@@ -1,0 +1,72 @@
+{
+ "name": "Horizon",
+ "author": "CleanYourTV",
+ "description": "Everything along the bottom edge of a dusk landscape: the app name, a row of seven square apps and round buttons. Down opens all apps over the picture.",
+ "colors": {
+  "night": "#0d0b16",
+  "panel": "#1f1a2c",
+  "ink": "#ffffff",
+  "accent": "#ffffff"
+ },
+ "surface": {
+  "pillAlpha": 0.16,
+  "pillRing": 0.2
+ },
+ "clock": {
+  "layout": "inline",
+  "align": "right",
+  "x": 96,
+  "y": 48,
+  "scale": 0.72,
+  "dateScale": 0.8
+ },
+ "bar": {
+  "style": "round",
+  "size": 58,
+  "anchor": "bottom",
+  "align": "right",
+  "x": 96,
+  "y": 109,
+  "gap": 14
+ },
+ "shelf": {
+  "align": "left",
+  "x": 96,
+  "y": 786,
+  "scale": 0.7
+ },
+ "dock": {
+  "anchor": "bottom",
+  "align": "left",
+  "x": 96,
+  "y": 76,
+  "count": 7,
+  "w": 124,
+  "h": 124,
+  "gap": 18,
+  "radius": 28,
+  "lift": 6,
+  "focusScale": 1.08
+ },
+ "grid": {
+  "mode": "overlay",
+  "cols": 12,
+  "tileH": 124,
+  "gapX": 18,
+  "gapY": 18,
+  "radius": 28,
+  "overlayDim": 0.6,
+  "y": 466,
+  "overlayH": 290
+ },
+ "tile": {
+  "border": 0.08,
+  "ringWidth": 3,
+  "ringOffset": 4
+ },
+ "effects": {
+  "glow": 0,
+  "wallpaper": "horizon.jpg",
+  "wallpaperDim": 0.05
+ }
+}

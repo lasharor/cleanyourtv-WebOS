@@ -723,54 +723,6 @@
      "installed": false,
      "name": "Bloom",
      "preview": true
-    },
-    {
-     "author": "CleanYourTV",
-     "description": "Twelve columns of smaller tiles: more apps on screen.",
-     "id": "compact",
-     "installed": false,
-     "name": "Compact",
-     "preview": true
-    },
-    {
-     "author": "CleanYourTV",
-     "description": "Eight columns of big tiles and bigger text, easier to read from the sofa.",
-     "id": "large",
-     "installed": false,
-     "name": "Large print",
-     "preview": true
-    },
-    {
-     "author": "CleanYourTV",
-     "description": "Deep blue with a soft wallpaper and a blue focus.",
-     "id": "midnight",
-     "installed": false,
-     "name": "Midnight",
-     "preview": true
-    },
-    {
-     "author": "CleanYourTV",
-     "description": "Pure black, no ambient glow: unlit pixels stay off.",
-     "id": "oled",
-     "installed": false,
-     "name": "OLED black",
-     "preview": true
-    },
-    {
-     "author": "CleanYourTV",
-     "description": "No animation and a quiet glow, for anyone who prefers a calm screen.",
-     "id": "still",
-     "installed": false,
-     "name": "Still",
-     "preview": true
-    },
-    {
-     "author": "CleanYourTV",
-     "description": "Brown and amber with the glow in the accent colour.",
-     "id": "warm",
-     "installed": false,
-     "name": "Warm",
-     "preview": true
     }
    ]
   },

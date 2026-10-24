@@ -23,6 +23,13 @@
    "preview": "compact/preview.jpg"
   },
   {
+   "id": "horizon",
+   "name": "Horizon",
+   "author": "CleanYourTV",
+   "description": "Everything along the bottom edge of a dusk landscape: the app name, a row of seven square apps and round buttons. Down opens all apps over the picture.",
+   "preview": "horizon/preview.jpg"
+  },
+  {
    "id": "large",
    "name": "Large print",
    "author": "CleanYourTV",

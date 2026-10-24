@@ -45,6 +45,14 @@ A flower wallpaper with the dock in a glass panel at the bottom. Down moves the 
 
 Folder: [`bloom/`](bloom/)
 
+### Horizon
+
+Everything along the bottom edge of a dusk landscape: the app name, a row of seven square apps and round buttons. Down opens all apps over the picture.
+
+[![Horizon](horizon/preview.jpg)](horizon/preview.jpg)
+
+Folder: [`horizon/`](horizon/)
+
 ### Compact
 
 Twelve columns of smaller tiles: more apps on screen.

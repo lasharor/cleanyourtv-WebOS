@@ -117,6 +117,13 @@ const gh = http.createServer((q, r) => {
         },
       ])
     );
+  // a fixed catalogue (Classic and Bloom from this checkout), so a theme added to the repository does not change the recorded replies
+  if (q.url === '/themes/index.json') {
+    const idx = JSON.parse(fs.readFileSync(path.join(ROOT, 'themes', 'index.json'), 'utf8'));
+    idx.themes = idx.themes.filter(t => t.id === 'classic' || t.id === 'bloom');
+    r.setHeader('content-type', 'application/octet-stream');
+    return r.end(JSON.stringify(idx));
+  }
   const f = path.join(ROOT, 'themes', q.url.replace(/^\/themes\//, '').replace(/\.\./g, '')); // the themes folder of this checkout
   if (q.url.indexOf('/themes/') === 0 && fs.existsSync(f) && fs.statSync(f).isFile()) {
     r.setHeader('content-type', 'application/octet-stream');
