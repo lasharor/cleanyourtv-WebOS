@@ -3,7 +3,7 @@
 // This file only wires the parts together. Each part is a feature module with create(ctx) -> { name, paths/prefix, handle, start };
 // ctx carries what they share (config, the TV profile, luna). A part that fails to load is left out and reported at /api/service;
 // the rest keeps working. AGENTS.md has the map of the files.
-const VERSION = '1.6.2';
+const VERSION = '1.6.3';
 const fs = require('fs');
 const P = require('./paths'),
   diag = require('./diag');

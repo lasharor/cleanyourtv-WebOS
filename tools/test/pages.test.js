@@ -71,6 +71,20 @@ run(async () => {
       built.build(p[0]) === fs.readFileSync(path.join(root, p[1]), 'utf8'),
       p[1] + ' is built from ' + p[0] + ' (run: node tools/build-pages.js)'
     );
+  // a long device name (HDMI-CEC) is the second line of a chip in the Inputs picker: the line could not shrink, so it was painted outside the
+  // card, over the next ones (issue 19). Both lines shrink inside the card and end in an ellipsis, and the card clips what is left.
+  const pickerPage = fs.readFileSync(path.join(root, 'picker', 'app', 'index.html'), 'utf8'),
+    cssRule = (css, sel) => (css.match(new RegExp(sel.replace(/\./g, '\\.') + '\\s*\\{([^}]*)\\}')) || [])[1] || '',
+    chipSt = cssRule(pickerPage, '.chip .st'),
+    chipTx = cssRule(pickerPage, '.chip .tx');
+  ok(
+    /overflow:\s*hidden/.test(chipSt) &&
+      /text-overflow:\s*ellipsis/.test(chipSt) &&
+      /max-width:\s*100%/.test(chipSt) &&
+      /width:\s*100%/.test(chipTx) &&
+      /overflow:\s*hidden/.test(cssRule(pickerPage, '.chip')),
+    'a long input name stays inside its card in the Inputs picker'
+  );
   // the favourite star and the menus' right-hand text both had the class st: the star's width squeezed the menu text into a column
   const launcher = fs.readFileSync(path.join(root, 'app', 'index.html'), 'utf8');
   ok(
