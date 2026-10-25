@@ -426,6 +426,18 @@ body {
   width: 96px;
   height: 96px;
 }
+#dock .tile.input-dock {
+  flex-direction: column;
+}
+#dock .tile.input-dock svg {
+  width: 64px;
+  height: 64px;
+}
+#dock .tile.input-dock .slab {
+  margin-top: 8px;
+  font-size: 18px;
+  text-align: center;
+}
 #dock .tile.f {
   transform: translateY(var(--dock-lift)) scale(var(--dock-fs));
 }

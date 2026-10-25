@@ -19,6 +19,12 @@ var TX = {
     'Add to dock': 'Aan dock toevoegen',
     'Add to dock...': 'Aan dock toevoegen...',
     'Replace which app?': 'Welke app vervangen?',
+    'Dock': 'Dock',
+    'Add HDMI inputs': 'HDMI-ingangen toevoegen',
+    'Add an HDMI input...': 'HDMI-ingang toevoegen...',
+    'Add an HDMI input': 'HDMI-ingang toevoegen',
+    'No HDMI inputs to add': 'Geen HDMI-ingangen om toe te voegen',
+    'Could not read the inputs': 'Kan de ingangen niet lezen',
     'Hide app': 'App verbergen',
     'Remove this button': 'Deze knop verwijderen',
     'hold OK on an app': 'houd OK ingedrukt op een app',
@@ -65,6 +71,12 @@ var TX = {
     'Add to dock': 'Zum Dock hinzufügen',
     'Add to dock...': 'Zum Dock hinzufügen...',
     'Replace which app?': 'Welche App ersetzen?',
+    'Dock': 'Dock',
+    'Add HDMI inputs': 'HDMI-Eingänge hinzufügen',
+    'Add an HDMI input...': 'HDMI-Eingang hinzufügen...',
+    'Add an HDMI input': 'HDMI-Eingang hinzufügen',
+    'No HDMI inputs to add': 'Keine HDMI-Eingänge zum Hinzufügen',
+    'Could not read the inputs': 'Eingänge konnten nicht gelesen werden',
     'Hide app': 'App ausblenden',
     'Remove this button': 'Diese Schaltfläche entfernen',
     'hold OK on an app': 'OK auf einer App gedrückt halten',
@@ -111,6 +123,12 @@ var TX = {
     'Add to dock': 'Ajouter au dock',
     'Add to dock...': 'Ajouter au dock...',
     'Replace which app?': 'Remplacer quelle app ?',
+    'Dock': 'Dock',
+    'Add HDMI inputs': 'Ajouter des entrées HDMI',
+    'Add an HDMI input...': 'Ajouter une entrée HDMI...',
+    'Add an HDMI input': 'Ajouter une entrée HDMI',
+    'No HDMI inputs to add': 'Aucune entrée HDMI à ajouter',
+    'Could not read the inputs': 'Impossible de lire les entrées',
     'Hide app': 'Masquer l’app',
     'Remove this button': 'Supprimer ce bouton',
     'hold OK on an app': 'maintenez OK sur une app',
@@ -157,6 +175,12 @@ var TX = {
     'Add to dock': 'Añadir al dock',
     'Add to dock...': 'Añadir al dock...',
     'Replace which app?': '¿Qué app reemplazar?',
+    'Dock': 'Dock',
+    'Add HDMI inputs': 'Añadir entradas HDMI',
+    'Add an HDMI input...': 'Añadir una entrada HDMI...',
+    'Add an HDMI input': 'Añadir una entrada HDMI',
+    'No HDMI inputs to add': 'No hay entradas HDMI que añadir',
+    'Could not read the inputs': 'No se pudieron leer las entradas',
     'Hide app': 'Ocultar app',
     'Remove this button': 'Quitar este botón',
     'hold OK on an app': 'mantén OK en una app',
@@ -449,6 +473,7 @@ function clockOpts() {
 }
 
 var apps = [],
+  inputDevices = [],
   cfg = {},
   usage = {},
   warned = false,
@@ -508,7 +533,7 @@ function launch(id, params) {
 }
 function store() {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ apps: apps, cfg: cfg, usage: usage, colors: colors }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ apps: apps, cfg: cfg, usage: usage, colors: colors, inputs: inputDevices }));
   } catch (e) {}
 }
 function storeSoon() {

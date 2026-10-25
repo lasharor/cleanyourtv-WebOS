@@ -431,6 +431,18 @@ body {
   width: 96px;
   height: 96px;
 }
+#dock .tile.input-dock {
+  flex-direction: column;
+}
+#dock .tile.input-dock svg {
+  width: 64px;
+  height: 64px;
+}
+#dock .tile.input-dock .slab {
+  margin-top: 8px;
+  font-size: 18px;
+  text-align: center;
+}
 #dock .tile.f {
   transform: translateY(var(--dock-lift)) scale(var(--dock-fs));
 }
@@ -1182,6 +1194,12 @@ var TX = {
     'Add to dock': 'Aan dock toevoegen',
     'Add to dock...': 'Aan dock toevoegen...',
     'Replace which app?': 'Welke app vervangen?',
+    'Dock': 'Dock',
+    'Add HDMI inputs': 'HDMI-ingangen toevoegen',
+    'Add an HDMI input...': 'HDMI-ingang toevoegen...',
+    'Add an HDMI input': 'HDMI-ingang toevoegen',
+    'No HDMI inputs to add': 'Geen HDMI-ingangen om toe te voegen',
+    'Could not read the inputs': 'Kan de ingangen niet lezen',
     'Hide app': 'App verbergen',
     'Remove this button': 'Deze knop verwijderen',
     'hold OK on an app': 'houd OK ingedrukt op een app',
@@ -1228,6 +1246,12 @@ var TX = {
     'Add to dock': 'Zum Dock hinzufügen',
     'Add to dock...': 'Zum Dock hinzufügen...',
     'Replace which app?': 'Welche App ersetzen?',
+    'Dock': 'Dock',
+    'Add HDMI inputs': 'HDMI-Eingänge hinzufügen',
+    'Add an HDMI input...': 'HDMI-Eingang hinzufügen...',
+    'Add an HDMI input': 'HDMI-Eingang hinzufügen',
+    'No HDMI inputs to add': 'Keine HDMI-Eingänge zum Hinzufügen',
+    'Could not read the inputs': 'Eingänge konnten nicht gelesen werden',
     'Hide app': 'App ausblenden',
     'Remove this button': 'Diese Schaltfläche entfernen',
     'hold OK on an app': 'OK auf einer App gedrückt halten',
@@ -1274,6 +1298,12 @@ var TX = {
     'Add to dock': 'Ajouter au dock',
     'Add to dock...': 'Ajouter au dock...',
     'Replace which app?': 'Remplacer quelle app ?',
+    'Dock': 'Dock',
+    'Add HDMI inputs': 'Ajouter des entrées HDMI',
+    'Add an HDMI input...': 'Ajouter une entrée HDMI...',
+    'Add an HDMI input': 'Ajouter une entrée HDMI',
+    'No HDMI inputs to add': 'Aucune entrée HDMI à ajouter',
+    'Could not read the inputs': 'Impossible de lire les entrées',
     'Hide app': 'Masquer l’app',
     'Remove this button': 'Supprimer ce bouton',
     'hold OK on an app': 'maintenez OK sur une app',
@@ -1320,6 +1350,12 @@ var TX = {
     'Add to dock': 'Añadir al dock',
     'Add to dock...': 'Añadir al dock...',
     'Replace which app?': '¿Qué app reemplazar?',
+    'Dock': 'Dock',
+    'Add HDMI inputs': 'Añadir entradas HDMI',
+    'Add an HDMI input...': 'Añadir una entrada HDMI...',
+    'Add an HDMI input': 'Añadir una entrada HDMI',
+    'No HDMI inputs to add': 'No hay entradas HDMI que añadir',
+    'Could not read the inputs': 'No se pudieron leer las entradas',
     'Hide app': 'Ocultar app',
     'Remove this button': 'Quitar este botón',
     'hold OK on an app': 'mantén OK en una app',
@@ -1612,6 +1648,7 @@ function clockOpts() {
 }
 
 var apps = [],
+  inputDevices = [],
   cfg = {},
   usage = {},
   warned = false,
@@ -1671,7 +1708,7 @@ function launch(id, params) {
 }
 function store() {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ apps: apps, cfg: cfg, usage: usage, colors: colors }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ apps: apps, cfg: cfg, usage: usage, colors: colors, inputs: inputDevices }));
   } catch (e) {}
 }
 function storeSoon() {
@@ -1935,6 +1972,12 @@ function tile(a) {
   d._a = a;
   tiles[a.id] = d;
   hit(d);
+  if (a.inputAppId) {
+    d.className += ' input-dock';
+    d.innerHTML = svg('hdmi') + '<div class="slab"></div>';
+    d.lastChild.textContent = 'HDMI ' + a.inputPort;
+    return d;
+  }
   if (a.sys) {
     d.innerHTML = svg(a.icon) + '<div class="slab">' + 'LG Home' + '</div>';
     return d;
@@ -2104,6 +2147,25 @@ function saveCfg() {
 function isHidden(id) {
   return (cfg.hidden || []).indexOf(id) >= 0;
 }
+var INPUT_DOCK_PREFIX = '__input__';
+function inputDockId(appId) {
+  return INPUT_DOCK_PREFIX + appId;
+}
+function inputDockItem(id) {
+  if (typeof id !== 'string' || id.indexOf(INPUT_DOCK_PREFIX) !== 0) return null;
+  var appId = id.slice(INPUT_DOCK_PREFIX.length);
+  for (var i = 0; i < inputDevices.length; i++) {
+    var d = inputDevices[i];
+    if (d.appId === appId)
+      return {
+        id: id,
+        title: d.label || 'HDMI ' + d.port,
+        inputAppId: d.appId,
+        inputPort: d.port,
+      };
+  }
+  return null;
+}
 function dockIds() {
   var by = {};
   apps.forEach(function (a) {
@@ -2112,7 +2174,7 @@ function dockIds() {
   var ids = cfg.dock && cfg.dock.length ? cfg.dock : DEFAULTS.dock;
   return ids
     .filter(function (i) {
-      return by[i] && !isHidden(i);
+      return (by[i] && !isHidden(i)) || !!inputDockItem(i);
     })
     .slice(0, TH.dockN);
 }
@@ -2155,6 +2217,8 @@ function byOrder(a, b) {
   return a.title.localeCompare(b.title);
 }
 function title(id) {
+  var input = inputDockItem(id);
+  if (input) return input.title;
   for (var i = 0; i < apps.length; i++) if (apps[i].id === id) return apps[i].title;
   return id;
 }
@@ -2163,6 +2227,7 @@ function title(id) {
 function act(e) {
   var a = e._a;
   if (a) {
+    if (a.inputAppId) return launch(a.inputAppId);
     if (!a.sys) {
       e.classList.add('launching');
       setTimeout(function () {
@@ -2374,7 +2439,7 @@ function appMenu(a) {
       {
         label: t('Open'),
         fn: function () {
-          launch(a.id);
+          launch(a.inputAppId || a.id);
         },
       },
     ];
@@ -2436,12 +2501,13 @@ function appMenu(a) {
         );
       },
     });
-  items.push({
-    label: t('Hide app'),
-    fn: function () {
-      hideApp(a.id);
-    },
-  });
+  if (!a.inputAppId)
+    items.push({
+      label: t('Hide app'),
+      fn: function () {
+        hideApp(a.id);
+      },
+    });
   openMenu(a.title, items);
 }
 
@@ -2466,10 +2532,10 @@ function customizeMenu() {
   openMenu(t('Customise'), [
     {
       label: 'Dock',
-      sub: t('hold OK on an app'),
+      sub: t('Add HDMI inputs'),
       stay: true,
       fn: function () {
-        toast(t('Hold OK on any app to change the dock'));
+        dockMenu();
       },
     },
     { label: t('Top buttons'), stay: true, fn: topButtonsMenu },
@@ -2499,6 +2565,50 @@ function customizeMenu() {
       },
     },
   ]);
+}
+function dockMenu() {
+  openMenu(t('Dock'), [{ label: t('Add an HDMI input...'), stay: true, fn: addInputToDockMenu }]);
+}
+function addInputToDockMenu() {
+  api('/api/inputs').then(function (x) {
+    inputDevices = (x.devices || []).filter(function (d) {
+      return d.appId;
+    });
+    var di = dockIds(),
+      items = inputDevices
+        .filter(function (d) {
+          return di.indexOf(inputDockId(d.appId)) < 0;
+        })
+        .map(function (d) {
+          var id = inputDockId(d.appId);
+          return {
+            icon: 'hdmi',
+            label: d.label || ('HDMI ' + d.port),
+            sub: 'HDMI ' + d.port,
+            fn: function () {
+              if (di.length < TH.dockN) setDock(di.concat(id));
+              else
+                openMenu(
+                  t('Replace which app?'),
+                  di.map(function (dockId, i) {
+                    return {
+                      label: title(dockId),
+                      fn: function () {
+                        var next = di.slice();
+                        next[i] = id;
+                        setDock(next);
+                      },
+                    };
+                  })
+                );
+            },
+          };
+        });
+    if (!items.length) items = [{ label: t('No HDMI inputs to add'), dim: true }];
+    openMenu(t('Add an HDMI input'), items);
+  }).catch(function () {
+    toast(t('Could not read the inputs'));
+  });
 }
 function topButtonsMenu() {
   var items = shownBar().map(function (o) {
@@ -2578,7 +2688,7 @@ function rebuild() {
   });
   var di = dockIds(),
     dock = di.map(function (i) {
-      return by[i];
+      return by[i] || inputDockItem(i);
     });
   var rest = apps
     .filter(function (a) {
@@ -2650,20 +2760,35 @@ function load() {
         x.config,
         rank,
       ]);
-      if (sig === lastSig) return;
-      lastSig = sig;
       apps = x.apps.map(function (a) {
         return { id: a.id, title: a.title };
       });
       cfg = x.config || {};
       applyTheme(cfg.theme);
       if (liveOn()) apps.push({ id: '__live', title: t('Live TV') });
-      store();
-      rebuild();
-      if (!perfReady) {
-        perfReady = true;
-        perfMark('launcher ready ' + Math.round(performance.now()));
-      }
+      return api('/api/inputs')
+        .then(function (io) {
+          inputDevices = (io.devices || []).filter(function (d) {
+            return d.appId;
+          });
+        })
+        .catch(function () {})
+        .then(function () {
+          sig = JSON.stringify([
+            sig,
+            inputDevices.map(function (d) {
+              return [d.appId, d.label, d.port];
+            }),
+          ]);
+          if (sig === lastSig) return;
+          lastSig = sig;
+          store();
+          rebuild();
+          if (!perfReady) {
+            perfReady = true;
+            perfMark('launcher ready ' + Math.round(performance.now()));
+          }
+        });
     })
     .catch(function () {
       toast(t('Helper not reachable, retrying...'));

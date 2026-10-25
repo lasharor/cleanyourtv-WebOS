@@ -9,6 +9,25 @@ function saveCfg() {
 function isHidden(id) {
   return (cfg.hidden || []).indexOf(id) >= 0;
 }
+var INPUT_DOCK_PREFIX = '__input__';
+function inputDockId(appId) {
+  return INPUT_DOCK_PREFIX + appId;
+}
+function inputDockItem(id) {
+  if (typeof id !== 'string' || id.indexOf(INPUT_DOCK_PREFIX) !== 0) return null;
+  var appId = id.slice(INPUT_DOCK_PREFIX.length);
+  for (var i = 0; i < inputDevices.length; i++) {
+    var d = inputDevices[i];
+    if (d.appId === appId)
+      return {
+        id: id,
+        title: d.label || 'HDMI ' + d.port,
+        inputAppId: d.appId,
+        inputPort: d.port,
+      };
+  }
+  return null;
+}
 function dockIds() {
   var by = {};
   apps.forEach(function (a) {
@@ -17,7 +36,7 @@ function dockIds() {
   var ids = cfg.dock && cfg.dock.length ? cfg.dock : DEFAULTS.dock;
   return ids
     .filter(function (i) {
-      return by[i] && !isHidden(i);
+      return (by[i] && !isHidden(i)) || !!inputDockItem(i);
     })
     .slice(0, TH.dockN);
 }
@@ -60,6 +79,8 @@ function byOrder(a, b) {
   return a.title.localeCompare(b.title);
 }
 function title(id) {
+  var input = inputDockItem(id);
+  if (input) return input.title;
   for (var i = 0; i < apps.length; i++) if (apps[i].id === id) return apps[i].title;
   return id;
 }
@@ -68,6 +89,7 @@ function title(id) {
 function act(e) {
   var a = e._a;
   if (a) {
+    if (a.inputAppId) return launch(a.inputAppId);
     if (!a.sys) {
       e.classList.add('launching');
       setTimeout(function () {

@@ -195,7 +195,7 @@ function appMenu(a) {
       {
         label: t('Open'),
         fn: function () {
-          launch(a.id);
+          launch(a.inputAppId || a.id);
         },
       },
     ];
@@ -257,12 +257,13 @@ function appMenu(a) {
         );
       },
     });
-  items.push({
-    label: t('Hide app'),
-    fn: function () {
-      hideApp(a.id);
-    },
-  });
+  if (!a.inputAppId)
+    items.push({
+      label: t('Hide app'),
+      fn: function () {
+        hideApp(a.id);
+      },
+    });
   openMenu(a.title, items);
 }
 
@@ -287,10 +288,10 @@ function customizeMenu() {
   openMenu(t('Customise'), [
     {
       label: 'Dock',
-      sub: t('hold OK on an app'),
+      sub: t('Add HDMI inputs'),
       stay: true,
       fn: function () {
-        toast(t('Hold OK on any app to change the dock'));
+        dockMenu();
       },
     },
     { label: t('Top buttons'), stay: true, fn: topButtonsMenu },
@@ -320,6 +321,50 @@ function customizeMenu() {
       },
     },
   ]);
+}
+function dockMenu() {
+  openMenu(t('Dock'), [{ label: t('Add an HDMI input...'), stay: true, fn: addInputToDockMenu }]);
+}
+function addInputToDockMenu() {
+  api('/api/inputs').then(function (x) {
+    inputDevices = (x.devices || []).filter(function (d) {
+      return d.appId;
+    });
+    var di = dockIds(),
+      items = inputDevices
+        .filter(function (d) {
+          return di.indexOf(inputDockId(d.appId)) < 0;
+        })
+        .map(function (d) {
+          var id = inputDockId(d.appId);
+          return {
+            icon: 'hdmi',
+            label: d.label || ('HDMI ' + d.port),
+            sub: 'HDMI ' + d.port,
+            fn: function () {
+              if (di.length < TH.dockN) setDock(di.concat(id));
+              else
+                openMenu(
+                  t('Replace which app?'),
+                  di.map(function (dockId, i) {
+                    return {
+                      label: title(dockId),
+                      fn: function () {
+                        var next = di.slice();
+                        next[i] = id;
+                        setDock(next);
+                      },
+                    };
+                  })
+                );
+            },
+          };
+        });
+    if (!items.length) items = [{ label: t('No HDMI inputs to add'), dim: true }];
+    openMenu(t('Add an HDMI input'), items);
+  }).catch(function () {
+    toast(t('Could not read the inputs'));
+  });
 }
 function topButtonsMenu() {
   var items = shownBar().map(function (o) {

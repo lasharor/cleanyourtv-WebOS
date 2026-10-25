@@ -94,4 +94,21 @@ run(async () => {
     !/(^|\n)\s*\.st\s*\{/.test(launcher) && /svg\.st\s*\{\s*width:\s*26px/.test(launcher),
     "the favourite star is styled as svg.st, so the menu's .st text keeps its natural width"
   );
+  const dockConfig = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'config.js'), 'utf8'),
+    dockMenus = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'menus.js'), 'utf8'),
+    dockTiles = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'tiles.js'), 'utf8');
+  ok(
+    /function inputDockId\(appId\)/.test(dockConfig) &&
+      /!!inputDockItem\(i\)/.test(dockConfig) &&
+      /if \(a\.inputAppId\) return launch\(a\.inputAppId\)/.test(dockConfig),
+    'dock entries can resolve and launch a saved HDMI input directly'
+  );
+  ok(
+    /Add an HDMI input\.\.\./.test(dockMenus) && /inputDockId\(d\.appId\)/.test(dockMenus) && /Replace which app\?/.test(dockMenus),
+    'Customise can add an HDMI input and replace a full dock tile'
+  );
+  ok(
+    dockTiles.indexOf('if (a.inputAppId)') >= 0 && dockTiles.indexOf("'HDMI ' + a.inputPort") >= 0,
+    'an HDMI dock tile shows its port instead of requesting an app icon'
+  );
 });

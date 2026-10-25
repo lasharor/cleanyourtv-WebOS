@@ -6,7 +6,7 @@ function rebuild() {
   });
   var di = dockIds(),
     dock = di.map(function (i) {
-      return by[i];
+      return by[i] || inputDockItem(i);
     });
   var rest = apps
     .filter(function (a) {
@@ -78,20 +78,35 @@ function load() {
         x.config,
         rank,
       ]);
-      if (sig === lastSig) return;
-      lastSig = sig;
       apps = x.apps.map(function (a) {
         return { id: a.id, title: a.title };
       });
       cfg = x.config || {};
       applyTheme(cfg.theme);
       if (liveOn()) apps.push({ id: '__live', title: t('Live TV') });
-      store();
-      rebuild();
-      if (!perfReady) {
-        perfReady = true;
-        perfMark('launcher ready ' + Math.round(performance.now()));
-      }
+      return api('/api/inputs')
+        .then(function (io) {
+          inputDevices = (io.devices || []).filter(function (d) {
+            return d.appId;
+          });
+        })
+        .catch(function () {})
+        .then(function () {
+          sig = JSON.stringify([
+            sig,
+            inputDevices.map(function (d) {
+              return [d.appId, d.label, d.port];
+            }),
+          ]);
+          if (sig === lastSig) return;
+          lastSig = sig;
+          store();
+          rebuild();
+          if (!perfReady) {
+            perfReady = true;
+            perfMark('launcher ready ' + Math.round(performance.now()));
+          }
+        });
     })
     .catch(function () {
       toast(t('Helper not reachable, retrying...'));

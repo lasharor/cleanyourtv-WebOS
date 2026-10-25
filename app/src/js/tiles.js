@@ -6,6 +6,12 @@ function tile(a) {
   d._a = a;
   tiles[a.id] = d;
   hit(d);
+  if (a.inputAppId) {
+    d.className += ' input-dock';
+    d.innerHTML = svg('hdmi') + '<div class="slab"></div>';
+    d.lastChild.textContent = 'HDMI ' + a.inputPort;
+    return d;
+  }
   if (a.sys) {
     d.innerHTML = svg(a.icon) + '<div class="slab">' + 'LG Home' + '</div>';
     return d;

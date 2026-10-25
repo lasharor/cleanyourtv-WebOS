@@ -7,7 +7,7 @@ same on every supported webOS version.
 
 ## The screen
 
-- **Dock.** Up to four apps, large, on the first row.
+- **Dock.** Up to four apps or HDMI inputs, large, on the first row.
 - **Top shelf.** The name of the focused app and an ambient glow taken from its icon.
 - **Grid.** All other apps, sorted by how often you use each one (or A to Z).
 - **Top buttons.** Inputs, Live TV, Settings and Customise, and a clock. The buttons you see are yours to change.
@@ -51,7 +51,7 @@ system apps are never in it. The list is read when it opens and closes when you 
 - the **clock** format (automatic, 12 or 24 hour),
 - **Reset customisation**.
 
-The dock holds up to four apps. Hold OK on an app and choose **Add to dock**, **Move left**, **Move right** or **Remove from dock**.
+The dock holds up to four apps or HDMI inputs. Hold OK on an app and choose **Add to dock**, **Move left**, **Move right** or **Remove from dock**. To add an HDMI input, open **Customise → Dock → Add an HDMI input...**, then choose an input. If the dock is full, choose which current tile it should replace. Selecting an HDMI tile switches directly to that input.
 
 ## Inputs
 
