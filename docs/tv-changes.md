@@ -40,6 +40,9 @@ uninstall. Optional features contact other services only when you switch them on
    our extra apps), the services that talk to it (`eim`, `webapp-mgr`, `preload-manager`, `memorymanager`, those the TV has) are
    restarted after it (`after-sam.sh`). Without that, apps stopped opening, an HDMI input lost its picture and HDMI-CEC control
    stopped (issues 14, 23 and 24). Each step is written to `/tmp/cleanyourtv-boot.log`, which **Share log** includes.
+   On OLED65C35LA with SDK 11 and flutter Home, the same hook restarts an already-running `arccontroller` after SAM.
+   ARC audio was silent despite the correct output and an active controller; restarting only that controller restored sound
+   (issue 21). This recovery is limited to the reported model and profile. The automatic boot recovery still needs testing on a TV.
 3. About a minute later the debloat runs, if it is on.
 
 Either bind mount lives in RAM. A reboot without the boot scripts, or the Homebrew Channel's failsafe mode, leaves LG's Home as it was.
