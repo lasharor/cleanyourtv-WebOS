@@ -15,7 +15,7 @@
 //                  and video apps no longer opened, an HDMI input had no picture, HDMI-CEC control stopped and no apps were preloaded
 //                  (issues 14, 23 and 24). TVs with the flutter or web Home (webOS 24 and newer) restart what depends on SAM themselves.
 //                  On webOS 26 (SDK 11) with the flutter or web Home, HDMI ARC to a soundbar stayed silent after the restart until
-//                  arccontroller was restarted (issue 21, OLED65C35LA): that one is restarted there. webOS 25 (SDK 10) keeps eARC.
+//                  arccontroller was restarted (issue 21, OLED65C35LA), and umediaserver lost its subscription to SAM's lifecycle (getForegroundApps), muting video output (black screen on playback across all video apps). Both are restarted there. webOS 25 (SDK 10) keeps eARC.
 //                  scripts/after-sam.sh restarts only services that exist and are active.
 //   homeTakeover   how the launcher becomes Home. 'mount': its folder is mounted over LG's Home app and the app manager is restarted
 //                  to read it (flutter and web Home). 'standin' where LG's Home is the native program: a small script is mounted over
@@ -68,7 +68,7 @@ function decide(facts, compat) {
       (major > 0 && major < 7) || /\snative$/.test(homeKind)
         ? 'eim webapp-mgr preload-manager memorymanager'
         : major === 11 && /\s(?:flutter|web)$/.test(homeKind)
-          ? 'arccontroller'
+          ? 'arccontroller umediaserver'
           : '',
     homeTakeover: /^com\.webos\.app\.home native$/.test(homeKind) ? 'standin' : 'mount',
   };

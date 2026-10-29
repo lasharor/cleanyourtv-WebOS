@@ -3,13 +3,66 @@
   "updated": "2026-10-26",
   "comment": "Firmware versions (Settings > About: software version, or the webOS SDK version) the setup is known to work on. A firmware listed here is set up without --force. A trailing * matches a prefix. Add an entry through an issue or pull request, with the output of 'Share log'.",
   "entries": [
-    { "firmware": "33.23.05", "sdk": "10.2.2", "homeType": "flutter", "status": "tested", "note": "OLED65G26LA, webOS 25 (tested)" },
-    { "firmware": "23.25.55", "homeType": "", "status": "reported", "note": "reported working on two models" },
-    { "firmware": "04.64.00", "sdk": "5.6.2", "homeType": "native", "status": "reported", "note": "75UN85006LA, 55UN7200PTF, OLED CX and OLED65CX6LA, webOS 5.6.2 (issues 4, 15, 23 and 24)" },
-    { "firmware": "13.40.90", "sdk": "8.4.0", "homeType": "native", "status": "reported", "note": "43UR74006LB, webOS 23 (issue 17)" },
-    { "firmware": "03.53.45", "sdk": "6.5.3", "homeType": "native", "status": "reported", "note": "OLED55G19LA, 65NANO753PR, OLED65B16LA, 55UP7550PVG and OLED48C16LA, webOS 6.5.3 (issues 5, 8, 12, 18 and 26)" },
-    { "firmware": "04.41.35", "sdk": "5.4.3", "homeType": "native", "status": "reported", "note": "OLED55CX3LA, webOS 5.4.3 (issue 13)" },
-    { "firmware": "23.23.30", "sdk": "9.2.4", "homeType": "", "status": "reported", "note": "OLED55G4, webOS 24 (pull request 25)" },
-    { "firmware": "04.60.91", "homeType": "", "status": "reported", "note": "43NANO786QA, webOS 22 (7.6) (issue 31)" }
+    {
+      "firmware": "43.04.24",
+      "sdk": "11.0.1",
+      "homeType": "flutter",
+      "status": "reported",
+      "note": "50NU850BPSA, webOS SDK 11.0.1 (restarts umediaserver after SAM)"
+    },
+    {
+      "firmware": "33.23.05",
+      "sdk": "10.2.2",
+      "homeType": "flutter",
+      "status": "tested",
+      "note": "OLED65G26LA, webOS 25 (tested)"
+    },
+    {
+      "firmware": "23.25.55",
+      "homeType": "",
+      "status": "reported",
+      "note": "reported working on two models"
+    },
+    {
+      "firmware": "04.64.00",
+      "sdk": "5.6.2",
+      "homeType": "native",
+      "status": "reported",
+      "note": "75UN85006LA, 55UN7200PTF, OLED CX and OLED65CX6LA, webOS 5.6.2 (issues 4, 15, 23 and 24)"
+    },
+    {
+      "firmware": "13.40.90",
+      "sdk": "8.4.0",
+      "homeType": "native",
+      "status": "reported",
+      "note": "43UR74006LB, webOS 23 (issue 17)"
+    },
+    {
+      "firmware": "03.53.45",
+      "sdk": "6.5.3",
+      "homeType": "native",
+      "status": "reported",
+      "note": "OLED55G19LA, 65NANO753PR, OLED65B16LA, 55UP7550PVG and OLED48C16LA, webOS 6.5.3 (issues 5, 8, 12, 18 and 26)"
+    },
+    {
+      "firmware": "04.41.35",
+      "sdk": "5.4.3",
+      "homeType": "native",
+      "status": "reported",
+      "note": "OLED55CX3LA, webOS 5.4.3 (issue 13)"
+    },
+    {
+      "firmware": "23.23.30",
+      "sdk": "9.2.4",
+      "homeType": "",
+      "status": "reported",
+      "note": "OLED55G4, webOS 24 (pull request 25)"
+    },
+    {
+      "firmware": "04.60.91",
+      "homeType": "",
+      "status": "reported",
+      "note": "43NANO786QA, webOS 22 (7.6) (issue 31)"
+    }
   ]
 }

@@ -37,6 +37,6 @@ run(async () => {
         CALLS: calls,
       }),
     });
-    ok(r.status === 0 && fs.readFileSync(calls, 'utf8') === (state === 'active' ? 'arccontroller\n' : ''), 'post-SAM hook: ARC ' + state);
+    ok(r.status === 0 && fs.readFileSync(calls, 'utf8') === (state === 'active' ? 'arccontroller\numediaserver\n' : ''), 'post-SAM hook: ARC ' + state);
   }
 });
