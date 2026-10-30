@@ -1,0 +1,96 @@
+{
+  "name": "Aerial",
+  "author": "gasparegas",
+  "description": "Apple TV-inspired: cinematic aerial scenes, frosted-glass dock at the bottom, blue focus rings and smooth animations.",
+  "colors": {
+    "night": "#000000",
+    "panel": "#1c1c1e",
+    "ink": "#f5f5f7",
+    "accent": "#0a84ff",
+    "focus": "#0a84ff",
+    "pill": "#ffffff"
+  },
+  "surface": {
+    "pillAlpha": 0.22,
+    "pillRing": 0.08,
+    "pillRadius": 60,
+    "menuAlpha": 0.94,
+    "rowRadius": 14
+  },
+  "type": {
+    "fontFile": "inter.woff2",
+    "scale": 1
+  },
+  "clock": {
+    "style": "text",
+    "show": true,
+    "date": false,
+    "greeting": false,
+    "layout": "inline",
+    "anchor": "top",
+    "align": "center",
+    "x": 0,
+    "y": 48,
+    "scale": 1.1
+  },
+  "bar": {
+    "show": true,
+    "style": "round",
+    "labels": "hide",
+    "anchor": "top",
+    "align": "right",
+    "x": 96,
+    "y": 38,
+    "size": 60,
+    "gap": 14
+  },
+  "shelf": {
+    "show": false
+  },
+  "dock": {
+    "anchor": "bottom",
+    "align": "center",
+    "x": 0,
+    "y": 36,
+    "count": 5,
+    "w": 226,
+    "h": 136,
+    "gap": 18,
+    "radius": 40,
+    "tileAlpha": 1,
+    "tileFrost": 0.28,
+    "tileFrostColor": "#000000",
+    "panel": 0.6,
+    "panelPad": 20,
+    "lift": 16,
+    "focusScale": 1.16
+  },
+  "grid": {
+    "mode": "push",
+    "dockUp": 200,
+    "align": "center",
+    "cols": 6,
+    "tileH": 156,
+    "gapX": 22,
+    "gapY": 20,
+    "radius": 40,
+    "clipTop": 180,
+    "focusScale": 1.14
+  },
+  "tile": {
+    "gloss": 0,
+    "border": 0,
+    "ringWidth": 4,
+    "ringOffset": 5
+  },
+  "effects": {
+    "glow": 0.6,
+    "glowColor": "app",
+    "speed": 1,
+    "scenes": "couch",
+    "sceneSecs": 25
+  },
+  "cards": {
+    "style": "glass"
+  }
+}
