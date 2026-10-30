@@ -127,6 +127,52 @@ function openWallPair() {
     }
   );
 }
+/* More > App icons, or a tile's Change icon on Home ({open: 'icons', app}): the phone page of helper/icons.js, the app first */
+function openIconPair(app) {
+  shareMode = 'icons';
+  push('share');
+  $('share').style.display = 'block';
+  $('shareurl').textContent = '';
+  $('qrbox').style.visibility = 'hidden';
+  $('share').querySelector('h2').textContent = tr('App icons');
+  $('share').querySelector('ol').innerHTML = tr(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Change</b> next to an app, then a picture, <b>Full tile</b> or <b>Icon</b>.</li>'
+  );
+  $('sharemsg').textContent = tr('Preparing…');
+  /* scale: this screen's pixels per CSS pixel (2 on a 4K TV, as on Home), so the sizes shown are the panel's own pixels */
+  api('/api/icons/pair', { app: app, scale: window.devicePixelRatio || 1 }).then(
+    function (r) {
+      if (view !== 'share' || shareMode !== 'icons') return;
+      if (r.error) {
+        $('sharemsg').textContent = tr(r.error);
+        return;
+      }
+      drawQr(r.qr);
+      $('qrbox').style.visibility = 'visible';
+      $('shareurl').textContent = tr(r.url + '   code ' + r.code);
+      /* the sizes that fit the theme's tiles: two more steps of the list, which has room for them below the others */
+      var z = r.sizes;
+      if (z) {
+        var ol = $('share').querySelector('ol'),
+          li = document.createElement('li');
+        li.textContent = tr('Best size for Full tile: %s pixels. Edges that don’t fit are trimmed, keeping the middle.').replace(
+          '%s',
+          z.tile.w + ' × ' + z.tile.h
+        );
+        ol.appendChild(li);
+        li = document.createElement('li');
+        li.textContent = tr('Best size for Icon: %s pixels. Ideally with a transparent background.').replace('%s', z.icon + ' × ' + z.icon);
+        ol.appendChild(li);
+      }
+      $('sharemsg').textContent = tr(
+        'The page stays open while you use it, at most an hour. It is not encrypted: the pictures travel over your Wi-Fi.'
+      );
+    },
+    function () {
+      $('sharemsg').textContent = tr('The service did not answer.');
+    }
+  );
+}
 function openHaPair() {
   openPair('ha');
 }

@@ -270,6 +270,19 @@ function fit(d, dock) {
   i.removeAttribute('style');
   d.classList.remove('fill');
   d.style.background = '';
+  /* a picture of your own shown as Full tile (helper/icons.js): it covers the tile, its middle kept, in the dock and the grid alike */
+  if (d._it) {
+    d.classList.add('fill');
+    var st = i.style;
+    st.position = 'absolute';
+    st.left = '0';
+    st.top = '0';
+    st.width = '100%';
+    st.height = '100%';
+    st.maxWidth = 'none';
+    st.objectFit = 'cover';
+    return;
+  }
   if (!c || c.k !== 'pad' || !c.box) return;
   var bx = c.box,
     bw = bx[2] - bx[0],

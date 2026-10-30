@@ -9,7 +9,7 @@ you can call it from a shell on the TV (for example over SSH).
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/apps` | Installed apps, config, usage, version, and `tuner: true` when LG's own Live TV is installed and shown |
+| `GET /api/apps` | Installed apps, config, usage, version, and `tuner: true` when LG's own Live TV is installed and shown; an app with a picture of its own has `iv`, the picture's version, and `it: 1` when it is shown as Full tile |
 | `POST /api/launch` `{id, params}` | Launch an app |
 | `POST /api/power/off` | Switch the TV off completely (`tvpower/power/shutDown`: a cold start next time, no Wake-on-LAN), unlike the remote's standby |
 | `GET /api/inputs` | The inputs: the HDMI ports and their state, and LG's own Live TV (the tuner, `{appId, tuner: true}`) while its app is installed and the manager's **Show LG's own Live TV** is on |
@@ -20,6 +20,7 @@ you can call it from a shell on the TV (for example over SSH).
 | `POST /api/cards/status`, `/set` `{slot, type}`, `/pair` `{stop?}`, `/weather` `{lat, lon, unit}`, `/ha` `{ids}`, `/ha/toggle` `{id}`; `GET /api/cards/ha/camera/<camera.id>` | Cards: the phone page for their options, the weather card's weather (Open-Meteo, kept 30 minutes), Home Assistant states (kept 20 seconds), switching an entity, a camera's picture; see [Cards](launcher.md#cards) |
 | `GET /api/wallpapers/status`, `/list`, `/photo/<u\|i>/<id>`; `POST /api/wallpapers/set` `{size}`, `/pair`, `/sync`, `/remove-uploads`, `/disconnect` | Wallpapers: the photo library, the phone page and the Immich sync; see [Wallpapers](wallpapers.md) |
 | `GET /api/androidbox`; `POST /api/androidbox` `{host, port, input, apps}`, `/api/androidbox/test`, `/api/androidbox/pair` (the phone page) | Apps that open on an Android box over ADB instead of on the TV; see [Android box](android-box.md) |
+| `GET /api/icons/status`; `POST /api/icons/pair` `{app?, scale?, stop?}`, `/reset` `{id}`; `GET /icon/<app id>` | App icons: the phone page where a picture is chosen for an app (Full tile or Icon), and back to the app's own icon; `pair` answers with `sizes`, the picture sizes that fit the theme's tiles at `scale` (the screen's pixels per CSS pixel); `/icon/<app id>` sends the app's picture of its own first; see [Your own icon](launcher.md#your-own-icon) |
 | `GET /api/live/status`, `/api/live/channels`, `/api/live/epg` | Live TV data |
 | `POST /api/live/settings`, `/api/live/refresh`, `/api/live/reset` | Live TV setup |
 | `GET /api/manager/status` | Versions, updates, options, hook state |

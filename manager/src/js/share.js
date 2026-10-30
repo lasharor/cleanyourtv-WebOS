@@ -71,6 +71,11 @@ function closeShare() {
     openCards();
     return;
   }
+  if (shareMode === 'icons') {
+    api('/api/icons/pair', { stop: true }).catch(function () {});
+    pop();
+    return;
+  }
   if (shareMode === 'wall') {
     api('/api/wallpapers/pair', { stop: true }).catch(function () {});
     pop();
