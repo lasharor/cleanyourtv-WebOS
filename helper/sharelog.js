@@ -8,6 +8,7 @@ const http = require('http'),
   crypto = require('crypto');
 const P = require('./paths'),
   exec = require('./exec'),
+  luna = require('./luna'),
   web = require('./web'),
   i18n = require('./i18n');
 const D = P.D,
@@ -45,9 +46,9 @@ function report() {
   const sec = (title, body) => o.push('\n===== ' + title + ' =====\n' + String(body).trim());
   sec('CleanYourTV report', new Date().toISOString());
   const ver = f => (/const VERSION = '([^']+)'/.exec(read(f)) || [])[1] || '?';
-  const info = sh(
-    'luna-send -n 1 -w 5000 -f luna://com.webos.service.tv.systemproperty/getSystemInfo \'{"keys":["modelName","firmwareVersion","sdkVersion"]}\' </dev/null'
-  );
+  const info = luna.sync('luna://com.webos.service.tv.systemproperty/getSystemInfo', {
+    keys: ['modelName', 'firmwareVersion', 'sdkVersion'],
+  });
   sec(
     'TV',
     info.replace(/\s+/g, ' ') + '\n' + sh('uname -a').trim() + '\nnode ' + process.version + '\n' + sh('python3 --version 2>&1').trim()
@@ -86,9 +87,7 @@ function report() {
     apps +=
       id +
       ': ' +
-      (/"returnValue": true/.test(
-        sh('luna-send -n 1 -w 4000 -f luna://com.webos.applicationManager/getAppInfo \'{"id":"' + id + '"}\' </dev/null')
-      )
+      (/"returnValue": true/.test(luna.sync('luna://com.webos.applicationManager/getAppInfo', { id }, { wait: 4000 }))
         ? 'registered'
         : 'not registered') +
       '\n';

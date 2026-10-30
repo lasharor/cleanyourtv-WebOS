@@ -6,9 +6,11 @@
 # Each step is written to /tmp/cleanyourtv-boot.log, which Share log includes.
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
 L=/media/developer/cleanyourtv
+luna_send() { command luna-send "$@" </dev/null; }
+[ ! -r "$L/luna-compat.sh" ] || . "$L/luna-compat.sh"
 LOG=/tmp/cleanyourtv-boot.log
 up() { cut -d' ' -f1 /proc/uptime; }
-sdk=$(luna-send -n 1 -w 5000 -f luna://com.webos.service.tv.systemproperty/getSystemInfo '{"keys":["sdkVersion"]}' </dev/null 2>/dev/null | sed -n 's/.*"sdkVersion": *"\([^"]*\)".*/\1/p')
+sdk=$(luna_send -n 1 -w 5000 -f luna://com.webos.service.tv.systemproperty/getSystemInfo '{"keys":["sdkVersion"]}' 2>/dev/null | sed -n 's/.*"sdkVersion": *"\([^"]*\)".*/\1/p')
 # LG's Home as it came with the TV (the backup the setup made), not our launcher that is mounted over it now
 home=$(node $L/jtool.js kind $L/backup/home-appinfo.orig.json 2>/dev/null)
 list=$(node $L/tvprofile.js get afterSam --sdk "$sdk" --home "$home" 2>/dev/null)

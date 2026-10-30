@@ -9,6 +9,18 @@ run(async () => {
   const dx = (cmd, args, o) => new Promise(res => diag.execFile(cmd, args, o || {}, (e, out, err) => res({ e, out, err })));
   let r = await dx('/bin/sh', ['-c', 'echo hi; echo oops 1>&2']);
   ok(r.e === null && r.out === 'hi\n' && r.err === 'oops\n', 'execFile returns stdout and stderr');
+  const eofProbe =
+    'process.stdin.on("end",function(){console.log("EOF");process.exit(0)});process.stdin.resume();setTimeout(function(){console.log("OPEN");process.exit(0)},100)';
+  r = await dx(process.execPath, ['-e', eofProbe]);
+  ok(r.out.trim() === 'EOF', 'stdin stays closed by default');
+  r = await dx(process.execPath, ['-e', eofProbe], { keepStdinOpen: true, timeout: 2000 });
+  ok(r.e === null && r.out.trim() === 'OPEN', 'the webOS 7 adapter can retain stdin without losing its time limit');
+  const openStarted = Date.now();
+  r = await dx(process.execPath, ['-e', 'process.stdin.resume();setInterval(function(){},1000)'], {
+    keepStdinOpen: true,
+    timeout: 300,
+  });
+  ok(r.e && r.e.killed === true && Date.now() - openStarted < 2000, 'an open stdin pipe cannot bypass the process time limit');
   r = await dx('/bin/sh', ['-c', 'exit 3']);
   ok(r.e && r.e.code === 3, 'a failing command reports its exit code');
   const t0 = Date.now();

@@ -8,9 +8,12 @@
 # service follows. The steps are the functions below; the order is at the end of the file.
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
 S=$(cd "$(dirname "$0")" && pwd)
+luna_send() { command luna-send "$@" </dev/null; }
+[ ! -r "$S/scripts/luna-compat.sh" ] || . "$S/scripts/luna-compat.sh"
 R=${CYTV_TEST_ROOT:-}                 # a folder that stands in for / (tools/test/scripts.test.js only; empty on a TV)
 MD=$R/media/developer
 D=$MD/cleanyourtv
+export CYTV_DIR="$D"
 INITD=$R/var/lib/webosbrew/init.d
 J="node $S/scripts/jtool.js"          # JSON helper (node, not python3)
 TV="node $S/helper/tvprofile.js"      # per-TV decisions
@@ -31,7 +34,7 @@ done
 say() { echo "[cleanyourtv] $*"; }
 warn() { echo "[cleanyourtv] WARNING: $*" >&2; }
 die() { echo "[cleanyourtv] ERROR: $*" >&2; exit 1; }
-luna() { luna-send -n 1 -w 5000 -f "luna://$1" "$2" </dev/null 2>/dev/null; }
+luna() { luna_send -n 1 -w 5000 -f "luna://$1" "$2" 2>/dev/null; }
 svc_version() { sed -n "s/^const VERSION = '\(.*\)';/\1/p" "$1" | head -1; }
 service_answers() { curl -s -m 3 http://127.0.0.1:8765/api/version | sed -n 's/.*"version":"\([^"]*\)".*/\1/p'; }
 opt() { $J opt "$D/config.json" "$1"; }
@@ -164,7 +167,7 @@ ensure_apps() {
   sh $D/after-sam.sh </dev/null
   sleep 10
   pkill -f "[a]pp-id=com.webos.app.home"; sleep 2
-  luna-send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' </dev/null >/dev/null
+  luna_send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' >/dev/null
 }
 
 # ---- an update: restart the service on the new files; go back to the previous files if it does not answer ----
@@ -191,7 +194,7 @@ restart_for_update() {
   say "service $WANT is running"
   ensure_apps
   # the overlay apps and the launcher may have new pages: restart the hidden picker (the service starts it again) and reload Home
-  luna-send -n 1 -w 3000 luna://com.webos.applicationManager/closeByAppId '{"id":"com.cleanyourtv.picker"}' </dev/null >/dev/null 2>&1
+  luna_send -n 1 -w 3000 luna://com.webos.applicationManager/closeByAppId '{"id":"com.cleanyourtv.picker"}' >/dev/null 2>&1
   if [ "$FRONTEND_NEW" = 1 ] && { grep -q " $HOME_DIR " /proc/mounts || [ -f $R/tmp/cleanyourtv-home-standin ]; }; then
     sh $D/reload-home.sh </dev/null
   fi

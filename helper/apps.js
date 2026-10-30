@@ -11,6 +11,7 @@ const fs = require('fs'),
 const P = require('./paths'),
   web = require('./web'),
   exec = require('./exec'),
+  lunaCompat = require('./luna'),
   cardsShape = require('./cards'),
   { LAUNCHER_KEYS } = require('./config');
 
@@ -284,7 +285,7 @@ function create(ctx) {
     exec.execFile(
       'luna-send',
       ['-n', '1', '-w', '3000', '-f', 'luna://com.webos.applicationManager/getForegroundAppInfo', '{}'],
-      { timeout: 6000 },
+      { timeout: 6000, keepStdinOpen: lunaCompat.keepStdinOpen() },
       (e, out) => {
         try {
           const o = JSON.parse(out);

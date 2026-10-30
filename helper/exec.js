@@ -26,15 +26,24 @@ function detached(script) {
   return c;
 }
 // for the standalone tools (sharelog.js) that collect a report step by step; spawnSync keeps its own time limit safely
-function shSync(script, ms) {
-  const r = cp.spawnSync('/bin/sh', ['-c', script], {
-    env: P.ENV,
-    timeout: ms || 8000,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+function runSync(cmd, args, opts) {
+  const r = cp.spawnSync(
+    cmd,
+    args,
+    Object.assign(
+      {
+        env: P.ENV,
+        timeout: 8000,
+        killSignal: 'SIGKILL',
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+      opts || {}
+    )
+  );
   if (r.error) return '(failed: ' + String(r.error.message).split('\n')[0] + ')';
   return (r.stdout || '') + (r.status === 0 ? '' : r.stderr || '');
 }
+const shSync = (script, ms) => runSync('/bin/sh', ['-c', script], { timeout: ms || 8000 });
 
-module.exports = { run, sh, execFile, detached, shSync };
+module.exports = { run, sh, execFile, detached, shSync, runSync };

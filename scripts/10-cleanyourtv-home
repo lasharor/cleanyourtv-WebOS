@@ -7,6 +7,8 @@
 #            A file home-method holding "mount" in the service folder chooses the first way on such a TV too.
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
 L=/media/developer/cleanyourtv
+luna_send() { command luna-send "$@" </dev/null; }
+[ ! -r "$L/luna-compat.sh" ] || . "$L/luna-compat.sh"
 H=/usr/palm/applications/com.webos.app.home
 STANDIN=/tmp/cleanyourtv-home-standin   # holds the path of LG's Home program while the stand-in is mounted over it
 LOG=/tmp/cleanyourtv-boot.log
@@ -41,9 +43,9 @@ if [ "$method" = standin ]; then
   for p in $(pgrep -f "^$EXE"); do kill "$p" 2>/dev/null; done
   (
     sleep 3
-    fg=$(luna-send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null | grep '"appId"')
+    fg=$(luna_send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' | grep '"appId"')
     case "$fg" in
-      *'"appId": ""'*|*com.webos.app.home*|"") luna-send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' </dev/null ;;
+      *'"appId": ""'*|*com.webos.app.home*|"") luna_send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' ;;
       *)
         # The TV started on an input or another app (some TVs come back to the last input): nothing opens Home now, so the
         # launcher is checked once Home is first asked for. Launching Home here would cover the input. home-standin.sh leaves
@@ -54,7 +56,7 @@ if [ "$method" = standin ]; then
         # so a broken stand-in still brings LG's Home back. Not an empty foreground: that is also what standby looks like.
         until [ -f /tmp/cleanyourtv-home-asked ]; do
           grep -q " $EXE " /proc/mounts || exit 0   # the stand-in was removed meanwhile (undo-home.sh)
-          luna-send -n 1 -w 3000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null | grep -q '"appId": *"com.webos.app.home"' && break
+          luna_send -n 1 -w 3000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' | grep -q '"appId": *"com.webos.app.home"' && break
           sleep 3
         done
         echo "$(up) home: Home was opened" >> $LOG ;;
@@ -62,7 +64,7 @@ if [ "$method" = standin ]; then
     # the launcher must be open in webapp-mgr by now; otherwise LG's Home comes back until the next reboot
     open=0
     for i in $(seq 1 15); do
-      luna-send -n 1 -w 3000 luna://com.palm.webappmanager/listRunningApps '{}' </dev/null | grep -q '"com.webos.app.home"' && { open=1; break; }
+      luna_send -n 1 -w 3000 luna://com.palm.webappmanager/listRunningApps '{}' | grep -q '"com.webos.app.home"' && { open=1; break; }
       sleep 2
     done
     if [ $open = 1 ]; then
@@ -82,11 +84,11 @@ else
     for i in $(seq 1 60); do systemctl is-active sam >/dev/null && break; sleep 2; done
     sh $L/after-sam.sh   # webOS before 7 and the native Home: the services that keep talking to the old sam (issues 23 and 24)
     sleep 8
-    fg=$(luna-send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null | grep '"appId"')
+    fg=$(luna_send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' | grep '"appId"')
     case "$fg" in
       *'"appId": ""'*|*com.webos.app.home*|"")
         pkill -f "[a]pp-id=com.webos.app.home"; sleep 2
-        luna-send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' </dev/null ;;
+        luna_send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' ;;
     esac
   ) </dev/null >/dev/null 2>&1 &
 fi

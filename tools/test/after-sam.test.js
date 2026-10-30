@@ -13,6 +13,7 @@ run(async () => {
   fs.writeFileSync(path.join(service, 'backup/home-appinfo.orig.json'), JSON.stringify({ id: 'com.webos.app.home', type: 'flutter' }));
   fs.copyFileSync(path.join(root, 'helper/tvprofile.js'), path.join(service, 'tvprofile.js'));
   fs.copyFileSync(path.join(root, 'scripts/jtool.js'), path.join(service, 'jtool.js'));
+  fs.copyFileSync(path.join(root, 'scripts/luna-compat.sh'), path.join(service, 'luna-compat.sh'));
   fs.symlinkSync(process.execPath, path.join(bin, 'node'));
   fs.writeFileSync(path.join(bin, 'luna-send'), '#!/bin/sh\nprintf \'%s\\n\' "$FACTS"\n', { mode: 0o755 });
   fs.writeFileSync(

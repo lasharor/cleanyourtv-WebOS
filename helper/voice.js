@@ -15,6 +15,7 @@ const nc = require('./netcompat'),
 const answers = require('./answers'),
   { toServer, askLlm, askHa, haTest, haAgents, models, haBase, haReady, llmCfg, haCfg, LLM_DEFAULTS, HA_DEFAULTS, HA_ROUTES } = answers;
 const P = require('./paths'),
+  luna = require('./luna'),
   exec = require('./exec'),
   fetch = require('./fetch'),
   web = require('./web'),
@@ -244,7 +245,7 @@ function capture() {
     const stream = cp.spawn(
       'luna-send',
       ['-i', '-f', 'luna://com.webos.service.voiceinput/startStreaming', '{"deviceType":"remote","keyType":"thinQtv","subscribe":true}'],
-      { env: ENV, stdio: 'ignore' }
+      { env: ENV, stdio: [luna.keepStdinOpen() ? 'pipe' : 'ignore', 'ignore', 'ignore'] }
     );
     const chunks = [];
     let buf = Buffer.alloc(0),

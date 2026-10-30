@@ -50,6 +50,40 @@ cached tile gets at most two retries, so genuinely missing icons do not create
 an endless request loop. The embedded Live TV icon is not requested from the
 helper.
 
+## Luna replies disappear on webOS 7.6.0
+
+On one LG 70UQ7070ZUD running firmware 04.60.90 (webOS 7.6.0, Node 12.21.0),
+`luna-send` could exit without executing or returning a reply when stdin reached
+EOF. Closed stdin remains the default; this is not an automatic SDK-wide rule.
+To opt in on an affected TV, create the flag over root SSH before setup:
+
+```sh
+mkdir -p /media/developer/cleanyourtv
+touch /media/developer/cleanyourtv/luna-stdin-open
+```
+
+The helper, foreground probe, Share log, optional voice capture and shell scripts
+read this flag. It survives updates and reboots without editing installed scripts.
+Remove it to undo the workaround (subsequent calls use closed stdin):
+
+```sh
+rm -f /media/developer/cleanyourtv/luna-stdin-open
+```
+
+For developers, `CYTV_LUNA_STDIN=open` or `closed` overrides the flag; an explicit
+per-call `keepStdinOpen` boolean overrides both in `helper/luna.js`. Node calls hold
+their input pipe until exit; one-shot calls retain their Luna wait and child
+deadline. Synchronous Share log calls and the shell wrapper use an immediately
+unlinked private FIFO, scoped to the call, with no feeder or descriptor inherited
+by other children. Native Home registration and optional voice remain subscriptions
+with their existing lifetimes. If the shell helper is missing after a partial copy,
+scripts fall back to closed stdin rather than aborting on the missing file.
+
+This option does not bypass installation compatibility checks or make an
+unsupported takeover safe. Equivalent handling was checked in a separately
+managed native deployment; this exact branch's generic install/reboot/update
+cycle and other firmware have not yet been device-validated.
+
 ## Reporting a problem
 
 An AI assistant can help you read the report and find the cause: see [Working on problems with an AI assistant](ai.md).

@@ -74,9 +74,11 @@ function start() {
 function execFile(cmd, args, opts, cb) {
   const o = Object.assign({}, opts),
     ms = o.timeout,
-    max = o.maxBuffer || 1 << 20;
+    max = o.maxBuffer || 1 << 20,
+    keepStdinOpen = o.keepStdinOpen === true;
   delete o.timeout;
   delete o.maxBuffer;
+  delete o.keepStdinOpen;
   note(
     'exec',
     cmd.split('/').pop() +
@@ -98,7 +100,7 @@ function execFile(cmd, args, opts, cb) {
     cb(e, out, err);
   };
   try {
-    child = cp.spawn(cmd, args || [], Object.assign({}, o, { stdio: ['ignore', 'pipe', 'pipe'] }));
+    child = cp.spawn(cmd, args || [], Object.assign({}, o, { stdio: [keepStdinOpen ? 'pipe' : 'ignore', 'pipe', 'pipe'] }));
   } catch (e) {
     fin(e);
     return null;
