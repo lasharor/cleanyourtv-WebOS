@@ -291,7 +291,7 @@ function load() {
       });
       var sig = JSON.stringify([
         x.apps.map(function (a) {
-          return a.input ? [a.id, a.title, a.off] : [a.id, !!a.removable];
+          return a.input ? [a.id, a.title, a.off] : [a.id, !!a.removable, a.iv || 0, a.it ? 1 : 0];
         }),
         x.config,
         rank,
@@ -302,7 +302,7 @@ function load() {
       apps = x.apps.map(function (a) {
         return a.input
           ? { id: a.id, title: a.title, input: a.input, off: !!a.off }
-          : { id: a.id, title: a.title, removable: !!a.removable };
+          : { id: a.id, title: a.title, removable: !!a.removable, iv: a.iv || 0, it: a.it ? 1 : 0 };
       });
       cfg = x.config || {};
       tunerOn = x.tuner === true; // the service found LG's own Live TV (the tuner): Customise can offer a TV button

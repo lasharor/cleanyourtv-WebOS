@@ -30,6 +30,7 @@
 | `wallpapers.js` | Wallpapers: the photo library (uploads and Immich, apart on disk, with an index), the phone page on port 8791 and the Immich sync. |
 | `androidbox.js`, `adbclient.js`, `androidboxpage.js` | Apps that open on an Android box: the settings and the launch hook, our own ADB client (packets, key, sign-in, one shell command; no `adb` program), and the phone page on port 8793. |
 | `cards.js`, `weather.js` | Cards: the shape check of the cards the launcher saves, the phone page on port 8792 where their options are typed, and the weather card's Open-Meteo requests (kept 30 minutes). |
+| `icons.js` | App icons: a picture of your own per app in `icons/` (Icon) or `icons/tile/` (Full tile; the app's own files are never touched), the phone page on port 8794 where it is chosen with a preview and the sizes that fit the theme's tiles, and the reset; `apps.js` sends the picture first on `/icon/<app id>` and marks the app with `iv` (and `it` for Full tile) in `/api/apps`. |
 | `theme.js`, `themeschema.js` | Themes: `themeschema.js` holds every setting a theme can make, the checks and how a theme becomes CSS variables; `theme.js` reads themes from GitHub and keeps them on the TV. |
 | `voice.js`, `answers.js` | Voice: the microphone, the recogniser, the phone setup page; `answers.js` asks Home Assistant, a language model or your server. |
 | `selfupdate.js`, `sharelog.js` | Programs the manager runs when the service is not running. |

@@ -21,7 +21,7 @@ yours to change.
 | Action | How |
 |---|---|
 | Open an app | OK |
-| App options (move, dock, hide, uninstall) | Hold OK on an app |
+| App options (move, dock, icon, hide, uninstall) | Hold OK on an app |
 | Move or remove a top button | Hold OK on it |
 | Customise | The **Customise** button |
 | Live TV | The **Live TV** button or tile |
@@ -53,7 +53,7 @@ system apps are never in it. The list is read when it opens and closes when you 
 **Customise** holds how Home looks:
 
 - the **dock**: each app in it can be replaced (an app already in the dock swaps places), moved or removed, and **Add an app...**
-  fills a free place. Holding OK on an app gives **Move** (to rearrange tiles interactively with arrow keys and confirm with OK), **Add to dock** or **Remove from dock**, **Hide app** and **Uninstall** (with a confirmation prompt, for user-installed LG Store and Homebrew apps);
+  fills a free place. Holding OK on an app gives **Move** (to rearrange tiles interactively with arrow keys and confirm with OK), **Add to dock** or **Remove from dock**, **Change icon** and **Reset icon** (see [Your own icon](#your-own-icon)), **Hide app** and **Uninstall** (with a confirmation prompt, for user-installed LG Store and Homebrew apps);
 - the **top buttons**: move one left or right, remove it, or add Inputs, Settings, Live TV, TV, **Power off** or any app. **TV** opens LG's own Live TV (the
 tuner) and is offered only when the TV has that app and **Show LG's own Live TV** is on in the manager;
   **Power off** asks first and then switches the TV off completely, unlike the remote's power key, which only suspends it (Quick Start+).
@@ -134,6 +134,28 @@ not show as a square. A transparent logo drawn in near-black (made for a white b
 
 An icon that is an opaque square with a transparent margin around it (many LG icons) is enlarged so it fills its tile, and a
 gradient icon in the dock gets a tile with the same gradient ([#3](https://github.com/lasharor/cleanyourtv-WebOS/issues/3)).
+
+### Your own icon
+
+Hold OK on an app and choose **Change icon**: the manager app opens its **App icons** screen with a QR code. On the phone page (port 8794,
+the code shown on the TV, at most an hour) choose **Change** next to the app and a picture. A preview shows it in a dock tile and a grid
+tile of the theme in use, in one of two ways:
+
+- **Full tile** (the default for a photo): the picture covers the whole tile, its middle kept, so any photo works. The phone scales it to
+  1024 pixels on the long side.
+- **Icon** (the default for a picture with see-through parts): the picture sits inside the tile like the app's own icon, with the tile's
+  colour and glow worked out from it; best for a logo on a transparent background. The phone scales it to 512 pixels.
+
+A photo is sent as JPEG; a picture with see-through parts as PNG (made smaller when needed to fit in 1 MB), so it stays see-through in
+either way of showing it.
+
+The screen on the TV and the phone page give the sizes that fit best: for Full tile the size of a dock tile in the panel's own pixels
+(the grid's tiles, which are squarer, show its middle), for Icon 512 x 512. They follow the theme, and the manager measures the screen's
+scale, so a 4K TV, where Home is drawn at 3840 x 2160, gets twice the size of its CSS pixels. Back on Home the tile shows the picture in
+the dock, the grid and the Inputs list. **Reset icon**, on Home or on the phone page, gives the app its own icon again. The pictures (JPEG,
+PNG or WebP, at most 1 MB) are kept in `/media/developer/cleanyourtv/icons/` (Icon) and `icons/tile/` (Full tile), one per app, at most
+300; the app's own files are never touched, so the picture stays when the app or CleanYourTV updates. **More** > **App icons** in the
+manager opens the same page.
 
 ## Language
 

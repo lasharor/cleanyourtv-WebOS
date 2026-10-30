@@ -56,6 +56,7 @@ if (notify) load('voice', () => require('./voice').create(ctx));
 load('live', () => require('./live').create(ctx));
 load('theme', () => require('./theme').create(ctx));
 load('wallpapers', () => require('./wallpapers').create(ctx));
+load('icons', () => require('./icons').create(ctx));
 load('cards', () => require('./cards').create(ctx));
 const inputkey = load('inputkey', () => require('./inputkey').create(ctx));
 if (notify) load('notifyapi', () => require('./notifyapi').create(ctx));

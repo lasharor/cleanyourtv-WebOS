@@ -285,6 +285,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       'live',
       'theme',
       'wallpapers',
+      'icons',
       'cards',
       'inputkey',
       'notifyapi',

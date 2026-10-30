@@ -1,5 +1,11 @@
 /* ---------- tiles (built once per app, reused across rebuilds) ---------- */
 function tile(a) {
+  /* a new custom icon (iv, helper/icons.js) or a new way to show it (it: Full tile): build the tile again, with the colour of the new picture */
+  if (tiles[a.id] && ((tiles[a.id]._iv || 0) !== (a.iv || 0) || (tiles[a.id]._it || 0) !== (a.it ? 1 : 0))) {
+    delete tiles[a.id];
+    delete colors[a.id];
+    storeSoon();
+  }
   if (tiles[a.id]) {
     tiles[a.id]._a = a;
     return a.input ? inputTile(tiles[a.id], a) : tiles[a.id];
@@ -7,6 +13,8 @@ function tile(a) {
   var d = document.createElement('div');
   d.className = 'tile' + (a.sys ? ' sys' : '');
   d._a = a;
+  d._iv = a.iv || 0;
+  d._it = a.it ? 1 : 0;
   tiles[a.id] = d;
   hit(d);
   if (a.sys) {
@@ -63,7 +71,7 @@ function tile(a) {
       paint(d, { c: f, b: hsl2rgb(hashHue(a.id), 0.4, 0.2) });
     }
   }; /* not remembered: a failed load must not pin a made-up colour */
-  i.src = a.id === '__live' ? LIVE_ICON : API + '/icon/' + encodeURIComponent(a.id);
+  i.src = a.id === '__live' ? LIVE_ICON : API + '/icon/' + encodeURIComponent(a.id) + (a.iv ? '?v=' + a.iv : '');
   d.appendChild(i);
   if (i.decode) i.decode().catch(function () {});
   return d;
