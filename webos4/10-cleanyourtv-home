@@ -1,0 +1,4 @@
+#!/bin/sh
+# Install only after physical HOME validation and explicit boot approval.
+umask 077
+exec sh /var/lib/webosbrew/cleanyourtv-home/home-startup.sh start >>/var/lib/webosbrew/cleanyourtv-home/startup.log 2>&1

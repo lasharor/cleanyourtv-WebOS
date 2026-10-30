@@ -8,6 +8,9 @@
 # Environment: CYTV_REPO=owner/name (default lasharor/cleanyourtv-WebOS)  CYTV_IPK=/path/to/package.ipk (use a local package)
 #   CYTV_CHANNEL=dev  install the dev build (the pre-release dev, rebuilt on every change) and keep following it; the manager app
 #   can switch back to the stable releases (Update channel). CYTV_BRANCH=<anything>, from before the dev builds, means the same.
+# From a local checkout, --check only inventories the TV; it does not install or make webOS 4 supported.
+# A built local kit also supports --webos4 check|install|start|stop|status|show for the experimental SDK 4 profile.
+# That branch installs a separate original-UI candidate and never runs the systemd/Home replacement setup below.
 
 main() {
   REPO="${CYTV_REPO:-lasharor/cleanyourtv-WebOS}"
@@ -15,7 +18,24 @@ main() {
   export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
   say() { echo "[cleanyourtv] $*"; }
   die() { echo "[cleanyourtv] ERROR: $*" >&2; exit 1; }
-  case "$1" in -h|--help) sed -n '2,8p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//'; return 0 ;; "") ;; *) die "unknown option: $1" ;; esac
+  case "$1" in
+    --webos4)
+      PORT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+      [ -f "$PORT_DIR/scripts/bootstrap.sh" ] || die 'Local webOS 4 install kit required'
+      shift
+      sh "$PORT_DIR/scripts/bootstrap.sh" webos4 "$@"
+      return $?
+      ;;
+    --check)
+      CHECK_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+      [ -f "$CHECK_DIR/scripts/check-tv.sh" ] || die '--check requires a local repository checkout; nothing changed'
+      sh "$CHECK_DIR/scripts/check-tv.sh"
+      return $?
+      ;;
+    -h|--help) sed -n '2,8p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//'; return 0 ;;
+    "") ;;
+    *) die "unknown option: $1" ;;
+  esac
 
   [ "$(id -u)" = 0 ] || die "run as root (ssh root@<tv-ip>)"
   command -v luna-send >/dev/null || die "this does not look like webOS (no luna-send)"

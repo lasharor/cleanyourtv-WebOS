@@ -1,0 +1,54 @@
+{
+  "configs": {
+    "com.webos.surfacemanager.keyFilters": [
+      {
+        "handler": "handleScreenSaver",
+        "file": "/usr/lib/qt5/qml/KeyFilters/systemUi.js"
+      },
+      {
+        "handler": "handleAccessibility",
+        "file": "/usr/lib/qt5/qml/KeyFilters/appLaunch.js"
+      },
+      {
+        "handler": "handleAvReset",
+        "file": "/usr/lib/qt5/qml/KeyFilters/appLaunch.js"
+      },
+      {
+        "handler": "handleMagnifier",
+        "file": "/usr/lib/qt5/qml/KeyFilters/systemUi.js"
+      },
+      {
+        "handler": "handleLowSpeedDataBroadcast",
+        "file": "/usr/lib/qt5/qml/KeyFilters/appLaunch.js"
+      },
+      {
+        "handler": "handleSystemKeys",
+        "file": "/usr/lib/qt5/qml/KeyFilters/systemUi.js"
+      },
+      {
+        "handler": "handleHotkeys",
+        "file": "/usr/lib/qt5/qml/KeyFilters/appLaunch.js"
+      },
+      {
+        "handler": "handleCPHotkeys",
+        "file": "/usr/lib/qt5/qml/KeyFilters/appLaunch.js"
+      },
+      {
+        "handler": "handleFactoryKeys",
+        "file": "/usr/lib/qt5/qml/KeyFilters/appLaunch.js"
+      },
+      {
+        "handler": "handleTvhotkeyAppLaunch",
+        "file": "/usr/lib/qt5/qml/KeyFilters/appLaunch.js"
+      },
+      {
+        "handler": "handleLocalKeys",
+        "file": "/usr/lib/qt5/qml/KeyFilters/appLaunch.js"
+      },
+      {
+        "handler": "handleMagicNumber",
+        "file": "/usr/lib/qt5/qml/KeyFilters/systemUi.js"
+      }
+    ]
+  }
+}

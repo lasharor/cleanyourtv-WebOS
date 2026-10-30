@@ -4,3 +4,8 @@ site/
 .venv/
 node_modules/
 .lint-pages/
+
+webos4/runtime/
+webos4/state/
+__pycache__/
+webos4/systemUi*.js

@@ -12,6 +12,7 @@ const OUR_APPS = /^file:\/\/((com\.webos\.app\.home|com\.cleanyourtv\.(manager|p
 
 function create(opts) {
   const features = opts.features; // a function returning the loaded features, in order
+  const appOrigins = opts.appOrigins || OUR_APPS;
   const route = u => {
     for (const f of features()) {
       if (f.paths && f.paths.indexOf(u) >= 0) return f;
@@ -22,7 +23,7 @@ function create(opts) {
   return http.createServer(async (req, res) => {
     let origin = req.headers.origin;
     const rawOrigin = origin;
-    if (OUR_APPS.test(origin || '')) origin = 'null';
+    if (appOrigins.test(origin || '')) origin = 'null';
     if (origin !== undefined && origin !== 'null') {
       console.log('refused origin ' + origin + ' ' + req.method + ' ' + req.url.slice(0, 60));
       return web.json(res, { error: 'origin not allowed' }, 403);

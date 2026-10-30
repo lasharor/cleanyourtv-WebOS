@@ -1,0 +1,10 @@
+[
+  [
+    "\n        if (key === Qt.Key_Super_L) {\n            if (pressed) {\n                if (autoRepeat)\n",
+    "\n        if (key === Qt.Key_Super_L) {\n            if (fullscreenView.appId === \"com.cleanyourtv.webos4\") {\n                if (!pressed && longPressTimer.isRunning(key))\n                    longPressTimer.cancel();\n                return KeyPolicy.Accepted;\n            }\n            if (pressed) {\n                if (autoRepeat)\n"
+  ],
+  [
+    "                performanceLog.time(\"HOME_LAUNCHER_SHOWN\", {\"PerfType\":\"LSM\", \"PerfGroup\":\"HomeScreenShown\"});\n                if (longPressTimer.isRunning(key)) {\n                    global.goHome();\n                    longPressTimer.cancel();\n                }\n            }\n        } else if (key === Qt.Key_Menu) {\n            if (pressed)\n",
+    "                performanceLog.time(\"HOME_LAUNCHER_SHOWN\", {\"PerfType\":\"LSM\", \"PerfGroup\":\"HomeScreenShown\"});\n                if (longPressTimer.isRunning(key)) {\n                    longPressTimer.cancel();\n                    if (typeof lunaCall !== \"undefined\" && lunaCall.send) {\n                        var origin = fullscreenView.appId;\n                        var params = {};\n                        if (typeof origin === \"string\" && /^[\\w.\\-]{1,200}$/.test(origin))\n                            params.cytvPreviousAppId = origin;\n                        lunaCall.send('com.webos.applicationManager', '/launch', JSON.stringify({id: \"com.cleanyourtv.webos4\", params: params}));\n                    } else if (typeof applicationManager !== \"undefined\" && applicationManager.launch) {\n                        applicationManager.launch(\"com.cleanyourtv.webos4\");\n                    } else {\n                        global.goHome();\n                    }\n                }\n            }\n            return KeyPolicy.Accepted;\n        } else if (key === Qt.Key_Menu) {\n            if (pressed)\n"
+  ]
+]

@@ -14,11 +14,12 @@ const mistakes = {
 
 module.exports = [
   {
-    files: ['helper/*.js', 'scripts/jtool.js', 'tools/**/*.js'],
+    files: ['helper/*.js', 'scripts/jtool.js', 'webos4/*.js', 'tools/**/*.js'],
     ignores: ['tools/vendor/**'],
     languageOptions: { ecmaVersion: 2018, sourceType: 'commonjs', globals: Object.assign({}, globals.node) },
     rules: mistakes,
   },
+  { files: ['webos4/runtime-install.js'], languageOptions: { ecmaVersion: 5, sourceType: 'commonjs' } },
   {
     // the scripts of the built pages, given to ESLint by tools/lint.js
     files: ['**/*.page.js'],

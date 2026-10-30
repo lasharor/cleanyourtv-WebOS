@@ -1,0 +1,1468 @@
+<!doctype html>
+<!-- CleanYourTV webOS 4 – TV launcher.
+     Built by tools/build-pages.js from webos4/src. Edit the source files, not this one. -->
+<html><head><meta charset="utf-8"><title>CleanYourTV</title>
+<meta name="viewport" content="width=1920">
+<style>
+/* Fixed 1080p TV layout, Chromium 53. Static focus avoids rounded-corner repaint glitches. */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html,
+body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #111318;
+  color: #f3f1eb;
+  font-family: "LG Smart UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+}
+button {
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+#stage {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #111318;
+}
+
+#topbar {
+  position: absolute;
+  left: 76px;
+  right: 76px;
+  top: 56px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+}
+#clock-wrap {
+  display: flex;
+  align-items: baseline;
+}
+#clock {
+  font-size: 58px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+#date {
+  margin-left: 24px;
+  font-size: 23px;
+  color: #b7b9c2;
+}
+#topbar-spacer {
+  flex: 1;
+}
+#bar {
+  display: flex;
+  align-items: center;
+}
+#bar > * + * {
+  margin-left: 16px;
+}
+.pill {
+  display: flex;
+  align-items: center;
+  height: 58px;
+  padding: 0 24px;
+  background: #22252d;
+  border: 1px solid #383b46;
+  border-radius: 30px;
+  font-size: 22px;
+  font-weight: 500;
+}
+.pill-svg {
+  width: 24px;
+  height: 24px;
+  margin-right: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#featured-section {
+  position: absolute;
+  left: 76px;
+  right: 76px;
+  top: 176px;
+}
+.section-head {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 28px;
+}
+.section-kicker {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 40px;
+  letter-spacing: -0.5px;
+}
+.section-sub {
+  margin-left: 24px;
+  font-size: 22px;
+  color: #9ca1ae;
+}
+#featured-row {
+  display: flex;
+}
+#featured-row > * + * {
+  margin-left: 24px;
+}
+.hero-card {
+  flex: 0 0 334px;
+  width: 334px;
+  height: 328px;
+  display: block;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #363a44;
+  border-radius: 20px;
+  background: #22252d;
+}
+.hero-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 182px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero-icon-wrap {
+  width: 172px;
+  height: 172px;
+}
+.brand-image,
+.brand-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.system-icon {
+  padding: 8px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: #c3c7d1;
+}
+.hero-info {
+  position: absolute;
+  top: 182px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18px 24px 20px;
+}
+.hero-tag {
+  display: block;
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #aeb3c0;
+  margin-bottom: 5px;
+}
+.hero-title {
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  white-space: nowrap;
+}
+.hero-desc {
+  font-size: 18px;
+  line-height: 24px;
+  color: #c3c7d1;
+  margin-top: 5px;
+  max-height: 48px;
+  overflow: hidden;
+}
+
+#live-banner {
+  position: absolute;
+  left: 76px;
+  right: 76px;
+  top: 594px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+}
+.banner-badge {
+  display: inline-block;
+  border: 1px solid #747987;
+  border-radius: 8px;
+  padding: 5px 9px;
+  margin-right: 16px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #d8dbe3;
+}
+.banner-text {
+  font-size: 23px;
+  color: #c3c7d1;
+}
+
+#panel {
+  position: absolute;
+  left: 76px;
+  right: 76px;
+  top: 708px;
+  height: 312px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.panel-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.panel-top h2 {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 40px;
+  letter-spacing: -0.5px;
+}
+.panel-top h2 span {
+  font-size: 20px;
+  color: #9298a7;
+  font-weight: 400;
+  margin-left: 12px;
+}
+.panel-top-hints {
+  font-size: 20px;
+  color: #aeb3c0;
+}
+#dock {
+  display: flex;
+  align-items: center;
+  height: 192px;
+  padding: 12px 0;
+  overflow: visible;
+}
+#dock > * + * {
+  margin-left: 20px;
+}
+.dock-item {
+  flex: 0 0 170px;
+  width: 170px;
+  height: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 1px solid #363a44;
+  border-radius: 18px;
+  padding: 16px 10px;
+  background: #22252d;
+}
+.dock-icon-svg {
+  width: 78px;
+  height: 78px;
+  margin-bottom: 14px;
+  display: block;
+}
+.dock-icon-svg .brand-image {
+  border-radius: 12px;
+}
+.dock-title {
+  display: block;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 24px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dock-action {
+  background: transparent;
+  border-color: transparent;
+  color: #c3c7d1;
+}
+.dock-action .dock-icon-svg {
+  width: 44px;
+  height: 44px;
+  margin: 17px 0 31px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.panel-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #2d313b;
+  font-size: 18px;
+  color: #9ca1ae;
+}
+#mode {
+  color: #aeb3c0;
+  letter-spacing: 0.5px;
+}
+.yellow-key {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  background: #e5c768;
+  border-radius: 50%;
+}
+
+.pill:focus,
+.hero-card:focus,
+.dock-item:focus,
+.app-item:focus,
+.input-tile:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 4px #111318,
+    0 0 0 8px #f3f1eb;
+  border-color: #f3f1eb;
+  z-index: 3;
+}
+.pill:focus {
+  background: #f3f1eb;
+  color: #171920;
+}
+.dock-item:focus,
+.app-item:focus,
+.input-tile:focus {
+  background: #323641;
+  color: #f3f1eb;
+}
+
+#drawer {
+  position: absolute;
+  left: 48px;
+  right: 48px;
+  top: 56px;
+  bottom: 48px;
+  padding: 40px 44px 24px;
+  background: #191c23;
+  border: 1px solid #454a56;
+  border-radius: 24px;
+  display: none;
+  flex-direction: column;
+  z-index: 40;
+}
+.drawer-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+.drawer-kicker {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #aeb3c0;
+  margin-bottom: 8px;
+}
+.drawer-head h2 {
+  font-size: 36px;
+  line-height: 44px;
+  font-weight: 600;
+}
+.drawer-head h2 span {
+  font-size: 24px;
+  color: #aeb3c0;
+  margin-left: 10px;
+  font-weight: 400;
+}
+.drawer-head-right {
+  font-size: 18px;
+  color: #aeb3c0;
+  padding-bottom: 6px;
+}
+#app-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 8px 24px;
+}
+#apps {
+  display: flex;
+  flex-wrap: wrap;
+  width: 1720px;
+}
+.app-item {
+  flex: 0 0 260px;
+  width: 260px;
+  height: 180px;
+  margin-right: 32px;
+  margin-bottom: 28px;
+  padding: 18px 16px;
+  border: 1px solid #363a44;
+  border-radius: 18px;
+  background: #22252d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+.app-item:nth-child(6n) {
+  margin-right: 0;
+}
+.app-icon-svg {
+  display: block;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 16px;
+}
+.app-icon-svg .brand-image {
+  border-radius: 12px;
+}
+.app-title {
+  font-size: 21px;
+  line-height: 26px;
+  font-weight: 500;
+  max-height: 52px;
+  overflow: hidden;
+  max-width: 100%;
+  word-break: break-word;
+}
+.fav-star {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 22px;
+  color: #e5c768;
+}
+
+#inputs-modal {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(7, 9, 13, 0.9);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+#inputs-card {
+  width: 1340px;
+  padding: 40px 44px 24px;
+  border-radius: 24px;
+  background: #191c23;
+  border: 1px solid #454a56;
+}
+.inputs-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+.inputs-head h2 {
+  font-size: 36px;
+  font-weight: 600;
+}
+.inputs-head span {
+  font-size: 21px;
+  color: #aeb3c0;
+}
+#inputs-grid {
+  display: flex;
+  flex-wrap: wrap;
+  width: 1252px;
+}
+.input-tile {
+  flex: 0 0 234px;
+  width: 234px;
+  height: 170px;
+  margin-right: 20px;
+  margin-bottom: 24px;
+  border: 1px solid #363a44;
+  border-radius: 18px;
+  background: #22252d;
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+.input-tile:nth-child(5n) {
+  margin-right: 0;
+}
+.input-tile.is-dim {
+  opacity: 0.6;
+}
+.input-svg {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.input-label {
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 28px;
+}
+.input-sub {
+  font-size: 18px;
+  color: #aeb3c0;
+  margin-top: 4px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.input-badge {
+  font-size: 15px;
+  color: #aeb3c0;
+  margin-top: 6px;
+}
+
+#toast {
+  position: absolute;
+  bottom: 360px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 18px 32px;
+  background: #f3f1eb;
+  color: #171920;
+  border-radius: 14px;
+  font-size: 24px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease-out;
+  z-index: 60;
+}
+#toast.on {
+  opacity: 1;
+}
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #616878;
+  border-radius: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  button,
+  #toast {
+    transition: none !important;
+  }
+}
+</style></head><body>
+<div id="stage">
+  <!-- ── Top bar: Clock, Date, and Quick Pills ───────────────── -->
+  <div id="topbar">
+    <div id="clock-wrap">
+      <span id="clock" aria-label="Hora">--:--</span>
+      <span id="date" aria-label="Fecha"></span>
+    </div>
+    <span id="topbar-spacer"></span>
+    <div id="bar" role="toolbar" aria-label="Acciones rapidas">
+      <button class="pill" id="pill-live" type="button">
+        <svg class="pill-svg" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+        Live TV
+      </button>
+      <button class="pill" id="pill-inputs" type="button">
+        <svg class="pill-svg" viewBox="0 0 24 24"><path d="M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+        Entradas
+      </button>
+      <button class="pill" id="pill-settings" type="button">
+        <svg class="pill-svg" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+        Ajustes
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Middle Parent Layout: Destacadas (Always Visible) ───── -->
+  <section id="featured-section" aria-label="Aplicaciones destacadas">
+    <div class="section-head">
+      <h1 class="section-kicker">Para ver</h1>
+      <span class="section-sub">Tus plataformas favoritas</span>
+    </div>
+    <div id="featured-row" role="region" aria-label="Tarjetas destacadas"></div>
+  </section>
+
+  <!-- ── Middle Live Status Banner ────────────────────────────── -->
+  <div id="live-banner" role="status" aria-label="Selección actual">
+    <span class="banner-badge">OK</span>
+    <span class="banner-text" id="live-banner-text">Elige qué quieres ver</span>
+  </div>
+
+  <!-- ── Bottom Panel: Homebar-style Dock ──────────────────── -->
+  <section id="panel" aria-label="Acceso rapido">
+    <div class="panel-top">
+      <div>
+        <h2>Favoritos <span id="fav-count">0/7</span></h2>
+      </div>
+      <div class="panel-top-hints">&#9664; &#9654; Mover &nbsp;·&nbsp; &#9650; Destacadas</div>
+    </div>
+    <div id="dock" aria-label="Favoritos y acciones" role="toolbar"></div>
+    <div class="panel-footer">
+      <span class="remote-help"><span class="yellow-key"></span> Amarillo: añadir o quitar favorito &nbsp;·&nbsp; Atrás: volver</span>
+      <span id="mode">CleanYourTV</span>
+    </div>
+  </section>
+
+  <!-- ── Full Library Drawer (Modal Overlay) ────────────────── -->
+  <section id="drawer" aria-label="Todas las aplicaciones">
+    <div class="drawer-head">
+      <div>
+        <div class="drawer-kicker">BIBLIOTECA</div>
+        <h2>Todas las aplicaciones <span id="app-count"></span></h2>
+      </div>
+      <div class="drawer-head-right">&#9650;/&#9660; Desplazar &nbsp;·&nbsp; OK Abrir &nbsp;·&nbsp; Amarillo Favorito &nbsp;·&nbsp; Atrás Cerrar</div>
+    </div>
+    <div id="app-scroll"><div id="apps"></div></div>
+  </section>
+
+  <!-- ── Inputs Switcher Modal ─────────────────────────────── -->
+  <div id="inputs-modal" role="dialog" aria-modal="true" aria-label="Selector de entradas">
+    <div id="inputs-card">
+      <div class="inputs-head">
+        <h2>Entradas de vídeo</h2>
+        <span>OK para cambiar · Atrás para cancelar</span>
+      </div>
+      <div id="inputs-grid"></div>
+    </div>
+  </div>
+
+  <!-- ── Toast Feedback ─────────────────────────────────────── -->
+  <div id="toast" aria-live="assertive" role="alert"></div>
+</div>
+<script>
+// CleanYourTV webOS 4 – Homebar-style Hybrid Launcher.
+// Compatible with Chromium 53 on LG webOS 4.4.3.
+// Strict ES5: var, function, XMLHttpRequest, no modern syntax.
+'use strict';
+
+var API = 'http://127.0.0.1:8765';
+var STORAGE_KEY = 'cytv.webos4.favs.v5';
+var MAX_FAV = 7;
+var COLS_DRAWER = 6;
+
+var SYSTEM_ICONS = {
+  'com.palm.app.settings': '<path d="M6 3v18M12 3v18M18 3v18M3 8h6M9 16h6M15 10h6"/>',
+  'org.webosbrew.inputhook': '<rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="9" r="3"/><path d="M10 16h4M10 19h4"/>',
+  'com.webos.app.miracast': '<path d="M3 9V4h18v14h-7M3 13a8 8 0 0 1 8 8M3 17a4 4 0 0 1 4 4M3 21h.01"/>',
+  'com.webos.app.recordings': '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="12" cy="12" r="4"/>',
+  'com.webos.app.scheduler': '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6M17 2v6M3 11h18M8 15h2M14 15h2M8 18h2"/>',
+};
+
+// Featured hero cards for the middle row
+var FEATURED_APPS = [
+  { id: 'youtube.leanback.v4', title: 'YouTube', desc: 'Vídeos, música y tus canales', surface: '#ffffff', tag: 'Vídeos' },
+  { id: 'netflix', title: 'Netflix', desc: 'Series, películas y documentales', surface: '#ffffff', tag: 'Cine y series' },
+  { id: 'com.disney.disneyplus-prod', title: 'Disney+', desc: 'Disney, Pixar, Marvel y Star Wars', surface: '#054553', tag: 'Para todos' },
+  { id: 'com.telefonica.app.nux', title: 'Movistar Plus+', desc: 'Cine y deporte en directo', surface: '#000000', tag: 'Televisión' },
+  { id: 'com.webos.app.livetv', title: 'Live TV', desc: 'Tus canales de antena', surface: '#a3c125', tag: 'Antena · TDT' },
+];
+
+// Display names for known apps; installation status always comes from the helper.
+var APP_DETAILS = [
+  { id: 'youtube.leanback.v4', title: 'YouTube', glow: '#b32d2e' },
+  { id: 'netflix', title: 'Netflix', glow: '#a61c1d' },
+  { id: 'com.disney.disneyplus-prod', title: 'Disney+', glow: '#113ccf' },
+  { id: 'com.telefonica.app.nux', title: 'Movistar Plus+', glow: '#005c8a' },
+  { id: 'dazn', title: 'DAZN', glow: '#f8f850' },
+  { id: 'spotify-beehive', title: 'Spotify', glow: '#1db954' },
+  { id: 'com.webos.app.livetv', title: 'Live TV', glow: '#22d3ee' },
+  { id: 'channelplus.eu', title: 'LG Channels', glow: '#a50034' },
+  { id: 'com.webos.app.browser', title: 'Navegador web', glow: '#38bdf8' },
+  { id: 'com.palm.app.settings', title: 'Ajustes', glow: '#e2e8f0' },
+  { id: 'com.webos.app.discovery', title: 'LG Content Store', glow: '#f43f5e' },
+  { id: 'com.webos.app.photovideo', title: 'Foto y Video', glow: '#f59e0b' },
+  { id: 'com.webos.app.music', title: 'Musica', glow: '#ec4899' },
+  { id: 'org.webosbrew.hbchannel', title: 'Homebrew Channel', glow: '#22c55e' },
+  { id: 'org.webosbrew.inputhook', title: 'LG Input Hook', glow: '#4b4860' },
+  { id: 'com.webos.app.miracast', title: 'Screen Share', glow: '#284b63' },
+  { id: 'com.webos.app.recordings', title: 'Grabaciones', glow: '#4a5d4e' },
+  { id: 'com.webos.app.scheduler', title: 'Programador', glow: '#455561' },
+];
+
+var INPUTS_LIST = [
+  {
+    id: 'com.webos.app.livetv',
+    label: 'Live TV',
+    sub: 'Sintonizador / TDT',
+    badge: 'Activa',
+    icon: 'tv',
+    params: { reason: 'recent' },
+    active: true,
+  },
+  { id: 'com.webos.app.hdmi1', label: 'PC', sub: 'HDMI 1', badge: 'Activa', icon: 'hdmi', params: { deviceId: 'HDMI_1' }, active: true },
+  { id: 'com.webos.app.hdmi2', label: 'HDMI 2', sub: 'Puerto 2', badge: 'Disponible', icon: 'hdmi', params: { deviceId: 'HDMI_2' } },
+  {
+    id: 'com.webos.app.externalinput.av1',
+    label: 'AV',
+    sub: 'Video compuesto',
+    badge: 'Disponible',
+    icon: 'av',
+    params: { deviceId: 'AV_1' },
+  },
+  { id: 'com.webos.app.photovideo', label: 'AVM FRITZ!Media', sub: 'Servidor Multimedia', badge: 'Red', icon: 'media', params: {} },
+  { id: 'airplay', label: 'AirPlay', sub: 'Apple AirPlay', badge: 'Listo', icon: 'airplay', params: {} },
+  { id: 'com.webos.app.miracast', label: 'Screen Share', sub: 'Pantalla compartida', badge: 'Listo', icon: 'cast', params: {} },
+  {
+    id: 'com.webos.app.hdmi3',
+    label: 'HDMI 3',
+    sub: 'Puerto 3',
+    badge: 'Inactiva',
+    icon: 'hdmi',
+    params: { deviceId: 'HDMI_3' },
+    dim: true,
+  },
+  {
+    id: 'com.webos.app.externalinput.component',
+    label: 'Componente',
+    sub: 'Entrada YPbPr',
+    badge: 'Inactiva',
+    icon: 'av',
+    params: { deviceId: 'COMP_1' },
+    dim: true,
+  },
+];
+
+var INPUT_SVGS = {
+  tv: '<svg class="input-svg" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 21h8M12 18v3M7 3l5 3 5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>',
+  hdmi: '<svg class="input-svg" viewBox="0 0 24 24"><path d="M4 8h16v7l-3 3H7l-3-3z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 11v3M12 11v3M15 11v3" stroke="currentColor" stroke-width="2"/></svg>',
+  av: '<svg class="input-svg" viewBox="0 0 24 24"><circle cx="7" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 8V4M17 8V4" stroke="currentColor" stroke-width="2"/></svg>',
+  airplay:
+    '<svg class="input-svg" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><polygon points="12,15 17,21 7,21" fill="currentColor"/></svg>',
+  cast: '<svg class="input-svg" viewBox="0 0 24 24"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8A13 13 0 0 1 14 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="3" cy="19" r="1" fill="currentColor"/></svg>',
+  media:
+    '<svg class="input-svg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="currentColor"/><polyline points="21,15 16,10 5,20" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+};
+
+// State
+var allApps = [];
+var loadingApps = false;
+var checkingConnection = false;
+var favIds = [
+  'youtube.leanback.v4',
+  'netflix',
+  'com.disney.disneyplus-prod',
+  'com.telefonica.app.nux',
+  'dazn',
+  'spotify-beehive',
+  'com.webos.app.livetv',
+];
+var view = 'home'; // 'home' | 'apps' | 'inputs'
+var dockButtons = [];
+var featuredButtons = [];
+var appButtons = [];
+var pillButtons = [];
+var inputButtons = [];
+var currentRow = 2; // 0 = pills, 1 = featured, 2 = dock
+var currentCol = 0;
+var toastTimer = null;
+var previousAppId = null;
+
+function rememberPrevious(params) {
+  try {
+    if (typeof params === 'string') params = JSON.parse(params);
+  } catch (_) {
+    params = null;
+  }
+  var id = params && params.cytvPreviousAppId;
+  previousAppId = typeof id === 'string' && /^[\w.\-]{1,200}$/.test(id) && id !== 'com.cleanyourtv.webos4' ? id : null;
+}
+function launched(event) {
+  var platform = window.PalmSystem || window.webOSSystem;
+  rememberPrevious(event && event.detail ? event.detail : platform && platform.launchParams);
+}
+document.addEventListener('webOSLaunch', launched);
+document.addEventListener('webOSRelaunch', launched);
+
+// DOM references
+function $(id) {
+  return document.getElementById(id);
+}
+var elClock = $('clock');
+var elDate = $('date');
+var elDock = $('dock');
+var elFeatured = $('featured-row');
+var elApps = $('apps');
+var elDrawer = $('drawer');
+var elAppCount = $('app-count');
+var elFavCount = $('fav-count');
+var elToast = $('toast');
+var elSelection = $('live-banner-text');
+var elMode = $('mode');
+var elInputsModal = $('inputs-modal');
+var elInputsGrid = $('inputs-grid');
+
+// Clock and calendar
+function tickClock() {
+  var d = new Date();
+  var h = d.getHours();
+  var m = d.getMinutes();
+  elClock.textContent = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  var days = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+  var months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  elDate.textContent = days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()];
+}
+
+// Toast
+function toast(msg) {
+  clearTimeout(toastTimer);
+  elToast.textContent = msg;
+  elToast.className = 'on';
+  toastTimer = setTimeout(function () {
+    elToast.className = '';
+  }, 3000);
+}
+
+function describeApp(app) {
+  elSelection.textContent = app.title + (app.desc ? ' · ' + app.desc : '');
+}
+
+// LocalStorage favorites
+function saveFavs() {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(favIds));
+  } catch (_) {}
+}
+function loadFavs() {
+  var saved;
+  try {
+    saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
+  } catch (_) {
+    saved = null;
+  }
+  if (Array.isArray(saved) && saved.length > 0) {
+    favIds = [];
+    for (var i = 0; i < saved.length && favIds.length < MAX_FAV; i++) {
+      if (typeof saved[i] === 'string' && favIds.indexOf(saved[i]) < 0) favIds.push(saved[i]);
+    }
+  }
+}
+
+function isFav(id) {
+  return favIds.indexOf(id) >= 0;
+}
+
+function byId(id) {
+  for (var i = 0; i < allApps.length; i++) if (allApps[i].id === id) return allApps[i];
+  return null;
+}
+
+function readHelper(path, done) {
+  var xhr;
+  var finished = false;
+  function finish(error, data) {
+    if (finished) return;
+    finished = true;
+    done(error, data);
+  }
+  try {
+    xhr = new XMLHttpRequest();
+    xhr.open('GET', API + path, true);
+    xhr.timeout = 10000;
+    xhr.onload = function () {
+      if (xhr.status !== 200) return finish(true);
+      var data;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch (_) {
+        return finish(true);
+      }
+      finish(false, data);
+    };
+    xhr.onerror = xhr.ontimeout = function () {
+      finish(true);
+    };
+    xhr.send();
+  } catch (_) {
+    finish(true);
+  }
+}
+
+function loadApps() {
+  if (loadingApps) return;
+  loadingApps = true;
+  readHelper('/api/apps', function (error, data) {
+    loadingApps = false;
+    if (
+      error ||
+      !data ||
+      !Array.isArray(data.apps) ||
+      !data.apps.every(function (app) {
+        return (
+          app && typeof app.id === 'string' && /^[\w.\-]{1,200}$/.test(app.id) && (app.title === undefined || typeof app.title === 'string')
+        );
+      })
+    ) {
+      elMode.textContent = 'Sin conexión con el helper';
+      toast('No se pudo consultar la lista de aplicaciones');
+      return;
+    }
+    var focused = document.activeElement;
+    var id = focused && focused._app && focused._app.id;
+    var action = focused && focused._action;
+    var wasLibrary = appButtons.indexOf(focused) >= 0;
+    var wasFeatured = featuredButtons.indexOf(focused) >= 0;
+    allApps = data.apps.map(function (app) {
+      var title = app.title || app.id;
+      for (var i = 0; i < APP_DETAILS.length; i++) {
+        if (APP_DETAILS[i].id === app.id) {
+          title = APP_DETAILS[i].title;
+          break;
+        }
+      }
+      return { id: app.id, title: title };
+    });
+    renderDock();
+    renderApps();
+    elMode.textContent = allApps.length + ' apps · Conectado';
+    if (id || action) {
+      var buttons = wasLibrary ? appButtons : wasFeatured ? featuredButtons : dockButtons;
+      for (var j = 0; j < buttons.length; j++) {
+        if ((id && buttons[j]._app && buttons[j]._app.id === id) || (action && buttons[j]._action === action)) {
+          buttons[j].focus();
+          return;
+        }
+      }
+      if (buttons.length) buttons[0].focus();
+    }
+  });
+}
+
+function checkConnection() {
+  if (checkingConnection) return;
+  checkingConnection = true;
+  var started = Date.now();
+  elMode.textContent = 'Comprobando conexión…';
+  readHelper('/api/service', function (error, data) {
+    checkingConnection = false;
+    if (error || !data || typeof data.version !== 'string' || typeof data.readOnly !== 'boolean') {
+      elMode.textContent = 'Sin conexión con el helper';
+      toast('El helper no responde. Vuelve a comprobar la conexión.');
+      return;
+    }
+    elMode.textContent = 'Conectado · ' + (data.readOnly ? 'solo lectura' : Date.now() - started + ' ms');
+    toast('Conexión correcta con el helper');
+  });
+}
+
+function appIconMarkup(id) {
+  if (Object.prototype.hasOwnProperty.call(SYSTEM_ICONS, id))
+    return '<svg class="brand-svg system-icon" viewBox="0 0 24 24" aria-hidden="true">' + SYSTEM_ICONS[id] + '</svg>';
+  if (/^[\w.-]{1,200}$/.test(id) && byId(id))
+    return '<img class="brand-image" src="' + API + '/icon/' + encodeURIComponent(id) + '" alt="" draggable="false">';
+  return '<svg class="brand-svg" viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="10" width="17" height="17" rx="4" fill="currentColor"/><rect x="37" y="10" width="17" height="17" rx="4" fill="currentColor"/><rect x="10" y="37" width="17" height="17" rx="4" fill="currentColor"/><rect x="37" y="37" width="17" height="17" rx="4" fill="currentColor"/></svg>';
+}
+
+// Application Launch: the helper applies LG's captured source activation requests.
+function launchApp(id, params) {
+  var targetApp = byId(id);
+  var title = targetApp ? targetApp.title : id;
+  if (!targetApp) {
+    for (var i = 0; i < INPUTS_LIST.length; i++) {
+      if (INPUTS_LIST[i].id === id) {
+        title = INPUTS_LIST[i].label;
+        break;
+      }
+    }
+  }
+  toast('Abriendo ' + title + '…');
+
+  var payload = { id: id };
+  if (params) {
+    payload.params = params;
+  } else {
+    if (id === 'com.webos.app.hdmi1') payload.params = { deviceId: 'HDMI_1' };
+    else if (id === 'com.webos.app.hdmi2') payload.params = { deviceId: 'HDMI_2' };
+    else if (id === 'com.webos.app.hdmi3') payload.params = { deviceId: 'HDMI_3' };
+    else if (id === 'com.webos.app.externalinput.av1') payload.params = { deviceId: 'AV_1' };
+    else if (id === 'com.webos.app.externalinput.component') payload.params = { deviceId: 'COMP_1' };
+  }
+
+  // Keep this page available for HOME; hidden-page close timers can fire when it resumes.
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', API + '/api/launch', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 10000;
+    xhr.onload = function () {
+      var result;
+      try {
+        result = JSON.parse(xhr.responseText);
+      } catch (_) {
+        return;
+      }
+      if (xhr.status !== 200 || result.returnValue !== true) toast('No se pudo abrir ' + title);
+    };
+    xhr.onerror = function () {
+      toast('El helper no está disponible. Comprueba Conexión.');
+    };
+    xhr.ontimeout = function () {
+      // The first request may have reached LG: never race it with another launch.
+      toast('La apertura tarda en responder. Comprueba la fuente antes de volver a abrirla.');
+    };
+    xhr.send(JSON.stringify(payload));
+  } catch (_) {
+    toast('No se pudo contactar con el helper. Comprueba Conexión.');
+  }
+}
+
+// Toggle favorites with Yellow key
+function toggleFav(app) {
+  var pos = favIds.indexOf(app.id);
+  if (pos >= 0) {
+    favIds.splice(pos, 1);
+    toast('Quitado de favoritos: ' + (app.title || app.id));
+  } else {
+    if (favIds.length >= MAX_FAV) {
+      toast('Maximo ' + MAX_FAV + ' favoritos. Quita uno primero.');
+      return;
+    }
+    favIds.push(app.id);
+    toast('Anadido a favoritos: ' + (app.title || app.id));
+  }
+  saveFavs();
+  renderDock();
+  renderApps();
+}
+
+// Render Featured Widescreen Cards in the middle of parent layout
+function renderFeatured() {
+  var nodes = [];
+  for (var i = 0; i < FEATURED_APPS.length; i++) {
+    (function (item) {
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'hero-card';
+
+      var top = document.createElement('div');
+      top.className = 'hero-top';
+      top.style.backgroundColor = item.surface;
+
+      var iconWrap = document.createElement('div');
+      iconWrap.className = 'hero-icon-wrap';
+      iconWrap.innerHTML = appIconMarkup(item.id);
+      top.appendChild(iconWrap);
+
+      var tag = document.createElement('span');
+      tag.className = 'hero-tag';
+      tag.textContent = item.tag || 'Destacada';
+      card.appendChild(top);
+
+      var info = document.createElement('div');
+      info.className = 'hero-info';
+      info.appendChild(tag);
+
+      var title = document.createElement('div');
+      title.className = 'hero-title';
+      title.textContent = item.title;
+      info.appendChild(title);
+
+      var desc = document.createElement('div');
+      desc.className = 'hero-desc';
+      desc.textContent = item.desc;
+      info.appendChild(desc);
+
+      card.appendChild(info);
+
+      card.onclick = function () {
+        launchApp(item.id);
+      };
+      card.onfocus = function () {
+        describeApp(item);
+      };
+      card._app = item;
+      nodes.push(card);
+    })(FEATURED_APPS[i]);
+  }
+
+  while (elFeatured.firstChild) elFeatured.removeChild(elFeatured.firstChild);
+  for (var j = 0; j < nodes.length; j++) elFeatured.appendChild(nodes[j]);
+  featuredButtons = nodes;
+}
+
+// Action button creator for dock
+function actionBtn(label, iconSvg, actionId, handler) {
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'dock-item dock-action';
+  btn._action = actionId;
+
+  var iconDiv = document.createElement('div');
+  iconDiv.innerHTML = iconSvg;
+  btn.appendChild(iconDiv.firstChild);
+
+  var title = document.createElement('span');
+  title.className = 'dock-title';
+  title.textContent = label;
+  btn.appendChild(title);
+
+  btn.onclick = handler;
+  btn.onfocus = function () {
+    elSelection.textContent = label;
+  };
+  return btn;
+}
+
+// Render Homebar-style Bottom Dock
+function renderDock() {
+  var nodes = [];
+
+  for (var i = 0; i < favIds.length; i++) {
+    var app = byId(favIds[i]);
+    if (!app) continue;
+    (function (a) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'dock-item';
+
+      var iconDiv = document.createElement('div');
+      iconDiv.className = 'dock-icon-svg';
+      iconDiv.innerHTML = appIconMarkup(a.id);
+      btn.appendChild(iconDiv);
+
+      var ttl = document.createElement('span');
+      ttl.className = 'dock-title';
+      ttl.textContent = a.title || a.id;
+      btn.appendChild(ttl);
+
+      btn.onclick = function () {
+        launchApp(a.id);
+      };
+      btn.onfocus = function () {
+        describeApp(a);
+      };
+      btn._app = a;
+      nodes.push(btn);
+    })(app);
+  }
+
+  // All Apps Action
+  var allIcon = '<svg class="dock-icon-svg" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>';
+  nodes.push(actionBtn('Todas', allIcon, 'apps', showApps));
+
+  // This checks only the local helper; it never installs or updates software.
+  var connectionIcon =
+    '<svg class="dock-icon-svg" viewBox="0 0 24 24"><path d="M7 3v5M17 3v5M5 8h14v3a7 7 0 0 1-7 7v3M5 8V6M19 8V6"/></svg>';
+  nodes.push(actionBtn('Conexión', connectionIcon, 'connection', checkConnection));
+
+  while (elDock.firstChild) elDock.removeChild(elDock.firstChild);
+  for (var j = 0; j < nodes.length; j++) elDock.appendChild(nodes[j]);
+  dockButtons = nodes;
+
+  elFavCount.textContent = nodes.length - 2 + '/' + MAX_FAV;
+}
+
+// Render All-Apps Library Drawer
+function renderApps() {
+  var nodes = [];
+  for (var i = 0; i < allApps.length; i++) {
+    (function (app) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'app-item';
+
+      var iconDiv = document.createElement('div');
+      iconDiv.className = 'app-icon-svg';
+      iconDiv.innerHTML = appIconMarkup(app.id);
+      btn.appendChild(iconDiv);
+
+      var ttl = document.createElement('span');
+      ttl.className = 'app-title';
+      ttl.textContent = app.title || app.id;
+      btn.appendChild(ttl);
+
+      if (isFav(app.id)) {
+        var star = document.createElement('span');
+        star.className = 'fav-star';
+        star.textContent = '\u2605';
+        btn.appendChild(star);
+      }
+
+      btn.onclick = function () {
+        launchApp(app.id);
+      };
+      btn.onfocus = function () {
+        describeApp(app);
+      };
+      btn._app = app;
+      nodes.push(btn);
+    })(allApps[i]);
+  }
+
+  while (elApps.firstChild) elApps.removeChild(elApps.firstChild);
+  for (var j = 0; j < nodes.length; j++) elApps.appendChild(nodes[j]);
+  appButtons = nodes;
+  elAppCount.textContent = '(' + allApps.length + ')';
+}
+
+// Render Inputs Selector Grid
+function renderInputs() {
+  var nodes = [];
+  for (var i = 0; i < INPUTS_LIST.length; i++) {
+    (function (inp) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'input-tile' + (inp.active ? ' is-active' : '') + (inp.dim ? ' is-dim' : '');
+      var svgIcon = INPUT_SVGS[inp.icon] || INPUT_SVGS.hdmi;
+
+      btn.innerHTML =
+        svgIcon +
+        '<div class="input-label">' +
+        inp.label +
+        '</div>' +
+        '<div class="input-sub">' +
+        (inp.sub || '') +
+        '</div>' +
+        '<div class="input-badge">' +
+        inp.badge +
+        '</div>';
+
+      btn.onclick = function () {
+        hideInputs();
+        launchApp(inp.id, inp.params);
+      };
+      nodes.push(btn);
+    })(INPUTS_LIST[i]);
+  }
+
+  while (elInputsGrid.firstChild) elInputsGrid.removeChild(elInputsGrid.firstChild);
+  for (var j = 0; j < nodes.length; j++) elInputsGrid.appendChild(nodes[j]);
+  inputButtons = nodes;
+}
+
+// Show/Hide Library Drawer
+function showApps() {
+  if (view === 'apps') return;
+  loadApps();
+  view = 'apps';
+  elDrawer.style.display = 'flex';
+  if (appButtons.length) {
+    appButtons[0].focus();
+    appButtons[0].scrollIntoView(false);
+  }
+}
+function hideApps() {
+  view = 'home';
+  elDrawer.style.display = 'none';
+  currentRow = 2; // dock
+  for (var i = 0; i < dockButtons.length; i++) {
+    if (dockButtons[i]._action === 'apps') {
+      dockButtons[i].focus();
+      return;
+    }
+  }
+  if (dockButtons.length) dockButtons[0].focus();
+}
+
+// Show/Hide Inputs Selector
+function showInputs() {
+  view = 'inputs';
+  elInputsModal.style.display = 'flex';
+  if (inputButtons.length) inputButtons[0].focus();
+}
+function hideInputs() {
+  view = 'home';
+  elInputsModal.style.display = 'none';
+  pillButtons[1].focus(); // Entradas pill
+}
+
+// Quick action pill handlers
+pillButtons = [$('pill-live'), $('pill-inputs'), $('pill-settings')];
+
+$('pill-live').onclick = function () {
+  launchApp('com.webos.app.livetv', { reason: 'recent' });
+};
+$('pill-inputs').onclick = function () {
+  showInputs();
+};
+$('pill-settings').onclick = function () {
+  launchApp('com.palm.app.settings');
+};
+
+for (var p = 0; p < pillButtons.length; p++) {
+  pillButtons[p].onfocus = function () {
+    elSelection.textContent = this.textContent.trim();
+  };
+}
+
+// Navigate array with arrow keys
+function navigate(arr, index, delta) {
+  var next = index + delta;
+  if (next < 0 || next >= arr.length) return;
+  arr[next].focus();
+  if (arr === appButtons) arr[next].scrollIntoView(false);
+}
+
+// Keyboard / Remote D-pad Navigation
+document.addEventListener('keydown', function (ev) {
+  var key = ev.keyCode;
+  var cur = document.activeElement;
+
+  // Back / Return / Esc (461 = LG Back, 27 = Esc)
+  if (key === 461 || key === 27) {
+    ev.preventDefault();
+    if (ev.repeat) return;
+    if (view === 'apps') {
+      hideApps();
+      return;
+    }
+    if (view === 'inputs') {
+      hideInputs();
+      return;
+    }
+    if (previousAppId) launchApp(previousAppId);
+    else toast('No hay una app anterior. Abre CleanYourTV con HOME.');
+    return;
+  }
+
+  // Yellow key (405) – toggle favorite
+  if (key === 405 && cur && cur._app) {
+    ev.preventDefault();
+    toggleFav(cur._app);
+    return;
+  }
+
+  // OK / Enter (13)
+  if (key === 13) {
+    ev.preventDefault();
+    if (cur && cur.click) cur.click();
+    return;
+  }
+
+  // Arrow keys (37 = Left, 38 = Up, 39 = Right, 40 = Down)
+  if (key < 37 || key > 40) return;
+  ev.preventDefault();
+
+  // Mode: Inputs Selector Modal (5 columns grid)
+  if (view === 'inputs') {
+    var inIdx = inputButtons.indexOf(cur);
+    if (inIdx < 0) {
+      if (inputButtons.length) inputButtons[0].focus();
+      return;
+    }
+    var COLS_INP = 5;
+    if (key === 37 && inIdx % COLS_INP !== 0) navigate(inputButtons, inIdx, -1);
+    if (key === 39 && inIdx % COLS_INP !== COLS_INP - 1) navigate(inputButtons, inIdx, 1);
+    if (key === 38) {
+      if (inIdx >= COLS_INP) navigate(inputButtons, inIdx, -COLS_INP);
+    }
+    if (key === 40) {
+      if (inIdx + COLS_INP < inputButtons.length) navigate(inputButtons, inIdx, COLS_INP);
+    }
+    return;
+  }
+
+  // Mode: All-Apps Library Drawer
+  if (view === 'apps') {
+    var idx = appButtons.indexOf(cur);
+    if (idx < 0) {
+      if (appButtons.length) appButtons[0].focus();
+      return;
+    }
+    if (key === 37 && idx % COLS_DRAWER !== 0) navigate(appButtons, idx, -1);
+    if (key === 39 && idx % COLS_DRAWER !== COLS_DRAWER - 1) navigate(appButtons, idx, 1);
+    if (key === 38) {
+      if (idx < COLS_DRAWER) hideApps();
+      else navigate(appButtons, idx, -COLS_DRAWER);
+    }
+    if (key === 40) {
+      if (idx + COLS_DRAWER >= appButtons.length) hideApps();
+      else navigate(appButtons, idx, COLS_DRAWER);
+    }
+    return;
+  }
+
+  // Mode: Main Parent Layout (Pills -> Featured -> Dock)
+  var pIdx = pillButtons.indexOf(cur);
+  var fIdx = featuredButtons.indexOf(cur);
+  var dIdx = dockButtons.indexOf(cur);
+
+  // Top Row: Pills
+  if (pIdx >= 0) {
+    if (key === 37) navigate(pillButtons, pIdx, -1);
+    if (key === 39) navigate(pillButtons, pIdx, 1);
+    if (key === 40) {
+      // Down moves into Featured Cards
+      if (featuredButtons.length) featuredButtons[Math.min(pIdx, featuredButtons.length - 1)].focus();
+    }
+    return;
+  }
+
+  // Middle Row: Featured Cards
+  if (fIdx >= 0) {
+    if (key === 37) navigate(featuredButtons, fIdx, -1);
+    if (key === 39) navigate(featuredButtons, fIdx, 1);
+    if (key === 38) {
+      // Up moves into Pills
+      if (pillButtons.length) pillButtons[Math.min(fIdx, pillButtons.length - 1)].focus();
+    }
+    if (key === 40) {
+      // Down moves into Bottom Dock
+      if (dockButtons.length) dockButtons[Math.min(fIdx, dockButtons.length - 1)].focus();
+    }
+    return;
+  }
+
+  // Bottom Row: Homebar Dock
+  if (dIdx >= 0) {
+    if (key === 37) navigate(dockButtons, dIdx, -1);
+    if (key === 39) navigate(dockButtons, dIdx, 1);
+    if (key === 38) {
+      if (featuredButtons.length) featuredButtons[Math.min(dIdx, featuredButtons.length - 1)].focus();
+    }
+    return;
+  }
+
+  // Fallback: focus first dock button
+  if (dockButtons.length) dockButtons[0].focus();
+});
+
+// Initialization
+launched();
+loadFavs();
+renderFeatured();
+renderDock();
+renderApps();
+renderInputs();
+loadApps();
+tickClock();
+setInterval(tickClock, 10000);
+
+// Default focus on the first dock item
+if (dockButtons.length) {
+  setTimeout(function () {
+    dockButtons[0].focus();
+  }, 100);
+}
+</script></body></html>

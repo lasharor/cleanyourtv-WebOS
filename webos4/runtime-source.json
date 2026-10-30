@@ -1,0 +1,5 @@
+{
+  "url": "https://github.com/Alexesmm/stremcompat-lg-webos/releases/download/v1.3.3/StremCompat-webOS4-UM4-armv7-graphics-1920x1080-1.2.29.ipk",
+  "sha256": "65f6dea25bf2c802197e32e9c0e47fe0949de91241feed98a04b8a7d8984496e",
+  "prefix": "usr/palm/services/io.strem.tv.server/bin/"
+}

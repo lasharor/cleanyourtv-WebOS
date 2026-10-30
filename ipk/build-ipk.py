@@ -7,13 +7,14 @@ def tgz(files):
     b = io.BytesIO()
     with tarfile.open(fileobj=b, mode='w:gz', format=tarfile.GNU_FORMAT) as t:
         for name, data in files:
-            ti = tarfile.TarInfo(name); ti.size = len(data); ti.mode = 0o644; ti.uid = ti.gid = 0
+            # Match build.py: some TVs refuse files with a zero timestamp.
+            ti = tarfile.TarInfo(name); ti.size = len(data); ti.mode = 0o644; ti.uid = ti.gid = 0; ti.mtime = 1761000000
             t.addfile(ti, io.BytesIO(data))
     return b.getvalue()
 data = []
 for root, _, files in os.walk(app):
     for f in sorted(files):
-        p = os.path.join(root, f); rel = os.path.relpath(p, app)
+        p = os.path.join(root, f); rel = os.path.relpath(p, app).replace(os.sep, '/')
         data.append(('./usr/palm/applications/%s/%s' % (ID, rel), open(p, 'rb').read()))
 data.append(('./usr/palm/packages/%s/packageinfo.json' % ID, json.dumps({"id": ID, "version": VER, "app": ID}).encode()))
 ctl = ("Package: %s\nVersion: %s\nSection: misc\nPriority: optional\nArchitecture: all\nInstalled-Size: 1\nMaintainer: N/A <nobody@example.com>\nDescription: %s\nwebOS-Package-Format-Version: 2\nwebOS-Packager-Version: x.y.x\n" % (ID, VER, info.get('title', ID))).encode()
