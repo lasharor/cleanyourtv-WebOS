@@ -22,8 +22,17 @@ for m in $(awk '$2 ~ /applications\/com.webos.app.screensaver$/ {print $2}' /pro
 systemctl restart sam 2>/dev/null
 for i in $(seq 1 60); do systemctl is-active sam >/dev/null && break; sleep 2; done
 [ -f $L/after-sam.sh ] && sh $L/after-sam.sh </dev/null
-# an app manager restart leaves nothing in the foreground: open Home again, as 10-cleanyourtv-home does at boot
-pkill -f "[a]pp-id=com.webos.app.home" 2>/dev/null
-sleep 2
-luna-send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' </dev/null >/dev/null 2>&1
+# An app manager restart leaves nothing in the foreground. Open Home the way the manager does after a launcher update
+# (reload-home.sh knows the stand-in and the webOS 6 webapp-mgr case), then look whether it really came up: one launch after the
+# restart did not get the page on screen on the 65UR91006LB, and the result was a black TV.
+sleep 4
+sh $L/reload-home.sh </dev/null
+sleep 5
+fg=$(luna-send -n 1 -w 3000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null 2>/dev/null)
+case "$fg" in
+  *com.webos.app.home*) ;;
+  *)
+    echo "$(cut -d' ' -f1 /proc/uptime) undo-screensaver: Home did not come back; asking once more" >> /tmp/cleanyourtv-boot.log
+    sh $L/reload-home.sh </dev/null ;;
+esac
 echo "LG's screen saver is back; rm $L/DISABLE-SCREENSAVER to replace it again at the next boot"
