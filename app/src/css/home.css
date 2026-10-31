@@ -240,6 +240,10 @@ body {
   display: var(--name-d);
   z-index: 5;
 }
+/* Customise > Show app name off */
+[data-shelf="off"] #shelf {
+  display: none;
+}
 #name {
   font-size: calc(92px * var(--fs) * var(--name-s));
   font-weight: 700;

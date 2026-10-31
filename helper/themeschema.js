@@ -477,6 +477,7 @@ function resolve(t, accent) {
     nightRgb: night.join(','),
     wallpaper: w ? { id: t.id, file: w, dim: v['effects.wallpaperDim'] } : null,
   };
+  if (dockBottom) out.dockBottom = true;
   if (v['effects.scenes'] !== 'off') out.scenes = { set: v['effects.scenes'], secs: v['effects.sceneSecs'] };
   // only a theme with slots has this key (the same reason)
   if (v.slots && v.slots.length)

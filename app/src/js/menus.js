@@ -731,6 +731,17 @@ function customizeMenu() {
           }
         : null,
       {
+        label: t('Show app name'),
+        sub: cfg.shelfShow === false ? t('Off') : t('On'),
+        stay: true,
+        fn: function () {
+          if (cfg.shelfShow === false) delete cfg.shelfShow;
+          else cfg.shelfShow = false;
+          applyShelfPref();
+          saveCfg();
+        },
+      },
+      {
         label: t('Mark running apps'),
         sub: cfg.runDots === true ? t('Green dot') : t('No dot'),
         stay: true,
