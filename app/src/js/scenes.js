@@ -128,7 +128,11 @@ var SCENES = (function () {
       b.classList.remove('scene-' + s.id);
     });
     b.classList.remove('scene-custom');
-    if (id) b.classList.add(custom ? 'scene-custom' : 'scene-' + id);
+    b.classList.remove('scene-dark-sky');
+    if (id) {
+      b.classList.add(custom ? 'scene-custom' : 'scene-' + id);
+      if (lib[cur] && lib[cur].darkSky) b.classList.add('scene-dark-sky');
+    }
   }
   function show(i) {
     var prev = cur;

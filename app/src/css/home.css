@@ -1210,6 +1210,12 @@ body.scenes-on {
   box-shadow: inset 0 0 0 1px rgba(22, 32, 29, 0.28);
   color: #16201d;
 }
+/* custom scenes with darkSky true: same dark pill treatment for bright-sky scenes */
+.scenes-on.scene-dark-sky .pill:not(.f) {
+  background: rgba(22, 32, 29, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(22, 32, 29, 0.28);
+  color: #16201d;
+}
 /* glass cards (cards.style): scenes.js puts the blurred scene behind each one; this is the frame, and the panel without scenes */
 [data-cards="glass"] .card-weather,
 [data-cards="glass"] .card-ha-weather,

@@ -282,6 +282,7 @@ Antonio under the SIL Open Font License, see `THIRD-PARTY.md`).
 | `clock.size` | no | Font size of the clock digits, in px (default 400). |
 | `date.top` | no | Distance from the top of the screen to the date line, in px (default 96). |
 | `water` | no | A 0–1 fraction of the screen height where the water surface is. When set, the clock sits on the water with a blurred reflection below the line. |
+| `darkSky` | no | `true`: the top buttons switch to a dark style when this scene is showing, so they stay readable against a bright sky. The same treatment the built-in Fog scene uses. |
 
 Up to 10 scenes are accepted; extras are ignored. A scene whose files are missing or whose filenames contain path characters is skipped silently. One scene means no cycling. The TV downloads the image files from the theme's GitHub folder together with `theme.json` when the theme is installed.
 

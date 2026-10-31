@@ -201,6 +201,7 @@ run(async () => {
       clock: { top: 200, size: 380 },
       date: { top: 120 },
       water: 0,
+      darkSky: true,
     },
     { id: '../bad', image: 'evil.jpg', glass: 'night-glass.jpg' }, // bad id
     { id: 'dup', image: '../../etc/passwd', glass: 'night-glass.jpg' }, // bad filename
@@ -220,8 +221,9 @@ run(async () => {
       sceneTheme.v.customScenes[0].clock &&
       sceneTheme.v.customScenes[0].clock.top === 200 &&
       sceneTheme.v.customScenes[0].date &&
-      sceneTheme.v.customScenes[0].date.top === 120,
-    'custom scenes: valid scene is accepted, bad id/filename/missing file/duplicate are dropped'
+      sceneTheme.v.customScenes[0].date.top === 120 &&
+      sceneTheme.v.customScenes[0].darkSky === true,
+    'custom scenes: valid scene is accepted, bad id/filename/missing file/duplicate are dropped; darkSky is preserved'
   );
   ok(
     rs2.scenes &&

@@ -365,6 +365,7 @@ function customScenes(list, themeDir) {
     }
     const entry = { id: String(s.id), image: String(s.image), glass: String(s.glass) };
     if (s.front) entry.front = String(s.front);
+    if (s.darkSky === true) entry.darkSky = true;
     const w = typeof s.water === 'number' && isFinite(s.water) ? Math.min(1, Math.max(0, s.water)) : 0;
     if (w) entry.water = w;
     const ct = s.clock ? num(s.clock.top, 0, 900) : null;
