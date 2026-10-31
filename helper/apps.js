@@ -11,7 +11,6 @@ const fs = require('fs'),
 const P = require('./paths'),
   web = require('./web'),
   exec = require('./exec'),
-  cardsShape = require('./cards'),
   { LAUNCHER_KEYS } = require('./config');
 
 const HALF_LIFE = 30 * 24 * 3600 * 1000; // usage counts halve every 30 days
@@ -44,24 +43,29 @@ function create(ctx) {
   }
   function askApps() {
     if (!asking)
-      asking = luna('luna://com.webos.applicationManager/listApps', {}).then(r => {
-        asking = null;
-        if (!Array.isArray(r.apps)) return appCache || [];
-        appCache = r.apps
-          .filter(a => a.visible !== false && a.id !== HOME && !uninstalledRecently[a.id])
-          .map(a => {
-            const item = { id: a.id, title: a.title, icon: a.largeIcon || a.icon, folder: a.folderPath, type: a.type };
-            if (isRemovable(a)) item.removable = true;
-            return item;
-          });
-        appCacheAt = Date.now();
-        return appCache;
-      });
+      asking = luna('luna://com.webos.applicationManager/listApps', {})
+        .then(r => {
+          asking = null;
+          if (!Array.isArray(r.apps)) return appCache || [];
+          appCache = r.apps
+            .filter(a => a.visible !== false && a.id !== HOME && !uninstalledRecently[a.id])
+            .map(a => {
+              const item = { id: a.id, title: a.title, icon: a.largeIcon || a.icon, folder: a.folderPath, type: a.type };
+              if (isRemovable(a)) item.removable = true;
+              return item;
+            });
+          appCacheAt = Date.now();
+          return appCache;
+        })
+        .catch(e => {
+          asking = null;
+          throw e;
+        });
     return asking;
   }
   async function installed() {
     if (!appCache) return askApps();
-    if (Date.now() - appCacheAt > 5000) askApps();
+    if (Date.now() - appCacheAt > 5000) askApps().catch(() => {});
     return (appCache || []).filter(a => !uninstalledRecently[a.id]);
   }
 
@@ -311,7 +315,7 @@ function create(ctx) {
       out.wall = { on: b.wall.on === true, secs: WALL_SECS.indexOf(secs) >= 0 ? secs : 900 };
     }
     // the cards in the theme's slots (Customise > Cards), checked for shape only (cards.js)
-    const cards = cardsShape.sanitize(b.cards);
+    const cards = require('./cards').sanitize(b.cards);
     if (cards) out.cards = cards;
     if (Array.isArray(b.topbar))
       out.topbar = b.topbar

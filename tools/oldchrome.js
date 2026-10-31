@@ -1,10 +1,11 @@
-// Runs the launcher, the manager and the Inputs picker in the browser engines of older TVs: Chromium 68 (webOS 5) and Chromium 79
+// Runs the launcher, manager, Inputs picker and standalone prototype in Chromium 68 (webOS 5) and Chromium 79
 // (webOS 6), headless, against a stand-in for the TV's service on 127.0.0.1:8765. It fails when a page throws a script error or does
 // not draw what it should (tiles, rows, inputs). A current Chrome hides such problems: these versions lack features it has.
 //   node tools/oldchrome.js                 both engines
 //   node tools/oldchrome.js --shots <dir>   also saves a screenshot of each page per engine
 // The engines are Chromium snapshots from Google's storage, downloaded once (about 100 MB each), checked against pinned SHA-256 sums
 // and kept in ~/.cache/cleanyourtv. Linux x64 and macOS (x64, or Apple silicon with Rosetta). Needs curl and unzip. Runs on Node 8.
+// The standalone webOS 4 page also needs real Chromium 53/TV validation; these newer engines do not establish that compatibility.
 'use strict';
 const fs = require('fs'),
   os = require('os'),
@@ -79,7 +80,26 @@ function engine(rev, sums) {
 
 // ---- the stand-in service: a few made-up apps, two inputs, the replies recorded in tools/test/golden/api.json ----
 const golden = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'test', 'golden', 'api.json'), 'utf8').replace(/<version>/g, '9.9.9'));
-const NAMES = ['Streaming', 'Video', 'Music', 'Photos', 'Games', 'Browser', 'News', 'Weather', 'Sports', 'Movies', 'Kids', 'Radio'];
+const NAMES = [
+  'Streaming',
+  'Video',
+  'Music',
+  'Photos',
+  'Games',
+  'Browser',
+  'News',
+  'Weather',
+  'Sports',
+  'Movies',
+  'Kids',
+  'Radio',
+  'Podcasts',
+  'Cinema',
+  'Library',
+  'Search',
+  'Education',
+  'Shopping',
+];
 const apps = NAMES.map((n, i) => ({ id: 'app.' + i, title: n, hue: (i * 47) % 360 }));
 const icon = a =>
   '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="hsl(' +
@@ -93,12 +113,23 @@ const theme = require(path.join(ROOT, 'helper', 'theme.js')).create({
 const PROBE =
   '<script>window.onerror=function(m,s,l){var h=document.documentElement;h.setAttribute("data-errors",(h.getAttribute("data-errors")||"")+m+" (line "+l+"); ")};' +
   'window.webOSSystem={launchParams:"{}",locale:"en-GB",hide:function(){},activate:function(){},platformBack:function(){},setInputRegion:function(){},setKeyMask:function(){}};</script>';
-const page = f => fs.readFileSync(path.join(ROOT, f), 'utf8').replace('<script>', PROBE + '<script>');
+const page = (f, original) => {
+  let html = fs.readFileSync(path.join(ROOT, f), 'utf8').replace('<script>', PROBE + '<script>');
+  if (original) html = require('./build-webos4-original').page(html).replace('http://127.0.0.1:8764', 'http://127.0.0.1:8765');
+  if (f === 'webos4/app/index.html')
+    html = html.replace(
+      '</body>',
+      '<script>setTimeout(function(){var drawer=document.getElementById("drawer");drawer.style.display="flex";var tiles=document.querySelectorAll(".app-item"),cols=0;if(tiles.length){var top=tiles[0].offsetTop;for(var i=0;i<tiles.length;i++)if(tiles[i].offsetTop===top)cols++}var icons=document.querySelectorAll(".brand-image"),loaded=icons.length>0;for(var j=0;j<icons.length;j++)if(!icons[j].complete||!icons[j].naturalWidth)loaded=false;document.documentElement.setAttribute("data-webos4-cols",String(cols));document.documentElement.setAttribute("data-webos4-icons",String(loaded));drawer.style.display="none";var previous=document.activeElement,controls=document.querySelectorAll(".pill,.hero-card,.dock-item"),stable=true;for(var k=0;k<controls.length;k++){controls[k].focus();var style=getComputedStyle(controls[k]);if(style.transform!=="none"||style.transitionDuration!=="0s")stable=false}if(previous)previous.focus();document.documentElement.setAttribute("data-webos4-static-focus",String(stable))},2000)</script></body>'
+    );
+  return html;
+};
 // [name, file, what it draws, how many at least, milliseconds of page time to wait]
 const PAGES = [
   ['launcher', 'app/index.html', /class="tile[ "]/g, 8, 8000],
   ['manager', 'manager/app/index.html', /class="row[ "]/g, 5, 8000],
   ['picker', 'picker/app/index.html', /class="chip[ "]/g, 2, 3000],
+  ['webos4', 'webos4/app/index.html', /class="app-item[ "]/g, 8, 3000],
+  ['original', 'app/index.html', /class="tile[ "]/g, 8, 8000],
 ];
 const marks = []; // what the pages log (perf lines: tools/perf-tv.sh reads the same on a TV)
 function serve() {
@@ -109,7 +140,7 @@ function serve() {
     if (q.method === 'OPTIONS') return r.writeHead(204), r.end();
     const json = o => (r.writeHead(200, { 'content-type': 'application/json' }), r.end(JSON.stringify(o)));
     const p = PAGES.filter(x => '/' + x[0] + '.html' === u)[0];
-    if (p) return r.writeHead(200, { 'content-type': 'text/html' }), r.end(page(p[1]));
+    if (p) return r.writeHead(200, { 'content-type': 'text/html' }), r.end(page(p[1], p[0] === 'original'));
     if (u === '/qrcode.js')
       return (
         r.writeHead(200, { 'content-type': 'text/javascript' }),
@@ -130,6 +161,7 @@ function serve() {
           { id: 'HDMI_2', appId: 'com.webos.app.hdmi2', label: 'HDMI 2', connected: false },
         ],
       });
+    if (u === '/api/service') return json({ readOnly: false });
     if (u === '/api/manager/status') return json(golden['manager status'].body);
     if (u === '/api/log') {
       marks.push(decodeURIComponent(q.url.split('m=')[1] || ''));
@@ -152,7 +184,6 @@ function run(bin, url, extra, budget) {
     '--headless',
     '--disable-gpu',
     '--no-sandbox',
-    '--hide-scrollbars',
     '--user-data-dir=' + dir,
     '--window-size=1920,1080',
     '--virtual-time-budget=' + (budget || 8000),
@@ -212,6 +243,11 @@ function run(bin, url, extra, budget) {
                 '\n  browser: ' +
                 (r.stderr || '').slice(-600))
         );
+        if (p[0] === 'webos4') {
+          ok(/data-webos4-cols="6"/.test(dom), e[0] + ': webos4 library keeps six columns');
+          ok(/data-webos4-icons="true"/.test(dom), e[0] + ': webos4 loads every original app icon');
+          ok(/data-webos4-static-focus="true"/.test(dom), e[0] + ': webos4 focus stays on a static paint surface');
+        }
         const ready = marks.filter(m => /^perf launcher ready /.test(m)).pop();
         if (p[0] === 'launcher' && ready)
           console.log('     ' + e[0] + ': launcher ready ' + ready.split(' ').pop() + ' ms after the page load (this computer, not a TV)');

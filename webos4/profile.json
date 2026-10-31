@@ -1,0 +1,10 @@
+{
+  "sdk": "4.4.0",
+  "node": "v18.17.1",
+  "runtime": "/var/lib/webosbrew/cleanyourtv-runtime/node-v18.17.1-armv7",
+  "directory": "/var/lib/webosbrew/cleanyourtv-original",
+  "appId": "com.cleanyourtv.webos4.original",
+  "port": 8764,
+  "stablePort": 8765,
+  "runtimeManifestSha256": "478e9344878dc4d2f5b49be3a689f3e0b90c2668e795174ae19b53538b743f7d"
+}

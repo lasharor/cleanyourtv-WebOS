@@ -1,0 +1,5 @@
+Application artwork is read from the installed TV apps through the loopback helper.
+Third-party app icons copied during research are not distributed with this port.
+
+Names, trademarks and application artwork belong to their respective owners.
+The port does not claim ownership of artwork displayed from the TV's apps.

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Only the separately validated Netflix closure on returning to a native source.
+exec sh /var/lib/webosbrew/netflix-source-exit/netflix.sh start

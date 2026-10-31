@@ -343,4 +343,43 @@ run(async () => {
   ok(r.j.returnValue === true && sent[0] === 'launch netflix' && opened.length === 1, 'any other app still opens on the TV');
   r = await call(withBox, '/api/apps');
   ok(r.j.config.androidBox === undefined, "the launcher is not given the box's address");
+
+  let attempt = 0;
+  const retry = req('apps').create({
+    config: memoryConfig({}),
+    feature: () => null,
+    luna: async () => {
+      if (!attempt++) throw new Error('temporary failure');
+      return { apps: [{ id: 'a.one', title: 'Recovered' }] };
+    },
+  });
+  try {
+    await retry.apps();
+  } catch (_) {}
+  ok((await retry.apps())[0].title === 'Recovered', 'a failed app query can be retried');
+  const now = Date.now;
+  let unhandled = false;
+  const rejection = () => (unhandled = true);
+  process.on('unhandledRejection', rejection);
+  Date.now = () => now() + 6000;
+  attempt = 0;
+  const cached = req('apps').create({
+    config: memoryConfig({}),
+    feature: () => null,
+    luna: async uri => {
+      if (!/listApps$/.test(uri)) return { returnValue: true };
+      if (attempt++ > 0) throw new Error('background failure');
+      return { apps: [{ id: 'a.one', title: 'Cached' }] };
+    },
+  });
+  try {
+    await cached.apps();
+    Date.now = () => now() + 12000;
+    const list = await cached.apps();
+    await new Promise(r => setTimeout(r, 10));
+    ok(list[0].title === 'Cached' && !unhandled, 'a failed background refresh keeps cached apps without an unhandled rejection');
+  } finally {
+    Date.now = now;
+    process.removeListener('unhandledRejection', rejection);
+  }
 });

@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "node": "v18.17.1",
+  "arch": "armv7",
+  "files": [
+    {
+      "name": "lib/libatomic.so.1",
+      "size": 20308,
+      "sha256": "314b426290c837d31f8f475e239d5db1219b2cfbebd2b543bf71add5dffebfe0"
+    },
+    {
+      "name": "lib/libatomic.so.1.2.0",
+      "size": 20308,
+      "sha256": "314b426290c837d31f8f475e239d5db1219b2cfbebd2b543bf71add5dffebfe0"
+    },
+    {
+      "name": "lib/libcares.so.2",
+      "size": 70260,
+      "sha256": "9ca29e8b2c65605556165170028eeb4e3c633488121d30443108c46d9bc9c743"
+    },
+    {
+      "name": "lib/libcares.so.2.6.1",
+      "size": 70260,
+      "sha256": "9ca29e8b2c65605556165170028eeb4e3c633488121d30443108c46d9bc9c743"
+    },
+    {
+      "name": "lib/libcrypto.so.3",
+      "size": 2967824,
+      "sha256": "311cd099b589436044649eb572e711f94f971218cdaeca683e925fc0e7fb0e78"
+    },
+    {
+      "name": "lib/libnghttp2.so.14",
+      "size": 138084,
+      "sha256": "f96e213abb525083c86cd98dee7217574207e66af2c83d7ad4174b48729cfcaa"
+    },
+    {
+      "name": "lib/libnghttp2.so.14.24.1",
+      "size": 138084,
+      "sha256": "f96e213abb525083c86cd98dee7217574207e66af2c83d7ad4174b48729cfcaa"
+    },
+    {
+      "name": "lib/libssl.so.3",
+      "size": 509104,
+      "sha256": "26eb62e3cb9e2ba0025638e30b873ac54a6c0c57a9af07127f1c8e8f40111026"
+    },
+    {
+      "name": "lib/libstdc++.so.6",
+      "size": 1001164,
+      "sha256": "c190dd5485981f2259225fe7def26cbc0316c7f430713c0ed6d174d7c31353f3"
+    },
+    {
+      "name": "lib/libstdc++.so.6.0.25",
+      "size": 1001164,
+      "sha256": "c190dd5485981f2259225fe7def26cbc0316c7f430713c0ed6d174d7c31353f3"
+    },
+    {
+      "name": "lib/libuv.so",
+      "size": 125300,
+      "sha256": "6768084bbe97670dd6511124786c7c2bbf26a77e46217df86c9d74cb38ce2b75"
+    },
+    {
+      "name": "lib/libuv.so.1",
+      "size": 125300,
+      "sha256": "6768084bbe97670dd6511124786c7c2bbf26a77e46217df86c9d74cb38ce2b75"
+    },
+    {
+      "name": "lib/libuv.so.1.0.0",
+      "size": 125300,
+      "sha256": "6768084bbe97670dd6511124786c7c2bbf26a77e46217df86c9d74cb38ce2b75"
+    },
+    {
+      "name": "node18",
+      "size": 27775556,
+      "sha256": "db816933c5464d05d7562017a81015810627b27dc3d643466aaf0a1419934aab"
+    }
+  ]
+}

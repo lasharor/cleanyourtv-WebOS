@@ -22,12 +22,12 @@ const step = (name, cmd, args) => {
   if (r.status !== 0) failed++;
 };
 step('types of the service (tsc)', bin('tsc'), ['-p', 'tsconfig.json']);
-step('lint of the service, scripts and tools (eslint)', bin('eslint'), ['helper', 'scripts/jtool.js', 'tools']);
+step('lint of the service, scripts and tools (eslint)', bin('eslint'), ['helper', 'scripts/jtool.js', 'webos4', 'tools']);
 // the page scripts, as the TV gets them
 // (written to .lint-pages, inside the project so ESLint's config applies; git ignores it)
 const tmp = path.join(root, '.lint-pages');
 cp.spawnSync('mkdir', ['-p', tmp]);
-const pages = ['app', 'manager/app', 'picker/app', 'notify/app'];
+const pages = ['app', 'manager/app', 'picker/app', 'notify/app', 'webos4/app'];
 for (const p of pages) {
   const html = fs.readFileSync(path.join(root, p, 'index.html'), 'utf8');
   const scripts = [];
@@ -43,6 +43,8 @@ step('formatting (prettier --check)', bin('prettier'), [
   'app/src/**/*.{js,css}',
   'manager/src/**/*.{js,css}',
   'i18n/*.js',
+  'webos4/*.js',
+  'webos4/src/*.{js,css}',
   'scripts/jtool.js',
   'eslint.config.js',
 ]);

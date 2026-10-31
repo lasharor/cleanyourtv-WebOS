@@ -180,3 +180,20 @@ and use it at your own risk. Live TV plays only the playlists you add.
 MIT. See `LICENSE`. The package also contains third-party files, listed with their licences in
 [`THIRD-PARTY.md`](THIRD-PARTY.md) and in [Credits and licences](https://lasharor.github.io/cleanyourtv-WebOS/credits/). The home-screen
 design follows the Android TV project [CleanYourTV](https://github.com/Gathin23/cleanyourtv) (MIT); no code from it is used.
+# Experimental webOS 4 port
+
+`sh install.sh --check` inventories a TV without installing; webOS 4 still requires the [original installer port](docs/webos4-installer-port.md).
+The built local kit now provides `sh install.sh --webos4 install` and manual `start|stop|status|show` for the tested SDK 4 profile,
+installing the original UI separately while retaining the validated HOME and helper. This is an experimental migration path, not a
+generic webOS 4 manager install or a replacement for its physical validation.
+Build with `python3 webos4/build-original.py --runtime <verified-local-runtime-tree>` to include the pinned Node 18.17.1 and libraries.
+The [runtime preparation guide](docs/webos4-runtime.md) identifies the pinned public source and local extraction command.
+The installer bootstraps that private runtime using system Node 0.12 without replacing it; a fresh manual installation can host
+the validated native bridge itself. This profile accepts SDK 4.4.0 only. The original UI and physical source sequence have been
+user-validated; persistent original-HOME activation and fresh-install bridge ownership still need hardware validation.
+The isolated launcher, optional Upstart debloat and hardware investigation are documented in
+[the webOS 4 guide](docs/webos4.md). This is firmware-specific experimental support; the normal installer and updater still require
+webOS 5+. See the guide's validation matrix before using HOME, boot or power-management tools.
+The firmware-specific addons include HOME reload without a compositor restart, reversible Upstart debloat, the shutdown guard,
+Netflix source-exit mitigation and robust calibrated Bluetooth confirmation. Node 18 stays isolated; system Node and the existing
+interface are preserved. These optional tools do not enable themselves or change the regular package's installation path.

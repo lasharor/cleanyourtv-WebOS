@@ -53,5 +53,9 @@ the file header). The manager app loads it to draw the QR code.
 
 ## Design
 
+The experimental webOS 4 runtime is an optional local build input, not a file in this repository or the regular release.
+Its pinned source package, exact-file verification, private installation and redistribution boundary are recorded in
+[webOS 4 runtime provenance](docs/webos4-runtime.md). Application artwork is served from installed TV apps and is not bundled.
+
 The home-screen design follows the Android TV project [CleanYourTV](https://github.com/Gathin23/cleanyourtv) (MIT).
 No code from it is used.

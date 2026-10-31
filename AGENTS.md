@@ -104,3 +104,20 @@ sh tools/perf-tv.sh <tv-ip>        # read-only timings from a TV: launcher, Inpu
 - A per-TV rule written in a module or a script drifts from the others: put it in `helper/tvprofile.js`.
 - Edit the pages in `app/src` and `manager/src`, then `node tools/build-pages.js`; the built files are what the TV loads.
 - Themes are data; a theme must never contain CSS or script. The schema in `helper/themeschema.js` is the only source of what a theme can set.
+# webOS 4 contribution
+
+The tested HOME/helper startup, installed debloat and robust Bluetooth were accepted by the user on 29 October; final navigation
+was checked in the TV browser on 30 October. HOME reloads through configd and a RAM mount without closing sources or restarting graphics.
+Use the exact tested debloat snapshots only as deployment-specific references; the public hosts-mount revision is separate.
+Read `docs/webos4.md` first, especially its current status and validated source-switching contract.
+Historical logs contain superseded conclusions. Preserve exact native launch payloads, a single request with no retry/fallback,
+and no delayed source/launcher closure. No TV changes are authorized by a repository edit request.
+Never import full LG firmware, private configs, runtime binaries or scratch captures. HOME generation accepts only the known original
+hash; the boot controller intentionally refuses unrelated helpers. Optional debloat is Upstart-specific, opt-in and reversible.
+The final tested HOME route toggles the captured configd key-filter paths after mounting the patch in RAM; it never closes native
+apps or restarts graphics. Keep both key-filter templates in optional addon builds and preserve LG fallback without the RAM mount.
+The robust Bluetooth observer uses one bounded wait and fresh device/focus/pixel checks before each key; calibration remains private.
+The explicit original-installer branch and runtime bootstrap are documented in `docs/webos4-installer-port.md` and
+`docs/webos4-runtime.md`. SDK 4.4.0 only; keep the original candidate's state/port and the stable HOME deployment separate.
+The pinned public runtime is prepared on the PC without installing/executing its source app; binaries remain outside Git.
+Post-rebase source and fresh-install bridge ownership have local tests; the earlier original-UI candidate has the user's physical acceptance.

@@ -2,6 +2,8 @@
 # CleanYourTV service bootstrap. Runs as root on the TV, from the service folder of the installed package:
 #   sh bootstrap.sh install [--no-debloat] [--no-input-key] [--debloat] [--input-key] [--no-start] [--no-verify] [--force]
 #   sh bootstrap.sh update <version>      after the manager installed a newer package (restarts the service, undoes it if it fails)
+#   sh bootstrap.sh check                 read-only installer inventory, including webOS 4; no setup is performed
+#   sh bootstrap.sh webos4 <action>       experimental isolated SDK 4 branch from a local install kit
 # It copies the service files to /media/developer/cleanyourtv, installs the boot scripts, replaces LG's Home and starts the service.
 # Idempotent: running it again repairs a broken install. What differs between TVs (the notification window type, whether the
 # firmware is in the compatibility list, whether LG's Home is a kind we support) is decided by helper/tvprofile.js, the same rules the
@@ -17,6 +19,18 @@ TV="node $S/helper/tvprofile.js"      # per-TV decisions
 HOME_DIR=$R/usr/palm/applications/com.webos.app.home
 
 MODE=${1:-install}; [ $# -gt 0 ] && shift
+if [ "$MODE" = webos4 ]; then
+  PORT=$S/webos4/setup.sh
+  [ -f "$PORT" ] || PORT=$S/../webos4/setup.sh
+  [ -f "$PORT" ] || { echo 'Local webOS 4 install kit required'; exit 1; }
+  exec sh "$PORT" "$@"
+fi
+if [ "$MODE" = check ]; then
+  CHECK=$S/check-tv.sh
+  [ -f "$CHECK" ] || CHECK=$S/scripts/check-tv.sh
+  [ -f "$CHECK" ] || { echo 'Read-only checker missing: nothing changed' >&2; exit 1; }
+  exec sh "$CHECK"
+fi
 WANT=""; [ "$MODE" = update ] && { WANT=$1; shift; }
 DEBLOAT=""; INPUTKEY=""; START=1; VERIFY=1; FORCE=0
 for a in "$@"; do

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Only the separately configured, already-paired audio confirmation service.
+exec sh /media/developer/cleanyourtv/bluetooth/bluetooth.sh start

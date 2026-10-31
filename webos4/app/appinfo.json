@@ -1,0 +1,13 @@
+{
+  "id": "com.cleanyourtv.webos4",
+  "version": "0.2.0",
+  "vendor": "CleanYourTV community port",
+  "type": "web",
+  "main": "index.html",
+  "title": "CleanYourTV",
+  "icon": "icon.png",
+  "noSplashOnLaunch": true,
+  "spinnerOnLaunch": false,
+  "disableBackHistoryAPI": true,
+  "visible": true
+}

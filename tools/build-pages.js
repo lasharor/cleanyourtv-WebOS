@@ -13,6 +13,7 @@ const fs = require('fs'),
   path = require('path');
 const root = path.join(__dirname, '..');
 const PAGES = [
+  ['webos4/src', 'webos4/app/index.html'],
   ['app/src', 'app/index.html'],
   ['manager/src', 'manager/app/index.html'],
   ['picker/app/index.html', 'picker/app/index.html'],
@@ -95,6 +96,7 @@ function build(src) {
   const dir = path.join(root, src);
   const page = fs
     .readFileSync(path.join(dir, 'index.html'), 'utf8')
+    .replace(/\r\n/g, '\n')
     .replace(/\n$/, '')
     .split('\n')
     .map(line => {
@@ -102,7 +104,7 @@ function build(src) {
       if (!m) return line;
       const f = path.join(dir, m[1]);
       if (f.indexOf(dir + path.sep) !== 0 || !fs.existsSync(f)) throw new Error(src + '/index.html includes a missing file: ' + m[1]);
-      return fs.readFileSync(f, 'utf8').replace(/\n$/, '');
+      return fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n').replace(/\n$/, '');
     })
     .join('\n');
   const parts = page.split(/^@i18n$/m);
@@ -115,7 +117,7 @@ if (require.main === module) {
   for (const p of PAGES) {
     const out = build(p[0]),
       file = path.join(root, p[1]);
-    const cur = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+    const cur = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n') : '';
     if (out === cur) {
       console.log('ok   ' + p[1] + ' matches ' + p[0]);
       continue;

@@ -31,6 +31,7 @@ nav = [
     { "Languages" = "languages.md" },
   ] },
   { "Reference" = [
+    { "Experimental webOS 4 port" = "webos4.md" },
     { "Security" = "security.md" },
     { "What it changes on the TV" = "tv-changes.md" },
     { "Service API" = "api.md" },

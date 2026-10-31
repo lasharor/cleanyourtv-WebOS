@@ -1,0 +1,91 @@
+<!doctype html>
+<!-- CleanYourTV webOS 4 – TV launcher.
+     Built by tools/build-pages.js from webos4/src. Edit the source files, not this one. -->
+<html><head><meta charset="utf-8"><title>CleanYourTV</title>
+<meta name="viewport" content="width=1920">
+<style>
+@include home.css
+</style></head><body>
+<div id="stage">
+  <!-- ── Top bar: Clock, Date, and Quick Pills ───────────────── -->
+  <div id="topbar">
+    <div id="clock-wrap">
+      <span id="clock" aria-label="Hora">--:--</span>
+      <span id="date" aria-label="Fecha"></span>
+    </div>
+    <span id="topbar-spacer"></span>
+    <div id="bar" role="toolbar" aria-label="Acciones rapidas">
+      <button class="pill" id="pill-live" type="button">
+        <svg class="pill-svg" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+        Live TV
+      </button>
+      <button class="pill" id="pill-inputs" type="button">
+        <svg class="pill-svg" viewBox="0 0 24 24"><path d="M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+        Entradas
+      </button>
+      <button class="pill" id="pill-settings" type="button">
+        <svg class="pill-svg" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+        Ajustes
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Middle Parent Layout: Destacadas (Always Visible) ───── -->
+  <section id="featured-section" aria-label="Aplicaciones destacadas">
+    <div class="section-head">
+      <h1 class="section-kicker">Para ver</h1>
+      <span class="section-sub">Tus plataformas favoritas</span>
+    </div>
+    <div id="featured-row" role="region" aria-label="Tarjetas destacadas"></div>
+  </section>
+
+  <!-- ── Middle Live Status Banner ────────────────────────────── -->
+  <div id="live-banner" role="status" aria-label="Selección actual">
+    <span class="banner-badge">OK</span>
+    <span class="banner-text" id="live-banner-text">Elige qué quieres ver</span>
+  </div>
+
+  <!-- ── Bottom Panel: Homebar-style Dock ──────────────────── -->
+  <section id="panel" aria-label="Acceso rapido">
+    <div class="panel-top">
+      <div>
+        <h2>Favoritos <span id="fav-count">0/7</span></h2>
+      </div>
+      <div class="panel-top-hints">&#9664; &#9654; Mover &nbsp;·&nbsp; &#9650; Destacadas</div>
+    </div>
+    <div id="dock" aria-label="Favoritos y acciones" role="toolbar"></div>
+    <div class="panel-footer">
+      <span class="remote-help"><span class="yellow-key"></span> Amarillo: añadir o quitar favorito &nbsp;·&nbsp; Atrás: volver</span>
+      <span id="mode">CleanYourTV</span>
+    </div>
+  </section>
+
+  <!-- ── Full Library Drawer (Modal Overlay) ────────────────── -->
+  <section id="drawer" aria-label="Todas las aplicaciones">
+    <div class="drawer-head">
+      <div>
+        <div class="drawer-kicker">BIBLIOTECA</div>
+        <h2>Todas las aplicaciones <span id="app-count"></span></h2>
+      </div>
+      <div class="drawer-head-right">&#9650;/&#9660; Desplazar &nbsp;·&nbsp; OK Abrir &nbsp;·&nbsp; Amarillo Favorito &nbsp;·&nbsp; Atrás Cerrar</div>
+    </div>
+    <div id="app-scroll"><div id="apps"></div></div>
+  </section>
+
+  <!-- ── Inputs Switcher Modal ─────────────────────────────── -->
+  <div id="inputs-modal" role="dialog" aria-modal="true" aria-label="Selector de entradas">
+    <div id="inputs-card">
+      <div class="inputs-head">
+        <h2>Entradas de vídeo</h2>
+        <span>OK para cambiar · Atrás para cancelar</span>
+      </div>
+      <div id="inputs-grid"></div>
+    </div>
+  </div>
+
+  <!-- ── Toast Feedback ─────────────────────────────────────── -->
+  <div id="toast" aria-live="assertive" role="alert"></div>
+</div>
+<script>
+@include home.js
+</script></body></html>
