@@ -16,7 +16,12 @@ const HEX = /^#[0-9a-f]{6}$/i,
   FILE = /^[\w-]{1,40}\.(?:jpg|png|webp)$/,
   FONT_FILE = /^[\w-]{1,40}\.(?:woff2|woff|ttf|otf)$/,
   ID = /^[a-z0-9-]{1,30}$/,
-  PREVIEW_PATH = /^([a-z0-9-]{1,30})\/preview\.(?:jpg|png|webp)$/;
+  PREVIEW_PATH = /^([a-z0-9-]{1,30})\/preview\.(?:jpg|png|webp)$/,
+  SCENE_IMG = /^[\w-]{1,60}\.(?:jpg|webp)$/,
+  SCENE_FRONT = /^[\w-]{1,60}\.webp$/,
+  SCENE_ID_RE = /^[a-z][a-z0-9-]{0,29}$/;
+const MAX_CUSTOM_SCENES = 10,
+  MAX_SCENE_FILE = 3 * 1024 * 1024;
 const ACCENTS = [
   ['Theme default', ''],
   ['White', '#f5f6f8'],
@@ -186,9 +191,9 @@ const SCHEMA = [
   [
     'effects.scenes',
     'enum',
-    ['off', 'couch'],
+    ['off', 'couch', 'custom'],
     'off',
-    '`couch`: five landscapes shipped with the launcher take turns behind Home (Night, Golden hour, Waterline, Fog, Dawn); with `clock.style` glass the scenery stands in front of the clock. Takes the place of the wallpaper and of Wallpapers.',
+    '`couch`: five landscapes shipped with the launcher take turns behind Home (Night, Golden hour, Waterline, Fog, Dawn); with `clock.style` glass the scenery stands in front of the clock. Takes the place of the wallpaper and of Wallpapers. `custom`: the theme brings its own scenes as a `"scenes"` array in `theme.json`.',
   ],
   ['effects.sceneSecs', 'int', [10, 600], 20, 'Seconds each scene stays (`effects.scenes`).'],
   [
@@ -294,6 +299,12 @@ function normalize(raw, id, base, wallDir) {
   } else if (f === '') v['type.fontFile'] = '';
   // slots for cards: a list in the theme (not in SCHEMA, which holds single values); a theme without "slots" keeps its base's
   if (raw.slots !== undefined) v.slots = slots(raw.slots);
+  // custom scenes: a list of landscape images the theme brings; validated against files on disk
+  if (v['effects.scenes'] === 'custom') {
+    const cs = customScenes(raw.scenes, wallDir || path.join(dir(), id));
+    if (cs) v.customScenes = cs;
+    else v['effects.scenes'] = 'off';
+  }
   return {
     id,
     name: String(raw.name || id).slice(0, 40),
@@ -330,6 +341,44 @@ function slots(list) {
     });
   }
   return out;
+}
+
+// Custom scenes: a theme brings its own landscape images (jpg/webp + glass copy + optional foreground cut-out), each with its own clock
+// and date position. Validated against the files on disk; only scenes whose images are present make it through.
+//   { id, image, glass, front?, clock?: {top, size}, date?: {top}, water?: 0–1 }
+function customScenes(list, themeDir) {
+  if (!Array.isArray(list)) return null;
+  const num = (n, lo, hi) => (typeof n === 'number' && isFinite(n) ? Math.round(Math.min(hi, Math.max(lo, n))) : null);
+  const out = [];
+  for (const s of list) {
+    if (out.length >= MAX_CUSTOM_SCENES) break;
+    if (!s || typeof s !== 'object' || !SCENE_ID_RE.test(s.id) || out.some(x => x.id === s.id)) continue;
+    if (!SCENE_IMG.test(s.image) || !SCENE_IMG.test(s.glass)) continue;
+    if (s.front !== undefined && !SCENE_FRONT.test(s.front)) continue;
+    try {
+      const imgBuf = fs.readFileSync(path.join(themeDir, s.image));
+      if (!imageOk(imgBuf, s.image, MAX_SCENE_FILE)) continue;
+      fs.statSync(path.join(themeDir, s.glass));
+      if (s.front) fs.statSync(path.join(themeDir, s.front));
+    } catch (_) {
+      continue;
+    }
+    const entry = { id: String(s.id), image: String(s.image), glass: String(s.glass) };
+    if (s.front) entry.front = String(s.front);
+    const w = typeof s.water === 'number' && isFinite(s.water) ? Math.min(1, Math.max(0, s.water)) : 0;
+    if (w) entry.water = w;
+    const ct = s.clock ? num(s.clock.top, 0, 900) : null;
+    const cs = s.clock ? num(s.clock.size, 100, 600) : null;
+    if (ct !== null || cs !== null) {
+      entry.clock = {};
+      if (ct !== null) entry.clock.top = ct;
+      if (cs !== null) entry.clock.size = cs;
+    }
+    const dt = s.date ? num(s.date.top, 0, 900) : null;
+    if (dt !== null) entry.date = { top: dt };
+    out.push(entry);
+  }
+  return out.length ? out : null;
 }
 
 // What the launcher applies: CSS variables, attributes for the few layouts that need more than a variable, and the numbers its scrolling needs.
@@ -477,7 +526,13 @@ function resolve(t, accent) {
     nightRgb: night.join(','),
     wallpaper: w ? { id: t.id, file: w, dim: v['effects.wallpaperDim'] } : null,
   };
-  if (v['effects.scenes'] !== 'off') out.scenes = { set: v['effects.scenes'], secs: v['effects.sceneSecs'] };
+  if (v['effects.scenes'] !== 'off') {
+    out.scenes = { set: v['effects.scenes'], secs: v['effects.sceneSecs'] };
+    if (v['effects.scenes'] === 'custom' && v.customScenes) {
+      out.scenes.lib = v.customScenes;
+      out.scenes.id = t.id;
+    }
+  }
   // only a theme with slots has this key (the same reason)
   if (v.slots && v.slots.length)
     out.slots = v.slots.map(sl => {
@@ -512,17 +567,23 @@ module.exports = {
   FONT_FILE,
   HEX,
   ID,
+  MAX_CUSTOM_SCENES,
   MAX_FONT,
   MAX_INDEX,
   MAX_PREVIEW,
+  MAX_SCENE_FILE,
   MAX_THEME,
   MAX_WALLPAPER,
   POS,
   PREVIEW_PATH,
+  SCENE_FRONT,
+  SCENE_ID_RE,
+  SCENE_IMG,
   SCHEMA,
   SLOT_ID,
   TOPBOT,
   check,
+  customScenes,
   dir,
   fontOk,
   fontType,

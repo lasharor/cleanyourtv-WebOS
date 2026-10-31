@@ -231,7 +231,7 @@ when the focus moves down into it (Back or Up closes it); a dock at the top leav
 | `effects.speed` | 0 to 2 | `1` | Animation speed multiplier; 0 switches the animations off. |
 | `effects.wallpaper` | a file name | none | A file name in `themes/wallpapers/`: `.jpg`, `.png` or `.webp`, at most 1.5 MB; drawn at 1920 x 1080. |
 | `effects.wallpaperDim` | 0 to 0.9 | `0.4` | How far the wallpaper is darkened with the background colour. |
-| `effects.scenes` | `off`, `couch` | `off` | `couch`: five landscapes shipped with the launcher take turns behind Home (Night, Golden hour, Waterline, Fog, Dawn); with `clock.style` glass the scenery stands in front of the clock. Takes the place of the wallpaper and of Wallpapers. |
+| `effects.scenes` | `off`, `couch`, `custom` | `off` | `couch`: five landscapes shipped with the launcher take turns behind Home (Night, Golden hour, Waterline, Fog, Dawn); with `clock.style` glass the scenery stands in front of the clock. Takes the place of the wallpaper and of Wallpapers. `custom`: the theme brings its own scenes as a `"scenes"` array in `theme.json`. |
 | `effects.sceneSecs` | 10 to 600 | `20` | Seconds each scene stays (`effects.scenes`). |
 | **cards** | | | |
 | `cards.style` | `flat`, `glass` | `flat` | `glass`: the weather and Home Assistant cards sit on frosted glass (a blurred copy of the scene behind them, no live blur). |
@@ -248,6 +248,42 @@ in Waterline the clock sits on the water with a reflection under it. Each scene 
 10 pm the scenes dim a little. Everything is drawn once a minute; only opacity animates. The scenes and the clock come from
 [couch-tv](https://github.com/Seagey/couch-tv) (MIT; the scenes were generated for that project and are free to use, the typeface is
 Antonio under the SIL Open Font License, see `THIRD-PARTY.md`).
+
+`effects.scenes` `custom` lets a theme bring its own landscape images instead of the five built-in ones. Add a `"scenes"` array to
+`theme.json` and put the image files in the theme folder:
+
+```json
+"effects": { "scenes": "custom", "sceneSecs": 25 },
+"scenes": [
+  {
+    "id": "lake",
+    "image": "lake.jpg",
+    "glass": "lake-glass.jpg",
+    "front": "lake-front.webp",
+    "clock": { "top": 463, "size": 360 },
+    "date":  { "top": 110 },
+    "water": 0.687
+  },
+  {
+    "id": "city",
+    "image": "city.jpg",
+    "glass": "city-glass.jpg"
+  }
+]
+```
+
+| Key | Required | What it does |
+|---|---|---|
+| `id` | yes | Short identifier (`a–z`, `0–9`, `-`). Must be unique within the list. |
+| `image` | yes | Main landscape file (`.jpg` or `.webp`, up to 3 MB). 1920 × 1080 is the native size; a 4K TV renders Home at 3840 × 2160 (device pixel ratio 2), so 2560 × 1440 or higher gives a sharper result. |
+| `glass` | yes | A blurred copy of the same image, used as the fill of the glass clock and glass cards. |
+| `front` | no | A foreground cut-out (`.webp` with transparency) drawn over the clock, so scenery stands in front of the digits. |
+| `clock.top` | no | Distance from the top of the screen to the clock, in px (default 150). |
+| `clock.size` | no | Font size of the clock digits, in px (default 400). |
+| `date.top` | no | Distance from the top of the screen to the date line, in px (default 96). |
+| `water` | no | A 0–1 fraction of the screen height where the water surface is. When set, the clock sits on the water with a blurred reflection below the line. |
+
+Up to 10 scenes are accepted; extras are ignored. A scene whose files are missing or whose filenames contain path characters is skipped silently. One scene means no cycling. The TV downloads the image files from the theme's GitHub folder together with `theme.json` when the theme is installed.
 
 `cards.style` `glass` puts the weather and Home Assistant cards on frosted glass: the same blurred copy of the current scene, placed
 where the card is, under a dark tint. Without scenes it is a plain translucent panel.

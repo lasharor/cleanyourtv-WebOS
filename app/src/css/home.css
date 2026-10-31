@@ -1146,6 +1146,18 @@ body.scenes-on {
 .s-dawn .gclock {
   top: 230px;
 }
+/* Custom theme scenes: clock and date position come from CSS variables set per-scene by scenes.js */
+.s-custom .gclock {
+  top: var(--scene-clock-top, 150px);
+  font-size: var(--scene-clock-size, 400px);
+}
+.s-custom .gclock.under {
+  opacity: 0.7;
+  transform: translateX(5px);
+}
+[data-cstyle="glass"].scene-custom #clock {
+  top: var(--scene-date-top, 96px);
+}
 /* with the glass clock the text clock steps aside: only the date stays, centred above the glass clock (each scene places it) */
 [data-cstyle="glass"] #time,
 [data-cstyle="glass"] #greet {
