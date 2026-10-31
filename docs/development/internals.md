@@ -23,6 +23,7 @@
 | `exec.js`, `luna.js`, `fetch.js` | The one way to start a program (time limits without Node's own `timeout` option, which can abort Node 8), to call `luna-send`, and to download (redirects, gzip, size and time limits, dropped connections). |
 | `server.js`, `web.js` | The HTTP server with the origin rules, and small reply helpers. |
 | `apps.js`, `running.js` | The app list, icons, usage, launching and the launcher's own settings; the running apps to close (Back on Home). |
+| `screensaver.js` | The page that replaces LG's screen saver: its photos from the wallpaper library, and closing it. |
 | `inputkey.js`, `inputhook.js`, `picker.js` | The Input key: the hook in LG's input processes, the key binds, the Inputs picker. |
 | `book.js` | The launcher's book: which page shows (`POST /api/book/page`, the launcher reports it), so the Home key (learned in the manager, else 773) is bound in LG's input service only while one shows (`inputhook.js`, `scripts/bookhome.sh`); see [Add-ons](addons.md#pages-home-is-page-1-of-a-book). |
 | `manager.js`, `updates.js`, `debloat.js` | The manager's API, updates from GitHub releases with rollback, switching the debloat. |
@@ -85,6 +86,22 @@ card are small and stay single files.
    ends by itself when CleanYourTV is uninstalled (`helper.js` gone).
 
 Nothing is written under `/usr`: the mount disappears at reboot. `DISABLE` in `/media/developer/cleanyourtv` makes the script skip it.
+
+## How the screen saver is replaced
+
+`20-cleanyourtv-screensaver` does the same for the app the TV starts when it is idle, `com.webos.app.screensaver` ([Screen saver](../screensaver.md)):
+
+- `stage-screensaver.sh` builds `$D/screensaver-overlay`: the page from `screensaver/app` and an `appinfo.json` derived from the stock
+  screen saver (`backup/screensaver-appinfo.orig.json`), type `web` with `defaultWindowType` `overlay`, so closing the page gives the
+  app that was underneath back (`jtool.js saver`).
+- `tvprofile.js` `saverTakeover`: `standin` where LG's screen saver is a native program (the script over it, no app manager restart),
+  `mount` otherwise (the folder over the app and the app manager restarted). `screensaver-method` holding `mount` forces the second.
+- `10-cleanyourtv-home` calls it with `prepare` before its own `systemctl restart sam`, so one restart reads both; `/tmp/cleanyourtv-sam`
+  records that the app manager was restarted this boot, so `20-` does not restart it again. Where Home is a stand-in (no restart there)
+  and the screen saver needs the mount, `20-` restarts it after Home came up and calls `reload-home.sh` afterwards: the restart takes
+  down the Home page in `webapp-mgr`.
+- `helper/screensaver.js` serves the page its photos and closes it: on `POST /api/screensaver/dismiss`, and by itself when the TV is
+  `Active` again while the page is still listed (a page left behind would keep the remote).
 
 ## Updates and rollback
 

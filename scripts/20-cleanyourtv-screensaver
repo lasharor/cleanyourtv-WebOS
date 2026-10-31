@@ -1,0 +1,66 @@
+#!/bin/sh
+# Replace LG's screen saver with the CleanYourTV page: photos from the wallpaper library and a clock (docs/screensaver.md).
+# RAM only, as for Home: a reboot without this script brings LG's screen saver back.
+# Off: touch /media/developer/cleanyourtv/DISABLE-SCREENSAVER and reboot, or run: sh /media/developer/cleanyourtv/undo-screensaver.sh
+# The way is chosen by helper/tvprofile.js (saverTakeover) from LG's own screen saver as it came with the TV:
+#   standin  a native program: screensaver-standin.sh is mounted over it; the app manager is not restarted
+#   mount    anything else (a QML or web screen saver): the page's folder is mounted over the app and the app manager reads it
+# "prepare" (called by 10-cleanyourtv-home just before it restarts the app manager) only mounts, so one restart reads both.
+# The screen saver starts by itself when the TV is idle: nothing is launched here.
+export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
+L=/media/developer/cleanyourtv
+H=/usr/palm/applications/com.webos.app.screensaver
+STANDIN=/tmp/cleanyourtv-screensaver-standin   # holds LG's screen saver program while the stand-in is mounted over it
+SAM=/tmp/cleanyourtv-sam                       # present once the app manager was restarted this boot
+LOG=/tmp/cleanyourtv-boot.log
+up() { cut -d' ' -f1 /proc/uptime; }
+replaced() { grep -q " $H " /proc/mounts || { [ -f $STANDIN ] && grep -q " $(cat $STANDIN) " /proc/mounts; }; }
+
+[ -e $L/DISABLE-SCREENSAVER ] && exit 0
+[ -d $H ] || exit 0   # a TV without LG's screen saver app: nothing to replace
+[ -f $L/backup/screensaver-appinfo.orig.json ] || exit 0
+PREPARE=0; [ "$1" = prepare ] && PREPARE=1
+
+method=$(node $L/tvprofile.js get saverTakeover --saver "$(node $L/jtool.js kind $L/backup/screensaver-appinfo.orig.json 2>/dev/null)" 2>/dev/null)
+[ "$(cat $L/screensaver-method 2>/dev/null)" = mount ] && method=mount
+EXE=""
+[ "$method" = standin ] && EXE=$(node $L/jtool.js exe $L/backup/screensaver-appinfo.orig.json 2>/dev/null)
+[ "$method" = standin ] && [ -z "$EXE" ] && { echo "$(up) saver: LG's screen saver program not found; using the mount" >> $LOG; method=mount; }
+
+if ! replaced; then
+  sh $L/stage-screensaver.sh || { echo "$(up) saver: the page could not be staged" >> $LOG; exit 1; }
+  if [ "$method" = standin ]; then
+    echo "$(up) saver: LG's screen saver is the program $EXE; mounting the stand-in over it" >> $LOG
+    chmod 755 $L/screensaver-standin.sh
+    mount --bind $L/screensaver-standin.sh "$EXE" || { echo "$(up) saver: the mount over $EXE failed" >> $LOG; exit 1; }
+    echo "$EXE" > $STANDIN
+  else
+    echo "$(up) saver: mounting the page over LG's screen saver app" >> $LOG
+    mount --bind $L/screensaver-overlay "$H" || { echo "$(up) saver: the mount over $H failed" >> $LOG; exit 1; }
+  fi
+fi
+
+[ "$method" = standin ] && exit 0                     # the program needs no app manager restart
+[ $PREPARE = 1 ] && exit 0
+[ -f $SAM ] && exit 0                                 # the Home takeover restarted the app manager after this mount
+systemctl is-active sam >/dev/null 2>&1 || exit 0     # it reads the mount when it starts
+# The app manager has to read the new manifest. Where Home is a stand-in its page lives in webapp-mgr, which such a restart takes
+# down: wait until Home is up, and open it again afterwards (reload-home.sh), so that a boot does not end on a black screen.
+RH=0
+[ -f /tmp/cleanyourtv-home-standin ] && grep -q " $(cat /tmp/cleanyourtv-home-standin) " /proc/mounts && RH=1
+echo "$(up) saver: restarting the app manager so that it reads the new screen saver" >> $LOG
+(
+  if [ $RH = 1 ]; then
+    for i in $(seq 1 20); do
+      luna-send -n 1 -w 3000 luna://com.palm.webappmanager/listRunningApps '{}' </dev/null 2>/dev/null | grep -q 'com.webos.app.home' && break
+      sleep 3
+    done
+  fi
+  (sleep 3; pkill -9 -f /usr/palm/applications/airplay/LunaExecutable) </dev/null >/dev/null 2>&1 &
+  systemctl restart sam
+  touch $SAM
+  echo "$(up) saver: the app manager is restarted" >> $LOG
+  for i in $(seq 1 60); do systemctl is-active sam >/dev/null && break; sleep 2; done
+  sh $L/after-sam.sh
+  [ $RH = 1 ] && sh $L/reload-home.sh
+) </dev/null >/dev/null 2>&1 &

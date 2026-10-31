@@ -24,6 +24,12 @@ BUILD = os.environ.get('CYTV_BUILD', '').strip()
 if BUILD and not re.fullmatch(r'[0-9a-f]{7,40}', BUILD):
     sys.exit('CYTV_BUILD must be a commit hash')
 
+BOOT_SCRIPTS = ('10-cleanyourtv-home', '15-cleanyourtv-debloat', '20-cleanyourtv-screensaver')
+
+def shell_text(data, name):
+    # a shell script runs on the TV, where '\r' is part of the command ("shift\r: not found"): a checkout on Windows may have CRLF
+    return data.replace(b'\r\n', b'\n') if (name.endswith('.sh') or name in BOOT_SCRIPTS) else data
+
 def add(files, arc, data, mode=0o644):
     files.append((arc, data, mode))
 
@@ -34,9 +40,9 @@ def add_dir(files, arc_root, src, mode_for=None, skip=(), skip_dirs=()):
             if n in skip or n.startswith('.'):
                 continue
             p = os.path.join(root, n)
-            rel = os.path.relpath(p, src)
-            mode = 0o755 if (n.endswith('.sh') or n in ('ezinject', '10-cleanyourtv-home', '15-cleanyourtv-debloat')) else 0o644
-            body = open(p, 'rb').read()
+            rel = os.path.relpath(p, src).replace(os.sep, '/')   # a package uses '/', also when it is built on Windows
+            mode = 0o755 if (n.endswith('.sh') or n in ('ezinject', '10-cleanyourtv-home', '15-cleanyourtv-debloat', '20-cleanyourtv-screensaver')) else 0o644
+            body = shell_text(open(p, 'rb').read(), n)
             add(files, arc_root + '/' + rel, body, mode)
 
 def tgz(files, prefix=''):
@@ -79,12 +85,13 @@ for app_id, src in (('com.cleanyourtv.manager', 'manager/app'), ('com.cleanyourt
             add(data, '.' + d + '/' + rel, body)
 add(data, './usr/palm/applications/com.cleanyourtv.manager/qrcode.js', open(P('third-party', 'qrcode-generator', 'qrcode.js'), 'rb').read())   # QR code for sharing the log
 s = '.' + '/usr/palm/services/' + SERVICE
-add(data, s + '/bootstrap.sh', open(P('scripts', 'bootstrap.sh'), 'rb').read(), 0o755)
+add(data, s + '/bootstrap.sh', shell_text(open(P('scripts', 'bootstrap.sh'), 'rb').read(), 'bootstrap.sh'), 0o755)
 add_dir(data, s + '/helper', P('helper'), skip_dirs=('src',))   # helper/addons-bundled/<id>/src: the sources of an add-on's page
 add(data, s + '/helper/qrcode.js', open(P('third-party', 'qrcode-generator', 'qrcode.js'), 'rb').read())   # the QR code an add-on's page draws (helper/addons.js serves it as /addon/qrcode.js)
 add_dir(data, s + '/i18n', P('i18n'), skip=('README.md',))   # the translations, for the phone pages the service serves (helper/i18n.js)
 add_dir(data, s + '/scripts', P('scripts'), skip=('bootstrap.sh',))
-add(data, s + '/scripts/uninstall.sh', open(P('uninstall.sh'), 'rb').read(), 0o755)
+add_dir(data, s + '/screensaver', P('screensaver'))
+add(data, s + '/scripts/uninstall.sh', shell_text(open(P('uninstall.sh'), 'rb').read(), 'uninstall.sh'), 0o755)
 add(data, s + '/voice/cytv-asr', open(P('voice', 'cytv-asr'), 'rb').read(), 0o755)   # optional voice feature: downloads its engine on request
 add(data, s + '/inputhook/ezinject', open(P('third-party', 'inputhook', 'ezinject'), 'rb').read(), 0o755)
 add(data, s + '/inputhook/libinputhookpp.so', open(P('third-party', 'inputhook', 'libinputhookpp.so'), 'rb').read())
@@ -102,6 +109,10 @@ if BUILD:
 add(data, './usr/palm/packages/%s/packageinfo.json' % PKG, json.dumps({'id': PKG, 'version': version, 'app': PKG}).encode())
 
 size = sum(len(d) for _, d, _ in data) // 1024 + 1
+# a name with a backslash comes from building on Windows and is one file on the TV, not a folder: refuse it here
+for arc, _, _ in data:
+    if '\\' in arc:
+        sys.exit('a path with a backslash: ' + arc)
 ctl = ('Package: %s\nVersion: %s\nSection: misc\nPriority: optional\nArchitecture: all\nInstalled-Size: %d\n'
        'Maintainer: N/A <nobody@example.com>\nDescription: CleanYourTV for LG webOS\nwebOS-Package-Format-Version: 2\nwebOS-Packager-Version: x.y.x\n' % (PKG, version, size)).encode()
 ipk_name = '%s_%s_all.ipk' % (PKG, version)

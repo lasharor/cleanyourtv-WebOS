@@ -30,6 +30,7 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 | Remote key remapping (a button opens an app, input, Live TV, Home) | `helper/remap.js`, `helper/keynames.js` (the name of a button), `scripts/remapkey.sh`, the binds in `helper/inputhook.js`, `manager/src/js/remap.js`, `docs/key-remap.md` |
 | Phone remote (pairing, tokens, WebSocket, keys into the TV) | the catalog add-on phoneremote: `addons/catalog/phoneremote/service.js`, `ws.js` (RFC 6455 server and client for Node 8), `remotekeys.js` (the key adapter: pointer socket, ime, audio), `page.js` (phone page), `src/` (the add-on's own page on the TV: pairing and the paired phones, built into `page/index.html`), `docs/phone-remote.md` |
 | Turning the TV on from the phone (Wake-on-LAN), and the hook for an app that wraps the phone page | the `window.CYTV_APP` hook and the on/off button in `addons/catalog/phoneremote/page.js`; `ready.mac` and `ready.wol` in `addons/catalog/phoneremote/service.js`; the shared QR code an add-on page draws with is `third-party/qrcode-generator` (served as `/addon/qrcode.js`); no app is part of this repository |
+| The screen saver (our page over LG's) | `scripts/20-cleanyourtv-screensaver`, `scripts/screensaver-standin.sh`, `scripts/stage-screensaver.sh`, `helper/screensaver.js`, `screensaver/app/`, `docs/screensaver.md` |
 | Picture notifications | `notify/app/`, `helper/notify.js`, `helper/notifyapi.js` |
 | Voice (Moonshine, AI providers with fallback, Home Assistant) | `helper/voice.js` (microphone, recogniser, settings, the phone setup page), `helper/answers.js` (Assist, the AI providers in order: OpenRouter and self-hosted servers, your server), `voice/`; the manager screens in `manager/src/js/screens.js` (AI providers) |
 | Themes | `helper/themeschema.js` (the schema), `helper/theme.js` (downloads), `themes/` (read from GitHub), `docs/themes.md` |
@@ -117,3 +118,6 @@ sh tools/perf-tv.sh <tv-ip>        # read-only timings from a TV: launcher, Inpu
 - A per-TV rule written in a module or a script drifts from the others: put it in `helper/tvprofile.js`.
 - Edit the pages in `app/src`, `manager/src` and `helper/addons-bundled/iptv/src`, then `node tools/build-pages.js`; the built files are what the TV loads.
 - Themes are data; a theme must never contain CSS or script. The schema in `helper/themeschema.js` is the only source of what a theme can set.
+- A package built on Windows: `os.path.relpath` gives `\` in archive names and a CRLF checkout gives `shift\r: not found` on the TV
+  (both broke the screen saver install). `ipk/build.py` writes `/` and normalises shell scripts to LF, and refuses a backslash.
+- `cp` without `-r` skips `screensaver/app` ("omitting directory"): `bootstrap.sh` copies that payload with `cp -r`.
