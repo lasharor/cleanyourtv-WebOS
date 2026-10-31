@@ -14,7 +14,7 @@ uninstall. Optional features contact other services only when you switch them on
 | `/media/developer/cleanyourtv/` | The service (`helper.js` and modules), the launcher (`app/`), scripts, `config.json`, `usage.json`, the backup of the original state in `backup/`, downloaded themes in `themes/`, the weather card's last answers in `weather.json`, Live TV data in `live/`, the optional voice download in `voice/`, the key for an Android box in `adb/adbkey` (only if you set that up) |
 | `/media/developer/apps/usr/palm/applications/` | The apps `com.cleanyourtv.manager`, `.picker` and `.notify` |
 | `/media/developer/apps/usr/palm/services/com.cleanyourtv.manager.service/` | The installed package contents |
-| `/var/lib/webosbrew/init.d/` | Boot scripts `10-cleanyourtv-home` and, with debloat on, `15-cleanyourtv-debloat` (links into the folder above) |
+| `/var/lib/webosbrew/init.d/` | Boot scripts `10-cleanyourtv-home`, `20-cleanyourtv-screensaver` and, with debloat on, `15-cleanyourtv-debloat` (links into the folder above) |
 | `/home/root/.config/lginputhook/keybinds.json` | Our binds for the Input key, the voice and Guide keys and any [remapped buttons](key-remap.md); other binds are left alone |
 | `/home/root/.local/bin/cytv-addons` | Only if you run `cytv-addons.js shortcut`: a one-line command for [add-on repositories](development/addon-repos.md) over SSH. The uninstall removes it |
 | `/media/developer/cytv-setup.log` | The setup log |
@@ -42,6 +42,13 @@ uninstall. Optional features contact other services only when you switch them on
       from a checkpoint instead of starting its program (issues 72 and 84). When the launcher does not come up after the setup, the
       setup tries the first way once and writes `home-method` itself, so the next boots use it too; only when that fails as well is
       everything rolled back. TVs where the stand-in works are not touched.
+
+   LG's **screen saver** is replaced as well, by `20-cleanyourtv-screensaver`: either the page's folder is mounted over
+   `/usr/palm/applications/com.webos.app.screensaver` and the app manager reads it, or, where LG's screen saver is a native program,
+   `screensaver-standin.sh` is mounted over that program and the app manager is left alone (`helper/tvprofile.js`, `saverTakeover`).
+   The app id stays LG's, so the TV starts the page when it would have started its own screen saver. Where both use the folder mount,
+   `10-cleanyourtv-home` mounts the screen saver before it restarts the app manager, so there is one restart. See
+   [Screen saver](screensaver.md).
 
    Whenever the app manager is restarted on a TV with LG's native Home or on webOS before 7 (the first way, or the setup registering
    our extra apps), the services that talk to it (`eim`, `webapp-mgr`, `preload-manager`, `memorymanager`, those the TV has) are
@@ -78,4 +85,5 @@ These are switched on in the manager app, **Experimental**, and put back by swit
 ## What the uninstall removes
 
 The apps, the boot scripts, the `cytv-addons` command, the Input-key and voice-key binds, the debloat changes, a switched-off LG volume bar (put back) and the folder
-`/media/developer/cleanyourtv` (with `--keep-config`, the settings and usage history stay). The TV then restarts with LG's Home.
+`/media/developer/cleanyourtv` (with `--keep-config`, the settings and usage history stay). The mounts that replace LG's Home and LG's
+screen saver are removed too, so the TV then restarts with both as LG shipped them.
