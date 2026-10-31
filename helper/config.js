@@ -12,7 +12,7 @@ const P = require('./paths');
 const OPTIONS = { debloat: true, inputKey: true, liveTv: true, tuner: true, volumeTheme: 'system' };
 const KEYS = { input: '', home: '', voice: '', guide: '', learned: false };
 // what the launcher saves with POST /api/config; everything else belongs to the service and the manager
-const LAUNCHER_KEYS = ['dock', 'hidden', 'sort', 'order', 'clock', 'topbar', 'runDots', 'wall', 'cards'];
+const LAUNCHER_KEYS = ['dock', 'hidden', 'sort', 'order', 'clock', 'topbar', 'runDots', 'wall', 'cards', 'shelfShow'];
 
 // file: config.json; opts.log(line) for the change log; opts.memory: keep the settings in memory instead (tests)
 function create(file, opts) {

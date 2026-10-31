@@ -60,6 +60,7 @@ tuner) and is offered only when the TV has that app and **Show LG's own Live TV*
   The next start is a cold boot, so it takes longer, and Wake-on-LAN no longer wakes the TV;
 - **hidden apps** (show them again);
 - the **app order** (most used first, A to Z, or custom static);
+- **show app name**: shows or hides the large name of the focused app. When hidden in the plain layout (`below` mode, dock near the top), the dock moves up to the name's position. The dock stays where it is in `push` and `overlay` grid modes and when the dock is at the bottom;
 - **mark running apps** (a green dot on their tiles, or none);
 - the **clock** format (automatic, 12 or 24 hour);
 - the **theme** (see [Themes](themes.md)) and the **accent colour**; the theme list shows each theme's screenshot;

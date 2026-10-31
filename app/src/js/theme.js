@@ -12,8 +12,10 @@ var TH0 = {
     glow: '',
     slots: [],
     shelfDock: null,
+    dockBottom: false,
   },
   TH = TH0,
+  lastTheme = null,
   themeKeys = [],
   themeAttrs = ['data-bar', 'data-labels', 'data-clock', 'data-grid', 'data-galign', 'data-cstyle', 'data-cards'];
 function applyTheme(t) {
@@ -70,13 +72,16 @@ function applyTheme(t) {
     glow: t.glowRgb || '',
     slots: t.slots || [],
     shelfDock: t.shelf || null,
+    dockBottom: !!t.dockBottom,
   };
+  lastTheme = t;
   /* the name follows the dock (shelf.dockAlign) only while that is on; otherwise it keeps the theme's own margin (--name-x) */
   var sh = $('shelf');
   sh.style.paddingLeft = '';
   sh.style.paddingRight = '';
   /* scenes and the glass clock (scenes.js) */
   if (window.SCENES) SCENES.apply(t);
+  applyShelfPref();
 }
 
 /* line the app name up with the left edge of the dock (shelf.dockAlign). The dock is centred on a width that depends on how many apps
@@ -96,6 +101,47 @@ function placeShelf(n) {
   left = Math.max(0, left);
   if (document.documentElement.getAttribute('dir') === 'rtl') sh.style.paddingRight = Math.max(0, 1920 - left - W) + 'px';
   else sh.style.paddingLeft = left + 'px';
+}
+
+/* Customise > Show app name: when hidden, the dock moves up to where the name was (below mode only; push/overlay keep their layout).
+   Reads the original theme values from lastTheme.vars so repeated calls are safe. */
+function applyShelfPref() {
+  var hide = cfg.shelfShow === false,
+    b = document.body;
+  b.setAttribute('data-shelf', hide ? 'off' : '');
+  /* only reposition the dock in plain 'below' mode with a top-anchored dock */
+  var canMove = hide && lastTheme && !TH.dockBottom && !TH.push && !TH.overlay;
+  if (!canMove) {
+    if (lastTheme && lastTheme.vars) {
+      var st2 = document.documentElement.style;
+      st2.setProperty('--dock-t', lastTheme.vars['--dock-t'] || '');
+      st2.setProperty('--grid-t', lastTheme.vars['--grid-t'] || '');
+      st2.setProperty('--view-top', lastTheme.vars['--view-top'] || '');
+    }
+    if (lastTheme) {
+      TH.gt = lastTheme.gt || 350;
+      TH.viewH = lastTheme.viewH || 780;
+    }
+    return;
+  }
+  var lv = lastTheme.vars,
+    st = document.documentElement.style,
+    nameY = parseInt(lv['--name-y']) || 150,
+    barT = parseInt(lv['--bar-t']),
+    pillH = parseInt(lv['--pill-h']) || 64,
+    barBottom = isNaN(barT) ? 0 : barT + pillH,
+    viewTopOrig = parseInt(lv['--view-top']) || 300,
+    dockH = parseInt(lv['--dock-h']) || 230,
+    dockPad = parseInt(lv['--dock-pad']) || 0,
+    newDockTop = Math.max(nameY, barBottom),
+    newViewTop = Math.min(viewTopOrig, newDockTop),
+    newDockT = newDockTop - newViewTop,
+    newGridT = newDockTop + dockH + 2 * dockPad + 60 - newViewTop;
+  st.setProperty('--dock-t', newDockT + 'px');
+  st.setProperty('--grid-t', newGridT + 'px');
+  st.setProperty('--view-top', newViewTop + 'px');
+  TH.gt = newGridT;
+  TH.viewH = 1080 - newViewTop;
 }
 
 function setFocus(nr, nc, first) {
