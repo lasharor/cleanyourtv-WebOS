@@ -1146,6 +1146,18 @@ body.scenes-on {
 .s-dawn .gclock {
   top: 230px;
 }
+/* Custom theme scenes: clock and date position come from CSS variables set per-scene by scenes.js */
+.s-custom .gclock {
+  top: var(--scene-clock-top, 150px);
+  font-size: var(--scene-clock-size, 400px);
+}
+.s-custom .gclock.under {
+  opacity: 0.7;
+  transform: translateX(5px);
+}
+[data-cstyle="glass"].scene-custom #clock {
+  top: var(--scene-date-top, 96px);
+}
 /* with the glass clock the text clock steps aside: only the date stays, centred above the glass clock (each scene places it) */
 [data-cstyle="glass"] #time,
 [data-cstyle="glass"] #greet {
@@ -1194,6 +1206,12 @@ body.scenes-on {
 }
 /* the light misty sky of Fog: the top buttons turn dark so they stay visible */
 .scenes-on.scene-fog .pill:not(.f) {
+  background: rgba(22, 32, 29, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(22, 32, 29, 0.28);
+  color: #16201d;
+}
+/* custom scenes with darkSky true: same dark pill treatment for bright-sky scenes */
+.scenes-on.scene-dark-sky .pill:not(.f) {
   background: rgba(22, 32, 29, 0.14);
   box-shadow: inset 0 0 0 1px rgba(22, 32, 29, 0.28);
   color: #16201d;

@@ -16,6 +16,7 @@ run(async () => {
     for (const k of Object.keys(o)) {
       const key = pre ? pre + '.' + k : k;
       if (key === 'slots') continue; // a list, checked by themeschema.slots
+      if (key === 'scenes') continue; // custom scenes array, checked by themeschema.customScenes
       if (o[k] && typeof o[k] === 'object') walk(o[k], key);
       else if (!known.has(key) && ['name', 'author', 'description', 'extends'].indexOf(key) < 0) unknownKeys.push(key);
     }
@@ -182,6 +183,60 @@ run(async () => {
       !('slots' in plain),
     'a theme that extends one with slots keeps them, "slots": [] removes them, and a theme without slots has no slots key'
   );
+  // custom scenes: a theme brings its own landscape images; files are validated on disk, bad entries are dropped
+  const sceneDir = path.join(tmp, 'scene-theme');
+  fs.mkdirSync(sceneDir, { recursive: true });
+  const appDir = path.join(root, 'app');
+  fs.writeFileSync(path.join(sceneDir, 'theme.json'), JSON.stringify({ name: 'S', effects: { scenes: 'custom' } }));
+  fs.copyFileSync(path.join(appDir, 'scene-night.jpg'), path.join(sceneDir, 'night.jpg'));
+  fs.copyFileSync(path.join(appDir, 'scene-night-glass.jpg'), path.join(sceneDir, 'night-glass.jpg'));
+  fs.copyFileSync(path.join(appDir, 'scene-night-fg.webp'), path.join(sceneDir, 'night-fg.webp'));
+  const sceneRaw = JSON.parse(fs.readFileSync(path.join(sceneDir, 'theme.json'), 'utf8'));
+  sceneRaw.scenes = [
+    {
+      id: 'night',
+      image: 'night.jpg',
+      glass: 'night-glass.jpg',
+      front: 'night-fg.webp',
+      clock: { top: 200, size: 380 },
+      date: { top: 120 },
+      water: 0,
+      darkSky: true,
+    },
+    { id: '../bad', image: 'evil.jpg', glass: 'night-glass.jpg' }, // bad id
+    { id: 'dup', image: '../../etc/passwd', glass: 'night-glass.jpg' }, // bad filename
+    { id: 'missing', image: 'missing.jpg', glass: 'night-glass.jpg' }, // file not on disk
+    { id: 'night' }, // duplicate id (after the valid one above)
+  ];
+  const sceneTheme = themeMod.normalize(sceneRaw, 'scene-theme', null, sceneDir);
+  const rs2 = themeMod.resolve(sceneTheme);
+  ok(
+    sceneTheme.v['effects.scenes'] === 'custom' &&
+      sceneTheme.v.customScenes &&
+      sceneTheme.v.customScenes.length === 1 &&
+      sceneTheme.v.customScenes[0].id === 'night' &&
+      sceneTheme.v.customScenes[0].image === 'night.jpg' &&
+      sceneTheme.v.customScenes[0].glass === 'night-glass.jpg' &&
+      sceneTheme.v.customScenes[0].front === 'night-fg.webp' &&
+      sceneTheme.v.customScenes[0].clock &&
+      sceneTheme.v.customScenes[0].clock.top === 200 &&
+      sceneTheme.v.customScenes[0].date &&
+      sceneTheme.v.customScenes[0].date.top === 120 &&
+      sceneTheme.v.customScenes[0].darkSky === true,
+    'custom scenes: valid scene is accepted, bad id/filename/missing file/duplicate are dropped; darkSky is preserved'
+  );
+  ok(
+    rs2.scenes &&
+      rs2.scenes.set === 'custom' &&
+      rs2.scenes.id === 'scene-theme' &&
+      rs2.scenes.lib &&
+      rs2.scenes.lib.length === 1 &&
+      rs2.scenes.lib[0].id === 'night',
+    'custom scenes: resolved output has scenes.lib and scenes.id'
+  );
+  const noSceneRaw = { name: 'NS', effects: { scenes: 'custom' } }; // custom but no scenes array
+  const noSceneTheme = themeMod.normalize(noSceneRaw, 'noscene', null, sceneDir);
+  ok(noSceneTheme.v['effects.scenes'] === 'off', 'effects.scenes "custom" without a valid scenes array falls back to off');
   const cardsShape = req('cards');
   const cs = cardsShape.sanitize({
     greeting: { type: 'greeting', name: 'Salih', x: { deep: { deeper: 1 } } },
