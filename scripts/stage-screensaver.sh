@@ -6,6 +6,8 @@ L=/media/developer/cleanyourtv
 H=/usr/palm/applications/com.webos.app.screensaver
 S=$L/screensaver-overlay
 [ -d $L/screensaver/app ] || exit 1
+# already staged and unchanged (the usual boot): copying it again and running node three times costs seconds for nothing
+if [ -f $S/appinfo.json ] && cmp -s $L/screensaver/app/index.html $S/index.html; then exit 0; fi
 mkdir -p $S
 cp $L/screensaver/app/* $S/
 # the stock screen saver's icons, once: the derived appinfo.json names them, and the overlay folder hides theirs
