@@ -84,8 +84,10 @@ if (cmd === 'kind') {
   );
   s.type = 'web';
   s.main = 'index.html';
+  // the page paints its own black background: no launch splash and no spinner, which showed as a grey "loading" screen for a second
   delete s.splashBackground;
-  delete s.noSplashOnLaunch;
+  s.noSplashOnLaunch = true;
+  s.spinnerOnLaunch = false;
   s.defaultWindowType = 'overlay';
   s.transparent = false;
   s.bgColor = '#000000';

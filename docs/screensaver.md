@@ -70,18 +70,21 @@ There is no switch for it in the manager app yet; `DISABLE-SCREENSAVER` in `/med
 
 ## Limits
 
-!!! warning "Stalled on power-off on the first TV, 2026-10-31"
-    On the LG 65UR91006LB the saver itself worked (see below), but **turning the TV off while the page was up stalled**: the TV stayed on a
-    frozen picture for a few minutes before it went off. The page had no standby handling and the service had closed it with `killApp`
-    while `tvpowerd` owned it. Since then the page closes itself on `visibilitychange` (standby, another app on top) and
-    `DISABLE-SCREENSAVER` was set on that TV; **not re-tested**. Treat the feature as experimental until a power-off/wake cycle with it
-    enabled has been seen to work.
+!!! warning "Power-off stalled on the first TV, then was fixed"
+    On the LG 65UR91006LB (2026-10-31) turning the TV off while the page was up **stalled**: the picture stayed frozen for a few
+    minutes before the TV went off. The page had no standby handling, and the service had closed it with `killApp` while `tvpowerd`
+    owned it. The page now closes itself on `visibilitychange` (standby, another app on top), and with that in place a power-off with
+    the saver on screen went cleanly (verified on the same TV). The `killApp` path on dismissal is still there, so treat this as
+    "fixed once, watch it".
 
 !!! note "What was verified on that TV"
     LG's screen saver is a **Flutter** app started by `tvpowerd`: after the mount and one app manager restart, sam reports `type: web`,
     `main: index.html`; `tvpowerd` starts the page after the idle timeout (`caller_id: com.webos.service.tvpower`, window
     `_WEBOS_WINDOW_TYPE_OVERLAY`), and the first key closes it and gives the launcher back. Without the app manager restart the registry
     keeps `type: flutter` and nothing appears — the restart is what makes the mount take effect.
+
+The launch showed a grey "loading" screen with a spinner for a second, like any web app: the derived manifest now sets
+`noSplashOnLaunch: true` and `spinnerOnLaunch: false`, so the page's own black background is what appears. (Not yet seen on the TV.)
 
 - While the page is up the power state stays `Active` with `processing: "Screen Saver Ready"`; that is why the service treats it as the
   screen saver and leaves it alone (a page that was closed every minute by its own safety check was the first bug found on the TV).

@@ -51,6 +51,10 @@ run(async () => {
       'it is an overlay: closing the page gives the app that was on screen back'
     );
     ok(!a.splashBackground && !a.qmlIncludePath, "the native and splash settings of LG's screen saver are dropped");
+    ok(
+      a.noSplashOnLaunch === true && a.spinnerOnLaunch === false,
+      'no launch splash or spinner: the page paints black itself (a grey loading screen showed for a second on the TV)'
+    );
     ok(a.version === '1.0.0', "everything else of LG's manifest is kept");
   }
 
