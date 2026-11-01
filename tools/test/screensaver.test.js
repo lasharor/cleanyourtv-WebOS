@@ -47,8 +47,8 @@ run(async () => {
       "it keeps LG's app id (the TV asks for that id) and runs our index.html"
     );
     ok(
-      a.defaultWindowType === 'overlay' && a.transparent === false,
-      'it is an overlay: closing the page gives the app that was on screen back'
+      a.defaultWindowType === 'screenSaver' && a.transparent === false,
+      "it keeps LG's screenSaver window type: tvpowerd only counts that as the screen saver"
     );
     ok(!a.splashBackground && !a.qmlIncludePath, "the native and splash settings of LG's screen saver are dropped");
     ok(

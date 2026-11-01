@@ -88,7 +88,9 @@ if (cmd === 'kind') {
   delete s.splashBackground;
   s.noSplashOnLaunch = true;
   s.spinnerOnLaunch = false;
-  s.defaultWindowType = 'overlay';
+  // LG's own saver has the window type "screenSaver", and tvpowerd only counts that as the screen saver: with an overlay window it
+  // started the app but never entered the Screen Saver state, and after the app closed it never armed again. Keep LG's type.
+  if (!s.defaultWindowType) s.defaultWindowType = 'screenSaver';
   s.transparent = false;
   s.bgColor = '#000000';
   fs.writeFileSync(a[2], JSON.stringify(s, null, 1));
