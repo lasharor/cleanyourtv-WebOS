@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- CleanYourTV screen saver: replaces LG's screen saver app (docs/screensaver.md). Photos come from the wallpaper library through
-     the service (GET /api/screensaver/photos, the pictures themselves from /api/wallpapers/photo/...), with a dim clock and date in
+     the service (GET /api/screensaver/photos, the pictures themselves from /api/wallpapers/photo/...), with the clock and date in
      the corner. Written for the TV's Chromium 68 and up: ES5 style, only opacity changes, nothing else animates.
      The first key, click or touch closes the page: the app that was on screen comes back (the page is an overlay window). -->
 <html lang="en"><head>
@@ -23,11 +23,9 @@
   #clock {
     position: fixed; right: 4.6vw; bottom: 4.2vh; text-align: right;
     text-shadow: 0 1px 18px rgba(0,0,0,.55);
-    transition: opacity 3s linear; opacity: .72;
   }
-  #clock.dim { opacity: .3; }
   #time { font-size: 4.6vw; font-weight: 200; letter-spacing: .01em; line-height: 1.05; }
-  #date { margin-top: .5em; font-size: 1.35vw; font-weight: 300; letter-spacing: .06em; text-transform: uppercase; opacity: .75; }
+  #date { margin-top: .5em; font-size: 1.35vw; font-weight: 300; letter-spacing: .06em; text-transform: uppercase; }
 </style>
 </head><body>
 <div id="p0"></div>
@@ -103,8 +101,6 @@ function tickClock() {
   } catch (e) {
     el('date').textContent = pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
   }
-  /* the clock fades after two minutes: a bright corner that never moves is what burns in */
-  if (Date.now() - upAt > 120000) el('clock').className = 'dim';
 }
 
 function load() {

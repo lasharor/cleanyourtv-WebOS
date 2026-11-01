@@ -1,7 +1,7 @@
 # Screen saver
 
 CleanYourTV replaces LG's screen saver with its own page: your own photos from the [wallpaper library](wallpapers.md), cross-faded,
-with a dim clock and date in the corner. It appears when the TV is idle, exactly when LG's screen saver used to.
+with the clock and date in the corner. It appears when the TV is idle, exactly when LG's screen saver used to.
 
 It is applied the same way as Home (**RAM only**): a reboot without the boot scripts, or the Homebrew Channel's failsafe mode, brings
 LG's screen saver back.
@@ -10,8 +10,8 @@ LG's screen saver back.
 
 - **Photos** from the wallpaper library (uploads from the phone and Immich, the same photos as the ones behind Home), changed every
   25 seconds. A new photo starts when the page opens.
-- **The clock and the date**, bottom right, dim: the clock fades further after two minutes, so a bright corner does not stay in one
-  place on an OLED panel.
+- **The clock and the date**, bottom right, solid white over the photo: no transparency, so it stays readable on a bright picture.
+  It sits in the same corner all the time, which is the one thing to watch on a panel that retains static content.
 - **No photos**: the clock and date alone, on black.
 
 The first key, click or touch closes it and the app that was on screen comes back. Nothing is saved or uploaded.
