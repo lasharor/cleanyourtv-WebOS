@@ -39,6 +39,22 @@ Where Home is a stand-in but the screen saver needs the folder mount (a QML scre
 manager is restarted at boot *after* Home came up, and Home is opened again afterwards (`reload-home.sh`), because the restart takes
 down the page in `webapp-mgr`. The setup itself only mounts; such a TV gets the new screen saver from its next boot.
 
+## When it appears
+
+`tvpowerd` starts it after the TV's idle timeout (two minutes, `com.webos.surfacemanager.userActivityTimeout`) and starts it again after
+each dismissal, as LG's own saver does — **provided the window type is LG's own**. With `defaultWindowType: "overlay"` it started the
+page once and then stayed at `Screen Saver Ready` for good; with `"screenSaver"` (inherited from the stock manifest, see
+[`jtool.js`](../scripts/jtool.js)) it re-arms. Three timed cycles on the tested TV: 61 s, 112 s, 61 s.
+
+The service keeps a second, slower timer as a fallback ([screensaver.js](../helper/screensaver.js)): two quiet minutes with the launcher
+in front and it opens the page itself. It covered one of those three cycles, where `tvpowerd` did not fire.
+
+The limit that follows: over a video app the service cannot tell an idle TV from a watched one, so there the saver comes only from
+`tvpowerd`.
+
+The page ignores keys for its first two seconds: webOS delivers a key with the launch, and without that guard the page closed itself
+right after opening.
+
 ## While it runs
 
 - The page asks the service for the photos and closes itself through it (`POST /api/screensaver/dismiss`). The service closes the

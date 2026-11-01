@@ -39,8 +39,11 @@ var API = 'http://127.0.0.1:8765';
 var list = [], order = [], pos = 0, every = 25, side = 0, timer = 0, started = false, closed = false, upAt = Date.now();
 function el(id) { return document.getElementById(id); }
 
-/* the way out. It is defined first, so that a failure further down still leaves the remote working. */
+/* the way out. It is defined first, so that a failure further down still leaves the remote working.
+   The window receives a keydown of its own as it is opened (webOS delivers one with the launch), so for the first two
+   seconds a key is not a way out: without that the page closed itself 0.3 s after the launch and was never seen. */
 function dismiss() {
+  if (Date.now() - upAt < 2000) return;
   if (closed) return;
   closed = true;
   try { var x = new XMLHttpRequest(); x.open('POST', API + '/api/screensaver/dismiss', true); x.send('{}'); } catch (e) {}

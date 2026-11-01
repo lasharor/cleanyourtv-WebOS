@@ -57,12 +57,19 @@ function create(ctx) {
     return true;
   }
 
-  // the way out of a page the system left behind: the TV is Active again and the page is still there
-  let since = 0;
+  // The way out of a page the system left behind, and a fallback way back in. With LG's own window type (`screenSaver`) tvpowerd
+  // arms and relaunches the saver by itself (61 s in the measured cycles), but it did not fire in one cycle out of three, so the
+  // service also opens the page after two quiet minutes on the launcher.
+  const HOME = 'com.webos.app.home',
+    IDLE_MS = 120000;
+  let since = 0,
+    homeSince = 0,
+    tickN = 0;
   async function tick() {
     // nothing to watch when LG's screen saver is not replaced: no luna call every ten seconds on those TVs
     if (!replaced()) {
       since = 0;
+      homeSince = 0;
       return;
     }
     let up = false;
@@ -73,8 +80,27 @@ function create(ctx) {
     }
     if (!up) {
       since = 0;
+      tickN++;
+      if (tickN % 3 !== 0) return; // an idle timer does not need a luna call every ten seconds
+      try {
+        const fg = await luna(AM + 'getForegroundAppInfo', {});
+        if (fg.appId !== HOME) {
+          homeSince = 0;
+          return;
+        }
+        if (!homeSince) {
+          homeSince = Date.now();
+          return;
+        }
+        if (Date.now() - homeSince < IDLE_MS) return;
+        homeSince = 0;
+        console.log('screensaver: the launcher has been idle for two minutes; opening the page');
+        await luna(AM + 'launch', { id: SA });
+      } catch (_) {}
       return;
     }
+    homeSince = 0;
+    tickN = 0;
     if (!since) {
       since = Date.now();
       return;
