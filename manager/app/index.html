@@ -1026,7 +1026,9 @@ function build() {
             : 'Yes, use LG’s Home',
       sub: un ? 'settings and apps are deleted; the TV restarts' : 'the TV restarts',
       fn: function () {
-        api(un ? '/api/manager/uninstall' : sv ? '/api/manager/saver' : '/api/manager/home', un ? {} : { enabled: on }).catch(function () {});
+        api(un ? '/api/manager/uninstall' : sv ? '/api/manager/saver' : '/api/manager/home', un ? {} : { enabled: on }).catch(
+          function () {}
+        );
         banner(
           un
             ? 'Removing CleanYourTV… the TV restarts in a moment and LG’s Home comes back.'

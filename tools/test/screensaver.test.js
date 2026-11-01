@@ -88,7 +88,13 @@ run(async () => {
 
   // ---- the files of the boot takeover ----
   if (process.platform !== 'win32') {
-    for (const s of ['10-cleanyourtv-home', '20-cleanyourtv-screensaver', 'screensaver-standin.sh', 'stage-screensaver.sh', 'undo-screensaver.sh']) {
+    for (const s of [
+      '10-cleanyourtv-home',
+      '20-cleanyourtv-screensaver',
+      'screensaver-standin.sh',
+      'stage-screensaver.sh',
+      'undo-screensaver.sh',
+    ]) {
       const n = cp.spawnSync('sh', ['-n', path.join(root, 'scripts', s)]);
       ok(n.status === 0, s + ' is valid shell');
     }
