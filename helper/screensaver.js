@@ -123,8 +123,7 @@ function create(ctx) {
 
   async function handle(req, res, u) {
     const json = (o, c) => web.json(res, o, c);
-    if (u === '/api/screensaver/photos')
-      return json({ photos: photos(), stamp: wp() ? wp().stamp() : '', every: every() });
+    if (u === '/api/screensaver/photos') return json({ photos: photos(), stamp: wp() ? wp().stamp() : '', every: every() });
     if (u === '/api/screensaver/dismiss' && req.method === 'POST') {
       await close();
       return json({ returnValue: true });
