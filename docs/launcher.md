@@ -64,6 +64,7 @@ tuner) and is offered only when the TV has that app and **Show LG's own Live TV*
 - the **clock** format (automatic, 12 or 24 hour);
 - the **theme** (see [Themes](themes.md)) and the **accent colour**; the theme list shows each theme's screenshot;
 - **Wallpapers**: your own photos behind Home, and how often they change (see [Wallpapers](wallpapers.md));
+- **Screen saver**: after 1 to 30 minutes without a key the screen goes black and shows the time, the date (also in the Islamic calendar), the next prayer and a dhikr, dim and drifting slowly so an OLED panel keeps no picture. Any key wakes it, and that key does nothing else. It is not shown over Live TV or a menu. **Try it now** shows it at once (see [Screen saver](#screen-saver));
 - **More settings...**, which opens the [manager app](manager.md) for everything the TV and the service do.
 
 Putting the dock, buttons, hidden apps, order and clock back to the defaults is in the manager app: **Reset Home customisation**.
@@ -80,6 +81,8 @@ same place.
 |---|---|
 | Greeting | Good morning, afternoon or evening, with your name if you set one, and the date or the weather on a second line where there is room. |
 | Weather | The temperature and the sky now at a place you search for on the phone page, from Open-Meteo (free, no account), with the next three days if you like; °C or °F. The TV asks at most every 30 minutes and keeps the last answer for when the internet is away. |
+| Prayer times | The next prayer with its time and the time left; with *The next prayer and the five times* the day's five times in a row. A place from the phone page (like the Weather card) and the method: Umm al-Qura (the default), Muslim World League, North America, Egyptian or Karachi, and the standard or Hanafi Asr. The times are worked out on the TV from the place and the date, so they need no internet and no account. |
+| Adhkar | One short dhikr in Arabic at a time, a new one every 30 seconds, a minute or 5 minutes, with a slow fade. The morning adhkar until noon, the evening adhkar from the afternoon, and the all-day ones in between. In three sizes. |
 | Home Assistant entity | One entity with an icon, its state (On, Off, 8.4 °C) and its name. Select it with the remote (it joins the row of top buttons) and press OK to switch a light, switch, fan or automation, or to run a scene or script. Locks, alarms and covers are never switched from the TV. |
 | Home Assistant entities | A list of entities, one per line on the phone page, with an optional title. |
 | Home Assistant camera | A camera's picture, renewed every 10, 30 or 60 seconds while Home is shown. |
@@ -161,3 +164,23 @@ Settings are stored on the TV in `/media/developer/cleanyourtv/config.json`:
 
 See [`config.example.json`](https://github.com/lasharor/cleanyourtv-WebOS/blob/main/config.example.json). Change settings in
 the launcher; the file is read and written by the service.
+
+## Prayer times, adhkar and the screen saver
+
+The **Prayer times** and **Adhkar** cards are for themes with places for cards (Lock Screen, Bloom and Horizon): choose them in the
+manager app under **Cards** or on the phone page. For the prayer times, search your city on the phone page; the TV's own time zone and
+date are used.
+
+The times are the usual astronomical ones for the method you choose (the angles of the sun for Fajr and Isha; Umm al-Qura sets Isha 90
+minutes after Maghrib, and 120 minutes in Ramadan when the TV's browser has the Umm al-Qura calendar). They can differ by a minute or two
+from your mosque's timetable, so check them once against it. Places beyond 66 degrees of latitude have no times (the sun may not rise or
+set), and the card then asks for another place.
+
+### Screen saver
+
+**Customise** > **Screen saver** switches it on and sets the minutes without a key (1, 3, 5, 10, 15 or 30). It is black, with the time,
+the date in the Gregorian and the Islamic calendar, the next prayer and a dhikr in dim text that drifts slowly round the screen (only
+opacity and position are animated), so an OLED panel is off where nothing is drawn. The prayer line appears when a Prayer times card has
+a place; the saver uses the first one. It never starts over Live TV, a menu or while another app is in front.
+
+The adhkar are plain text in `app/src/js/prayer.js` (`ADHKAR`), kept in one place so they can be checked and changed.

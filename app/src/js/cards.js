@@ -549,6 +549,66 @@ var CARD_TYPES = {
       el.setAttribute('data-size', o.size === 'small' || o.size === 'large' ? o.size : 'medium');
     },
   },
+  /* the next prayer with the time left, and with show: 'all' the five times of the day; worked out on the TV from the card's place
+     (prayer.js), so it needs no network. The place is chosen on the phone page, like the weather's. */
+  prayer: {
+    name: function () {
+      return t('Prayer times');
+    },
+    draw: function (el, o) {
+      var now = new Date(),
+        nx = prayerReady(o) ? PRAYER.next(now, o) : null,
+        h = '',
+        key;
+      if (!nx) {
+        key = 'none';
+        h = '<div class="pr-none"></div>';
+      } else {
+        var mins = Math.ceil((nx.at - now) / 60000);
+        key = nx.id + '|' + nx.at.getTime() + '|' + mins + '|' + (o.show || '') + '|' + o.method + '|' + o.asr + '|' + LOC;
+        h = '<div class="pr-n"></div><div class="pr-t"></div><div class="pr-l"></div>';
+        if (o.show === 'all') {
+          h += '<div class="pr-all">';
+          PRAYER.ORDER.forEach(function (id) {
+            h += '<div class="pr-i' + (id === nx.id ? ' on' : '') + '"><span></span><b></b></div>';
+          });
+          h += '</div>';
+        }
+      }
+      if (el._k === key) return;
+      el._k = key;
+      el.innerHTML = h;
+      if (!nx) {
+        el.firstChild.textContent = t('Choose a place in Cards');
+        return;
+      }
+      el.querySelector('.pr-n').textContent = prayerName(nx.id);
+      el.querySelector('.pr-t').textContent = prayerClock(nx.at);
+      el.querySelector('.pr-l').textContent = prayerLeft(nx.at - now);
+      if (o.show === 'all') {
+        var items = el.querySelectorAll('.pr-i');
+        PRAYER.ORDER.forEach(function (id, i) {
+          items[i].firstChild.textContent = prayerName(id);
+          items[i].lastChild.textContent = prayerClock(nx.times[id]);
+        });
+      }
+    },
+  },
+  /* one short dhikr at a time (prayer.js: ADHKAR), a new one every `secs` seconds with a slow fade; the morning ones until noon and the
+     evening ones from the afternoon. A new element each time, so the fade (opacity only) starts again. */
+  dhikr: {
+    name: function () {
+      return t('Adhkar');
+    },
+    draw: function (el, o) {
+      var s = adhkarAt(new Date(), o.secs);
+      if (el._k === s) return;
+      el._k = s;
+      el.innerHTML = '<div class="dh-t" dir="rtl" lang="ar"></div>';
+      el.firstChild.textContent = s;
+      el.setAttribute('data-size', o.size === 'small' || o.size === 'large' ? o.size : 'medium');
+    },
+  },
 };
 function cardFor(sl) {
   var c = (cfg.cards || {})[sl.id];

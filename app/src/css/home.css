@@ -974,6 +974,157 @@ body.wpon {
   opacity: 0.45;
   transition: opacity 2s linear;
 }
+/* the prayer card (prayer.js): the next prayer, its time and what is left; with show "all" the five times in a row below */
+.card-prayer {
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  line-height: 1.15;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+.card-prayer .pr-n {
+  flex: none;
+  font-size: calc(22px * var(--fs));
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(245, 246, 248, 0.8);
+}
+.card-prayer .pr-t {
+  flex: none;
+  margin-top: 4px;
+  font-size: calc(54px * var(--fs));
+  font-weight: 300;
+}
+.card-prayer .pr-l {
+  flex: none;
+  margin-top: 4px;
+  font-size: calc(22px * var(--fs));
+  color: rgba(245, 246, 248, 0.7);
+}
+.card-prayer .pr-none {
+  font-size: calc(22px * var(--fs));
+  color: rgba(245, 246, 248, 0.7);
+}
+.card-prayer .pr-all {
+  flex: none;
+  display: flex;
+  margin-top: 18px;
+  font-size: calc(18px * var(--fs));
+}
+.card-prayer .pr-i {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  margin-right: 22px;
+  color: rgba(245, 246, 248, 0.55);
+}
+.card-prayer .pr-i b {
+  margin-top: 2px;
+  font-weight: 500;
+}
+.card-prayer .pr-i.on {
+  color: var(--ink);
+}
+/* the adhkar card: one dhikr in Arabic, faded in when it changes (opacity only) */
+.card-dhikr {
+  color: var(--ink);
+  font-size: calc(34px * var(--fs));
+  line-height: 1.6;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+.card-dhikr[data-size="small"] {
+  font-size: calc(26px * var(--fs));
+}
+.card-dhikr[data-size="large"] {
+  font-size: calc(46px * var(--fs));
+}
+.card-dhikr .dh-t {
+  animation: dhin 1.6s ease-out;
+}
+@keyframes dhin {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* the screen saver (saver.js): black, so an OLED panel is off where nothing is drawn; the clock, the prayer and the dhikr are dim and
+   drift slowly round the screen, so no pixel keeps the same picture. Only opacity and transform are animated. */
+#saver {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 900;
+  background: #000;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 1.5s linear,
+    visibility 0s linear 1.5s;
+}
+#saver.on {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 1.5s linear;
+}
+#sv-box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 900px;
+  margin-left: -450px;
+  height: 520px;
+  margin-top: -260px;
+  text-align: center;
+  color: rgba(235, 238, 242, 0.62);
+  animation: svdrift 300s linear infinite;
+}
+@keyframes svdrift {
+  0% {
+    transform: translate(-300px, -190px);
+  }
+  25% {
+    transform: translate(300px, -190px);
+  }
+  50% {
+    transform: translate(300px, 190px);
+  }
+  75% {
+    transform: translate(-300px, 190px);
+  }
+  100% {
+    transform: translate(-300px, -190px);
+  }
+}
+#sv-time {
+  font-size: 170px;
+  font-weight: 200;
+  line-height: 1.05;
+}
+#sv-date,
+#sv-hijri,
+#sv-pray {
+  margin-top: 10px;
+  font-size: 30px;
+  color: rgba(235, 238, 242, 0.5);
+}
+#sv-pray {
+  margin-top: 26px;
+  color: rgba(235, 238, 242, 0.7);
+}
+#sv-dhikr {
+  margin: 34px auto 0;
+  width: 820px;
+  font-size: 36px;
+  line-height: 1.7;
+  color: rgba(235, 238, 242, 0.6);
+}
+#sv-dhikr .dh-t {
+  animation: dhin 2.5s ease-out;
+}
 /* ---------- scenes and the glass clock (scenes.js; after couch-tv, MIT). Layers: photo, shade, glass clock, the scenery cut out of
    the photo, the late-evening dimming; then the rest of Home. Only opacity is animated. ---------- */
 @font-face {

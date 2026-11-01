@@ -748,5 +748,21 @@
  "Stock TV volume bar": "Stock TV volume bar",
  "Saved. Press Back, then choose Test the connection.": "Saved. Press Back, then choose Test the connection.",
  "Android box": "Android box",
- "The page stays open for ten minutes. It is not encrypted: what you type travels over your Wi-Fi.": "The page stays open for ten minutes. It is not encrypted: what you type travels over your Wi-Fi."
+ "The page stays open for ten minutes. It is not encrypted: what you type travels over your Wi-Fi.": "The page stays open for ten minutes. It is not encrypted: what you type travels over your Wi-Fi.",
+ "Prayer times": "Prayer times",
+ "Choose a place in Cards": "Choose a place in Cards",
+ "Adhkar": "Adhkar",
+ "Screen saver": "Screen saver",
+ "Use the screen saver": "Use the screen saver",
+ "Start after": "Start after",
+ "%s min": "%s min",
+ "Any key ends it": "Any key ends it",
+ "Fajr": "Fajr",
+ "Sunrise": "Sunrise",
+ "Dhuhr": "Dhuhr",
+ "Asr": "Asr",
+ "Maghrib": "Maghrib",
+ "Isha": "Isha",
+ "in %s h": "in %s h",
+ "in %s min": "in %s min"
 }

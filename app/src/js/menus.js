@@ -768,6 +768,12 @@ function customizeMenu() {
         stay: true,
         fn: wallMenu,
       },
+      {
+        label: t('Screen saver'),
+        sub: cfg.saver && cfg.saver.on ? t('On') : t('Off'),
+        stay: true,
+        fn: saverMenu,
+      },
       { label: t('Accent colour'), stay: true, fn: accentMenu },
       { sep: true },
       {
@@ -826,6 +832,42 @@ function wallMenu() {
         sub: t('in the CleanYourTV app'),
         fn: function () {
           launch('com.cleanyourtv.manager', { open: 'wallpapers' });
+        },
+      },
+    ];
+  });
+}
+/* Screen saver (saver.js): switched on here, and the minutes without a key before it starts; "Try it" shows it at once */
+function saverMenu() {
+  openBuilt(t('Screen saver'), function () {
+    var s = cfg.saver || { on: false },
+      m = SAVER.mins(),
+      MV = [1, 3, 5, 10, 15, 30];
+    return [
+      {
+        label: t('Use the screen saver'),
+        sub: s.on ? t('On') : t('Off'),
+        stay: true,
+        fn: function () {
+          cfg.saver = { on: !s.on, mins: m };
+          saveCfg();
+        },
+      },
+      {
+        label: t('Start after'),
+        sub: t('%s min').replace('%s', m),
+        stay: true,
+        fn: function () {
+          var k = MV.indexOf(m);
+          cfg.saver = { on: !!s.on, mins: MV[(k < 0 ? 2 : k + 1) % MV.length] };
+          saveCfg();
+        },
+      },
+      {
+        label: t('Try it now'),
+        sub: t('Any key ends it'),
+        fn: function () {
+          SAVER.show();
         },
       },
     ];

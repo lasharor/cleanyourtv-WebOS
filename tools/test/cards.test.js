@@ -79,6 +79,15 @@ run(async () => {
       p.j.types.some(t => t.type === 'template' && t.fields.some(f => f.key === 'text')),
     'the state lists the slots (named in the language), the saved cards and the card types with their options'
   );
+  ok(
+    p.j.types.some(
+      t =>
+        t.type === 'prayer' &&
+        t.fields.some(f => f.kind === 'place') &&
+        ['method', 'asr', 'show'].every(k => t.fields.some(f => f.key === k))
+    ) && p.j.types.some(t => t.type === 'dhikr' && t.fields.some(f => f.key === 'secs')),
+    'the card types include the prayer times (a place, a method, Asr, what to show) and the adhkar (how often a new one)'
+  );
   p = await phone(
     'POST',
     '/api/save',

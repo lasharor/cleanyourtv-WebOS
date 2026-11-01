@@ -715,5 +715,21 @@
  "Dial": "قرص",
  "Circular dial on the right": "قرص دائري على اليمين",
  "System default (LG webOS)": "افتراضي النظام (LG webOS)",
- "Stock TV volume bar": "شريط صوت التلفزيون الأصلي"
+ "Stock TV volume bar": "شريط صوت التلفزيون الأصلي",
+ "Prayer times": "مواقيت الصلاة",
+ "Choose a place in Cards": "اختر المدينة من إعدادات البطاقات",
+ "Adhkar": "الأذكار",
+ "Screen saver": "شاشة التوقف",
+ "Use the screen saver": "تفعيل شاشة التوقف",
+ "Start after": "تبدأ بعد",
+ "%s min": "%s د",
+ "Any key ends it": "أي زر يوقفها",
+ "Fajr": "الفجر",
+ "Sunrise": "الشروق",
+ "Dhuhr": "الظهر",
+ "Asr": "العصر",
+ "Maghrib": "المغرب",
+ "Isha": "العشاء",
+ "in %s h": "بعد %s س",
+ "in %s min": "بعد %s د"
 }

@@ -90,6 +90,71 @@ const TYPES = [
       },
     ],
   },
+  // prayer times worked out on the TV from the place (app/src/js/prayer.js); no network, no account
+  {
+    type: 'prayer',
+    name: 'Prayer times',
+    fields: [
+      { key: 'place', kind: 'place', label: 'Place' },
+      {
+        key: 'method',
+        kind: 'choice',
+        label: 'Method',
+        choices: [
+          ['', 'Umm al-Qura (Saudi Arabia and the Gulf)'],
+          ['mwl', 'Muslim World League'],
+          ['isna', 'North America (ISNA)'],
+          ['egypt', 'Egyptian General Authority of Survey'],
+          ['karachi', 'University of Islamic Sciences, Karachi'],
+        ],
+      },
+      {
+        key: 'asr',
+        kind: 'choice',
+        label: 'Asr',
+        choices: [
+          ['', 'Standard (Shafi, Maliki, Hanbali)'],
+          ['hanafi', 'Hanafi'],
+        ],
+      },
+      {
+        key: 'show',
+        kind: 'choice',
+        label: 'Show',
+        choices: [
+          ['', 'The next prayer'],
+          ['all', 'The next prayer and the five times'],
+        ],
+      },
+    ],
+  },
+  // one short dhikr at a time (app/src/js/prayer.js: ADHKAR)
+  {
+    type: 'dhikr',
+    name: 'Adhkar',
+    fields: [
+      {
+        key: 'secs',
+        kind: 'choice',
+        label: 'A new one',
+        choices: [
+          ['', 'Every 30 seconds'],
+          ['60', 'Every minute'],
+          ['300', 'Every 5 minutes'],
+        ],
+      },
+      {
+        key: 'size',
+        kind: 'choice',
+        label: 'Size',
+        choices: [
+          ['', 'Medium'],
+          ['small', 'Small'],
+          ['large', 'Large'],
+        ],
+      },
+    ],
+  },
   {
     type: 'ha-entity',
     name: 'Home Assistant entity',

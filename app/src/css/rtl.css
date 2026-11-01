@@ -83,6 +83,13 @@
 [dir="rtl"] .card-greeting .l1 {
   letter-spacing: 0;
 }
+[dir="rtl"] .card-prayer .pr-n {
+  letter-spacing: 0;
+}
+[dir="rtl"] .card-prayer .pr-i {
+  margin-right: 0;
+  margin-left: 22px;
+}
 [dir="rtl"] .wx-i svg {
   margin: 0 0 0 16px;
 }

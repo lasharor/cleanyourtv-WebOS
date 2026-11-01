@@ -97,6 +97,23 @@ run(async () => {
     w10.on && w10.secs === 10 && wOld.secs === 300 && config.get().wall.secs === 900,
     "Wallpapers: the photo interval is saved in seconds (10 s up to an hour), an older launcher's minutes are converted, an unknown value becomes 15 min"
   );
+  await call(apps, '/api/config', 'POST', { saver: { on: true, mins: 10 } });
+  const sv = config.get().saver;
+  await call(apps, '/api/config', 'POST', { saver: { on: true, mins: 7 } });
+  const svOdd = config.get().saver;
+  await call(apps, '/api/config', 'POST', { saver: 'yes' });
+  ok(
+    sv.on === true && sv.mins === 10 && svOdd.on === true && svOdd.mins === 5 && config.get().saver === undefined,
+    'Screen saver: on or off and the minutes (1 to 30) are saved, an unknown number of minutes becomes 5, and anything else is dropped'
+  );
+  await call(apps, '/api/config', 'POST', {
+    cards: { side: { type: 'prayer', place: 'Riyadh', lat: 24.7136, lon: 46.6753, method: 'ummalqura', show: 'all' } },
+  });
+  const pc = (config.get().cards || {}).side || {};
+  ok(
+    pc.type === 'prayer' && pc.lat === 24.7136 && pc.lon === 46.6753 && pc.method === 'ummalqura' && pc.show === 'all',
+    'a prayer card keeps its place (latitude and longitude as numbers) and its options'
+  );
 
   config.update('test', c => {
     c.dock = ['a.one', 'com.webos.app.hdmi2'];

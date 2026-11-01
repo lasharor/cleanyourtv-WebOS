@@ -16,6 +16,7 @@ const P = require('./paths'),
 
 const HALF_LIFE = 30 * 24 * 3600 * 1000; // usage counts halve every 30 days
 const WALL_SECS = [0, 10, 30, 60, 180, 300, 900, 3600]; // the photo-change intervals Customise > Wallpapers offers
+const SAVER_MINS = [1, 3, 5, 10, 15, 30]; // the minutes without a key Customise > Screen saver offers
 const HOME = 'com.webos.app.home';
 // never offered for uninstall: the Homebrew Channel runs the boot scripts (root, CleanYourTV, the update blocking), and the other two keep
 // LG's firmware updates away
@@ -310,6 +311,9 @@ function create(ctx) {
       const secs = typeof b.wall.secs === 'number' ? b.wall.secs : typeof b.wall.every === 'number' ? b.wall.every * 60 : 900;
       out.wall = { on: b.wall.on === true, secs: WALL_SECS.indexOf(secs) >= 0 ? secs : 900 };
     }
+    // the screen saver (saver.js): on or off, and the minutes without a key before it starts
+    if (b.saver && typeof b.saver === 'object')
+      out.saver = { on: b.saver.on === true, mins: SAVER_MINS.indexOf(b.saver.mins) >= 0 ? b.saver.mins : 5 };
     // the cards in the theme's slots (Customise > Cards), checked for shape only (cards.js)
     const cards = cardsShape.sanitize(b.cards);
     if (cards) out.cards = cards;
