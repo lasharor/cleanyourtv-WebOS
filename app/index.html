@@ -3639,7 +3639,7 @@ var SCENES = (function () {
   }
   function arm() {
     clearInterval(timer);
-    if (on && !document.hidden)
+    if (on)
       timer = setInterval(function () {
         show((cur + 1) % LIB.length);
       }, secs * 1000);
