@@ -362,7 +362,7 @@ run(async () => {
     p.stdout = new EventEmitter();
     p.kill = () => p.emit('close');
     p.args = [cmd].concat(args);
-    sub = p;
+    if (/listApps/.test(args.join(' '))) sub = p; // the volume watch (audio.js) is started with the same spawn
     return p;
   };
   const watched = req('apps').create({ config: memoryConfig({}), luna: wLuna, spawn: wSpawn, version: '1.6.0', feature: () => null });
@@ -371,6 +371,7 @@ run(async () => {
   r = await call(watched, '/api/apps/stamp');
   ok(typeof s1 === 'number' && r.j.stamp === s1, 'the list of apps comes with a stamp, and the stamp alone can be asked');
   watched.start();
+  for (let i = 0; i < 50 && !sub; i++) await sleep(20);
   ok(
     !!sub && sub.args.join(' ') === 'luna-send -i luna://com.webos.applicationManager/listApps {"subscribe":true}',
     "the service follows the app manager's changes"

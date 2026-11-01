@@ -136,7 +136,8 @@ function create(ctx) {
       proc.on('error', again);
       proc.on('close', again);
     };
-    run();
+    // a subscription left by an earlier run of the service (it is not ended when the service stops abnormally) goes first
+    exec.run('pkill', ['-f', '^luna-send -i luna://com.webos.applicationManager/listApps'], { timeout: 5000 }).then(run, run);
   }
   function unwatchApps() {
     watchOn = false;
