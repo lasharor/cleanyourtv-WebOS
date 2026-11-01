@@ -297,6 +297,7 @@ function load() {
         rank,
       ]);
       retryTileIcons();
+      if (typeof x.stamp === 'number') appsStamp = x.stamp;
       if (sig === lastSig) return;
       lastSig = sig;
       apps = x.apps.map(function (a) {
@@ -325,6 +326,23 @@ function load() {
 
 var refreshT = 0,
   refreshT2 = 0;
+/* a new app shows up by itself: the service raises a stamp whenever the list of apps changes (an app installed from the Homebrew
+   Channel or the LG store, or removed). It is checked every 5 seconds, also when the page was not told that Home is back (Back from
+   another app on webOS 6). Nothing is drawn again while the stamp stays the same. */
+var appsStamp = null;
+setInterval(function () {
+  /* not while Live TV plays or a tile is being moved: the next check picks the change up */
+  if (appsStamp === null || (window.LIVE && LIVE.on) || moving) return;
+  api('/api/apps/stamp').then(
+    function (x) {
+      if (x && typeof x.stamp === 'number' && x.stamp !== appsStamp) {
+        appsStamp = x.stamp;
+        load();
+      }
+    },
+    function () {}
+  );
+}, 5000);
 function refreshSoon() {
   clearTimeout(refreshT);
   clearTimeout(refreshT2);

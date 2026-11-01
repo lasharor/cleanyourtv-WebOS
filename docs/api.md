@@ -9,7 +9,8 @@ you can call it from a shell on the TV (for example over SSH).
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/apps` | Installed apps, config, usage, version, and `tuner: true` when LG's own Live TV is installed and shown |
+| `GET /api/apps` | Installed apps, config, usage, version, `stamp` (see below), and `tuner: true` when LG's own Live TV is installed and shown |
+| `GET /api/apps/stamp` | `{stamp}`: a number that changes whenever the list of apps changes. The service follows the app manager's changes (`listApps` with `subscribe`); the launcher checks the stamp every 5 seconds and reads the list again when it changed, so an app installed from the Homebrew Channel or the LG store shows up on Home by itself |
 | `POST /api/launch` `{id, params}` | Launch an app |
 | `POST /api/power/off` | Switch the TV off completely (`tvpower/power/shutDown`: a cold start next time, no Wake-on-LAN), unlike the remote's standby |
 | `GET /api/inputs` | The inputs: the HDMI ports and their state, and LG's own Live TV (the tuner, `{appId, tuner: true}`) while its app is installed and the manager's **Show LG's own Live TV** is on |
