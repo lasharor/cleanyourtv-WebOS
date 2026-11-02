@@ -204,6 +204,7 @@ run(async () => {
     hits = [],
     tracked = [],
     limit = false,
+    fail = false,
     left = '49',
     imgs = [],
     portrait = false,
@@ -251,6 +252,7 @@ run(async () => {
     if (q.headers.authorization !== 'Client-ID ' + KEY || q.headers['accept-version'] !== 'v1')
       return send(401, { errors: ['OAuth error: The access token is invalid'] });
     if (limit) return send(403, 'Rate Limit Exceeded', { 'x-ratelimit-remaining': '0' });
+    if (fail) return send(500, {});
     if (u.pathname === '/photos') return send(200, []);
     if (u.pathname === '/photos/random') {
       if (u.query.query === 'redirect') return send(302, {}, { location: evil.url + '/stolen' });
@@ -373,6 +375,19 @@ run(async () => {
   p = await unsaveT({ query: ' mountains  and lakes ' });
   r = await pushed();
   ok(p.j.photo && p.j.photo.name !== ps.name && r.seq === ps.seq + 1 && hits.length === n + 2, 'every click fetches another photo');
+  // a request that fails is not a photo: the next one may come after 30 seconds, not after the 3 minutes
+  skew += GAP;
+  fail = true;
+  n = hits.length;
+  await use('live');
+  const afterFail = hits.length;
+  skew += 31000;
+  await use('live');
+  fail = false;
+  ok(
+    afterFail === n + 1 && hits.length === n + 2 && /Unsplash answered 500/.test((await ust()).error),
+    'a failed request is tried again after 30 seconds, not after the 3 minutes'
+  );
   // there is no collection field: one that is sent anyway is not kept or used; then the Wallpapers topic
   skew += GAP;
   p = await unsave({ collection: 'abc123XYZ', query: 'mountains' });

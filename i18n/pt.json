@@ -40,7 +40,6 @@
  "4K (3840 px)": "4K (3840 px)",
  "4K (the default) keeps photos at 3840 pixels, the size the TV draws Home at, so they look sharp; Full HD at 1920 fits about four times as many photos in 150 MB. It applies to new uploads and to the next Immich sync.": "4K (o padrão) mantém as fotos em 3840 pixels, a resolução em que a TV renderiza o Início, para que fiquem nítidas; Full HD em 1920 comporta cerca de quatro vezes mais fotos em 150 MB. Aplica-se a novos envios e à próxima sincronização do Immich.",
  "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera and open the page: it shows the address and the token with <b>Copy</b> buttons.</li><li>The token is a <b>secret</b>: anyone who sees this code while it is open can read it.</li>": "<li>Celular no <b>mesmo Wi-Fi</b> que a TV.</li><li>Escaneie o código com a câmera e abra a página: ela mostra o endereço e o token com botões <b>Copiar</b>.</li><li>O token é <b>secreto</b>: qualquer pessoa que veja este código aberto poderá lê-lo.</li>",
- "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Upload photos</b> or <b>Configure Immich</b>.</li>": "<li>Celular no <b>mesmo Wi-Fi</b> que a TV.</li><li>Escaneie o código com a câmera.</li><li>Escolha <b>Enviar fotos</b> ou <b>Configurar o Immich</b>.</li>",
  "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose a card for each place and fill in its options, then tap <b>Save</b>.</li>": "<li>Celular na <b>mesma rede Wi-Fi</b> da TV.</li><li>Escaneie o código com a câmera.</li><li>Escolha um cartão para cada espaço e preencha suas opções, depois toque em <b>Salvar</b>.</li>",
  "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter the <b>code</b> below and your playlist address.</li>": "<li>Celular no <b>mesmo Wi-Fi</b> que a TV.</li><li>Escaneie o código com a câmera.</li><li>Digite o <b>código</b> abaixo e o endereço da sua lista de reprodução.</li>",
  "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter your <b>OpenRouter key</b> and model, and tap <b>Save</b>.</li>": "<li>Celular no <b>mesmo Wi-Fi</b> que a TV.</li><li>Escaneie o código com a câmera.</li><li>Digite sua <b>chave do OpenRouter</b> e modelo, e toque em <b>Salvar</b>.</li>",
@@ -481,7 +480,6 @@
  "Show as QR code": "Exibir como código QR",
  "Show Live TV": "Exibir TV ao vivo",
  "Shows a QR code. A phone that scans it opens a page, served by the TV for ten minutes, that shows the notification address and the token with Copy buttons (for Home Assistant, for example). The token is a secret.": "Exibe um código QR. Um celular que o escanear abre uma página servida pela TV por dez minutos, que mostra o endereço de notificação e o token com botões Copiar (para o Home Assistant, por exemplo). O token é secreto.",
- "Shows a QR code. On the phone page you upload photos (they are made the right size on the phone), delete uploads, connect Immich, choose albums and hide single photos.": "Exibe um código QR. Na página do celular você envia fotos (redimensionadas no próprio celular), exclui envios, conecta o Immich, escolhe álbuns e oculta fotos individuais.",
  "Shows a QR code. Scan it with a phone on the same Wi-Fi to copy a report for a bug report. Addresses and URL paths are masked; the page closes after ten minutes.": "Exibe um código QR. Escaneie-o com um celular no mesmo Wi-Fi para copiar um relatório de erros. Endereços e caminhos de URL são mascarados; a página fecha após dez minutos.",
  "Shows a QR code. Scan it with a phone on the same Wi-Fi to enter your OpenRouter key, choose a model, write instructions and set a server address. Nothing is typed on the TV.": "Exibe um código QR. Escaneie-o com um celular no mesmo Wi-Fi para inserir sua chave do OpenRouter, escolher um modelo, escrever instruções e definir o endereço do servidor. Nada é digitado na TV.",
  "Shows the address, the token and an example request.": "Mostra o endereço, o token e um exemplo de requisição.",
@@ -520,7 +518,6 @@
  "Sync now": "Sincronizar agora",
  "synced %s": "sincronizado %s",
  "Synced photos": "Fotos sincronizadas",
- "Syncing with Immich…": "Sincronizando com o Immich…",
  "syncing…": "sincronizando…",
  "Syncing…": "Sincronizando…",
  "syncing… %d new": {
@@ -572,7 +569,6 @@
  "The page stays open for ten minutes, or until you save. It is not encrypted: the key travels over your Wi-Fi, so use a network you trust.": "A página permanece aberta por dez minutos ou até você salvar. Não é criptografada: a chave trafega pelo seu Wi-Fi, portanto use uma rede confiável.",
  "The page stays open for ten minutes. It is not encrypted: the playlist address, which may hold an access key, travels over your Wi-Fi.": "A página fica aberta por dez minutos. Ela não é criptografada: o endereço da lista de reprodução, que pode conter uma chave de acesso, trafega pelo seu Wi-Fi.",
  "The page stays open while you use it, at most an hour. It is not encrypted: what you type travels over your Wi-Fi.": "A página permanece aberta enquanto você a utiliza, no máximo por uma hora. Ela não é criptografada: o que você digita trafega pela sua rede Wi-Fi.",
- "The page stays open while you use it, at most an hour. It is not encrypted: your photos and the Immich key travel over your Wi-Fi.": "A página fica aberta enquanto você a utiliza, no máximo uma hora. Não é criptografada: suas fotos e a chave do Immich trafegam pelo seu Wi-Fi.",
  "the phone page could not start: %s": "não foi possível iniciar a página do celular: %s",
  "the picture is larger than 12 MB": "a imagem é maior que 12 MB",
  "The playlist address must start with http:// or https://": "O endereço da lista de reprodução deve começar com http:// ou https://",
@@ -665,7 +661,6 @@
  "Yes, use LG’s Home": "Sim, usar o Início da LG",
  "Your firmware is not in the compatibility list and LG’s Home looks different. This tries it anyway; a failed start restarts the TV with LG’s Home.": "Seu firmware não consta na lista de compatibilidade e o Início da LG parece diferente. Isso tentará de qualquer forma; se a inicialização falhar, a TV reinicia com o Início da LG.",
  "Your M3U playlist and its XMLTV guide. Choose it to set up: a QR code opens a page on your phone where you enter the playlist address and the 6-digit code shown here.": "Sua lista de reprodução M3U e o guia XMLTV. Escolha para configurar: um código QR abre uma página no seu celular onde você digita o endereço da lista e o código de 6 dígitos mostrado aqui.",
- "Your own photos behind Home: uploaded from a phone, or synced from Immich albums. Switch them on in the launcher: Customise > Wallpapers.": "Suas próprias fotos como plano de fundo do Início: enviadas do celular ou sincronizadas de álbuns do Immich. Ative-as no inicializador: Personalizar > Papéis de Parede.",
  "Your playlist": "Sua lista de reprodução",
  "Configure Unsplash": "Configurar o Unsplash",
  "Access Key (saved: %s; leave empty to keep)": "Access Key (salva: %s; deixe em branco para manter)",
@@ -689,7 +684,6 @@
  "Yes, remove Unsplash": "Sim, remover o Unsplash",
  "upload photos, configure Immich or Unsplash": "enviar fotos, configurar o Immich ou o Unsplash",
  "not set up": "não configurado",
- "off": "desativado",
  "paused for the hourly limit": "pausado pelo limite por hora",
  "the photographer of an Unsplash photo": "o fotógrafo de uma foto do Unsplash",
  "Photo credit": "Crédito da foto",
@@ -708,5 +702,6 @@
  "Forgets the Access Key and the list of recent photos. Other photos stay.": "Esquece a chave de acesso e a lista de fotos recentes. As outras fotos continuam.",
  "Photos behind Home: uploaded from a phone, synced from Immich albums, or a new one from Unsplash now and then. Switch them on in the launcher: Customise > Wallpapers.": "Fotos como plano de fundo do Início: enviadas do celular, sincronizadas de álbuns do Immich ou, de vez em quando, uma nova do Unsplash. Ative-as no inicializador: Personalizar > Papéis de Parede.",
  "Photos come from the search words; with none, from the Wallpapers topic.": "As fotos vêm das palavras da busca; sem palavras, do tópico “Wallpapers”.",
- "Landscape photos from Unsplash (a search, or its Wallpapers topic) with your own free Access Key. Home asks Unsplash for one new random photo, at most every 3 minutes; between those, and when the hourly limit is used up, photos shown before are shown again. No picture is saved on the TV. A new key may make 50 requests an hour.": "Fotos em paisagem do Unsplash (uma busca ou o tópico “Wallpapers”) com a sua própria chave de acesso gratuita. O Home pede ao Unsplash uma nova foto aleatória, no máximo a cada 3 minutos; nesse intervalo, e quando o limite por hora se esgota, fotos já exibidas são exibidas de novo. Nenhuma imagem é salva na TV. Uma chave nova pode fazer 50 solicitações por hora."
+ "Landscape photos from Unsplash (a search, or its Wallpapers topic) with your own free Access Key. Home asks Unsplash for one new random photo, at most every 3 minutes; between those, and when the hourly limit is used up, photos shown before are shown again. No picture is saved on the TV. A new key may make 50 requests an hour.": "Fotos em paisagem do Unsplash (uma busca ou o tópico “Wallpapers”) com a sua própria chave de acesso gratuita. O Home pede ao Unsplash uma nova foto aleatória, no máximo a cada 3 minutos; nesse intervalo, e quando o limite por hora se esgota, fotos já exibidas são exibidas de novo. Nenhuma imagem é salva na TV. Uma chave nova pode fazer 50 solicitações por hora.",
+ "a new photo at most every 3 minutes": "uma nova foto a cada 3 minutos, no máximo"
 }

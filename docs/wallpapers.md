@@ -42,7 +42,7 @@ and closes when you leave the QR screen. It is not encrypted: photos and the Imm
 | Row | What it does |
 |---|---|
 | Manage from your phone | The QR code for the phone page. |
-| Local uploads, Immich, Unsplash, Total | How many photos there are per source, when Immich was last synced, the last error of Immich and Unsplash (or that Unsplash is paused for the hourly limit), and the space used. |
+| Local uploads, Immich, Unsplash, Total | How many photos there are per source, when Immich was last synced, the last error of Immich and Unsplash (or that Unsplash is paused for the hourly limit), and the space used. Total counts the photos kept on the TV, not the live Unsplash entry. |
 | Sync now | Downloads new and changed photos from the chosen Immich albums and removes the ones that left them. |
 | Use Unsplash photos | Shows the Unsplash photos on Home (On) or not (Off). While it is off the key stays and nothing is asked of Unsplash. |
 | Picture size | 4K (3840 pixels, the default) or Full HD (1920). Applies to new uploads, to the next Immich sync and to the next Unsplash photo. On a 4K TV, Home is laid out at 1920 x 1080 but drawn at 3840 x 2160, so a 4K photo is shown pixel for pixel; Full HD fits about four times as many photos in 150 MB. |
@@ -83,7 +83,8 @@ Unsplash for **one random landscape photo** (`/photos/random`, for your search w
 download (`links.download_location`, which Unsplash's guidelines require) and hands Home the picture's address; Home loads the picture from
 Unsplash's image host and it fades in. The picture request never carries the key. The picture is Unsplash's `urls.raw` with `w` (3840 or
 1920, the **Picture size**), `fit=max`, `q=80` and `fm=jpg` added (the `ixid` stays), not the full original. The TV's browser may keep
-a picture in its own cache; CleanYourTV itself saves none.
+a picture in its own cache; CleanYourTV itself saves none. The small pictures under **Recent photos** on the phone page are loaded by the
+phone from Unsplash's image host, so the phone needs internet for them (the TV still keeps none).
 
 **How often.** A new photo is asked for at most **every 3 minutes**: 2 requests each, 40 an hour of the 50 a new key has. Home may change
 the wallpaper more often (**Customise > Wallpapers > New photo**, or each time Home opens); in between, a photo that was shown before is

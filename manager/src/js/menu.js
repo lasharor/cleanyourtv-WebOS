@@ -1025,14 +1025,13 @@ function build() {
       label: 'Unsplash',
       sub: !us.configured
         ? 'not set up · set up from your phone'
-        : (us.on ? '' : 'off · ') +
-          'live · a new photo every 3 min at most' +
+        : (us.on ? 'a new photo at most every 3 minutes' : 'Off') +
           (us.pausedUntil ? ' · paused for the hourly limit' : us.error ? ' · ' + us.error : ''),
       fn: openWallPair,
     });
     rows.push({
       label: 'Total',
-      sub: w.total + ' photos \u00B7 ' + Math.round(w.bytes / 1048576) + ' of 150 MB',
+      sub: w.uploads + (im.photos || 0) + ' photos \u00B7 ' + Math.round(w.bytes / 1048576) + ' of 150 MB',
       fn: null,
     });
     rows.push({ sep: true });

@@ -406,7 +406,8 @@ function create(ctx) {
   // the photos shown so far (the last 30: ids, picture addresses, photographers; no pictures): when a new one may not be asked
   // for, one of these is shown again. Kept in index.json so a restart does not lose them.
   const SEEN_MAX = 30,
-    LIVE_GAP_MS = 3 * 60 * 1000; // a new photo is asked of Unsplash at most every 3 minutes (2 requests each: 40 an hour of the 50 a new key has)
+    LIVE_GAP_MS = 3 * 60 * 1000, // a new photo is asked of Unsplash at most every 3 minutes (2 requests each: 40 an hour of the 50 a new key has)
+    RETRY_MS = 30 * 1000; // a failed request is not a photo: try again after 30 s, not after the 3 minutes
   const seen = () => idx().seen;
   let busy = false,
     lastLive = 0,
@@ -438,10 +439,10 @@ function create(ctx) {
       return { ok: false, note: st.error || limited().message };
     if (!force && Date.now() - lastLive < LIVE_GAP_MS) return { ok: false };
     busy = true;
-    lastLive = Date.now();
     try {
       const p = await unsplashRandom(uc);
       await unsplashApi(p.dl, uc.key);
+      lastLive = Date.now(); // a photo that was really fetched: the next one is 3 minutes away
       st.error = '';
       st.ok = Date.now();
       const l = seen().filter(x => x.id !== p.id);
@@ -459,7 +460,7 @@ function create(ctx) {
       st.error = String(e.message || e);
       if (e.limited) {
         st.wait = Date.now() + UNSPLASH_WAIT_MS;
-      }
+      } else lastLive = Date.now() - LIVE_GAP_MS + RETRY_MS; // no photo was fetched: the next try may come after 30 s
       saveIdx();
       return { ok: false, note: st.error };
     } finally {
@@ -772,7 +773,7 @@ function create(ctx) {
   return { name: 'wallpapers', prefix: '/api/wallpapers/', handle, start, status, stamp, sync, addUpload, list, phone };
 }
 
-// the phone page: two actions, Upload photos and Configure Immich. Plain script for iOS Safari and Android Chrome; photos are scaled in
+// the phone page: three actions, Upload photos, Configure Immich and Configure Unsplash. Plain script for iOS Safari and Android Chrome; photos are scaled in
 // the browser (to 3840 or 1920 pixels on the long side) before they are sent, which also turns an iPhone's HEIC into JPEG. It is in the
 // phone's language: the fixed text is translated here, the script's own texts by t() with the translations it uses (i18n.js).
 const PHONE_JS = `var code='',S={},MAX=3840,UF=0,LP=-1,$=function(i){return document.getElementById(i)};
@@ -785,7 +786,7 @@ function msg(t,e){$('msg').innerHTML=t?'<p class="m'+(e?' e':'')+'"></p>':'';if(
 function showLogin(t){$('login').className='';$('main').className='hide';$('sum').textContent=t||''}
 function ago(x){if(!x)return t('never');var m=Math.round((Date.now()-x)/60000);return m<1?t('just now'):m<60?fm('%d min ago',m):m<1440?fm('%d h ago',Math.round(m/60)):fm('%d days ago',Math.round(m/1440))}
 function state(){return api('state').then(function(s){S=s;MAX=s.size==='hd'?1920:3840;$('login').className='hide';$('main').className='';
- $('sum').textContent=fm('Local uploads: %d · Immich: %d · Total: %d photos (%d of 150 MB)',s.uploads,s.immich.photos,s.total,Math.round(s.bytes/1048576));
+ $('sum').textContent=fm('Local uploads: %d · Immich: %d · Total: %d photos (%d of 150 MB)',s.uploads,s.immich.photos,s.uploads+s.immich.photos,Math.round(s.bytes/1048576));
  $('un').textContent=fm('%d of %d',s.uploads,s.limits.uploads);var g='';(s.uploadsList||[]).forEach(function(id){g+='<div class=ph><img loading=lazy src="" data-s="u/'+id+'"><button data-d="'+id+'">×</button></div>'});$('ug').innerHTML=g;thumbs($('ug'));
  var i=s.immich;$('iu').value=$('iu').value||i.url;$('ik').placeholder=i.keyHint?fm('API key (saved: %s; leave empty to keep)',i.keyHint):t('API key');
  $('ist').innerHTML='';var p=document.createElement('p');p.textContent=i.configured?(i.state==='syncing'?fm('Syncing… %d new',i.done):fm('Last sync: %s',ago(i.lastSync))+' · '+fm('%d photos from %d albums',i.photos,i.albums))+(i.error?' · '+t(i.error):''):t('Not connected.');$('ist').appendChild(p);
