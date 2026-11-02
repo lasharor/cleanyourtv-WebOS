@@ -48,16 +48,18 @@ down the page in `webapp-mgr`. The setup itself only mounts; such a TV gets the 
 
 ## Turning it off and on
 
-LG's own screen saver back, until the next restart:
+In the manager app: **CleanYourTV as Home → Screen saver**, On or Off. Switching restarts the TV, as that switch does for Home.
 
-```sh
-sh /media/developer/cleanyourtv/undo-screensaver.sh temp
-```
-
-LG's own screen saver back for good (and a restart):
+The same thing from a shell on the TV — LG's own screen saver back for good:
 
 ```sh
 sh /media/developer/cleanyourtv/undo-screensaver.sh
+```
+
+Until the next restart only:
+
+```sh
+sh /media/developer/cleanyourtv/undo-screensaver.sh temp
 ```
 
 CleanYourTV's screen saver again (the next restart):
@@ -66,7 +68,7 @@ CleanYourTV's screen saver again (the next restart):
 rm /media/developer/cleanyourtv/DISABLE-SCREENSAVER
 ```
 
-There is no switch for it in the manager app yet; `DISABLE-SCREENSAVER` in `/media/developer/cleanyourtv` is the setting.
+The setting is the file `DISABLE-SCREENSAVER` in `/media/developer/cleanyourtv`: present means LG's screen saver.
 
 ## Limits
 

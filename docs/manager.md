@@ -21,6 +21,7 @@ The rows, in the order of the old list:
 | Update channel | Follow the stable releases or the [dev builds](managing.md#dev-builds). |
 | Go back to launcher | Appears after a launcher update. |
 | CleanYourTV as Home | **Use CleanYourTV as Home** (LG's Home or ours; the TV restarts) and the optional **Learn the Home key**. |
+| Screen saver | Our screen saver (photos from the wallpaper library and a clock) or LG's own; switching restarts the TV. See [Screen saver](screensaver.md). |
 | Wallpapers | Your own photos behind Home: the phone page (uploads), a row per photo source (Immich, ...), counts, **Picture size**, **Remove all uploads** and, on a TV that had Immich before, **Remove old Immich data**. See [Wallpapers](wallpapers.md). |
 | App icons | A picture of your own for an app: the phone page (a QR code), where you choose **Change** next to an app and a picture, shown as **Full tile** or **Icon** with a preview, or **Reset**. The screen gives the picture sizes that fit the theme's tiles on this TV. A tile's **Change icon** on Home opens it with that app first. See [Your own icon](launcher.md#your-own-icon). |
 | Cards | A card for each place of the theme (Lock Screen, Bloom, Horizon), **Get more cards** (the catalog of downloadable cards on GitHub, with a picture and text each; install, update, remove), the phone page for their names, texts and options, and a link to Home Assistant; see [Cards](launcher.md#cards). |

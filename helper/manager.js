@@ -5,6 +5,7 @@ const fs = require('fs');
 const P = require('./paths'),
   web = require('./web'),
   exec = require('./exec'),
+  saver = require('./screensaver'),
   debloat = require('./debloat');
 
 // the TV comes back to its last app after a restart; that must not be one of ours
@@ -23,6 +24,14 @@ function setHome(enabled) {
     fs.writeFileSync(P.DISABLE, '');
     fixLastApp();
   }
+  exec.detached('sleep 3; reboot');
+}
+// LG's screen saver or ours: one file, read by 20-cleanyourtv-screensaver at boot. Like Home, the change needs a restart.
+function setSaver(enabled) {
+  try {
+    if (enabled) fs.unlinkSync(P.SA_DISABLE);
+    else fs.writeFileSync(P.SA_DISABLE, '');
+  } catch (_) {}
   exec.detached('sleep 3; reboot');
 }
 const KEY_NAMES = ['home', 'voice', 'guide'];
@@ -68,6 +77,7 @@ function create(ctx) {
       icons: !!(ad && ad.module && ad.module('icons')), // the App icons add-on runs
       lang: config.get().lang || '', // the Language setting: '' follows the TV
       home: { enabled: !fs.existsSync(P.DISABLE), fullhome: fs.existsSync(P.FULLHOME_APP), ours },
+      saver: { enabled: !fs.existsSync(P.SA_DISABLE), replaced: saver.replaced() },
       inputhook: inputhook.status(keys().input),
       keys: keys(),
       job: updates.job(),
@@ -196,6 +206,10 @@ function create(ctx) {
     }
     if (act === 'home') {
       setHome(b.enabled !== false);
+      return json({ returnValue: true });
+    }
+    if (act === 'saver') {
+      setSaver(b.enabled !== false);
       return json({ returnValue: true });
     }
     if (act === 'restore') {

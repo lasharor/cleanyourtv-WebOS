@@ -96,8 +96,9 @@ function build(src) {
     return cur.slice(0, a) + MARK + '\n' + i18nScript(rest) + '\n' + cur.slice(b);
   }
   const dir = path.join(root, src);
-  const page = fs
-    .readFileSync(path.join(dir, 'index.html'), 'utf8')
+  // a checkout on Windows may have CRLF: the @include lines would not match and the page would be built without its CSS and script
+  const read = f => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
+  const page = read(path.join(dir, 'index.html'))
     .replace(/\n$/, '')
     .split('\n')
     .map(line => {
@@ -107,7 +108,7 @@ function build(src) {
       // a page may include files of another page's sources (the TV guide of the LG tuner add-on builds from the guide code of Live TV), but
       // only inside the repository
       if (f.indexOf(root + path.sep) !== 0 || !fs.existsSync(f)) throw new Error(src + '/index.html includes a missing file: ' + m[1]);
-      return fs.readFileSync(f, 'utf8').replace(/\n$/, '');
+      return read(f).replace(/\n$/, '');
     })
     .join('\n');
   const parts = page.split(/^@i18n$/m);
