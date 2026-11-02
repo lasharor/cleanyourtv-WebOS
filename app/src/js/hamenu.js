@@ -187,10 +187,15 @@ function haMenu() {
 /* Customise > Spotify: like Home Assistant, the places of the theme (OK puts the Spotify now playing card there, or empties the place
    again) and the connection, which is set up from a phone through the manager app's Spotify screen */
 var spReady = null; /* Spotify connected? null until asked */
+var spWho = ''; /* the account that is signed in */
+var spBad =
+  ''; /* Spotify turned the saved settings down: 'signin' or 'account' (the sign-in is not accepted any more, or the account is not allowed for the app) */
 function spotifyStatus() {
   api('/api/cards/nowplaying/status', {}).then(
     function (s) {
       spReady = !!s.connected;
+      spBad = s.rejected || '';
+      spWho = s.account || '';
       var m = stack[stack.length - 1];
       if (m && m.title === 'Spotify') refreshMenu();
     },
@@ -203,7 +208,15 @@ function spotifyMenu() {
     var items = [
       {
         label: t('Connection'),
-        sub: spReady === null ? '…' : spReady ? t('Connected') : t('Not connected'),
+        sub: spBad
+          ? spBad === 'account'
+            ? t('Account not allowed')
+            : t('Sign in again')
+          : spReady === null
+            ? '…'
+            : spReady
+              ? t('Connected') + (spWho ? ' · ' + spWho : '')
+              : t('Not connected'),
         fn: function () {
           launch('com.cleanyourtv.manager', { open: 'nowplaying' });
         },
@@ -227,7 +240,8 @@ function spotifyMenu() {
       { sep: true },
       { note: t('OK on a place shows Spotify now playing there, and empties it again. It appears only while something plays.') }
     );
-    if (spReady === false)
+    if (spBad) items.push({ note: t(spBad === 'account' ? NP_BAD_ACCOUNT : NP_BAD_SIGNIN) });
+    else if (spReady === false)
       items.push({ note: t('Choose Connection to link Spotify: a code on the TV, then your Client ID and sign-in on your phone.') });
     return items;
   });

@@ -1066,11 +1066,21 @@ function build() {
     var sp = spt || {};
     rows.push({
       label: 'Spotify',
-      sub: sp.connected
-        ? (sp.controls ? 'connected' : 'connected · sign in again to allow the controls') + (sp.error ? ' · ' + sp.error : '')
-        : sp.error
-          ? sp.error
-          : 'not connected \u00B7 set up from your phone',
+      sub: sp.rejected
+        ? sp.rejected === 'account'
+          ? 'account not allowed · add it under Users Management in your Spotify app'
+          : 'sign-in no longer accepted · sign in again from your phone'
+        : sp.connected
+          ? (sp.controls
+              ? sp.wake
+                ? 'connected'
+                : 'connected · sign in again to wake speakers'
+              : 'connected · sign in again to allow the controls') +
+            (sp.account ? ' · ' + sp.account : '') +
+            (sp.error ? ' · ' + sp.error : '')
+          : sp.error
+            ? sp.error
+            : 'not connected \u00B7 set up from your phone',
       fn: sp.connected ? null : openSpotifyPair,
     });
     rows.push({

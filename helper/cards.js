@@ -356,6 +356,11 @@ function create(ctx) {
     // the Now playing card: what plays on the user's Spotify account (kept 4 to 10 s), or {playing: false}
     if (u === '/api/cards/nowplaying') return web.json(res, await np.now(b.fresh === true));
     if (u === '/api/cards/nowplaying/control') return web.json(res, await np.control(b.action));
+    // the launcher has shown the toast that Spotify no longer accepts the settings
+    if (u === '/api/cards/nowplaying/told') return web.json(res, np.tell());
+    // where the music plays: the devices of the account, and moving it to one
+    if (u === '/api/cards/nowplaying/devices') return web.json(res, await np.devices());
+    if (u === '/api/cards/nowplaying/transfer') return web.json(res, await np.transfer(b.id));
     // the cover: the Spotify app of the TV, on the song that plays and at the place it was
     if (u === '/api/cards/nowplaying/open')
       return web.json(

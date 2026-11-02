@@ -352,6 +352,7 @@ function npPoll(fresh) {
       NP.data = r;
       NP.rcv = Date.now();
       npRedraw();
+      npRejected(r.rejected);
     },
     function () {
       NP.busy = false;
@@ -359,6 +360,16 @@ function npPoll(fresh) {
       npRedraw();
     }
   );
+}
+/* Spotify turned down the saved sign-in or the account: one toast each time the TV is on (the service remembers that it was shown),
+   and the same words in Customise > Spotify */
+var NP_BAD_ACCOUNT = 'Spotify does not accept your account for this app. Add it under Users Management in your Spotify app.',
+  NP_BAD_SIGNIN = 'Spotify no longer accepts the saved sign-in. Sign in again from Customise > Spotify.';
+function npRejected(kind) {
+  if (!kind || NP.told) return;
+  NP.told = true;
+  toast(t(kind === 'account' ? NP_BAD_ACCOUNT : NP_BAD_SIGNIN), true);
+  api('/api/cards/nowplaying/told', {});
 }
 /* 125000 -> 2:05 (and 1:02:05 for a long episode) */
 function npClock(ms) {
@@ -395,7 +406,16 @@ var NP_ICON = {
   next: '<svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>',
   play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
   pause: '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>',
+  out: '<svg viewBox="0 0 24 24"><path d="M17 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-5 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 16a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>',
 };
+/* Spotify's own answer follows within a few seconds of a command: asked again at short intervals meanwhile */
+function npSoon() {
+  [300, 900, 1800, 3000, 5000].forEach(function (ms) {
+    setTimeout(function () {
+      npPoll(true);
+    }, ms);
+  });
+}
 function npControl(what) {
   var d = NP.data,
     a = what === 'toggle' ? (d && d.playing ? 'pause' : 'play') : what;
@@ -419,11 +439,7 @@ function npControl(what) {
   api('/api/cards/nowplaying/control', { action: a }).then(
     function (r) {
       if (r.error) toast(t(r.error), true);
-      [300, 900, 1800, 3000, 5000].forEach(function (ms) {
-        setTimeout(function () {
-          npPoll(true);
-        }, ms);
-      });
+      npSoon();
     },
     function () {
       toast(t('The service did not answer.'), true);
@@ -467,7 +483,69 @@ function npFit(box) {
 function npOpen() {
   api('/api/cards/nowplaying/open', {}).then(
     function (r) {
+      npSoon();
       if (r && (r.error || r.returnValue === false)) toast(r.error ? t(r.error) : t('Spotify did not open.'), true);
+    },
+    function () {
+      toast(t('The service did not answer.'), true);
+    }
+  );
+}
+/* the picture of a device in the output menu, by the kind Spotify gives it */
+function npDevIcon(type) {
+  if (/^(TV|CastVideo|STB|GameConsole)$/.test(type)) return 'devtv';
+  if (type === 'Computer') return 'devcomputer';
+  if (/^(Smartphone|Tablet)$/.test(type)) return 'devphone';
+  return 'devspeaker';
+}
+/* the output button: the devices that Spotify lists for the account (those with Spotify open), in a menu; OK on one moves the music there */
+function npOutput() {
+  api('/api/cards/nowplaying/devices', {}).then(
+    function (r) {
+      if (!r || r.error) return toast(t((r && r.error) || 'The service did not answer.'), true);
+      var list = r.devices || [],
+        tv = false;
+      list.forEach(function (dv) {
+        if (dv.type === 'TV') tv = true;
+      });
+      /* this TV's Spotify app is listed only while it is open: otherwise a row that does what the cover does (opens the app on the song, which takes the music over) */
+      if (!tv) list.push({ id: 'tv', name: t('This TV'), type: 'TV', hint: t('Opens Spotify'), active: false });
+      var at = 0;
+      list.forEach(function (dv, i) {
+        if (dv.active) at = i;
+      });
+      openBuilt(
+        t('Play on'),
+        function () {
+          return list.map(function (dv) {
+            return {
+              icon: npDevIcon(dv.type),
+              label: dv.name || dv.type,
+              sub: dv.active ? t('Playing here') : dv.hint || dv.type,
+              fn: function () {
+                npTransfer(dv);
+              },
+            };
+          });
+        },
+        at
+      );
+    },
+    function () {
+      toast(t('The service did not answer.'), true);
+    }
+  );
+}
+function npTransfer(dv) {
+  if (dv.active) return;
+  /* the TV is not moved to by a transfer (the app then stays paused): the cover's way, which starts the app on the song, takes the music over */
+  if (dv.type === 'TV') return npOpen();
+  if (dv.wake) toast(t('Playing on') + ' ' + dv.name + '...');
+  api('/api/cards/nowplaying/transfer', { id: dv.id }).then(
+    function (r) {
+      if (r && r.error) return toast(t(r.error), true);
+      toast(t('Playing on') + ' ' + dv.name);
+      npSoon();
     },
     function () {
       toast(t('The service did not answer.'), true);
@@ -518,14 +596,15 @@ function npShell(el) {
   art.addEventListener('click', npOpen);
   el._cover = art;
   var box = el.querySelector('.np-c');
-  ['previous', 'toggle', 'next'].forEach(function (w) {
+  ['previous', 'toggle', 'next', 'output'].forEach(function (w) {
     var p = document.createElement('div');
     p.className = 'np-btn';
     p._card = el._card;
     p._o = { action: 'card', label: '', fixed: true };
     p._b = w;
     p.addEventListener('click', function () {
-      npControl(w);
+      if (w === 'output') npOutput();
+      else npControl(w);
     });
     box.appendChild(p);
     el._btns.push(p);
@@ -870,6 +949,8 @@ var CARD_TYPES = {
         el._btns[0]._o.label = t('Previous');
         el._btns[2].innerHTML = NP_ICON.next;
         el._btns[2]._o.label = t('Next');
+        el._btns[3].innerHTML = NP_ICON.out;
+        el._btns[3]._o.label = t('Play on');
       }
       el._on = big;
       npTop(el, true);
@@ -878,9 +959,10 @@ var CARD_TYPES = {
     /* OK on one of the buttons */
     act: function (btn) {
       if (btn._b === 'cover') npOpen();
+      else if (btn._b === 'output') npOutput();
       else npControl(btn._b);
     },
-    /* what joins the top row for the remote: the cover, and the three buttons in a place big enough for them */
+    /* what joins the top row for the remote: the cover, and the four buttons in a place big enough for them */
     targets: function (el) {
       return el._cover ? [el._cover].concat(el._on ? el._btns : []) : [];
     },

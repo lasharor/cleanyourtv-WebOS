@@ -46,6 +46,8 @@ run(async () => {
   // ---- the stand-in for accounts.spotify.com and api.spotify.com (and the cover host) ----
   const seen = { token: [], api: 0, art: 0, auth: [], ctl: [] };
   let ctlAnswer = null; // the answer of the control calls: {status, body}
+  let devicesAnswer = null, // the answer of the device list
+    transferAnswer = null; // the answer of moving the music to a device
   let playing = null, // the answer of currently-playing: {status, body, headers}
     tokenAnswer = null; // overrides the answer of the token endpoint
   const sp = await serve((rq, rs) => {
@@ -73,7 +75,7 @@ run(async () => {
                   refresh_token: REFRESH1,
                   expires_in: 3600,
                   token_type: 'Bearer',
-                  scope: 'user-read-currently-playing user-read-playback-state user-modify-playback-state',
+                  scope: 'user-read-currently-playing user-read-playback-state user-modify-playback-state streaming',
                 }
               : { access_token: SECRET2, refresh_token: REFRESH2, expires_in: 3600, token_type: 'Bearer' }
           )
@@ -89,6 +91,22 @@ run(async () => {
       if (/^\/v1\/me\/player\/(play|pause|next|previous|seek)([?]|$)/.test(rq.url)) {
         seen.ctl.push({ m: rq.method, p: rq.url, auth: rq.headers.authorization });
         const a = ctlAnswer || { status: 204 };
+        rs.writeHead(a.status, { 'content-type': 'application/json' });
+        return rs.end(a.body === undefined ? undefined : JSON.stringify(a.body));
+      }
+      if (rq.url === '/v1/me') {
+        rs.writeHead(200, { 'content-type': 'application/json' });
+        return rs.end(JSON.stringify({ id: 'user1', display_name: 'Test Listener' }));
+      }
+      if (rq.url === '/v1/me/player/devices') {
+        seen.ctl.push({ m: rq.method, p: rq.url, auth: rq.headers.authorization });
+        const a = devicesAnswer || { status: 200, body: { devices: [] } };
+        rs.writeHead(a.status, { 'content-type': 'application/json' });
+        return rs.end(JSON.stringify(a.body));
+      }
+      if (rq.url === '/v1/me/player' && rq.method === 'PUT') {
+        seen.ctl.push({ m: rq.method, p: rq.url, auth: rq.headers.authorization, body });
+        const a = transferAnswer || { status: 204 };
         rs.writeHead(a.status, { 'content-type': 'application/json' });
         return rs.end(a.body === undefined ? undefined : JSON.stringify(a.body));
       }
@@ -134,7 +152,19 @@ run(async () => {
 
   const NP = req('nowplaying');
   const config = memoryConfig({ lang: 'nl', cards: { side: { type: 'nowplaying' } } });
-  const np = NP.create({ config, tick: 25 });
+  // the devices of the network: what mDNS finds, what they say about themselves, and the wake-up
+  const BOSE = 'b0a1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9';
+  const lan = { found: [], woke: [], awake: () => {} };
+  const connect = {
+    discover: async () => lan.found,
+    info: async d => ({ id: BOSE, name: d.name, type: 'Speaker' }),
+    wake: async (d, user, token) => {
+      lan.woke.push({ d, user, token });
+      lan.awake();
+      return true;
+    },
+  };
+  const np = NP.create({ config, tick: 25, wait: 10, scan: 10, connect });
 
   // ---- the sign-in ----
   ok(np.prepare('short', '').error, 'a Client ID that is not 32 hex digits is refused');
@@ -377,6 +407,26 @@ run(async () => {
   );
   await new Promise(r => setTimeout(r, 120));
   ok(seen.ctl.filter(c => /seek/.test(c.p)).length === 1, 'and only once');
+  // a command of the user ends the give-back: Previous restarts the song on purpose and must not be undone
+  playing = { status: 200, body: track({ progress_ms: 100000 }) };
+  skew += 11000;
+  seen.ctl.length = 0;
+  await np.open(async () => ({ returnValue: true }));
+  await np.control('previous');
+  playing = { status: 200, body: track({ progress_ms: 2000 }) };
+  await new Promise(r => setTimeout(r, 200));
+  ok(!seen.ctl.some(c => /seek/.test(c.p)), 'a command of the user (previous) ends the give-back of the place');
+  // and so does a pause seen after the song played
+  playing = { status: 200, body: track({ progress_ms: 100000 }) };
+  skew += 11000;
+  seen.ctl.length = 0;
+  await np.open(async () => ({ returnValue: true }));
+  await new Promise(r => setTimeout(r, 60));
+  playing = { status: 200, body: track({ progress_ms: 101000, is_playing: false }) };
+  await new Promise(r => setTimeout(r, 120));
+  playing = { status: 200, body: track({ progress_ms: 2000 }) };
+  await new Promise(r => setTimeout(r, 200));
+  ok(!seen.ctl.some(c => /seek/.test(c.p)), 'a pause seen meanwhile ends it too');
   playing = { status: 200, body: track({ is_playing: false }) };
   skew += 11000;
   await np.now();
@@ -386,6 +436,141 @@ run(async () => {
     return { returnValue: true };
   });
   ok(launched && launched.contentTarget === undefined, 'a paused track is not started again: the app opens without a target');
+  // ---- the output: the devices of the account, and moving the music to one ----
+  const DEV = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0';
+  seen.ctl.length = 0;
+  ok((await np.devices()).devices.length === 0, 'no device listed gives an empty list');
+  devicesAnswer = {
+    status: 200,
+    body: {
+      devices: [
+        { id: DEV, name: 'Living room TV', type: 'TV', is_active: true, volume_percent: 30 },
+        { id: null, name: 'Web player', type: 'Computer', is_active: false },
+        { id: 'short', name: 'Bad id', type: 'Speaker', is_active: false },
+        { id: '3f2504e0-4f89-11d3-9a0c-0305e82c3301', name: 'Living room TV', type: 'TV', is_active: false },
+        { id: 'bad id/with?chars', name: 'Bad chars', type: 'Speaker', is_active: false },
+        { id: 'f1e2d3c4b5a6f1e2d3c4b5a6f1e2d3c4b5a6f1e2', name: 'x'.repeat(100), type: 'Smartphone', is_active: false },
+      ],
+    },
+  };
+  const dl = await np.devices();
+  ok(
+    dl.devices.length === 3 &&
+      dl.devices[1].id === '3f2504e0-4f89-11d3-9a0c-0305e82c3301' &&
+      dl.devices[0].id === DEV &&
+      dl.devices[0].active === true &&
+      dl.devices[2].name.length === 60 &&
+      dl.devices[2].type === 'Smartphone' &&
+      Object.keys(dl.devices[0]).sort().join() === 'active,id,name,type',
+    'the devices are listed with id, name, type and active only; one without a good id is left out; names are cut'
+  );
+  devicesAnswer = { status: 404 };
+  ok((await np.devices()).error, 'a device list that fails gives an error');
+  devicesAnswer = null;
+  ok(
+    (await np.transfer('../x')).error === 'That device is not available.' && (await np.transfer('')).error,
+    'a device id of the wrong form is refused before Spotify is asked'
+  );
+  seen.ctl.length = 0;
+  playing = { status: 200, body: track() };
+  skew += 11000;
+  ok((await np.transfer(DEV)).ok === true, 'moving the music answers ok');
+  const tr = seen.ctl.filter(c => c.m === 'PUT' && c.p === '/v1/me/player');
+  ok(
+    tr.length === 1 &&
+      tr[0].auth === 'Bearer ' + SECRET2 &&
+      JSON.parse(tr[0].body).device_ids[0] === DEV &&
+      JSON.parse(tr[0].body).play === true,
+    'it is a PUT with the device and play on while a song plays'
+  );
+  playing = { status: 200, body: track({ is_playing: false }) };
+  skew += 11000;
+  seen.ctl.length = 0;
+  await np.transfer(DEV);
+  ok(JSON.parse(seen.ctl.filter(c => c.m === 'PUT')[0].body).play === false, 'a paused song stays paused on the new device');
+  transferAnswer = { status: 404, body: { error: { status: 404, reason: 'DEVICE_NOT_FOUND' } } };
+  ok((await np.transfer(DEV)).error === 'That device is not available.', 'a device that has gone is told so');
+  transferAnswer = null;
+  // a speaker that only the network knows: listed with wake, and woken when chosen
+  lan.found = [{ host: '10.0.0.9', port: 8200, path: '/zc', name: 'Kitchen speaker' }];
+  skew += 25000; // the list of the network is kept 20 seconds
+  devicesAnswer = { status: 200, body: { devices: [{ id: DEV, name: 'Phone', type: 'Smartphone', is_active: true }] } };
+  const nl = (await np.devices()).devices;
+  ok(
+    nl.length === 2 &&
+      nl[1].id === BOSE &&
+      nl[1].wake === true &&
+      nl[1].name === 'Kitchen speaker' &&
+      nl[1].type === 'Speaker' &&
+      !nl[0].wake,
+    'a speaker found on the network is listed after the ones of Spotify, marked to be woken'
+  );
+  devicesAnswer = {
+    status: 200,
+    body: {
+      devices: [
+        { id: DEV, name: 'Phone', type: 'Smartphone', is_active: true },
+        { id: BOSE, name: 'Kitchen speaker', type: 'Speaker', is_active: false },
+      ],
+    },
+  };
+  ok((await np.devices()).devices.length === 2, 'and not twice once Spotify lists it too');
+  devicesAnswer = { status: 200, body: { devices: [{ id: DEV, name: 'Phone', type: 'Smartphone', is_active: true }] } };
+  transferAnswer = { status: 404, body: { error: { status: 404, reason: 'DEVICE_NOT_FOUND' } } };
+  lan.awake = () => {
+    transferAnswer = null;
+    devicesAnswer = {
+      status: 200,
+      body: {
+        devices: [
+          { id: DEV, name: 'Phone', type: 'Smartphone', is_active: true },
+          { id: BOSE, name: 'Kitchen speaker', type: 'Speaker', is_active: false },
+        ],
+      },
+    };
+  };
+  seen.ctl.length = 0;
+  ok((await np.transfer(BOSE)).ok === true, 'choosing a speaker that is not in the list wakes it and moves the music');
+  ok(
+    lan.woke.length === 1 &&
+      lan.woke[0].user === 'user1' &&
+      lan.woke[0].token === SECRET2 &&
+      seen.ctl.filter(c => c.m === 'PUT' && c.p === '/v1/me/player').length === 2,
+    'the account and token go to that device once, and the move is asked for again after it shows'
+  );
+  config.update('test', c => {
+    c.spotify.scope = 'user-read-currently-playing user-read-playback-state user-modify-playback-state';
+  });
+  ok(np.status().wake === false, 'without the streaming scope the status says so');
+  transferAnswer = { status: 404 };
+  lan.awake = () => {};
+  ok(/again/.test((await np.transfer(BOSE)).error || ''), 'and waking is refused with a sign-in again');
+  // only a device that Spotify does not know is woken: a busy Spotify is told as it is, and the token stays here
+  config.update('test', c => {
+    c.spotify.scope = 'user-read-currently-playing user-read-playback-state user-modify-playback-state streaming';
+  });
+  transferAnswer = { status: 429 };
+  const woke = lan.woke.length;
+  ok(
+    /busy/.test((await np.transfer(BOSE)).error || '') && lan.woke.length === woke,
+    'a 429 on the move does not wake the device or send it the token'
+  );
+  // two asks while the scan runs share it: both see the speaker
+  skew += 25000;
+  devicesAnswer = { status: 200, body: { devices: [{ id: DEV, name: 'Phone', type: 'Smartphone', is_active: true }] } };
+  const both = await Promise.all([np.devices(), np.devices()]);
+  ok(
+    both.every(b => b.devices.some(d => d.id === BOSE && d.wake)),
+    'two asks during one scan both get the speaker'
+  );
+  config.update('test', c => {
+    c.spotify.scope = 'user-read-currently-playing user-read-playback-state user-modify-playback-state streaming';
+  });
+  config.update('test', c => {
+    c.spotify.scope = 'user-read-currently-playing user-read-playback-state user-modify-playback-state streaming';
+  });
+  transferAnswer = null;
+  devicesAnswer = null;
   playing = { status: 200, body: track() };
   ctlAnswer = { status: 404, body: { error: { status: 404, reason: 'NO_ACTIVE_DEVICE' } } };
   ok(/device/.test((await np.control('next')).error || ''), 'no active device is said');
@@ -399,12 +584,23 @@ run(async () => {
   });
   ok(np.status().controls === false, 'a sign-in without the scope shows in the status, so the page can ask to sign in again');
   config.update('test', c => {
-    c.spotify.scope = 'user-read-currently-playing user-read-playback-state user-modify-playback-state';
+    c.spotify.scope = 'user-read-currently-playing user-read-playback-state user-modify-playback-state streaming';
   });
   skew += 11000;
   playing = { status: 403 };
   n = await np.now();
   ok(n.playing === false && /Users Management/.test(n.error || ''), 'a 403 says the account is not allowed for the app');
+  ok(
+    n.rejected === 'account' && np.status().rejected === 'account',
+    'the answer says that Spotify rejected the account, for the toast, and the status does too, for the settings pages'
+  );
+  np.tell();
+  skew += 11000;
+  n = await np.now();
+  ok(
+    n.rejected === undefined && n.playing === false,
+    'once the launcher has told the user, the answer does not carry it again (one toast per run)'
+  );
   skew += 11000;
   tokenAnswer = { status: 400, body: { error: 'invalid_grant' } };
   config.update('test', c => {
@@ -418,6 +614,26 @@ run(async () => {
       config.get().spotify.refreshToken === undefined &&
       config.get().spotify.clientId === CID,
     'a refused refresh token ends the connection (sign in again) but keeps the Client ID'
+  );
+  ok(n.rejected === 'signin', 'and a different rejection is told again (the sign-in itself is no longer accepted)');
+  ok(
+    np.status().rejected === 'signin' && (await NP.create({ config, tick: 25, connect }).now()).rejected === 'signin',
+    'the refused sign-in stays known after a restart (a Client ID without tokens), for the toast and the settings'
+  );
+  // nothing is said where Spotify is not set up (no Client ID saved), whatever happened before
+  config.update('test', c => {
+    delete c.spotify.clientId;
+  });
+  ok((await np.now()).rejected === undefined, 'without a saved Client ID no rejection is told');
+  config.update('test', c => {
+    c.spotify.clientId = CID;
+  });
+  np.tell();
+  ok((await np.now()).rejected === undefined, 'but only once');
+  ok(
+    said.some(l => /^spotify: Spotify turned the saved settings down \(signin\): the refresh was refused \(HTTP 400\)/.test(l)) &&
+      said.some(l => /^spotify: the launcher showed the toast/.test(l)),
+    'the rejection and the toast are written to the log, with the reason'
   );
   tokenAnswer = null;
 
@@ -434,8 +650,14 @@ run(async () => {
   ok(n.playing === false, 'with Spotify unreachable the card quietly has nothing to show');
   Date.now = clock;
 
+  // ---- the account that is signed in ----
+  np.status(); // asks Spotify in the background
+  await new Promise(r => setTimeout(r, 100));
+  ok(np.status().account === 'Test Listener', 'the status names the account that is signed in');
+  ok(!JSON.stringify(config.get()).includes('Test Listener'), 'and the name is not written to the settings');
   // ---- disconnect ----
   ok(np.disconnect().connected === false && config.get().spotify === undefined, 'disconnecting forgets everything');
+  ok(np.status().account === undefined, 'and the name of the account');
 
   // ---- through the cards feature: the card endpoint, the settings page and its phone page ----
   const C = req('cards');
@@ -508,8 +730,8 @@ run(async () => {
   const cardJs = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'app', 'src', 'js', 'cards.js'), 'utf8');
   const names = (/\[('previous'.*?)\]\.forEach/.exec(cardJs) || ['', ''])[1].match(/[a-z]+/g) || [];
   let known = true;
-  for (const n of names) if (n !== 'toggle') known = known && (await np.control(n)).error !== 'That is not a control.';
-  ok(names.length === 3 && known, 'every button of the card is a control the service knows');
+  for (const n of names) if (n !== 'toggle' && n !== 'output') known = known && (await np.control(n)).error !== 'That is not a control.';
+  ok(names.length === 4 && known, 'every button of the card is a control the service knows');
   // every np... function the card calls is defined (a patch once removed one: the first draw threw and the card stayed blank)
   const called = new Set((cardJs.match(/\bnp[A-Z][A-Za-z]*(?=\()/g) || []).filter(n => !/^function /.test(n)));
   const missing = [...called].filter(n => !new RegExp('function ' + n + '\\(').test(cardJs));

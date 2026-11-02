@@ -97,7 +97,7 @@ same place.
 | Home Assistant entities | A list of entities, one per line on the phone page, with an optional title. |
 | Home Assistant camera | A camera's picture, renewed every 10, 30 or 60 seconds while Home is shown. |
 | Home Assistant weather | A `weather.*` entity: the sky now with an icon, the temperature (from an outside temperature sensor if you choose one, otherwise the entity's own), humidity and wind, and the forecast for the next days or hours from `weather.get_forecasts` (Home Assistant 2023.9 and newer; older versions are read from the `forecast` attribute). Asked every five minutes, the forecast at most every 15 minutes. It also feeds `{{weather.temp}}`, `{{weather.text}}` and the greeting's weather line. |
-| Spotify now playing | What plays on your Spotify account, on any device, with the cover, the title, the artist, a thin progress bar and three buttons: previous, play or pause, next. It is there while something plays and while a track is paused (to resume it); an advertisement, nothing playing, offline or not set up all leave it away. See [Spotify now playing](#spotify-now-playing). |
+| Spotify now playing | What plays on your Spotify account, on any device, with the cover, the title, the artist, a thin progress bar and four buttons: previous, play or pause, next, and the output (where it plays). It is there while something plays and while a track is paused (to resume it); an advertisement, nothing playing, offline or not set up all leave it away. See [Spotify now playing](#spotify-now-playing). |
 | Text | Your own text. `{{greeting}}`, `{{time}}`, `{{date}}` and `{{weekday}}` are filled in and kept up to date, and `{{weather.temp}}` and `{{weather.text}}` with a weather card on Home; `**bold**`, `*italic*` and a line starting with `#` for a heading. In three sizes. |
 
 **Customise** > **Home Assistant** (the first row, in themes with places for cards) chooses the cards with
@@ -132,6 +132,9 @@ a Spotify app of your own, which is free, but Spotify's rules for it apply:
 To set it up, open **Customise** > **Spotify** on Home, below Home Assistant. It works like Home Assistant: **Connection** opens the
 Spotify page of the manager app, and each place of the theme below it shows Spotify there (OK) or empties it again. The manager app has
 the same page under **Spotify now playing**. In the connection page choose **Connect from your phone** and scan the code:
+The phone page walks through these steps one at a time (log in, create the app, add your email, Client ID and sign-in, approve and
+connect); the sign-in link and the box for the address appear in the last step. Once connected it shows the name of the Spotify account
+that is signed in, and so do **Customise** > **Spotify** and the manager app (the name is asked from Spotify, kept only in memory and never saved):
 
 1. On developer.spotify.com create an app. Add `http://127.0.0.1:8888/callback` as its **Redirect URI** (Spotify accepts only https
    addresses or a loopback address written as an IP) and your own email under **Users Management**. Copy the **Client ID**. You do
@@ -143,7 +146,7 @@ the same page under **Spotify now playing**. In the connection page choose **Con
 4. Back in **Customise** > **Spotify**, choose the place for the card (or choose it for a place in **Cards**, or **Customise** >
    **Home Assistant**, where the place's menu also has the one option of the card, the progress bar).
 
-**The buttons.** In a place at least 200 px high the card shows previous, play or pause, and next, and the time (`1:05 / 3:54`)
+**The buttons.** In a place at least 200 px high the card shows previous, play or pause, next and the output, and the time (`1:05 / 3:54`)
 beside them. They join the top row for the remote like the buttons of the top row (Up from the apps reaches Inputs, Live TV, Settings
 and Customise; Down from there goes to play or pause, Left and Right move between the buttons, OK presses, Up goes back to the top
 row). A smaller place shows the cover and the text only. The buttons send Spotify's player commands (`play`, `pause`, `next`,
@@ -152,12 +155,19 @@ playing anywhere. The card changes at once and asks Spotify again after each pre
 the buttons existed, the sign-in lacks the permission to control playback: the settings page says so, and **Sign in again from your
 phone** asks for it.
 
+**The output.** The last button (a speaker) lists the devices that Spotify shows for your account, the ones with Spotify open and signed
+in (this TV's Spotify app, your phone, a speaker), with the one that plays marked. OK on another moves the music there: a song that
+plays keeps playing, a paused one stays paused. Each row has a picture of the kind of device (TV, computer, phone, speaker). Spotify lists a device only while its Spotify app is awake, so the service also looks for Spotify Connect speakers on your network (mDNS, like the Spotify apps do) and adds the ones that are missing. Choosing one of those wakes it first: the service gives it your account's access token over your local network (encrypted for that device), it registers with Spotify, and the music moves there. Waking needs the permission **streaming**: after an update, **Sign in again from your phone** once (the manager says so). Without a TV in the list the last row is **This TV**, which (like a TV that is listed) does what the cover does: it opens the TV's Spotify app on the song, at the place it was, and the app takes the music over from the other device. A plain transfer to the TV is not used: the TV's app then stays paused. Moving the music sets the song back to where it was when the new device starts it from the beginning. This needs the same
+Premium account and permission as the other buttons.
+
 **The cover and long names.** The cover is a target for the remote and the pointer too (the first one in that row, left of the
 buttons): OK or a click opens the Spotify app of the TV on the song that plays. The app can show the song only when it is started with it,
 and then plays it from the start; the service therefore sets the song back to where it was a moment after the app has started it
 (a short jump back to the beginning can be heard; the music stays on the device that plays it, and a paused song is not touched: the
 app then opens on its Home). A title or an artist wider than the card runs sideways to its end and back, resting at both ends,
 instead of being cut off; a short one stays still.
+
+**When Spotify turns the settings down.** If Spotify no longer accepts the saved sign-in (revoked at spotify.com/account/apps, or older than six months) or refuses the account for your app (not under Users Management), the card shows one toast, the first time the card is on Home after the TV is switched on (the service remembers that it has been shown until it runs anew, and a different kind of rejection is shown again). Sign in again from **Customise** > **Spotify**.
 
 The sign-in is kept in `config.json` (readable by root only) and is never shown or returned; **Disconnect Spotify** deletes it. Spotify
 lets a sign-in last about six months; after that the settings page says to sign in again (**Sign in again from your phone**). The cover is shown as Spotify sends it and
