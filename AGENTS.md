@@ -104,5 +104,6 @@ sh tools/perf-tv.sh <tv-ip>        # read-only timings from a TV: launcher, Inpu
 - Settings were lost when two parts read and rewrote `config.json` around each other (issues 6, 7): use `config.update`, which logs
   every change of an option or key with its source.
 - A per-TV rule written in a module or a script drifts from the others: put it in `helper/tvprofile.js`.
+- Two parts claiming one LAN port is a race that no test of either part can see: the second `listen` fails with `EADDRINUSE` and which one breaks depends on the start order (the App icons add-on and the Spotify page were both 8794). `tools/test/ports.test.js` reads every fixed port out of `helper/` (add-ons included) and fails on a duplicate and on a port `docs/security.md` does not list: take a free number there, and add its row.
 - Edit the pages in `app/src`, `manager/src` and `helper/addons-bundled/iptv/src`, then `node tools/build-pages.js`; the built files are what the TV loads.
 - Themes are data; a theme must never contain CSS or script. The schema in `helper/themeschema.js` is the only source of what a theme can set.

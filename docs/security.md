@@ -18,6 +18,10 @@ local network on request, and an optional notification endpoint is off by defaul
 | 8794 | App icons page | The same, for choosing a picture for an app; see [Your own icon](launcher.md#your-own-icon) |
 | 8795 | Spotify now playing page | The same, to connect Spotify; see [Spotify now playing](launcher.md#spotify-now-playing) |
 
+Every page takes a port of its own, and each one is listed here. `tools/test/ports.test.js` reads the numbers out of the code and
+fails on a duplicate — two pages that claim one port are not a merge conflict, they are a race: the second `listen` fails and which
+page breaks depends on the order things started in — and on a port this table does not list.
+
 What the setup changes on the TV is listed in [What it changes on the TV](tv-changes.md).
 
 ## Network notifications
