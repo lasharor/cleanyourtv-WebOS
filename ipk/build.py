@@ -13,9 +13,20 @@ P = lambda *a: os.path.join(ROOT, *a)
 PKG = 'com.cleanyourtv.manager'
 SERVICE = PKG + '.service'
 
-version = re.search(r"const VERSION = '([^']+)'", open(P('helper', 'helper.js')).read()).group(1)
-fe = json.load(open(P('app', 'version.json')))['version']
-if not re.search(r"VERSION\s*=\s*'%s'" % re.escape(fe), open(P('app', 'index.html')).read()):
+def text(*a):
+    # read as UTF-8 whatever the computer's own encoding is: on Windows a plain open() uses the code page (cp1252) and the launcher's
+    # translations are not in it
+    with open(P(*a), encoding='utf-8') as f:
+        return f.read()
+
+def wtext(path, data):
+    # and write as UTF-8 with '\n': on Windows a plain open() writes CRLF, which a .sha256 file and apps.json should not have
+    with open(path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(data)
+
+version = re.search(r"const VERSION = '([^']+)'", text('helper', 'helper.js')).group(1)
+fe = json.loads(text('app', 'version.json'))['version']
+if not re.search(r"VERSION\s*=\s*'%s'" % re.escape(fe), text('app', 'index.html')):
     sys.exit('app/version.json (%s) and VERSION in app/index.html do not match' % fe)
 
 # A test build (made by .github/workflows/test-build.yml from a branch) carries the commit it was made from in a BUILD file, in the
@@ -62,7 +73,7 @@ def ar(parts):
 def write(name, data):
     path = os.path.join(DIST, name)
     open(path, 'wb').write(data)
-    open(path + '.sha256', 'w').write('%s  %s\n' % (hashlib.sha256(data).hexdigest(), name))
+    wtext(path + '.sha256', '%s  %s\n' % (hashlib.sha256(data).hexdigest(), name))
     print('%-52s %8d bytes' % (name, len(data)))
 
 shutil.rmtree(DIST, ignore_errors=True); os.makedirs(DIST)
@@ -137,6 +148,6 @@ repo = {'paging': {'page': 1, 'count': 1, 'maxPage': 1, 'itemsTotal': 1}, 'packa
     'manifestUrl': dl + PKG + '.manifest.json', 'manifest': manifest, 'pool': 'main',
     'fullDescriptionUrl': raw + 'docs/homebrew-channel.html'}]}
 for name, obj in ((PKG + '.manifest.json', manifest), ('apps.json', repo)):
-    open(os.path.join(DIST, name), 'w').write(json.dumps(obj, indent=2) + '\n')
+    wtext(os.path.join(DIST, name), json.dumps(obj, indent=2) + '\n')
     print('%-52s (Homebrew Channel, %s)' % (name, TAG))
 print('service %s, launcher %s' % (version, fe))

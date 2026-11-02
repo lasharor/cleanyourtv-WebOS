@@ -1,19 +1,34 @@
 #!/bin/sh
-# Build the directory that is mounted over LG's screen saver app: our page plus an appinfo.json derived from this TV's own stock
-# screen saver (saved in backup/screensaver-appinfo.orig.json), switched to the web type with the overlay window.
+# Build the folder that is mounted over LG's screen saver app: our page plus an appinfo.json derived from this TV's own stock
+# screen saver (saved in backup/screensaver-appinfo.orig.json), switched to the web type while it keeps LG's own window type
+# ("screenSaver", which is what tvpowerd counts as the screen saver; jtool.js saver).
 # Safe to re-run while mounted: the page's files are replaced where they already are.
-L=/media/developer/cleanyourtv
-H=/usr/palm/applications/com.webos.app.screensaver
+# The paths can be pointed elsewhere for the tests (tools/test/screensaver.test.js); on the TV CYTV_TEST_ROOT is not set.
+R=${CYTV_TEST_ROOT:-}
+L=$R/media/developer/cleanyourtv
+H=$R/usr/palm/applications/com.webos.app.screensaver
 S=$L/screensaver-overlay
+T=$L/.stage-screensaver   # what jtool writes, compared with the staged files before anything is copied
 [ -d $L/screensaver/app ] || exit 1
-# already staged and unchanged (the usual boot): copying it again and running node three times costs seconds for nothing
-if [ -f $S/appinfo.json ] && cmp -s $L/screensaver/app/index.html $S/index.html; then exit 0; fi
-mkdir -p $S
-cp $L/screensaver/app/* $S/
-# the stock screen saver's icons, once: the derived appinfo.json names them, and the overlay folder hides theirs
+[ -f $L/backup/screensaver-appinfo.orig.json ] || exit 1   # without LG's own manifest the derived one would have no app id
+mkdir -p $S $T
+node $L/jtool.js saver "$L/backup/screensaver-appinfo.orig.json" "$T/appinfo.json" || exit 1
+# what scripts/screensaver-standin.sh sends to webapp-mgr where LG's screen saver is the native program (saverTakeover 'standin')
+node $L/jtool.js wamlaunch "$T/appinfo.json" "$S" "$T/wam-launch-saver.json" cleanyourtv-screensaver || exit 1
+# Already staged and unchanged (the usual boot): the page AND the two generated files are compared, because the manifest follows this
+# TV's stock screen saver and jtool.js, not only the page. Copying it again and running node three times costs seconds for nothing.
+if cmp -s $L/screensaver/app/index.html $S/index.html && cmp -s $T/appinfo.json $S/appinfo.json && cmp -s $T/wam-launch-saver.json $L/wam-launch-saver.json; then
+  rm -rf $T
+  exit 0
+fi
+cp -r $L/screensaver/app/* $S/ || exit 1
+# the stock screen saver's icons, once: the derived appinfo.json names them, and the overlay folder hides theirs. While the folder is
+# mounted, $H is this folder (the icon is there already, so nothing is copied); on a first stage it is LG's own folder.
 for f in icon.png largeIcon.png iconSplash.png; do
   [ -f $H/$f ] && [ ! -f $S/$f ] && cp $H/$f $S/$f 2>/dev/null
 done
-node $L/jtool.js saver "$L/backup/screensaver-appinfo.orig.json" "$S/appinfo.json"
-# what scripts/screensaver-standin.sh sends to webapp-mgr where LG's screen saver is the native program (saverTakeover 'standin')
-node $L/jtool.js wamlaunch "$S/appinfo.json" "$S" "$L/wam-launch-saver.json" cleanyourtv-screensaver
+mv $T/appinfo.json $S/appinfo.json || exit 1
+mv $T/wam-launch-saver.json $L/wam-launch-saver.json || exit 1
+[ -f $T/wam-launch-saver.json.str ] && mv $T/wam-launch-saver.json.str $L/wam-launch-saver.json.str
+rm -rf $T
+exit 0

@@ -21,15 +21,17 @@ The first key, click or touch closes it and the app that was on screen comes bac
 The same idea as for [Home](tv-changes.md#at-boot), on the app the TV starts when it is idle: `com.webos.app.screensaver`.
 
 1. `20-cleanyourtv-screensaver` runs at boot. It builds a folder with the page and an `appinfo.json` derived from **this TV's own**
-   screen saver (saved in `backup/screensaver-appinfo.orig.json` the first time), switched to the web type and to an overlay window.
-   The app id stays LG's, which is why the TV keeps asking for it.
+   screen saver (saved in `backup/screensaver-appinfo.orig.json` the first time), switched to the web type while it keeps **this TV's
+   own window type** (`screenSaver`, which is the only one `tvpowerd` counts — see [When it appears](#when-it-appears)). The app id
+   stays LG's, which is why the TV keeps asking for it.
 2. How it is put in place is decided by `helper/tvprofile.js` (`saverTakeover`), from the kind of LG's screen saver as it came with
    the TV:
     - **a native program**: `screensaver-standin.sh` is bind-mounted over that program. The app manager keeps LG's manifest and starts
       the script when the screen saver starts; the script asks `webapp-mgr` to open the page. The app manager is not restarted.
     - **anything else** (a QML or web screen saver): the page's folder is bind-mounted over
       `/usr/palm/applications/com.webos.app.screensaver` and the app manager is restarted so that it reads it.
-3. The page is an **overlay window**: closing it gives the app that was underneath back, instead of going to Home.
+3. The page runs as LG's screen saver app, so the TV treats it as its screen saver, and closing it gives the app that was underneath back
+   instead of going to Home (that was seen with the earlier `overlay` manifest — see [Limits](#limits)).
 
 `10-cleanyourtv-home` mounts the screen saver *before* it restarts the app manager, so on a TV where both use the folder mount there is
 one restart, not two. A file `screensaver-method` holding `mount` forces the folder mount on a TV whose screen saver is a native
@@ -47,7 +49,10 @@ page once and then stayed at `Screen Saver Ready` for good; with `"screenSaver"`
 [`jtool.js`](../scripts/jtool.js)) it re-arms. Three timed cycles on the tested TV: 61 s, 112 s, 61 s.
 
 The service keeps a second, slower timer as a fallback ([screensaver.js](../helper/screensaver.js)): two quiet minutes with the launcher
-in front and it opens the page itself. It covered one of those three cycles, where `tvpowerd` did not fire.
+in front and it opens the page itself. It covered one of those three cycles, where `tvpowerd` did not fire. "Quiet" is the launcher's
+own word: its page reports every key, click and pointer movement to the service (`POST /api/screensaver/active`), and the timer only
+fires when no report has come for two minutes — a TV being browsed with the remote is Home in front all evening, and only `tvpowerd`'s
+timer knows about that. A launcher that reports nothing (LG's Home in front, a launcher from before this) is left to `tvpowerd`.
 
 The limit that follows: over a video app the service cannot tell an idle TV from a watched one, so there the saver comes only from
 `tvpowerd`.
@@ -97,16 +102,19 @@ The setting is the file `DISABLE-SCREENSAVER` in `/media/developer/cleanyourtv`:
 
 !!! note "What was verified on that TV"
     LG's screen saver is a **Flutter** app started by `tvpowerd`: after the mount and one app manager restart, sam reports `type: web`,
-    `main: index.html`; `tvpowerd` starts the page after the idle timeout (`caller_id: com.webos.service.tvpower`, window
-    `_WEBOS_WINDOW_TYPE_OVERLAY`), and the first key closes it and gives the launcher back. Without the app manager restart the registry
-    keeps `type: flutter` and nothing appears — the restart is what makes the mount take effect.
+    `main: index.html`; `tvpowerd` starts the page after the idle timeout (`caller_id: com.webos.service.tvpower`), with the window type
+    of the manifest, and the first key closes it and gives the launcher back. Without the app manager restart the registry keeps
+    `type: flutter` and nothing appears — the restart is what makes the mount take effect.
 
 The launch showed a grey "loading" screen with a spinner for a second, like any web app: the derived manifest now sets
 `noSplashOnLaunch: true` and `spinnerOnLaunch: false`, so the page's own black background is what appears. (Not yet seen on the TV.)
 
 - While the page is up the power state stays `Active` with `processing: "Screen Saver Ready"`; that is why the service treats it as the
   screen saver and leaves it alone (a page that was closed every minute by its own safety check was the first bug found on the TV).
-- The window is an `overlay`, not LG's `screenSaver` type: closing it gives the app underneath back, which is what a screen saver needs.
+- The page keeps LG's `screenSaver` window type: that is what makes `tvpowerd` arm it again after a dismissal (with `overlay` it started
+  once and then stayed at `Screen Saver Ready`, see [When it appears](#when-it-appears)).
+- "Closing it gives the app underneath back" was seen with the earlier `overlay` manifest, where the first key closed the page and gave
+  the launcher back. With LG's own window type that is worth one look on a TV with a video app behind the saver.
 - If the page does not open, the TV stays on the app it was showing: the screen stays on rather than turning black, and the next restart
   is LG's screen saver as before.
 - LG's **Screen Saver** setting (Clock, Gallery, Photo) still exists and is untouched; only the app it starts is replaced.

@@ -34,6 +34,9 @@ const extraText = src =>
     )
     .join('\n');
 const I18N = path.join(root, 'i18n');
+// A checkout on Windows may have CRLF: the @include lines would not match and the page would be built without its CSS and script. Every
+// file the build reads is normalised, so the pages are written with LF and a check on Windows compares the same text as on Linux.
+const readPage = f => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
 
 // ---- translations: every i18n/<language>.json except en.json, which lists all the English texts ----
 function langs() {
@@ -80,15 +83,16 @@ function i18nScript(pageText) {
     ep = {};
   for (const k of used) if (en[k] && typeof en[k] === 'object') ep[k] = en[k];
   if (Object.keys(ep).length) out.en = ep;
-  return 'var I18N = ' + JSON.stringify(out) + ';\n' + fs.readFileSync(path.join(I18N, 'runtime.js'), 'utf8').replace(/\n$/, '');
+  return 'var I18N = ' + JSON.stringify(out) + ';\n' + readPage(path.join(I18N, 'runtime.js')).replace(/\n$/, '');
 }
 
 const MARK = '/* @i18n */',
   MARK_END = '/* @i18n end */';
+
 function build(src) {
   if (/\.html$/.test(src)) {
     // the picker: rewrite the part between the marks
-    const cur = fs.readFileSync(path.join(root, src), 'utf8'),
+    const cur = readPage(path.join(root, src)),
       a = cur.indexOf(MARK),
       b = cur.indexOf(MARK_END);
     if (a < 0 || b < a) throw new Error(src + ' has no ' + MARK + ' ... ' + MARK_END + ' part');
@@ -96,9 +100,7 @@ function build(src) {
     return cur.slice(0, a) + MARK + '\n' + i18nScript(rest) + '\n' + cur.slice(b);
   }
   const dir = path.join(root, src);
-  // a checkout on Windows may have CRLF: the @include lines would not match and the page would be built without its CSS and script
-  const read = f => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
-  const page = read(path.join(dir, 'index.html'))
+  const page = readPage(path.join(dir, 'index.html'))
     .replace(/\n$/, '')
     .split('\n')
     .map(line => {
@@ -108,21 +110,25 @@ function build(src) {
       // a page may include files of another page's sources (the TV guide of the LG tuner add-on builds from the guide code of Live TV), but
       // only inside the repository
       if (f.indexOf(root + path.sep) !== 0 || !fs.existsSync(f)) throw new Error(src + '/index.html includes a missing file: ' + m[1]);
-      return read(f).replace(/\n$/, '');
+      return readPage(f).replace(/\n$/, '');
     })
     .join('\n');
   const parts = page.split(/^@i18n$/m);
   return (parts.length === 2 ? parts[0] + i18nScript(parts[0] + parts[1] + '\n' + extraText(src)) + parts[1] : page) + '\n';
 }
 
+// is the page on disk what the sources build to? (compared with LF line ends, so a CRLF checkout is not "stale")
+function fresh(p) {
+  const file = path.join(root, p[1]);
+  return build(p[0]) === (fs.existsSync(file) ? readPage(file) : '');
+}
+
 if (require.main === module) {
   const check = process.argv.indexOf('--check') >= 0;
   let stale = 0;
   for (const p of PAGES) {
-    const out = build(p[0]),
-      file = path.join(root, p[1]);
-    const cur = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
-    if (out === cur) {
+    const file = path.join(root, p[1]);
+    if (fresh(p)) {
       console.log('ok   ' + p[1] + ' matches ' + p[0]);
       continue;
     }
@@ -131,10 +137,10 @@ if (require.main === module) {
       console.log('FAIL ' + p[1] + ' does not match ' + p[0] + ' (run: node tools/build-pages.js)');
     } else {
       if (!fs.existsSync(path.dirname(file))) fs.mkdirSync(path.dirname(file));
-      fs.writeFileSync(file, out);
+      fs.writeFileSync(file, build(p[0]));
       console.log('wrote ' + p[1]);
     }
   }
   process.exit(stale ? 1 : 0);
 }
-module.exports = { build, PAGES, langs, english, usedIn, plain, filled };
+module.exports = { build, fresh, PAGES, langs, english, usedIn, plain, filled };
