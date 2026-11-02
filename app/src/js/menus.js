@@ -1324,7 +1324,8 @@ function wxSet(fn) {
       if (card.type === 'none') delete cfg.cards['under-clock'];
       else cfg.cards['under-clock'] = card;
       drawCards();
-      drawMenu();
+      /* the panel is built from the settings: build it again, or the rows keep the values it was opened with */
+      refreshMenu();
     },
     function () {
       toast(t('The service did not answer.'), true);

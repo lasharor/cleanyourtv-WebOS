@@ -347,6 +347,27 @@ setInterval(function () {
     function () {}
   );
 }, 5000);
+/* the launcher's own settings can be changed somewhere else too (the phone page's cards, the manager): a stamp of them is checked
+   every ten seconds, so Home shows the change without being opened again. Not while a menu is open (the panel updates itself and the
+   next check picks anything else up), not while Live TV plays and not while a tile is being moved. */
+var cfgStamp = null;
+setInterval(function () {
+  if ((window.LIVE && LIVE.on) || moving || (typeof stack !== 'undefined' && stack.length)) return;
+  api('/api/cfg/stamp').then(
+    function (x) {
+      if (!x || typeof x.cfg !== 'number') return;
+      if (cfgStamp === null) {
+        cfgStamp = x.cfg;
+        return;
+      }
+      if (x.cfg !== cfgStamp) {
+        cfgStamp = x.cfg;
+        load();
+      }
+    },
+    function () {}
+  );
+}, 10000);
 function refreshSoon() {
   clearTimeout(refreshT);
   clearTimeout(refreshT2);

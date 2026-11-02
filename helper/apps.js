@@ -2,6 +2,7 @@
 // settings (dock, hidden apps, sort order, clock, top buttons).
 //   GET /api/apps  GET /api/inputs  GET /api/foreground  POST /api/launch {id, params}  POST /api/config {...}  GET /icon/<app id>
 //   GET /api/apps/stamp: a number that changes whenever the list of apps changes (the launcher checks it every few seconds)
+//   GET /api/cfg/stamp: a number that changes when the launcher's own settings do (Customise, the cards on the phone page)
 //   GET /icon/<app id> sends the app's custom picture first (the App icons add-on); /api/apps marks such an app with iv, the picture's version,
 //   and with it: 1 when the picture is shown as Full tile
 //   GET /api/inputs: the HDMI ports, plus LG's own Live TV (the tuner) while its app is installed ({appId, tuner: true})
@@ -440,6 +441,21 @@ function create(ctx) {
     return theme ? Object.assign(c, { theme: theme.resolved() }) : c;
   }
 
+  // a number that changes when the launcher's own settings do, so that Home shows a change made elsewhere (the phone page, the manager)
+  // without opening Home again: only the keys the launcher draws from, not the theme or the wallpaper stamp
+  function cfgStamp() {
+    const c = config.get(),
+      pick = {};
+    for (const k of LAUNCHER_KEYS) if (c[k] !== undefined) pick[k] = c[k];
+    const s = JSON.stringify(pick);
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h;
+  }
+
   async function handle(req, res, u, body) {
     if (u === '/api/apps') {
       const reply = { apps: await apps(), config: launcherConfig(), usage: usageScores(), version: ctx.version, stamp: appsStamp };
@@ -469,6 +485,8 @@ function create(ctx) {
       return web.json(res, reply);
     }
     if (u === '/api/apps/stamp') return web.json(res, { stamp: await stampNow() });
+    // the launcher's own settings, hashed: the launcher checks it now and then so a change made elsewhere shows up on Home
+    if (u === '/api/cfg/stamp') return web.json(res, { cfg: cfgStamp() });
     if (u === '/api/inputs') return web.json(res, await inputsWithTuner());
     if (u === '/api/inputs/pin' && req.method === 'POST') return web.json(res, await pin(await body(req)));
     if (u === '/api/foreground') return web.json(res, await luna('luna://com.webos.applicationManager/getForegroundAppInfo', {}));
@@ -526,6 +544,7 @@ function create(ctx) {
       '/api/config',
       '/api/apps/uninstall',
       '/api/apps/stamp',
+      '/api/cfg/stamp',
       '/api/power/off',
       '/api/audio/volume',
     ],
