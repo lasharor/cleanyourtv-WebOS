@@ -282,12 +282,12 @@ function openHa() {
 var cs = null,
   cardSlot = null;
 /* Cards > Get more cards: the catalog of downloadable cards (helper/cardcatalog.js), with a picture and a text each */
-var cc = { cards: [], error: '', sel: '' };
+var cardCat = { cards: [], error: '', sel: '' };
 function openCardCatalog() {
   api('/api/cards/catalog').then(
     function (r) {
-      cc.cards = (r && r.cards) || [];
-      cc.error = (r && r.error) || '';
+      cardCat.cards = (r && r.cards) || [];
+      cardCat.error = (r && r.error) || '';
       if (view !== 'cardcat' && view !== 'cardone') push('cardcat');
       else {
         build();
@@ -301,7 +301,7 @@ function openCardCatalog() {
   );
 }
 function cardSel() {
-  for (var i = 0; i < cc.cards.length; i++) if (cc.cards[i].id === cc.sel) return cc.cards[i];
+  for (var i = 0; i < cardCat.cards.length; i++) if (cardCat.cards[i].id === cardCat.sel) return cardCat.cards[i];
   return null;
 }
 function cardDo(path, id, done) {

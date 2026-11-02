@@ -114,4 +114,24 @@ run(async () => {
     !/(^|\n)\s*\.st\s*\{/.test(launcher) && /svg\.st\s*\{\s*width:\s*26px/.test(launcher),
     "the favourite star is styled as svg.st, so the menu's .st text keeps its natural width"
   );
+  // the manager's build() declares variables with var, which shadow a global of the same name in the whole function: a card catalog called cc
+  // was undefined in build() because the channel screen has a local cc, and Get more cards did nothing
+  const mdir = path.join(root, 'manager', 'src', 'js');
+  const msrc = fs.readdirSync(mdir).map(n => [n, fs.readFileSync(path.join(mdir, n), 'utf8')]);
+  const menu = msrc.filter(x => x[0] === 'menu.js')[0][1];
+  const from = menu.indexOf('function build() {'),
+    to = menu.indexOf("/* the debloat's four groups");
+  const locals = {};
+  menu.slice(from, to).replace(/\bvar\s+([^;]*?);/g, (m, list) => {
+    list.replace(/(?:^|,)\s*([A-Za-z_$][\w$]*)\s*(?=\s*(?:=|,|$))/g, (m2, n) => (locals[n] = 1));
+    return m;
+  });
+  const globals = {};
+  msrc.forEach(x => {
+    const text = x[0] === 'menu.js' ? menu.slice(0, from) + menu.slice(to) : x[1];
+    text.replace(/^(?:var|function)\s+([A-Za-z_$][\w$]*)/gm, (m, n) => (globals[n] = 1));
+    text.replace(/^var\s+[^;]*;/gm, m => m.replace(/(?:^var|,)\s*([A-Za-z_$][\w$]*)\s*(?=\s*[=,;])/g, (m2, n) => (globals[n] = 1)));
+  });
+  const shadow = Object.keys(locals).filter(n => globals[n]);
+  ok(!shadow.length, "no variable of the manager's build() has the name of a global of the manager: " + shadow.join(', '));
 });

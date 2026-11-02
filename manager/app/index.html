@@ -1406,21 +1406,21 @@ function build() {
     return;
   }
   if (view === 'cardcat') {
-    cc.cards.forEach(function (c) {
+    cardCat.cards.forEach(function (c) {
       rows.push({
         label: c.name,
         pvu: c.preview ? '/api/cards/preview/' + c.id : '',
         about: c.about || c.description,
         sub: c.update ? 'Update to ' + c.version : c.installed ? 'installed \u00B7 ' + c.installed : 'Install \u00B7 ' + c.version,
         fn: function () {
-          cc.sel = c.id;
+          cardCat.sel = c.id;
           if (c.installed && !c.update) push('cardone');
           else cardDo('/api/cards/install', c.id, c.name + (c.update ? ' updated' : ' installed'));
         },
       });
     });
-    if (!cc.cards.length && !cc.error) rows.push({ label: 'The catalog has no cards yet', dim: true, fn: function () {} });
-    if (cc.error) rows.push({ label: 'The catalog could not be read', sub: cc.error, dim: true, fn: function () {} });
+    if (!cardCat.cards.length && !cardCat.error) rows.push({ label: 'The catalog has no cards yet', dim: true, fn: function () {} });
+    if (cardCat.error) rows.push({ label: 'The catalog could not be read', sub: cardCat.error, dim: true, fn: function () {} });
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
     return;
@@ -2641,12 +2641,12 @@ function openHa() {
 var cs = null,
   cardSlot = null;
 /* Cards > Get more cards: the catalog of downloadable cards (helper/cardcatalog.js), with a picture and a text each */
-var cc = { cards: [], error: '', sel: '' };
+var cardCat = { cards: [], error: '', sel: '' };
 function openCardCatalog() {
   api('/api/cards/catalog').then(
     function (r) {
-      cc.cards = (r && r.cards) || [];
-      cc.error = (r && r.error) || '';
+      cardCat.cards = (r && r.cards) || [];
+      cardCat.error = (r && r.error) || '';
       if (view !== 'cardcat' && view !== 'cardone') push('cardcat');
       else {
         build();
@@ -2660,7 +2660,7 @@ function openCardCatalog() {
   );
 }
 function cardSel() {
-  for (var i = 0; i < cc.cards.length; i++) if (cc.cards[i].id === cc.sel) return cc.cards[i];
+  for (var i = 0; i < cardCat.cards.length; i++) if (cardCat.cards[i].id === cardCat.sel) return cardCat.cards[i];
   return null;
 }
 function cardDo(path, id, done) {

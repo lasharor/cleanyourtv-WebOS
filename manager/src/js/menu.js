@@ -839,21 +839,21 @@ function build() {
     return;
   }
   if (view === 'cardcat') {
-    cc.cards.forEach(function (c) {
+    cardCat.cards.forEach(function (c) {
       rows.push({
         label: c.name,
         pvu: c.preview ? '/api/cards/preview/' + c.id : '',
         about: c.about || c.description,
         sub: c.update ? 'Update to ' + c.version : c.installed ? 'installed \u00B7 ' + c.installed : 'Install \u00B7 ' + c.version,
         fn: function () {
-          cc.sel = c.id;
+          cardCat.sel = c.id;
           if (c.installed && !c.update) push('cardone');
           else cardDo('/api/cards/install', c.id, c.name + (c.update ? ' updated' : ' installed'));
         },
       });
     });
-    if (!cc.cards.length && !cc.error) rows.push({ label: 'The catalog has no cards yet', dim: true, fn: function () {} });
-    if (cc.error) rows.push({ label: 'The catalog could not be read', sub: cc.error, dim: true, fn: function () {} });
+    if (!cardCat.cards.length && !cardCat.error) rows.push({ label: 'The catalog has no cards yet', dim: true, fn: function () {} });
+    if (cardCat.error) rows.push({ label: 'The catalog could not be read', sub: cardCat.error, dim: true, fn: function () {} });
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
     return;
