@@ -379,7 +379,7 @@ var CARD_TYPES = {
       p.textContent = w
         ? (place ? place + ' · ' : '') + wxKind(w.now.code, w.now.day)[1]
         : o.lat === undefined
-          ? t('Choose a place from your phone')
+          ? t('Choose a city from your phone')
           : place;
     },
     /* OK opens the weather drawer (wxdrawer.js); the card joins the row of top buttons for the remote */
