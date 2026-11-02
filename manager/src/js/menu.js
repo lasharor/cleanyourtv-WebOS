@@ -8,6 +8,10 @@ function build() {
     rows = kRows;
     return;
   }
+  if (view.indexOf('remap') === 0) {
+    rmRows();
+    return;
+  }
   if (view === 'notifyhow' || view === 'voicehow') {
     rows.push({ label: 'Back', fn: pop });
     return;
@@ -1174,6 +1178,7 @@ function build() {
         push('inputkey');
       },
     });
+    rows.push({ label: 'Key remapping', sub: 'make a remote button open an app or input', fn: openRemap });
     rows.push({ sep: true });
     rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
   } else if (tb === 'features') {

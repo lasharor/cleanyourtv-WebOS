@@ -31,8 +31,8 @@ module.exports = {
   SETUP_LOG: '/media/developer/cytv-setup.log',
   SERVICE_LOG: '/tmp/cleanyourtv-helper.log',
   RUNFILE: env.CYTV_RUNFILE || '/tmp/cytv-run.json',
-  HOOK_CFG: '/home/root/.config/lginputhook',
-  HOOK_LOG: '/tmp/lginput-hook-lginput2.log',
+  HOOK_CFG: env.CYTV_HOOK_CFG || '/home/root/.config/lginputhook',
+  HOOK_LOG: env.CYTV_HOOK_LOG || '/tmp/lginput-hook-lginput2.log',
   LASTAPP: '/var/luna/preferences/bootd_last_foreground_app_id.json',
   PROC: env.CYTV_PROC || '/proc',
   ZRAM: env.CYTV_ZRAM || '/sys/block/zram0', // the zram device's settings and counters (zram.js)

@@ -19,7 +19,8 @@ const TARGETS = [PRIMARY].concat(FALLBACK);
 const DEFAULT_KEY = '241',
   COMMAND = 'sh ' + D + '/inputkey.sh',
   VOICE_COMMAND = 'sh ' + D + '/voicekey.sh',
-  GUIDE_COMMAND = 'sh ' + D + '/guidekey.sh'; // 241: the Input button on the remote this was written with; learned in the setup
+  GUIDE_COMMAND = 'sh ' + D + '/guidekey.sh',
+  REMAP_COMMAND = 'sh ' + D + '/remapkey.sh '; // + the code: one bind per remapped key (remap.js). 241: the Input button on the remote this was written with; learned in the setup
 
 function procs() {
   const out = [];
@@ -45,7 +46,7 @@ const hooked = pid => {
   }
 };
 
-function writeBinds(on, key, vkey, gkey) {
+function writeBinds(on, key, vkey, gkey, rkeys) {
   let b = {};
   try {
     b = JSON.parse(fs.readFileSync(BINDS, 'utf8'));
@@ -56,12 +57,15 @@ function writeBinds(on, key, vkey, gkey) {
       b[k] &&
       ((b[k].command === COMMAND && (!on || k !== key)) ||
         (b[k].command === VOICE_COMMAND && (!vkey || k !== vkey)) ||
-        (b[k].command === GUIDE_COMMAND && (!gkey || k !== gkey)))
+        (b[k].command === GUIDE_COMMAND && (!gkey || k !== gkey)) ||
+        (typeof b[k].command === 'string' && b[k].command === REMAP_COMMAND + k && rkeys.indexOf(k) < 0))
     )
       delete b[k]; // our binds only, wherever they were
   if (on) b[key] = { action: 'exec', command: COMMAND };
   if (vkey) b[vkey] = { action: 'exec', command: VOICE_COMMAND };
   if (gkey) b[gkey] = { action: 'exec', command: GUIDE_COMMAND };
+  // a remapped key never takes over a key that already does something of ours
+  for (const k of rkeys) if (k !== key && k !== vkey && k !== gkey) b[k] = { action: 'exec', command: REMAP_COMMAND + k };
   if (JSON.stringify(b) === before) return;
   nc.mkdirp(CFGDIR);
   fs.writeFileSync(BINDS + '.tmp', JSON.stringify(b));
@@ -78,15 +82,20 @@ let guideFn = () => ''; // the key bound to the Live TV guide, or '' (Live TV of
 const setGuideKey = f => {
   guideFn = f;
 };
+let remapFn = () => []; // the codes of the remapped keys (remap.js)
+const setRemapKeys = f => {
+  remapFn = f;
+};
 function ensure(enabled, key) {
   const vkey = voiceFn(),
-    gkey = guideFn();
+    gkey = guideFn(),
+    rkeys = remapFn().map(String);
   try {
-    writeBinds(enabled, String(key || DEFAULT_KEY), vkey ? String(vkey) : '', gkey ? String(gkey) : '');
+    writeBinds(enabled, String(key || DEFAULT_KEY), vkey ? String(vkey) : '', gkey ? String(gkey) : '', rkeys);
   } catch (e) {
     console.error('inputhook: keybinds:', e.message);
   }
-  if (!(enabled || vkey || gkey) || busy || !fs.existsSync(HOOK + '/ezinject')) return;
+  if (!(enabled || vkey || gkey || rkeys.length) || busy || !fs.existsSync(HOOK + '/ezinject')) return;
   const todo = procs().filter(p => !hooked(p.pid));
   if (!todo.length) return;
   busy = true;
@@ -144,6 +153,7 @@ const IGNORE = {
   home: [28, 103, 105, 106, 108, 272, 273, 274, 352],
   voice: [28, 103, 105, 106, 108, 272, 273, 274, 352, 412],
   guide: [28, 103, 105, 106, 108, 272, 273, 274, 352, 412],
+  remap: [28, 103, 105, 106, 108, 272, 273, 274, 352, 412],
 }; // arrows, OK, pointer, Back
 let learn = null;
 const markSaved = () => {
@@ -187,4 +197,16 @@ function learnState() {
     seconds: Math.round((Date.now() - learn.at) / 1000),
   };
 }
-module.exports = { setVoiceKey, setGuideKey, ensure, status, markSaved, startLearn, learnState, hookInfo, procs, DEFAULT_KEY };
+module.exports = {
+  setVoiceKey,
+  setGuideKey,
+  setRemapKeys,
+  ensure,
+  status,
+  markSaved,
+  startLearn,
+  learnState,
+  hookInfo,
+  procs,
+  DEFAULT_KEY,
+};
