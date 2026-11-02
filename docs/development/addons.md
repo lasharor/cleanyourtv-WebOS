@@ -144,11 +144,10 @@ left out stays installed and running but has no button.
 | `dnscheck` | Asks the TV's own resolver for the hosts the debloat blocks and shows each as Blocked or Reachable (issue 92). A host that does not exist, or resolves to 0.0.0.0, 127.x or ::, counts as blocked; a control host (example.com) tells whether DNS works at all, and when it does not, no host is called blocked. Add your own hosts with `curl -X POST localhost:8765/api/addons/dnscheck/hosts -d '{"hosts":["ads.example.net"]}'` on the TV. |
 | `sysinfo` | Memory, swap, load and uptime of the TV, live, from `/proc`. |
 
-## Not released yet
+## Versions
 
-The repository root has a file `RELEASE-HOLD`. While it is on `dev`, `tools/release.sh` releases nothing and does not move `main`
-(the first line of the file says why); dev builds still go out. It also stops a release started by hand, which the workflow's
-`RELEASE_HOLD` variable does not. Delete the file when add-ons should go out in a release.
+A launcher that shows add-on pages needs a service that serves them: `app/version.json` names the oldest service it works with
+(`minService`), and the manager offers the service update first. Raise it when the launcher starts to need something new from the service.
 
 ## Adding a catalog add-on
 
