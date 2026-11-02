@@ -492,6 +492,7 @@
  "Show": "Show",
  "Show as QR code": "Show as QR code",
  "Show Live TV": "Show Live TV",
+ "Show app name": "Show app name",
  "Shows a QR code. A phone that scans it opens a page, served by the TV for ten minutes, that shows the notification address and the token with Copy buttons (for Home Assistant, for example). The token is a secret.": "Shows a QR code. A phone that scans it opens a page, served by the TV for ten minutes, that shows the notification address and the token with Copy buttons (for Home Assistant, for example). The token is a secret.",
  "Shows a QR code. On the phone page you upload photos (they are made the right size on the phone), delete uploads, connect Immich, choose albums and hide single photos.": "Shows a QR code. On the phone page you upload photos (they are made the right size on the phone), delete uploads, connect Immich, choose albums and hide single photos.",
  "Shows a QR code. Scan it with a phone on the same Wi-Fi to copy a report for a bug report. Addresses and URL paths are masked; the page closes after ten minutes.": "Shows a QR code. Scan it with a phone on the same Wi-Fi to copy a report for a bug report. Addresses and URL paths are masked; the page closes after ten minutes.",

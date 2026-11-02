@@ -78,6 +78,10 @@ run(async () => {
   const on = config.get().runDots === true;
   await call(apps, '/api/config', 'POST', { dock: ['a.one'], runDots: 'yes' });
   ok(on && config.get().runDots === undefined, 'the green dot on open apps is off by default and saved only when switched on');
+  await call(apps, '/api/config', 'POST', { dock: ['a.one'], shelfShow: false });
+  const sfOff = config.get().shelfShow === false;
+  await call(apps, '/api/config', 'POST', { dock: ['a.one'] });
+  ok(sfOff && config.get().shelfShow === undefined, 'Show app name is on by default and saved only when hidden');
   await call(apps, '/api/config', 'POST', {
     dock: ['a.one'],
     cards: { greeting: { type: 'greeting', name: 'Sam' }, 'x y': { type: 'a' } },

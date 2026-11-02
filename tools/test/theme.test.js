@@ -294,8 +294,9 @@ run(async () => {
       bl.dockN === 6 &&
       bl.vars['--dock-t'] !== 'auto' &&
       bl.vars['--dock-b'] === 'auto' &&
-      bl.vars['--tile-w'] === '193px',
-    'a dock at the bottom with the push layout resolves to a scrolling grid below it, centred'
+      bl.vars['--tile-w'] === '193px' &&
+      bl.dockBottom === true,
+    'a dock at the bottom with the push layout resolves to a scrolling grid below it, centred; dockBottom is set'
   );
   r = await tcall('wallpaper/bloom/bloom.jpg', null, 'GET');
   ok(r.code === 200, 'a downloaded wallpaper is served');

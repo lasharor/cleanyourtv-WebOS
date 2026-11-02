@@ -825,6 +825,17 @@ function customizeMenu() {
             fn: wallMenu,
           },
           {
+            label: t('Show app name'),
+            sub: cfg.shelfShow === false ? t('Off') : t('On'),
+            stay: true,
+            fn: function () {
+              if (cfg.shelfShow === false) delete cfg.shelfShow;
+              else cfg.shelfShow = false;
+              applyShelfPref();
+              saveCfg();
+            },
+          },
+          {
             label: t('Clock'),
             sub: cfg.clock === '24' ? t('24-hour') : cfg.clock === '12' ? t('12-hour') : t('Automatic'),
             stay: true,

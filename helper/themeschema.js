@@ -517,6 +517,7 @@ function resolve(t, accent) {
       y: v['strip.y'],
       size: v['strip.size'],
     };
+  if (dockBottom) out.dockBottom = true;
   if (v['effects.scenes'] !== 'off') out.scenes = { set: v['effects.scenes'], secs: v['effects.sceneSecs'] };
   // only a theme with slots has this key (the same reason)
   if (v.slots && v.slots.length)
