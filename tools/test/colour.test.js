@@ -107,4 +107,90 @@ run(async () => {
     ) === null,
     'a corner that is only partly opaque gives nothing'
   );
+
+  // analyse() and fit(): a picture is read through a 64 x 64 canvas; a stand-in canvas hands it the pixels of a test picture
+  const M = 64;
+  let pixels = null;
+  sandbox.document = {
+    createElement: () => ({ getContext: () => ({ drawImage() {}, getImageData: () => ({ data: pixels }) }) }),
+  };
+  // a test picture: transparent, a rounded-free square from m to M-m in colour c, painted over by the rectangles in more
+  function art(m, c, more) {
+    const d = new Uint8ClampedArray(M * M * 4);
+    const put = (x0, y0, x1, y1, col) => {
+      for (let y = y0; y < y1; y++)
+        for (let x = x0; x < x1; x++) {
+          const j = (y * M + x) * 4;
+          d[j] = col[0];
+          d[j + 1] = col[1];
+          d[j + 2] = col[2];
+          d[j + 3] = 255;
+        }
+    };
+    put(m, m, M - m, M - m, c);
+    (more || []).forEach(r => put(r[0], r[1], r[2], r[3], r[4]));
+    return d;
+  }
+  // a card in a frame (the Smart STB icon): grey border 3 px around a white inside with a blue badge
+  pixels = art(
+    4,
+    [205, 211, 219],
+    [
+      [7, 7, 57, 57, [250, 250, 250]],
+      [18, 26, 46, 38, [30, 90, 200]],
+    ]
+  );
+  let an = sandbox.analyse({});
+  ok(
+    an.k === 'pad' && Math.abs(an.fr - 3 / M) < 1e-9 && eq(an.edge, [250, 250, 250]) && eq(an.top, an.edge),
+    "a picture with a frame of its own: the frame's depth is found and the tile takes the colour inside it"
+  );
+  // a white card with a wide wordmark close to its sides (the Alexa icon): no frame
+  pixels = art(4, [255, 255, 255], [[6, 28, 58, 36, [35, 47, 62]]]);
+  an = sandbox.analyse({});
+  ok(an.k === 'pad' && !an.fr && eq(an.edge, [255, 255, 255]), 'a wordmark that comes close to two sides is not taken for a frame');
+  // a picture in four colours, one per side: not a card in a frame either
+  pixels = art(
+    4,
+    [250, 250, 250],
+    [
+      [4, 4, 60, 8, [200, 0, 0]],
+      [4, 56, 60, 60, [0, 200, 0]],
+      [4, 8, 8, 56, [0, 0, 200]],
+      [56, 8, 60, 56, [200, 200, 0]],
+    ]
+  );
+  an = sandbox.analyse({});
+  ok(an.k === 'pad' && an.fr && eq(an.edge, [250, 250, 250]), 'a border of four colours around one inside colour is a frame too');
+
+  // fit(): in a grid tile the picture keeps its own proportions (a square icon is not stretched to the wider tile)
+  const tileOf = col => {
+    const st = {},
+      cls = {};
+    return {
+      _i: { style: st, removeAttribute: () => Object.keys(st).forEach(k => delete st[k]) },
+      _col: col,
+      style: {},
+      classList: { add: c => (cls[c] = 1), remove: c => delete cls[c] },
+      st,
+      cls,
+    };
+  };
+  let t = tileOf({ k: 'pad', box: [0.0625, 0.0625, 0.9375, 0.9375] });
+  sandbox.fit(t, false);
+  ok(
+    t.cls.fill &&
+      t.st.width === 'auto' &&
+      /^114\.28/.test(t.st.height) &&
+      t.st.left === '50%' &&
+      t.st.transform === 'translateX(-50%)' &&
+      !t.st.clipPath,
+    'a padded square icon fills the grid tile from top to bottom at its own proportions, centred'
+  );
+  t = tileOf({ k: 'pad', box: [0.0625, 0.0625, 0.9375, 0.9375], fr: 3 / M, fround: 0.05 });
+  sandbox.fit(t, false);
+  ok(
+    /^inset\(10\.9375% 10\.9375% 10\.9375% 10\.9375% round 6%\)$/.test(t.st.clipPath),
+    "the picture's own frame is cut off, along the inside's round corner"
+  );
 });
