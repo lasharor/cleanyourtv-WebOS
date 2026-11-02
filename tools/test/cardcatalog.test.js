@@ -45,6 +45,11 @@ run(async () => {
   chk({ options: [{ key: 'a b', kind: 'text' }] }, /option needs a key/, 'an option key with a space is refused');
   chk({ options: [{ key: 'a', kind: 'script' }] }, /option needs a key/, 'an option kind that does not exist is refused');
   chk({ options: [{ key: 'a', kind: 'choice' }] }, /choices/, 'a choice without choices is refused');
+  chk({ options: [{ key: 'where', kind: 'place' }] }, /key place/, 'a place option must be called place');
+  ok(
+    cc.clean(Object.assign({}, good, { options: [{ key: 'place', kind: 'place', label: 'Place' }] })).card.options[0].kind === 'place',
+    'a place option is accepted'
+  );
   ok(cc.clean(good, 'other').error, 'the folder name must be the id');
   ok(cc.clean(Object.assign({}, good, { about: 'x'.repeat(900) })).card.about.length === 600, 'the longer text is cut at 600 characters');
 

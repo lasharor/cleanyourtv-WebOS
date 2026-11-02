@@ -26,7 +26,7 @@ const MAX_FILE = 64 * 1024,
   MAX_PREVIEW = 600 * 1024,
   MAX_FILES = 8,
   MAX_OPTIONS = 10;
-const KINDS = ['text', 'long', 'choice'];
+const KINDS = ['text', 'long', 'choice', 'place']; // place: a name searched on the phone page, with its coordinates (opt.place, opt.lat, opt.lon)
 // the card types in the launcher itself: their pictures ship in cardpreviews/, and no downloadable card may take these ids
 const BUILTIN = ['greeting', 'weather', 'ha-entity', 'ha-entities', 'ha-weather', 'ha-camera', 'template'];
 const SIZES = ['small', 'medium', 'large'];
@@ -49,7 +49,8 @@ function clean(m, folder) {
   const options = [];
   for (const o of raw) {
     if (!o || typeof o !== 'object' || !/^[a-zA-Z][a-zA-Z0-9]{0,19}$/.test(o.key || '') || KINDS.indexOf(o.kind) < 0)
-      return { error: 'an option needs a key (letters and digits) and a kind (text, long or choice)' };
+      return { error: 'an option needs a key (letters and digits) and a kind (text, long, choice or place)' };
+    if (o.kind === 'place' && o.key !== 'place') return { error: 'a place option has the key place' };
     const one = { key: o.key, kind: o.kind, label: text(o.label, 60) || o.key, default: text(o.default, 200) };
     if (o.kind === 'choice') {
       one.choices = (Array.isArray(o.choices) ? o.choices : [])

@@ -725,6 +725,27 @@ body.wpon {
 .card-template[data-size="large"] {
   font-size: calc(44px * var(--fs));
 }
+/* the other line styles of a template: ### a big light line, > a small dim one; a new remembrance (adhkar) fades in, opacity only */
+.card-template .dsp {
+  font-size: 1.8em;
+  font-weight: 300;
+  line-height: 1.1;
+}
+.card-template .mu {
+  font-size: 0.75em;
+  color: rgba(245, 246, 248, 0.7);
+}
+.card-template[data-fade="1"] > div {
+  animation: dhin 1.6s ease-out;
+}
+@keyframes dhin {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 .card-template .hd {
   font-size: 1.6em;
   font-weight: 700;

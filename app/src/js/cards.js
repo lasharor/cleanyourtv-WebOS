@@ -251,6 +251,24 @@ function dayDiff(s) {
   b = new Date(b.getFullYear(), b.getMonth(), b.getDate());
   return Math.round((a - b) / 86400000);
 }
+/* {{prayer.name}}, {{prayer.time}}, {{prayer.left}} of the next prayer, and {{prayer.fajr}} {{prayer.sunrise}} {{prayer.dhuhr}} {{prayer.asr}}
+   {{prayer.maghrib}} {{prayer.isha}} with {{prayer.name.fajr}} and so on for their names; without a place the name asks for one */
+function prayerVars(vars, opt) {
+  var now = new Date(),
+    o = { lat: opt.lat, lon: opt.lon, method: opt.method, asr: opt.asr },
+    nx = prayerReady(o) ? PRAYER.next(now, o) : null;
+  if (!nx) {
+    vars['prayer.name'] = t('Choose a place in Cards');
+    return;
+  }
+  vars['prayer.name'] = prayerName(nx.id);
+  vars['prayer.time'] = prayerClock(nx.at);
+  vars['prayer.left'] = prayerLeft(nx.at - now);
+  ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'].forEach(function (id) {
+    vars['prayer.' + id] = prayerClock(nx.times[id]);
+    vars['prayer.name.' + id] = prayerName(id);
+  });
+}
 function cardMarkup(src, opt) {
   var yr = new Date(),
     y0 = new Date(yr.getFullYear(), 0, 1),
@@ -268,6 +286,10 @@ function cardMarkup(src, opt) {
   };
   /* what was filled in for a downloaded card, as {{opt.<key>}} */
   for (var k0 in opt || {}) vars['opt.' + k0] = String(opt[k0]);
+  /* prayer times (prayer.js), worked out on the TV from the card's place (opt.lat, opt.lon), method and asr; one remembrance; today's Islamic date */
+  if (/\{\{\s*prayer\./.test(src)) prayerVars(vars, opt || {});
+  if (/\{\{\s*adhkar/.test(src)) vars.adhkar = adhkarAt(new Date(), (opt || {}).secs);
+  if (/\{\{\s*hijri/.test(src)) vars.hijri = hijriText();
   var esc = function (x) {
     return String(x).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -298,7 +320,11 @@ function cardMarkup(src, opt) {
     .split('\n')
     .map(function (l) {
       l = l.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\*([^*]+)\*/g, '<i>$1</i>');
-      return /^#\s/.test(l) ? '<div class="hd">' + l.replace(/^#\s+/, '') + '</div>' : '<div>' + (l || '&nbsp;') + '</div>';
+      /* # a heading, ### a big light line (a time, a number), > a small dim line; dir=auto lets an Arabic line run from the right */
+      if (/^#\s/.test(l)) return '<div class="hd" dir="auto">' + l.replace(/^#\s+/, '') + '</div>';
+      if (/^###\s/.test(l)) return '<div class="dsp" dir="auto">' + l.replace(/^###\s+/, '') + '</div>';
+      if (/^&gt;\s/.test(l)) return '<div class="mu" dir="auto">' + l.replace(/^&gt;\s+/, '') + '</div>';
+      return '<div dir="auto">' + (l || '&nbsp;') + '</div>';
     })
     .join('');
 }
@@ -596,6 +622,11 @@ function cardType(name) {
       var opt = {};
       pk.options.forEach(function (q) {
         opt[q.key] = o[q.key] !== undefined && o[q.key] !== '' ? o[q.key] : q.def;
+        if (q.kind === 'place') {
+          /* the place the phone page chose: its name and coordinates */
+          opt.lat = o.lat;
+          opt.lon = o.lon;
+        }
       });
       var h = cardMarkup(pk.template, opt);
       if (el._k === h) return;
@@ -603,6 +634,7 @@ function cardType(name) {
       el.innerHTML = h;
       /* an option called size (small, medium, large) is the card's size, else the card's own */
       el.setAttribute('data-size', /^(small|medium|large)$/.test(opt.size) ? opt.size : pk.size);
+      el.setAttribute('data-fade', /\{\{\s*adhkar/.test(pk.template) ? '1' : ''); /* a new remembrance fades in */
     },
   };
 }

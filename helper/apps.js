@@ -455,7 +455,11 @@ function create(ctx) {
             about: have[id].about || have[id].description,
             template: have[id].template,
             size: have[id].size,
-            options: have[id].options.map(o => ({ key: o.key, def: o.kind === 'choice' && !o.default ? o.choices[0][0] : o.default })),
+            options: have[id].options.map(o => ({
+              key: o.key,
+              kind: o.kind,
+              def: o.kind === 'choice' && !o.default ? o.choices[0][0] : o.default,
+            })),
           };
       }
       // the launcher offers Change icon only while the App icons add-on runs

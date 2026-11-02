@@ -1,6 +1,17 @@
 {
   "cards": [
     {
+      "id": "adhkar",
+      "name": "Adhkar",
+      "version": "1.0.0",
+      "description": "One short remembrance at a time, in Arabic.",
+      "about": "A short remembrance from the Qur'an and the Sunnah in Arabic, a new one every 30 seconds, minute or 5 minutes with a slow fade, with today's date in the Islamic calendar. The morning ones show until noon and the evening ones from the afternoon. The calculation and the idea are from @mashhour134 (pull request 121).",
+      "preview": "preview.jpg",
+      "files": {
+        "card.json": "3151071ebbd0b3ded4b4b5269fc1523c1ed3280f2c7f162a5dad9a5903f271cf"
+      }
+    },
+    {
       "id": "countdown",
       "name": "Countdown",
       "version": "1.0.0",
@@ -9,6 +20,28 @@
       "preview": "preview.jpg",
       "files": {
         "card.json": "ed6f5d9311910b5bfa7562cba0600835179f6d4f50963bd20ad8b443a23fd0df"
+      }
+    },
+    {
+      "id": "prayer-next",
+      "name": "Next prayer",
+      "version": "1.0.0",
+      "description": "The next prayer, its time and how long is left.",
+      "about": "The next of the five prayers with its time and what is left, worked out on the TV from your place: no network and no account. Choose the place on the phone page, and the method and the Asr rule that your mosque follows. The times can differ by a minute or two from a mosque's timetable. The calculation and the idea are from @mashhour134 (pull request 121).",
+      "preview": "preview.jpg",
+      "files": {
+        "card.json": "bac6e5116fe5f8839dcee796a944c0a7d7856045e6e59aa312d5f64ba7baa095"
+      }
+    },
+    {
+      "id": "prayer-times",
+      "name": "Prayer times",
+      "version": "1.0.0",
+      "description": "The five prayers and the sunrise of today.",
+      "about": "Today's Fajr, sunrise, Dhuhr, Asr, Maghrib and Isha under the next prayer and the time left, worked out on the TV from your place: no network and no account. Choose the place on the phone page, and the method and the Asr rule that your mosque follows. The calculation and the idea are from @mashhour134 (pull request 121).",
+      "preview": "preview.jpg",
+      "files": {
+        "card.json": "2ca8dfb52868110f6f7af8c5cd094965a217ce7f6b78fa0b0e4ef8e222b5ea60"
       }
     },
     {
