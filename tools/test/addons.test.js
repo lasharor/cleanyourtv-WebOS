@@ -30,6 +30,11 @@ run(async () => {
   bad({ permissions: ['exec'] }, /unknown permission/, 'a permission that does not exist is refused');
   bad({ minService: '9.0.0' }, /needs service 9\.0\.0/, 'a newer service is asked for');
   ok(addons.check(null).error && addons.check([]).error, 'a manifest that is not an object is refused');
+  ok(
+    addons.check(Object.assign({}, good, { about: 'x'.repeat(700) }), '1.6.11').manifest.about.length === 600 &&
+      addons.check(good, '1.6.11').manifest.about === '',
+    'the longer text of an add-on (about) is kept, at most 600 characters'
+  );
 
   // folders: demo (works), broken (throws at load), later (off), wrongname (id differs from the folder), plain file
   const dir = path.join(tmp, 'addons');
@@ -53,6 +58,8 @@ run(async () => {
   // a bundled add-on that still answers an old API path, enabled by an option
   const bdir = path.join(tmp, 'bundled', 'old');
   req('netcompat').mkdirp(bdir);
+  const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(40, 3)]);
+  fs.writeFileSync(path.join(bdir, 'preview.png'), PNG); // the picture of a bundled add-on ships in its folder
   fs.writeFileSync(
     path.join(bdir, 'addon.json'),
     JSON.stringify({
@@ -369,6 +376,8 @@ run(async () => {
     'index.html': '<b>hello</b>',
   };
   const sha = s => crypto.createHash('sha256').update(s).digest('hex');
+  const JPG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(100, 5)]);
+  let pictureOk = true;
   const hashes = {};
   Object.keys(files).forEach(f => (hashes[f] = sha(files[f])));
   const evil = Object.assign({}, files);
@@ -378,7 +387,7 @@ run(async () => {
       rs.end(
         JSON.stringify({
           addons: [
-            { id: 'hello', name: 'Hello', version: '1.2.0', kind: 'page', files: hashes },
+            { id: 'hello', name: 'Hello', version: '1.2.0', kind: 'page', about: 'Says hello.', preview: 'preview.jpg', files: hashes },
             { id: 'Bad Id', version: '1.0.0', files: hashes },
             { id: 'nohash', version: '1.0.0', files: { 'addon.json': 'xyz' } },
             { id: 'esc', version: '1.0.0', files: { 'addon.json': hashes['addon.json'], '../x': hashes['addon.json'] } },
@@ -387,6 +396,7 @@ run(async () => {
       );
       return;
     }
+    if (rq2.url === '/catalog/hello/preview.jpg') return rs.end(pictureOk ? JPG : Buffer.from('<script>x</script>'));
     const m = /^\/catalog\/hello\/(.+)$/.exec(rq2.url);
     if (m && (serveEvil ? evil : files)[m[1]] !== undefined) return rs.end((serveEvil ? evil : files)[m[1]]);
     rs.writeHead(404);
@@ -398,6 +408,17 @@ run(async () => {
     r.j.addons.length === 1 && r.j.addons[0].id === 'hello' && r.j.addons[0].installed === '',
     'the catalog lists only entries with a clean id and hashes: ' + JSON.stringify(r.j)
   );
+  ok(
+    r.j.addons[0].about === 'Says hello.' && r.j.addons[0].preview === true,
+    'a catalog entry carries its longer text and says it has a picture'
+  );
+  r = await call(a, '/api/addons/preview/hello');
+  ok(r.code === 200 && Buffer.isBuffer(r.out) && r.out.equals(JPG), 'the picture of a catalog add-on is read from the catalog');
+  fs.unlinkSync(path.join(dir, '.previews', 'hello.img'));
+  pictureOk = false;
+  r = await call(a, '/api/addons/preview/hello');
+  ok(r.code === 404, 'a catalog picture that is not an image is not served');
+  pictureOk = true;
   evil['index.html'] = '<script>steal()</script>';
   serveEvil = true;
   r = await call(a, '/api/addons/install', 'POST', { id: 'hello' });
@@ -416,8 +437,18 @@ run(async () => {
   );
   r = await call(a, '/api/addons/hello');
   ok(r.j.status === 'running' && r.j.page === '/addon/hello/index.html' && !r.j.bundled, 'and runs at once (a page)');
+  ok(
+    !fs.existsSync(path.join(dir, 'hello', 'preview.jpg')),
+    'the picture is not installed with the add-on (the manager reads it from the catalog)'
+  );
   r = await call(a, '/api/addons/catalog');
   ok(r.j.addons[0].installed === '1.2.0' && r.j.addons[0].update === false, 'the catalog shows what is installed');
+  r = await call(a, '/api/addons/old');
+  ok(r.j.preview === true && r.j.about === '', 'an add-on with a picture in its folder says so');
+  r = await call(a, '/api/addons/preview/old');
+  ok(r.code === 200 && Buffer.isBuffer(r.out) && r.out.equals(PNG), 'and the picture is served from the folder');
+  r = await call(a, '/api/addons/preview/nothere');
+  ok(r.code === 404, 'an add-on without a picture has none');
   r = await call(a, '/api/addons/install', 'POST', { id: 'old' });
   ok(r.code === 400 && /ships with/.test(r.j.error), 'a bundled add-on is not installed from the catalog');
   r = await call(a, '/api/addons/install', 'POST', { id: 'nothere' });

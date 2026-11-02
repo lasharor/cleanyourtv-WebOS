@@ -45,7 +45,7 @@ document.addEventListener('wheel', function (e) {
   if (e.deltaY > 0) next(1);
   else if (e.deltaY < 0) next(-1);
 }); /* the Magic Remote wheel */
-/* opened with {"open":"wallpapers"}, {"open":"cards"} or {"open":"ha"} (the launcher's Customise menu), or {"open":"icons", "app": id}
+/* opened with {"open":"wallpapers"}, {"open":"cards"}, {"open":"addons"} or {"open":"ha"} (the launcher's Customise menu), or {"open":"icons", "app": id}
    (a tile's Change icon): straight to that screen */
 var cardsFromHome = false;
 function wantView() {
@@ -55,6 +55,7 @@ function wantView() {
   } catch (e) {}
   if (p && p.open === 'wallpapers') openWallpapers();
   if (p && p.open === 'icons') openIconPair(String(p.app || ''));
+  if (p && p.open === 'addons') wantTab = 2;
   /* the launcher's Customise > Home Assistant > Connection: the Home Assistant screen with its phone page */
   if (p && p.open === 'ha')
     api('/api/voice/status').then(

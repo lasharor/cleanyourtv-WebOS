@@ -4,7 +4,15 @@
   "version": "1.0.0",
   "kind": "service",
   "description": "Memory, swap, load and uptime of the TV, live. Useful on a TV with little memory.",
-  "entry": { "service": "service.js", "page": "index.html" },
+  "about": "Memory, swap, load and uptime of the TV, live, as a page next to Home. Shows at a glance whether the TV is running out of memory, for example before you switch on Compressed memory.",
+  "entry": {
+    "service": "service.js",
+    "page": "index.html"
+  },
   "permissions": [],
-  "tile": { "label": "Status", "icon": "chart", "placement": "page" }
+  "tile": {
+    "label": "Status",
+    "icon": "chart",
+    "placement": "page"
+  }
 }

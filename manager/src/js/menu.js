@@ -426,7 +426,13 @@ function build() {
   }
   if (view === 'addon') {
     var a1 = addonSel() || {};
-    rows.push({ label: a1.name || '', sub: (a1.description || '') + (a1.error ? ' \u00B7 ' + a1.error : ''), fn: function () {} });
+    rows.push({
+      label: a1.name || '',
+      pv: a1.preview ? a1.id : '',
+      about: a1.about || a1.description,
+      sub: (a1.description || '') + (a1.error ? ' \u00B7 ' + a1.error : ''),
+      fn: function () {},
+    });
     if (a1.bookable) {
       var bp = bookPages().filter(function (p) {
           return p.inBook;
@@ -1198,6 +1204,8 @@ function addonRows() {
   ad.installed.forEach(function (a) {
     rows.push({
       label: a.name,
+      pv: a.preview ? a.id : '',
+      about: a.about || a.description,
       sub:
         (a.status === 'running' ? 'on' : a.status === 'off' ? 'off' : a.status === 'failed' ? 'failed' : a.status) +
         (a.version ? ' \u00B7 ' + a.version : '') +
@@ -1215,7 +1223,9 @@ function addonRows() {
   offer.forEach(function (e) {
     rows.push({
       label: e.name,
-      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version + (e.description ? ' \u00B7 ' + e.description : ''),
+      pv: e.preview ? e.id : '',
+      about: e.about || e.description,
+      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version,
       fn: function () {
         addonDo('/api/addons/install', { id: e.id }, e.name + ' installed');
       },

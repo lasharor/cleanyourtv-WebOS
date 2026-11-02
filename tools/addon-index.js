@@ -10,6 +10,7 @@ const root = path.join(__dirname, '..', 'addons');
 
 function walk(dir, base, out) {
   for (const n of fs.readdirSync(dir).sort()) {
+    if (!base && /^preview\.(jpg|png|webp)$/.test(n)) continue; // the picture is read from GitHub for the manager, never installed
     const p = path.join(dir, n);
     if (fs.statSync(p).isDirectory()) walk(p, base + n + '/', out);
     else out[base + n] = crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
@@ -30,6 +31,8 @@ function build() {
       name: m.name,
       version: m.version,
       description: m.description || '',
+      about: m.about || '',
+      preview: ['jpg', 'png', 'webp'].map(x => 'preview.' + x).filter(f => fs.existsSync(path.join(dir, f)))[0] || '',
       kind: m.kind,
       permissions: m.permissions || [],
       files: walk(dir, '', {}),

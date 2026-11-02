@@ -23,6 +23,7 @@ const P = require('./paths'),
   web = require('./web'),
   fetch = require('./fetch'),
   version = require('./version');
+const { imageType } = require('./wallpapers');
 
 const KINDS = ['page', 'service'];
 const PERMISSIONS = ['net.fetch', 'config.own', 'notify', 'key.guide'];
@@ -31,8 +32,10 @@ const CLAIMS = ['digits', 'colors', 'back'];
 // where the user may put the page strip ('' leaves it to the theme)
 const POSITIONS = ['', 'top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
 const ID = /^[a-z][a-z0-9-]{1,31}$/;
-const RESERVED = ['catalog', 'install', 'remove', 'sdk', 'book'];
-const MAX_FILE = 2 << 20,
+const MIME_IMG = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+const RESERVED = ['catalog', 'install', 'remove', 'sdk', 'book', 'preview'];
+const MAX_PREVIEW = 600 * 1024, // the picture of an add-on (preview.jpg), as for themes
+  MAX_FILE = 2 << 20,
   MAX_FILES = 60;
 const safeRel = f => typeof f === 'string' && f.length > 0 && f.length < 120 && !/^[\\/]|\.\.|[\0\\]/.test(f);
 const TYPES = {
@@ -82,6 +85,7 @@ function check(m, serviceVersion) {
       version: m.version,
       kind: m.kind,
       description: typeof m.description === 'string' ? m.description.slice(0, 200) : '',
+      about: typeof m.about === 'string' ? m.about.slice(0, 600) : '',
       entry: { service: entry.service, page: entry.page },
       permissions: perms,
       routes,
@@ -116,6 +120,8 @@ function cleanIndex(raw) {
       name: String(e.name || e.id).slice(0, 60),
       version: e.version,
       description: String(e.description || '').slice(0, 200),
+      about: String(e.about || '').slice(0, 600),
+      preview: /^preview\.(?:jpg|png|webp)$/.test(e.preview || '') ? e.preview : '',
       kind: KINDS.indexOf(e.kind) >= 0 ? e.kind : 'page',
       permissions: (Array.isArray(e.permissions) ? e.permissions : []).filter(p => PERMISSIONS.indexOf(p) >= 0),
       files,
@@ -293,12 +299,22 @@ function create(ctx) {
       .filter(Boolean)
       .concat(all.filter(a => b.order.indexOf(a.id) < 0));
   };
+  // the picture of an add-on that is on the TV (it ships in the package folder), or ''
+  const previewFile = a => {
+    for (const x of ['jpg', 'png', 'webp']) {
+      const f = path.join(a.dir, 'preview.' + x);
+      if (fs.existsSync(f)) return f;
+    }
+    return '';
+  };
   const info = a => ({
     id: a.id,
     name: a.manifest ? a.manifest.name : a.id,
     version: a.manifest ? a.manifest.version : '',
     kind: a.manifest ? a.manifest.kind : '',
     description: a.manifest ? a.manifest.description : '',
+    about: a.manifest ? a.manifest.about : '',
+    preview: !!previewFile(a),
     permissions: a.manifest ? a.manifest.permissions : [],
     enabled: a.enabled,
     status: a.status,
@@ -353,6 +369,8 @@ function create(ctx) {
           name: e.name,
           version: e.version,
           description: e.description,
+          about: e.about,
+          preview: !!e.preview,
           kind: e.kind,
           permissions: e.permissions,
           installed: a && a.manifest ? a.manifest.version : '',
@@ -361,6 +379,35 @@ function create(ctx) {
         };
       }),
     };
+  }
+
+  // the picture of an add-on: from its folder when it is on the TV, else from the catalog on GitHub, kept in add-ons/.previews for a day
+  async function preview(id) {
+    const a = find(id),
+      own = a && a.dir ? previewFile(a) : '';
+    if (own) {
+      const b = fs.readFileSync(own);
+      return b.length <= MAX_PREVIEW && imageType(b) ? b : null;
+    }
+    const pd = path.join(P.ADDONS, '.previews'),
+      f = path.join(pd, id + '.img');
+    let st = null;
+    try {
+      st = fs.statSync(f);
+    } catch (_) {}
+    if (st && Date.now() - st.mtimeMs < 86400000) return fs.readFileSync(f);
+    try {
+      const e = (await index()).filter(x => x.id === id)[0];
+      if (!e || !e.preview) throw new Error('no picture');
+      const b = await get(catalogBase() + '/catalog/' + id + '/' + e.preview, MAX_PREVIEW);
+      if (!imageType(b)) throw new Error('the picture is not an image');
+      nc.mkdirp(pd);
+      fs.writeFileSync(f + '.part', b);
+      fs.renameSync(f + '.part', f);
+      return b;
+    } catch (_) {
+      return st ? fs.readFileSync(f) : null;
+    }
   }
 
   async function install(id) {
@@ -500,6 +547,13 @@ function create(ctx) {
       return web.json(res, { book: bookOf() });
     }
     if (u === '/api/addons/catalog' && req.method === 'GET') return web.json(res, await catalog());
+    const pm = /^\/api\/addons\/preview\/([a-z][a-z0-9-]*)$/.exec(u);
+    if (pm && req.method === 'GET') {
+      const b = await preview(pm[1]);
+      if (!b) return web.notFound(res);
+      res.writeHead(200, { 'content-type': MIME_IMG[imageType(b)], 'cache-control': 'max-age=600', 'x-content-type-options': 'nosniff' });
+      return res.end(b);
+    }
     if ((u === '/api/addons/install' || u === '/api/addons/remove') && req.method === 'POST') {
       const b = await body(req);
       if (!ID.test(b.id || '')) return web.json(res, { error: 'bad id' }, 400);

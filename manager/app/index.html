@@ -75,11 +75,24 @@ body {
   color: var(--ink2);
   line-height: 1.4;
 }
+#head.ab #sub {
+  display: none;
+}
 #info {
   margin-top: 40px;
   font-size: 30px;
   line-height: 1.5;
   color: var(--ink2);
+}
+#info img {
+  display: block;
+  width: 640px;
+  height: 360px;
+  margin-bottom: 26px;
+  object-fit: cover;
+  border-radius: 28px;
+  background: #1a1c22;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 #info b {
   display: block;
@@ -473,6 +486,7 @@ var napi = null,
   idx = 0,
   view = 'main',
   tab = 0,
+  wantTab = -1 /* a tab to turn to when the status has arrived (opened with {open: 'addons'}) */,
   pending = null,
   pollT = 0,
   setup = { debloat: true, inputKey: true },
@@ -979,7 +993,13 @@ function build() {
   }
   if (view === 'addon') {
     var a1 = addonSel() || {};
-    rows.push({ label: a1.name || '', sub: (a1.description || '') + (a1.error ? ' \u00B7 ' + a1.error : ''), fn: function () {} });
+    rows.push({
+      label: a1.name || '',
+      pv: a1.preview ? a1.id : '',
+      about: a1.about || a1.description,
+      sub: (a1.description || '') + (a1.error ? ' \u00B7 ' + a1.error : ''),
+      fn: function () {},
+    });
     if (a1.bookable) {
       var bp = bookPages().filter(function (p) {
           return p.inBook;
@@ -1751,6 +1771,8 @@ function addonRows() {
   ad.installed.forEach(function (a) {
     rows.push({
       label: a.name,
+      pv: a.preview ? a.id : '',
+      about: a.about || a.description,
       sub:
         (a.status === 'running' ? 'on' : a.status === 'off' ? 'off' : a.status === 'failed' ? 'failed' : a.status) +
         (a.version ? ' \u00B7 ' + a.version : '') +
@@ -1768,7 +1790,9 @@ function addonRows() {
   offer.forEach(function (e) {
     rows.push({
       label: e.name,
-      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version + (e.description ? ' \u00B7 ' + e.description : ''),
+      pv: e.preview ? e.id : '',
+      about: e.about || e.description,
+      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version,
       fn: function () {
         addonDo('/api/addons/install', { id: e.id }, e.name + ' installed');
       },
@@ -2129,6 +2153,8 @@ function draw() {
   var inf = infoFor(rows[idx]),
     ie = $('info');
   ie.textContent = '';
+  $('head').className = '';
+  drawAbout(rows[idx], ie);
   $('sub').style.wordBreak = '';
   if (view === 'notifyhow' || view === 'voicehow') {
     $('sub').textContent = tr(kText);
@@ -2231,6 +2257,24 @@ function draw() {
     $('sub').textContent = tr(
       offline ? 'The service is not running. Set it up to replace LG’s Home, take over the Input key and keep everything up to date.' : ''
     );
+}
+/* an add-on's picture and what it does, left of the list (the Add-ons tab and an add-on's own screen), as the Theme menu on Home does */
+function drawAbout(r, ie) {
+  if (!r || !r.about) return;
+  $('head').className = 'ab'; /* the version lines make room for the picture */
+  if (r.pv) {
+    var im = document.createElement('img');
+    im.alt = '';
+    im.onerror = function () {
+      im.style.display = 'none';
+    };
+    im.src = API + '/api/addons/preview/' + r.pv;
+    ie.appendChild(im);
+  }
+  var b = document.createElement('b');
+  b.textContent = r.label;
+  ie.appendChild(b);
+  ie.appendChild(document.createTextNode(tr(r.about)));
 }
 /* the tab bar: every screen shows it, the one you are in marked; inside a sub-screen it only tells where you are */
 function drawTabs() {
@@ -3091,6 +3135,11 @@ function load(keep) {
       build();
       if (idx >= rows.length) idx = 0;
       draw();
+      if (wantTab >= 0) {
+        var w = wantTab;
+        wantTab = -1;
+        setTab(w);
+      }
       /* the Android box settings are read apart from the status, which stays as it is */
       api('/api/androidbox').then(
         function (r) {
@@ -3710,7 +3759,7 @@ document.addEventListener('wheel', function (e) {
   if (e.deltaY > 0) next(1);
   else if (e.deltaY < 0) next(-1);
 }); /* the Magic Remote wheel */
-/* opened with {"open":"wallpapers"}, {"open":"cards"} or {"open":"ha"} (the launcher's Customise menu), or {"open":"icons", "app": id}
+/* opened with {"open":"wallpapers"}, {"open":"cards"}, {"open":"addons"} or {"open":"ha"} (the launcher's Customise menu), or {"open":"icons", "app": id}
    (a tile's Change icon): straight to that screen */
 var cardsFromHome = false;
 function wantView() {
@@ -3720,6 +3769,7 @@ function wantView() {
   } catch (e) {}
   if (p && p.open === 'wallpapers') openWallpapers();
   if (p && p.open === 'icons') openIconPair(String(p.app || ''));
+  if (p && p.open === 'addons') wantTab = 2;
   /* the launcher's Customise > Home Assistant > Connection: the Home Assistant screen with its phone page */
   if (p && p.open === 'ha')
     api('/api/voice/status').then(

@@ -70,11 +70,24 @@ body {
   color: var(--ink2);
   line-height: 1.4;
 }
+#head.ab #sub {
+  display: none;
+}
 #info {
   margin-top: 40px;
   font-size: 30px;
   line-height: 1.5;
   color: var(--ink2);
+}
+#info img {
+  display: block;
+  width: 640px;
+  height: 360px;
+  margin-bottom: 26px;
+  object-fit: cover;
+  border-radius: 28px;
+  background: #1a1c22;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 #info b {
   display: block;

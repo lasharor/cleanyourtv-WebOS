@@ -71,6 +71,8 @@ function draw() {
   var inf = infoFor(rows[idx]),
     ie = $('info');
   ie.textContent = '';
+  $('head').className = '';
+  drawAbout(rows[idx], ie);
   $('sub').style.wordBreak = '';
   if (view === 'notifyhow' || view === 'voicehow') {
     $('sub').textContent = tr(kText);
@@ -173,6 +175,24 @@ function draw() {
     $('sub').textContent = tr(
       offline ? 'The service is not running. Set it up to replace LG’s Home, take over the Input key and keep everything up to date.' : ''
     );
+}
+/* an add-on's picture and what it does, left of the list (the Add-ons tab and an add-on's own screen), as the Theme menu on Home does */
+function drawAbout(r, ie) {
+  if (!r || !r.about) return;
+  $('head').className = 'ab'; /* the version lines make room for the picture */
+  if (r.pv) {
+    var im = document.createElement('img');
+    im.alt = '';
+    im.onerror = function () {
+      im.style.display = 'none';
+    };
+    im.src = API + '/api/addons/preview/' + r.pv;
+    ie.appendChild(im);
+  }
+  var b = document.createElement('b');
+  b.textContent = r.label;
+  ie.appendChild(b);
+  ie.appendChild(document.createTextNode(tr(r.about)));
 }
 /* the tab bar: every screen shows it, the one you are in marked; inside a sub-screen it only tells where you are */
 function drawTabs() {

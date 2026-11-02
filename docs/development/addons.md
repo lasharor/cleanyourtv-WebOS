@@ -38,6 +38,11 @@ What is done, and what is not:
 }
 ```
 
+- `about` (optional, at most 600 characters) is the longer text the manager shows next to the add-on's picture; `description` stays one sentence.
+- `preview.jpg` (or `.png`, `.webp`; 800 x 450 and at most 600 KB, like a theme's screenshot) is the add-on's picture in the manager's Add-ons
+  tab. A bundled add-on ships it in its folder. A catalog add-on keeps it in `addons/catalog/<id>/`: `node tools/addon-index.js` lists it in the
+  index (it is not part of `files`, so it is never installed) and the manager reads it from GitHub and keeps it for a day
+  (`GET /api/addons/preview/<id>`).
 - `tile.icon` is the icon of the page in the page strip and on its button: `home`, `tv`, `clock`, `chart`, `globe`, `photo`, `music`, `play`, `star`, `heart`, `cards`,
   `grid`, `hdmi`, `settings` or `addon` (the default).
 - `kind` is `page` (a web page, no code in the service) or `service` (Node code that runs as root in the service; also needs
@@ -121,8 +126,9 @@ left out stays installed and running but has no button.
 
 | Request | Reply |
 |---|---|
-| `GET /api/addons` | `{addons: [{id, name, version, kind, description, permissions, enabled, status, error, bundled, tile, page}], paused}`; `status` is `running`, `off`, `paused` or `failed` |
-| `GET /api/addons/catalog` | `{addons: [{id, name, version, description, kind, permissions, installed, bundled, update}], error}` |
+| `GET /api/addons` | `{addons: [{id, name, version, kind, description, about, preview, permissions, enabled, status, error, bundled, tile, page}], paused}`; `status` is `running`, `off`, `paused` or `failed` |
+| `GET /api/addons/preview/<id>` | The add-on's picture (`image/jpeg`, `png` or `webp`): from its folder when it is on the TV, else from the catalog; 404 without one |
+| `GET /api/addons/catalog` | `{addons: [{id, name, version, description, about, preview, kind, permissions, installed, bundled, update}], error}` |
 | `POST /api/addons/book {order, hidden, strip, position}` | The pages of the launcher's book: ids in order, ids left out, whether the strip shows and where (`''`, `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center`, `bottom-right`). Unknown ids and places are dropped. `{book}` |
 | `POST /api/addons/install {id}` | Downloads each file named in the index, refuses the whole install if one does not match its hash, then moves the folder in. `{id, version, restartNeeded}` |
 | `POST /api/addons/remove {id}` | Deletes an installed add-on. `restartNeeded` when its service part was loaded. |

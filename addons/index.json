@@ -5,10 +5,12 @@
       "name": "Big clock",
       "version": "1.0.0",
       "description": "A full-screen clock. A small example of a page add-on.",
+      "about": "A full-screen clock with the date, as a page next to Home. Press its colour or number button to open it, Back returns to Home. Also a small example of a page add-on for people who want to make their own.",
+      "preview": "preview.jpg",
       "kind": "page",
       "permissions": [],
       "files": {
-        "addon.json": "9ddbb54d9b454076b0c935bdce70c7a67e54eae8f46fddb5fda2ddc75eb5863d",
+        "addon.json": "e82a2d9b9353500c67c87797538914299a6cc5b22029084714c5033a2206f205",
         "index.html": "ad47a31114832658c41cbbcb46ef2e4cdb9be8ab7cad4308cdea90a2d9da784f"
       }
     },
@@ -17,10 +19,12 @@
       "name": "DNS check",
       "version": "1.0.0",
       "description": "Shows which ad and tracking hosts your network blocks, as the TV itself sees them.",
+      "about": "Checks which ad and tracking hosts your network blocks, as the TV itself sees them: ad servers of LG and others, with Blocked, Reachable or No answer for each. Useful after changing your router or DNS blocker. OK checks again.",
+      "preview": "preview.jpg",
       "kind": "service",
       "permissions": [],
       "files": {
-        "addon.json": "88c87026d0d4e6af9e7b58c018b7d6ccb78ba4a57f9a12fbe9dacdf94a34db87",
+        "addon.json": "5b8aecd48cb3813a404cb93391482d5f1be54e2504a0be77feb9696b3f82fde0",
         "index.html": "f844a216c574a7bf965ad85e3d13cadae06c9b5f18cd8f9d04d30577e41f25c8",
         "service.js": "1036e54bd3556779f2f2bafca460793852f98e49833569bb18862e150f641cbc"
       }
@@ -30,10 +34,12 @@
       "name": "TV status",
       "version": "1.0.0",
       "description": "Memory, swap, load and uptime of the TV, live. Useful on a TV with little memory.",
+      "about": "Memory, swap, load and uptime of the TV, live, as a page next to Home. Shows at a glance whether the TV is running out of memory, for example before you switch on Compressed memory.",
+      "preview": "preview.jpg",
       "kind": "service",
       "permissions": [],
       "files": {
-        "addon.json": "859aeebad40630bf23193d381ba3483cee2ead2e84a2c80ffe356a1ded922ff1",
+        "addon.json": "02cb4add590dfa7ee9d950123d59752a44cf7e1c1613cf1b36e9f5c891a133b0",
         "index.html": "cbc683b2bf5aab30023e05284f12a1652a422b7c7dbec2efe4bbcb375756aca6",
         "service.js": "724692ff559fafed1d4f3318d83101af7988700c281b496492c46405385c5903"
       }
