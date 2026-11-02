@@ -1,1 +1,1 @@
-{"id":"com.cleanyourtv.manager","version":"1.4.0","vendor":"cleanyourtv","type":"web","main":"index.html","title":"CleanYourTV","icon":"icon.png","largeIcon":"largeIcon.png","visible":true,"bgColor":"#07080b","disableBackHistoryAPI":true}
+{"id":"com.cleanyourtv.manager","version":"1.4.0","vendor":"cleanyourtv","type":"web","main":"index.html","title":"CleanYourTV","icon":"icon.png","largeIcon":"largeIcon.png","visible":true,"bgColor":"#07080b","noSplashOnLaunch":true,"spinnerOnLaunch":false,"disableBackHistoryAPI":true}
