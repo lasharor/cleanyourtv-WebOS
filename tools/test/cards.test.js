@@ -147,6 +147,20 @@ run(async () => {
   r = await call(cards, '/api/cards/set', 'POST', { slot: 'nowhere', type: 'greeting' });
   const bad = await call(cards, '/api/cards/set', 'POST', { slot: 'side', type: 'rocket' });
   ok(r.j.error && bad.j.error && config.get().cards.side.type === 'ha-camera', 'an unknown place or card type is refused');
+  // the launcher's own Customise > Weather sends the whole card: the place typed on the TV, its unit and its forecast
+  r = await call(cards, '/api/cards/card', 'POST', {
+    slot: 'under-clock',
+    card: { type: 'weather', place: 'Utrecht', lat: 52.09, lon: 5.12, unit: 'f', show: 'days' },
+  });
+  ok(
+    r.j.ok &&
+      config.get().cards['under-clock'].place === 'Utrecht' &&
+      config.get().cards['under-clock'].lat === 52.09 &&
+      config.get().cards['under-clock'].unit === 'f',
+    'the launcher saves the weather place, unit and forecast on the under-clock card'
+  );
+  bad = await call(cards, '/api/cards/card', 'POST', { slot: 'nowhere', card: { type: 'weather' } });
+  ok(bad.j.error, 'the launcher cannot write a place the theme does not have');
   await phone('POST', '/api/save', { cards: {} }, code);
   // what the phone page and the launcher may save for a weather card is checked: text trimmed, coordinates in range and in pairs, units
   p = await phone(

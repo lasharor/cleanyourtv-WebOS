@@ -1300,3 +1300,81 @@ function wxMenu() {
     });
   });
 }
+
+/* ---- Customise > Weather: the under-clock card, its place typed on the TV (input.js sends Enter to wxFind) ---- */
+/* the card as it is now, or a fresh weather card: the panel only ever touches the under-clock place */
+function wxCard() {
+  var c = (cfg.cards || {})['under-clock'];
+  return c && c.type === 'weather' ? c : { type: 'weather' };
+}
+function wxCopy(o) {
+  var r = {},
+    k;
+  for (k in o) if (Object.prototype.hasOwnProperty.call(o, k)) r[k] = o[k];
+  return r;
+}
+/* change the under-clock card and save it in the service; Home is drawn again at once so the change is seen */
+function wxSet(fn) {
+  var card = wxCopy(wxCard());
+  fn(card);
+  api('/api/cards/card', { slot: 'under-clock', card: card }).then(
+    function (r) {
+      if (r && r.error) return toast(t(r.error), true);
+      cfg.cards = cfg.cards || {};
+      if (card.type === 'none') delete cfg.cards['under-clock'];
+      else cfg.cards['under-clock'] = card;
+      drawCards();
+      drawMenu();
+    },
+    function () {
+      toast(t('The service did not answer.'), true);
+    }
+  );
+}
+/* the place: an input over the menu, typed with the TV's keyboard; Enter searches, Back leaves the field */
+function wxSearch() {
+  var el = $('wxq');
+  if (!el) return;
+  el.value = wxCard().place || '';
+  el.style.display = 'block';
+  el.focus();
+}
+function wxSearchEnd() {
+  var el = $('wxq');
+  if (!el) return;
+  el.value = '';
+  el.style.display = 'none';
+  el.blur();
+}
+/* Enter in the field: the service's city search, then the places it found as a menu; picking one saves the place and shows it */
+function wxFind(q) {
+  var v = String(q || '').replace(/^\s+|\s+$/g, '');
+  if (v.length < 2) return toast(t('Type at least two letters.'), true);
+  api('/api/cards/places', { q: v }).then(
+    function (r) {
+      var list = (r && r.places) || [];
+      wxSearchEnd();
+      if (!list.length) return toast(t('No place found.'), true);
+      openBuilt(t('Place'), function () {
+        return list.map(function (p) {
+          return {
+            label: p.name,
+            sub: p.area || '',
+            fn: function () {
+              wxSet(function (c) {
+                c.type = 'weather';
+                c.place = p.name;
+                c.lat = p.lat;
+                c.lon = p.lon;
+              });
+            },
+          };
+        });
+      });
+    },
+    function () {
+      wxSearchEnd();
+      toast(t('Place search is not available now.'), true);
+    }
+  );
+}

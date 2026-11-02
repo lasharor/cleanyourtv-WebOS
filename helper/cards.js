@@ -258,6 +258,21 @@ function create(ctx) {
     });
     return { ok: true };
   }
+  // the launcher's own Customise > Weather: the under-clock card with the place typed on the TV, its unit and its forecast
+  function setCard(slot, card) {
+    if (!slots().some(sl => sl.id === slot)) return { error: 'this theme has no such place' };
+    if (!card || typeof card !== 'object') return { error: 'no card' };
+    const type = String(card.type || 'none');
+    if (type === 'none') return setType(slot, 'none');
+    if (!(/** @type {any[]} */ (TYPES).concat(packTypes()).some(ty => ty.type === type))) return { error: 'unknown card type' };
+    const one = sanitize({ [slot]: Object.assign({}, card, { type }) });
+    if (!one || !one[slot]) return { error: 'that card has no usable options' };
+    const next = Object.assign({}, config.get().cards || {}, one);
+    config.update('cards (launcher)', conf => {
+      conf.cards = next;
+    });
+    return { ok: true, cards: next };
+  }
   function save(cards) {
     const c = sanitize(cards) || {};
     config.update('cards (phone)', conf => {
@@ -352,6 +367,8 @@ function create(ctx) {
     // the manager's Cards screen: the theme's places with their cards, and a card type picked for one of them
     if (u === '/api/cards/status') return web.json(res, state(i18n.lang(req, config.get().lang)));
     if (u === '/api/cards/set') return web.json(res, setType(String(b.slot || ''), String(b.type || '')));
+    // the launcher's Customise > Weather: {slot, card} -> the card with its options (the place typed on the TV) saved
+    if (u === '/api/cards/card') return web.json(res, setCard(String(b.slot || ''), b.card));
     // the launcher's own city search (Customise > Weather > Place, typed with the TV's keyboard): {q} -> {places} like the phone page's
     if (u === '/api/cards/places') {
       try {
