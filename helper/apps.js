@@ -108,7 +108,7 @@ function create(ctx) {
         next = false;
       try {
         proc = watchProc = spawn('luna-send', ['-i', 'luna://com.webos.applicationManager/listApps', '{"subscribe":true}'], {
-          stdio: ['ignore', 'pipe', 'ignore'],
+          stdio: [lunaCompat.keepStdinOpen() ? 'pipe' : 'ignore', 'pipe', 'ignore'], // an open stdin where luna-send exits at EOF (luna-stdin-open)
         });
       } catch (_) {
         return;

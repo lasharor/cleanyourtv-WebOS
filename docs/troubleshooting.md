@@ -62,7 +62,8 @@ mkdir -p /media/developer/cleanyourtv
 touch /media/developer/cleanyourtv/luna-stdin-open
 ```
 
-The helper, foreground probe, Share log, optional voice capture and shell scripts
+The installer (`install.sh`), the helper, the foreground probe, the watcher of the
+app manager's changes, Share log, optional voice capture and the shell scripts
 read this flag. It survives updates and reboots without editing installed scripts.
 Remove it to undo the workaround (subsequent calls use closed stdin):
 

@@ -114,4 +114,29 @@ run(async () => {
     /failed:.*(?:timed out|ETIMEDOUT)/.test(failed) && Date.now() - before < 3000,
     'synchronous open-stdin calls are killed at their deadline'
   );
+  // install.sh has its own luna_send (it runs before anything of ours is on the TV): the same two ways, chosen by the flag file
+  const inst = fs.readFileSync(path.join(root, 'install.sh'), 'utf8'),
+    start = inst.indexOf('luna_send() ('),
+    end = inst.indexOf('\n  )\n', start);
+  ok(start > 0 && end > start, 'install.sh defines luna_send');
+  const lsFile = path.join(tmp, 'install-luna.sh');
+  fs.writeFileSync(lsFile, inst.slice(start, end + 4) + '\nluna_send "$1" "$2"\n');
+  const installCall = dir =>
+    cp.spawnSync('/bin/sh', [lsFile, uri, payload], {
+      encoding: 'utf8',
+      timeout: 5000,
+      env: Object.assign({}, process.env, { PATH: bin + ':' + process.env.PATH, CYTV_DIR: dir, TMPDIR: tmp }),
+    });
+  const noFlag = path.join(tmp, 'no-flag');
+  fs.mkdirSync(noFlag);
+  ok(JSON.parse(installCall(noFlag).stdout).state === 'EOF', "install.sh's luna_send keeps stdin closed without the flag");
+  ok(JSON.parse(installCall(process.env.CYTV_DIR).stdout).state === 'OPEN', 'and holds it open with the flag (luna-stdin-open)');
+  ok(!fs.readdirSync(tmp).some(name => /^cytv-luna\./.test(name)), "install.sh's temporary FIFO is removed at once");
+  // the watcher of the app manager's changes (apps.js) asks the same question as the other callers
+  ok(
+    /stdio: \[lunaCompat\.keepStdinOpen\(\) \? 'pipe' : 'ignore', 'pipe', 'ignore'\]/.test(
+      fs.readFileSync(path.join(root, 'helper', 'apps.js'), 'utf8')
+    ),
+    'the listApps watcher keeps stdin open where the flag says so'
+  );
 });
