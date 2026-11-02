@@ -659,6 +659,7 @@ body.wpon {
   position: absolute;
   right: 28px;
   bottom: 16px;
+  z-index: 4;
   font-size: 15px;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);

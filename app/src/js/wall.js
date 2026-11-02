@@ -39,7 +39,7 @@ var WALL = (function () {
       cr = document.createElement('div');
       cr.id = 'wpc';
       cr.className = 'wpc';
-      document.body.insertBefore(cr, $('gA'));
+      $('gA').parentNode.appendChild(cr); /* inside #homepage like the photo, last so nothing covers it */
     }
     if (name && want()) {
       cr.textContent = t('Photo by %s on Unsplash').replace('%s', name);

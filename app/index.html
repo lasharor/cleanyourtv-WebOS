@@ -664,6 +664,7 @@ body.wpon {
   position: absolute;
   right: 28px;
   bottom: 16px;
+  z-index: 4;
   font-size: 15px;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
@@ -3937,7 +3938,7 @@ var WALL = (function () {
       cr = document.createElement('div');
       cr.id = 'wpc';
       cr.className = 'wpc';
-      document.body.insertBefore(cr, $('gA'));
+      $('gA').parentNode.appendChild(cr); /* inside #homepage like the photo, last so nothing covers it */
     }
     if (name && want()) {
       cr.textContent = t('Photo by %s on Unsplash').replace('%s', name);
