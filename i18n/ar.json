@@ -731,7 +731,6 @@
  "Not set": "غير محدد",
  "Choose a place first.": "اختر مكانًا أولًا.",
  "Place search is not available now.": "البحث عن الأماكن غير متاح الآن.",
- "Weather and city search by Open-Meteo. Only the name you type and the place you choose are sent. No account.": "الطقس والبحث عن المدن من Open-Meteo. يُرسل فقط الاسم الذي تكتبه والمكان الذي تختاره. بلا حساب.",
  "Under the clock": "تحت الساعة",
  "Low": "منخفض",
  "Moderate": "متوسط",
@@ -774,6 +773,5 @@
  "South": "الجنوب",
  "South-west": "الجنوب الغربي",
  "West": "الغرب",
- "North-west": "الشمال الغربي",
- "This theme hides the place under the clock.": "هذا المظهر يخفي المكان أسفل الساعة."
+ "North-west": "الشمال الغربي"
 }

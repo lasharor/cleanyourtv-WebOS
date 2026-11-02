@@ -790,7 +790,6 @@
  "Not set": "Not set",
  "Choose a place first.": "Choose a place first.",
  "Place search is not available now.": "Place search is not available now.",
- "Weather and city search by Open-Meteo. Only the name you type and the place you choose are sent. No account.": "Weather and city search by Open-Meteo. Only the name you type and the place you choose are sent. No account.",
  "Under the clock": "Under the clock",
  "Low": "Low",
  "Moderate": "Moderate",
@@ -844,6 +843,9 @@
  "South-west": "South-west",
  "West": "West",
  "North-west": "North-west",
- "This theme hides the place under the clock.": "This theme hides the place under the clock.",
- "The weather for a place you choose, from Open-Meteo, with a drawer of the next hours and days.": "The weather for a place you choose, from Open-Meteo, with a drawer of the next hours and days."
+ "The weather for a place you choose, from Open-Meteo, with a drawer of the next hours and days.": "The weather for a place you choose, from Open-Meteo, with a drawer of the next hours and days.",
+ "This theme hides this place.": "This theme hides this place.",
+ "Weather and city search by Open-Meteo. Only the city you type and the place you pick are sent. No account.": "Weather and city search by Open-Meteo. Only the city you type and the place you pick are sent. No account.",
+ "Type at least two letters.": "Type at least two letters.",
+ "No place found.": "No place found."
 }

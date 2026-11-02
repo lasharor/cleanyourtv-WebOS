@@ -74,7 +74,7 @@ tuner) and is offered only when the TV has that app and **Show LG's own Live TV*
 - **mark running apps** (a green dot on their tiles, or none);
 - the **clock** format (automatic, 12 or 24 hour);
 - the **theme** (see [Themes](themes.md)) and the **accent colour**; the theme list shows each theme's screenshot;
-- **Weather**: a weather card under the clock, in every theme (see [Weather on Home](#weather-on-home));
+- **Weather**: a weather card, in a place the theme has (the built-in one is under the clock), in every theme (see [Weather on Home](#weather-on-home));
 - **Wallpapers**: your own photos behind Home, and how often they change (see [Wallpapers](wallpapers.md));
 - **More settings...**, which opens the [manager app](manager.md) for everything the TV and the service do.
 
@@ -83,8 +83,9 @@ Putting the dock, buttons, hidden apps, order and clock back to the defaults is 
 
 ## Weather on Home
 
-**Customise** > **Weather** puts a weather card in the place **Under the clock**, which every theme has (see [Cards](#cards)), without
-Home Assistant and without a card place in the theme. It is the same Open-Meteo weather as the [Weather card](#cards) (free, no account),
+**Customise** > **Weather** sets the weather card in the built-in place every theme has (**Under the clock**, see [Cards](#cards)), without
+Home Assistant and without a card place in the theme; the same card can be picked for any other place in the manager, so it does not have to
+sit under the clock. It is the same Open-Meteo weather as the [Weather card](#cards) (free, no account),
 so a place needs choosing once:
 
 - **Place**: type a city or town with the TV's keyboard (the one Live TV search uses) and press OK; pick the right one from the list

@@ -1253,7 +1253,7 @@ function wxMenu() {
       box = $('under'),
       hidden = !!box && getComputedStyle(box).display === 'none';
     return [
-      hidden ? { note: t('This theme hides the place under the clock.') } : null,
+      hidden ? { note: t('This theme hides this place.') } : null,
       {
         label: t('Show on Home'),
         sub: on ? t('On') : t('Off'),
@@ -1294,7 +1294,7 @@ function wxMenu() {
         },
       },
       { sep: true },
-      { note: t('Weather and city search by Open-Meteo. Only the name you type and the place you choose are sent. No account.') },
+      { note: t('Weather and city search by Open-Meteo. Only the city you type and the place you pick are sent. No account.') },
     ].filter(function (it) {
       return it; /* the note above only where the theme hides the place */
     });

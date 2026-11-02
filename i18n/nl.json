@@ -752,7 +752,6 @@
  "Not set": "Niet ingesteld",
  "Choose a place first.": "Kies eerst een plaats.",
  "Place search is not available now.": "Plaatsen zoeken is nu niet beschikbaar.",
- "Weather and city search by Open-Meteo. Only the name you type and the place you choose are sent. No account.": "Weer en plaatszoeker van Open-Meteo. Alleen de naam die je typt en de gekozen plaats worden verstuurd. Geen account.",
  "Under the clock": "Onder de klok",
  "Low": "Laag",
  "Moderate": "Matig",
@@ -796,6 +795,5 @@
  "South": "Zuid",
  "South-west": "Zuidwest",
  "West": "West",
- "North-west": "Noordwest",
- "This theme hides the place under the clock.": "Dit thema verbergt de plek onder de klok."
+ "North-west": "Noordwest"
 }

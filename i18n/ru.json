@@ -710,7 +710,6 @@
  "Not set": "Не задано",
  "Choose a place first.": "Сначала выберите место.",
  "Place search is not available now.": "Поиск места сейчас недоступен.",
- "Weather and city search by Open-Meteo. Only the name you type and the place you choose are sent. No account.": "Погода и поиск города от Open-Meteo. Отправляются только введённое название и выбранное место. Без аккаунта.",
  "Under the clock": "Под часами",
  "Low": "Низкий",
  "Moderate": "Умеренный",
@@ -754,6 +753,5 @@
  "South": "Юг",
  "South-west": "Юго-запад",
  "West": "Запад",
- "North-west": "Северо-запад",
- "This theme hides the place under the clock.": "Эта тема скрывает место под часами."
+ "North-west": "Северо-запад"
 }

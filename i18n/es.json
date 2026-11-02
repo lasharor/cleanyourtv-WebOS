@@ -711,7 +711,6 @@
  "Not set": "Sin definir",
  "Choose a place first.": "Elige primero un lugar.",
  "Place search is not available now.": "La búsqueda de lugares no está disponible ahora.",
- "Weather and city search by Open-Meteo. Only the name you type and the place you choose are sent. No account.": "El tiempo y la búsqueda de ciudades son de Open-Meteo. Solo se envía el nombre que escribes y el lugar que eliges. Sin cuenta.",
  "Under the clock": "Debajo del reloj",
  "Low": "Bajo",
  "Moderate": "Moderado",
@@ -755,6 +754,5 @@
  "South": "Sur",
  "South-west": "Suroeste",
  "West": "Oeste",
- "North-west": "Noroeste",
- "This theme hides the place under the clock.": "Este tema oculta el lugar bajo el reloj."
+ "North-west": "Noroeste"
 }

@@ -703,7 +703,6 @@
  "Not set": "Sense definir",
  "Choose a place first.": "Tria primer un lloc.",
  "Place search is not available now.": "La cerca de llocs no està disponible ara.",
- "Weather and city search by Open-Meteo. Only the name you type and the place you choose are sent. No account.": "El temps i la cerca de ciutats són d’Open-Meteo. Només s’envia el nom que escrius i el lloc que tries. Sense compte.",
  "Under the clock": "Sota el rellotge",
  "Low": "Baix",
  "Moderate": "Moderat",
@@ -747,6 +746,5 @@
  "South": "Sud",
  "South-west": "Sud-oest",
  "West": "Oest",
- "North-west": "Nord-oest",
- "This theme hides the place under the clock.": "Aquest tema amaga el lloc sota el rellotge."
+ "North-west": "Nord-oest"
 }

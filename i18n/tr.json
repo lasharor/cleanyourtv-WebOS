@@ -685,7 +685,6 @@
  "Not set": "Ayarlanmadı",
  "Choose a place first.": "Önce bir yer seçin.",
  "Place search is not available now.": "Yer araması şu anda kullanılamıyor.",
- "Weather and city search by Open-Meteo. Only the name you type and the place you choose are sent. No account.": "Hava durumu ve şehir araması Open-Meteo’dan gelir. Yalnızca yazdığınız ad ve seçtiğiniz yer gönderilir. Hesap yok.",
  "Under the clock": "Saatin altında",
  "Low": "Düşük",
  "Moderate": "Orta",
@@ -729,6 +728,5 @@
  "South": "Güney",
  "South-west": "Güneybatı",
  "West": "Batı",
- "North-west": "Kuzeybatı",
- "This theme hides the place under the clock.": "Bu tema saatin altındaki yeri gizler."
+ "North-west": "Kuzeybatı"
 }
