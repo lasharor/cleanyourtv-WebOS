@@ -291,6 +291,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       'apps',
       'running',
       'zram',
+      'fstrim',
       'addons',
     ];
     const okTv = tv.sdk === '10.2.2' && tv.pickerMode === 'overlay' && tv.notifyWindow === 'topui';

@@ -60,10 +60,11 @@ Either bind mount lives in RAM. A reboot without the boot scripts, or the Homebr
 
 ## Experimental (off by default)
 
-Both are switched on in the manager app, **Experimental**, and put back by switching them off.
+These are switched on in the manager app, **Experimental**, and put back by switching them off.
 
 - **Volume bar.** A Pill, Capsule or Dial replaces LG's volume bar. LG's own setting `com.webos.surfacemanager.volumeOSD` is switched off for that; the value the TV had is saved in `backup/volume-osd.orig` and put back by **System default**, `undo-home.sh` and the uninstall. See [Volume bar themes](volume-themes.md).
 - **Compressed memory.** zram (`/dev/zram0`, lz4) as swap in RAM ahead of LG's `eswap`, and `vm.page-cluster` 0 while it is on. Nothing is written to disk; switching it off, or a reboot without CleanYourTV, leaves the TV as LG ships it. See [the manager](manager.md#compressed-memory-experimental).
+- **Weekly trim** (issue 100, found by Reveal80). LG ships `fstrim` but never runs it, and none of the writable ext4 partitions is mounted with `discard`, so the built-in storage is never told which blocks are free. Switched on, the service runs `fstrim` on the writable ext4 partitions of the eMMC five minutes after it starts, when the last trim is a week old (checked again every six hours), and keeps the date and result in `trim.json`. The small key partitions (`uhdcp`, `ciplus`) are left alone, a filesystem that is mounted in several places is trimmed once, and nothing else changes. **Trim now** runs it at once. The rows appear only where the storage reports discard support.
 
 ## Processes and ports
 

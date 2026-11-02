@@ -57,6 +57,10 @@ var INFO = {
     'Optional. Speak into the remote and the TV turns it into text on the TV itself (Moonshine, English). The text can be sent to a server you run. Audio never leaves the TV. Needs a download of about 80 MB.',
   'Install voice':
     'Downloads the speech engine, a 64-bit C library and the model (checksums are verified), then tests them. About a minute. Nothing is installed in the system folders.',
+  'Weekly trim':
+    'LG ships a trim tool but never runs it, so the built-in storage is never told which blocks are free: over time writes get slower and wear goes up. On: once a week, a few minutes after the service starts, the writable partitions on the built-in storage are trimmed (not the small key partitions). Nothing else changes.',
+  'Trim now':
+    'Trims the writable partitions on the built-in storage now and shows how much was freed. A second run right after frees almost nothing.',
   'Listen on the voice button': 'On: pressing the button you learned starts listening. A card shows what was heard.',
   'AI chat (OpenRouter)':
     'On: what you say is also sent as text to a language model through OpenRouter and the answer is shown on screen. Needs your OpenRouter key; the text goes to OpenRouter and the model provider, never audio.',

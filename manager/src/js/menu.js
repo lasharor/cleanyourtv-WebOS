@@ -712,6 +712,22 @@ function build() {
     } else {
       rows.push({ label: 'Compressed memory', sub: 'not available on this TV', fn: function () {} });
     }
+    if (tm && tm.available) {
+      rows.push({
+        label: 'Weekly trim',
+        sub: onoff(tm.on) + ' \u00B7 tells the built-in storage which blocks are free \u00B7 ' + trimLast(tm),
+        fn: function () {
+          trimSet(!tm.on);
+        },
+      });
+      rows.push({
+        label: 'Trim now',
+        sub: tm.running ? 'running\u2026' : 'takes a few seconds',
+        fn: trimNow,
+      });
+    } else {
+      rows.push({ label: 'Weekly trim', sub: 'not available on this TV', fn: function () {} });
+    }
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
     return;
@@ -1361,16 +1377,75 @@ function preloadToggle(id) {
 }
 /* Experimental: compressed memory (zram, helper/zram.js). The service answers with what the TV has now. */
 var zr = null,
-  zrSize = 512;
+  zrSize = 512,
+  tm = null; /* the weekly trim (helper/fstrim.js) */
 function zramLoad(stay) {
   api('/api/zram').then(
     function (r) {
       zr = r;
       zrSize = r.size || r.setting || zrSize;
-      if (stay === true) {
-        build();
-        draw();
-      } else push('experimental');
+      api('/api/trim').then(
+        function (t) {
+          tm = t;
+          if (stay === true) {
+            build();
+            draw();
+          } else push('experimental');
+        },
+        function () {
+          tm = null;
+          if (stay === true) {
+            build();
+            draw();
+          } else push('experimental');
+        }
+      );
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+/* "last 2 Nov, 470 MB" or "not run yet" */
+function trimLast(t) {
+  var l = t && t.last;
+  if (!l) return 'not run yet';
+  var mb = 0;
+  (l.mounts || []).forEach(function (m) {
+    mb += m.bytes || 0;
+  });
+  return 'last ' + new Date(l.at).toLocaleDateString() + ', ' + Math.round(mb / 1048576) + ' MB' + (l.ok ? '' : ' (failed)');
+}
+function trimSet(on) {
+  api('/api/trim', { on: on }).then(
+    function (r) {
+      if (r.error) return banner(r.error, 'err');
+      tm = r;
+      banner(on ? 'Weekly trim on: the first one runs a few minutes after the next start of the service' : 'Weekly trim off', 'ok');
+      build();
+      draw();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function trimNow() {
+  banner('Trimming\u2026', 'work');
+  api('/api/trim', { now: true }, 200000).then(
+    function (r) {
+      if (r.error) return banner(r.error, 'err');
+      tm = r;
+      var mb = 0;
+      ((r.result && r.result.mounts) || []).forEach(function (m) {
+        mb += m.bytes || 0;
+      });
+      banner(
+        r.result && r.result.ok ? 'Trimmed ' + Math.round(mb / 1048576) + ' MB' : 'The trim failed on a partition: see Share log',
+        r.result && r.result.ok ? 'ok' : 'err'
+      );
+      build();
+      draw();
     },
     function () {
       banner('The service did not answer', 'err');
