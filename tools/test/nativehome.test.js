@@ -43,7 +43,36 @@ run(async () => {
     refused = /foreign/.test(e.message);
   }
   ok(refused, 'target discovery refuses a marker pointing at a foreign mount');
+  // an update rolled back, or an edit, gave home-standin.sh another inode: the mounted copy is still ours by its header, a foreign one is not
+  const header = fs
+    .readFileSync(path.join(root, 'scripts', 'home-standin.sh'), 'utf8')
+    .split('\n')
+    .slice(0, 3)
+    .join('\n');
+  ok(
+    header.indexOf("Stands in for LG's Home program on TVs where LG's Home is the native app") >= 0,
+    'home-standin.sh still has the header the ownership check looks for'
+  );
   fs.unlinkSync(exe);
+  fs.writeFileSync(exe, header + '\n');
+  fs.unlinkSync(script);
+  fs.writeFileSync(script, header + '\n# a later version\n');
+  ok(
+    !native.same(script, exe) && native.target() === exe && native.ownedMount(exe),
+    'a mounted stand-in is still ours after the file in the service folder was replaced'
+  );
+  fs.unlinkSync(exe);
+  fs.writeFileSync(exe, 'foreign program');
+  refused = false;
+  try {
+    native.target();
+  } catch (e) {
+    refused = /foreign/.test(e.message);
+  }
+  ok(refused && !native.ownedMount(exe), 'a mount without the inode and without the header stays foreign');
+  fs.unlinkSync(exe);
+  fs.unlinkSync(script);
+  fs.writeFileSync(script, '#!/bin/sh\n');
   fs.linkSync(script, exe);
   const manifest = path.join(P.D, 'backup/home-appinfo.orig.json'),
     saved = fs.readFileSync(manifest);

@@ -21,14 +21,26 @@ function mounts() {
     .map(line => (line.split(/\s+/)[1] || '').replace(/\\([0-7]{3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8))))
     .filter(Boolean);
 }
+// The first lines of home-standin.sh. The mounted file keeps the inode it had when it was mounted; a rollback of an update (tar puts
+// the old files back as new ones) or an edit gives the file in the service folder another inode, and the mount would then look foreign.
+const HEADER = "Stands in for LG's Home program on TVs where LG's Home is the native app";
+function isOurs(exe) {
+  if (same(exe, P.D + '/home-standin.sh')) return true;
+  try {
+    const st = fs.statSync(exe);
+    return st.isFile() && st.size < 65536 && fs.readFileSync(exe, 'utf8').slice(0, 600).indexOf(HEADER) >= 0;
+  } catch (_) {
+    return false;
+  }
+}
 function ownedMount(exe) {
-  return !!exe && exe[0] === '/' && mounts().indexOf(exe) >= 0 && same(exe, P.D + '/home-standin.sh');
+  return !!exe && exe[0] === '/' && mounts().indexOf(exe) >= 0 && isOurs(exe);
 }
 // The mount's inode is independent evidence when an interrupted update lost the
 // marker or manifest. Never read a FIFO/symlink marker as a path to unmount.
 function target() {
   const mounted = mounts(),
-    ours = mounted.filter(exe => same(exe, P.D + '/home-standin.sh'));
+    ours = mounted.filter(isOurs);
   if (ours.length > 1) throw new Error('more than one stand-in mount; manual recovery needed');
   if (ours.length) return ours[0];
   try {

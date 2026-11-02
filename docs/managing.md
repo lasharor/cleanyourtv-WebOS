@@ -74,7 +74,7 @@ Luna clients. The separate one-per-boot watchdog remains in place; it checks
 whether Home is still replaced after each wait, rather than using takeover generations.
 
 If saved metadata or the marker is missing or stale, restoration falls back to
-the mounted script's inode as ownership evidence and tries bounded process cleanup
+the mounted script's inode, or its header after a rolled-back update gave the file another inode, as ownership evidence and tries bounded process cleanup
 again. A FIFO or symlink marker is not read. No owned mount means no arbitrary
 process signalling or foreign unmount. If process cleanup still fails, the command
 warns and makes a best-effort stock restore, rechecking ownership before unmounting.
