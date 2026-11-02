@@ -141,4 +141,16 @@ run(async () => {
   });
   const shadow = Object.keys(locals).filter(n => globals[n]);
   ok(!shadow.length, "no variable of the manager's build() has the name of a global of the manager: " + shadow.join(', '));
+  // issue 109: webOS 25 froze a live stream without a 'waiting' event, so nothing reloaded it. A watchdog on the picture time does, is stopped with the
+  // video, starts afresh with every variant, and the one reload of a stall is given back after half a minute of playing
+  const live = fs.readFileSync(path.join(root, 'helper', 'addons-bundled', 'iptv', 'src', 'js', 'live.js'), 'utf8');
+  ok(
+    /progressT = setInterval\(watchProgress, 1000\)/.test(live) &&
+      /function watchProgress\(\) \{\s*if \(!started \|\| pend \|\| !video \|\| video\.paused \|\| video\.ended/.test(live) &&
+      /Date\.now\(\) - lastProgressAt >= STALL_MS/.test(live) &&
+      /clearInterval\(progressT\)/.test(live) &&
+      /started = false;\s*lastTime = -1;\s*lastProgressAt = 0;/.test(live) &&
+      /healthyT = setTimeout\(function \(\) \{\s*reloads = 0;\s*\}, 30000\)/.test(live),
+    'Live TV reloads a stream whose picture time stops without a waiting event (issue 109)'
+  );
 });

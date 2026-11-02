@@ -127,7 +127,20 @@ var LIVE = (function () {
 
   /* ---------- the player: one <video>, several streams per channel, tuning screen, recovery ---------- */
   /* One <video> element for the whole session: creating and destroying it on every channel change makes the TV rebuild its video plane. */
-  var lastTime = -1;
+  var lastTime = -1,
+    lastProgressAt = 0 /* when the picture time last moved, for the stall watchdog */,
+    progressT = 0,
+    healthyT = 0;
+  /* Some TVs (webOS 25) freeze a stream without a 'waiting' event, so nothing armed the stall timer (issue 109): a started stream whose
+     picture time has not moved for STALL_MS is reloaded by stalled(), as after 'waiting'. When 'waiting' fires first, startVariant() has
+     reset 'started' by then and this does nothing. */
+  function watchProgress() {
+    if (!started || pend || !video || video.paused || video.ended || document.hidden) return;
+    if (lastProgressAt && Date.now() - lastProgressAt >= STALL_MS) {
+      lastProgressAt = Date.now();
+      stalled();
+    }
+  }
   function ensureVideo() {
     if (video) return video;
     var v = document.createElement('video');
@@ -137,10 +150,16 @@ var LIVE = (function () {
     function onPlaying() {
       clearTimeout(spinT);
       clearTimeout(stallT);
+      lastProgressAt = Date.now();
       layer('lv-spin', false);
       layer('lv-tune', false);
       if (!started) {
         started = true;
+        /* after half a minute of playing the one reload a stall gets is available again: a freeze every few hours is not a dead stream */
+        clearTimeout(healthyT);
+        healthyT = setTimeout(function () {
+          reloads = 0;
+        }, 30000);
         perfMark('live playing ' + (Date.now() - tuneAt) + ' variant ' + vi + (variants[vi] && variants[vi].type ? ' typed' : ' src'));
         clearTimeout(playedT);
         var c = byNum[cur];
@@ -172,6 +191,7 @@ var LIVE = (function () {
       true
     );
     $('lv-stage').appendChild(v);
+    progressT = setInterval(watchProgress, 1000);
     return v;
   }
   function release() {
@@ -180,6 +200,9 @@ var LIVE = (function () {
     clearTimeout(stallT);
     clearTimeout(playedT);
     clearTimeout(tuneT);
+    clearTimeout(healthyT);
+    clearInterval(progressT);
+    progressT = 0;
     pend = false;
     if (video) {
       try {
@@ -229,9 +252,11 @@ var LIVE = (function () {
   function startVariant() {
     clearTimeout(spinT);
     clearTimeout(stallT);
+    clearTimeout(healthyT);
     pend = false;
     started = false;
     lastTime = -1;
+    lastProgressAt = 0;
     var v = ensureVideo(),
       d = variants[vi];
     layer('lv-spin', true);
