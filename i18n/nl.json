@@ -74,7 +74,7 @@
  "Albums": "Albums",
  "Albums saved. Syncing…": "Albums opgeslagen. Synchroniseren…",
  "All": "Alle",
- "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. A type the TV does not know yet leaves its slot empty.": "Alle kaarten tegelijk, per plek: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. Een type dat de tv nog niet kent, laat zijn plek leeg.",
+ "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"line\": \"date\"}}. A name belongs to \"Your name\", not to a card. A type the TV does not know yet leaves its slot empty.": "Alle kaarten tegelijk, per plek: {\"greeting\": {\"type\": \"greeting\", \"line\": \"date\"}}. Een type dat de tv nog niet kent, laat zijn plek leeg.",
  "All channels": "Alle zenders",
  "An app...": "Een app...",
  "and enter this code:": "en voer deze code in:",
@@ -752,7 +752,7 @@
  "Not set": "Niet ingesteld",
  "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Te zien in de begroeting op Home, bijvoorbeeld “Goedenavond, Sam”. Laat leeg voor geen naam.",
  "the greeting on Home": "de begroeting op Home",
- "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "De naam in de begroeting op Home (“Goedenavond, Sam”). Toont een QR-code: scan die met een telefoon op hetzelfde wifi-netwerk en typ daar de naam; op de tv wordt niets getypt. Leeg laten geeft een begroeting zonder naam.",
- "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Typ je naam en tik op <b>Opslaan</b>. Home begroet je daarmee.</li>",
+ "The name in the greeting on Home (“Good evening, Sam”). Scan the QR code with a phone on the same Wi-Fi and type the name there, or press OK on this screen and type it with the TV’s keyboard. Empty keeps the greeting without a name.": "De naam in de begroeting op Home (“Goedenavond, Sam”). Toont een QR-code: scan die met een telefoon op hetzelfde wifi-netwerk en typ daar de naam. Leeg laten geeft een begroeting zonder naam.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Telefoon op <b>hetzelfde wifi-netwerk</b> als de tv.</li><li>Scan de code met de camera.</li><li>Typ je naam en tik op <b>Opslaan</b>. Home begroet je daarmee.</li>",
  "Or press OK and type it here": "Of druk op OK en typ het hier"
 }

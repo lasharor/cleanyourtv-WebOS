@@ -1182,7 +1182,7 @@ function build() {
     });
     rows.push({
       label: 'Your name',
-      sub: st.name || 'not set \u00B7 the greeting on Home',
+      sub: st.name || tr('Not set') + ' \u00B7 ' + tr('the greeting on Home'),
       fn: function () {
         openCardsPair('name');
       },

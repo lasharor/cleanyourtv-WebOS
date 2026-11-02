@@ -11,6 +11,22 @@ run(async () => {
   const B = require(path.join(root, 'tools', 'build-pages.js'));
   const fresh = B.PAGES.every(p => B.build(p[0]) === fs.readFileSync(path.join(root, p[1]), 'utf8'));
   ok(fresh, 'the pages (and the picker part between its marks) carry the current translations');
+  // a translated list must keep its steps: the Your name page lost "same Wi-Fi" and "scan the code" in every language but English.
+  // A language translated later than this text (Vietnamese arrived after it) has no such key at all: that is incompleteness, not a
+  // clipped list, so only the languages that do translate it are checked.
+  const lists = fs
+    .readdirSync(path.join(root, 'i18n'))
+    .filter(f => /^[a-z]{2}\.json$/.test(f))
+    .map(f => {
+      const j = JSON.parse(fs.readFileSync(path.join(root, 'i18n', f), 'utf8'));
+      const k = Object.keys(j).find(x => x.includes('Type your name, then tap'));
+      return { f, n: k ? (j[k].match(/<li>/g) || []).length : 0 };
+    });
+  ok(
+    lists.filter(x => x.n > 0).every(x => x.n === 3),
+    'every language that translates the Your name list keeps its three steps: ' +
+      lists.map(x => x.f.replace('.json', '') + ' ' + x.n).join(', ')
+  );
 
   // the runtime as a page has it, with a small table
   const runtime = fs.readFileSync(path.join(root, 'i18n', 'runtime.js'), 'utf8');

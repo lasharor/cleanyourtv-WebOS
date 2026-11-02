@@ -30,15 +30,19 @@ const read = (f, tail) => {
 
 // ---- masking ----
 function redact(t) {
-  return t
-    .replace(/https?:\/\/[^\s"'<>)]+/g, u => {
-      const m = /^(https?:\/\/)([^\/:?#]+)/.exec(u);
-      if (!m) return '<url>';
-      return m[1] + (m[2] === '127.0.0.1' ? m[2] : /^\d+\.\d+\.\d+\.\d+$/.test(m[2]) ? 'x.x.x.x' : m[2]) + '/…';
-    })
-    .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, ip => (ip === '127.0.0.1' || ip === '0.0.0.0' ? ip : 'x.x.x.x'))
-    .replace(/\b[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}\b/g, 'xx:xx:xx:xx:xx:xx')
-    .replace(/("(?:token|key|password|pass|secret|apikey)"\s*:\s*")[^"]*"/gi, '$1…"');
+  return (
+    t
+      .replace(/https?:\/\/[^\s"'<>)]+/g, u => {
+        const m = /^(https?:\/\/)([^\/:?#]+)/.exec(u);
+        if (!m) return '<url>';
+        return m[1] + (m[2] === '127.0.0.1' ? m[2] : /^\d+\.\d+\.\d+\.\d+$/.test(m[2]) ? 'x.x.x.x' : m[2]) + '/…';
+      })
+      .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, ip => (ip === '127.0.0.1' || ip === '0.0.0.0' ? ip : 'x.x.x.x'))
+      .replace(/\b[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}\b/g, 'xx:xx:xx:xx:xx:xx')
+      // a secret, and "Your name" (config.name) — the report goes into a public issue, so the person's name stays out of it.
+      // The closing quote is optional: a report cut in the middle of a value (the status reply is shortened) is masked too.
+      .replace(/("(?:token|key|password|pass|secret|apikey|name)"\s*:\s*")(?:[^"\\\n]|\\.)*("?)/gi, '$1…$2')
+  );
 }
 
 function report() {

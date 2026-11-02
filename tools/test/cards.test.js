@@ -17,6 +17,19 @@ function source(js, name) {
   return '';
 }
 
+// a string cut in the middle of an emoji: a high surrogate without its pair, or a low one with no high one before it
+function hasHalfCharacter(s) {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c >= 0xd800 && c <= 0xdbff) {
+      const d = s.charCodeAt(i + 1);
+      if (!(d >= 0xdc00 && d <= 0xdfff)) return true;
+      i++;
+    } else if (c >= 0xdc00 && c <= 0xdfff) return true;
+  }
+  return false;
+}
+
 function phone(method, p, body, code) {
   return new Promise((resolve, reject) => {
     const r = http.request({ host: '127.0.0.1', port: 8792, path: p, method, headers: { 'x-code': code || '' } }, res => {
@@ -115,6 +128,10 @@ run(async () => {
     'the page has a field for your name, which is not mistaken for a card place'
   );
   ok(
+    /\$\('sum'\)\.textContent=NAMEONLY\?/.test(p.text),
+    'the page opened for the name alone does not talk about the card places (a theme without cards has none)'
+  );
+  ok(
     config.get().name === 'Sam',
     'a name typed on a Greeting card before there was Your name became the name (the state above shows the card without one)'
   );
@@ -181,6 +198,10 @@ run(async () => {
     );
     sb.cfg.name = '$& $1 עדן';
     ok(at(20) === 'Good evening, \u2068$& $1 עדן\u2069', 'a name is put in as it is, even with $ in it');
+    // a name of emoji: the service keeps 30 characters, the launcher's own cut must not leave half of one behind
+    sb.cfg.name = '😀'.repeat(19) + 'a' + '😀';
+    const cut = at(20);
+    ok(!hasHalfCharacter(cut), 'a cut through an emoji leaves no half character in the greeting: ' + JSON.stringify(cut.slice(-3)));
     delete sb.cfg.name;
     ok(at(20) === 'Good evening', 'clearing the name takes it out of the greeting');
   }

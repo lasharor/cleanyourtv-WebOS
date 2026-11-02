@@ -495,7 +495,7 @@
     "ad services and ad servers": "serveis i servidors de publicitat",
     "address and access token": "adreça i token d'accés",
     "address, token, example": "adreça, token, exemple",
-    "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. A type the TV does not know yet leaves its slot empty.": "Totes les targetes alhora, organitzades per espai: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. Si el televisor encara no coneix un tipus, deixa'n l'espai buit.",
+    "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"line\": \"date\"}}. A name belongs to \"Your name\", not to a card. A type the TV does not know yet leaves its slot empty.": "Totes les targetes alhora, organitzades per espai: {\"greeting\": {\"type\": \"greeting\", \"line\": \"date\"}}. Si el televisor encara no coneix un tipus, deixa'n l'espai buit.",
     "choose from the list or type any OpenRouter model name": "tria'n un de la llista o escriu el nom de qualsevol model d'OpenRouter",
     "Choose how Home looks. The change shows the next time you open Home.": "Tria l'aspecte d'Inici. El canvi es veurà la propera vegada que l'obris.",
     "Choose the Home Assistant agent": "Tria l'agent de Home Assistant",
@@ -703,7 +703,7 @@
     "Not set": "No configurat",
     "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Es mostra a la salutació d’Inici, per exemple «Bon vespre, Sam». Deixa-ho buit per no mostrar cap nom.",
     "the greeting on Home": "la salutació a Inici",
-    "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "El nom a la salutació d’Inici («Bon vespre, Sam»). Mostra un codi QR: escaneja’l amb un mòbil a la mateixa Wi-Fi i escriu-hi el nom; al televisor no s’escriu res. Buit: salutació sense nom.",
-    "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Escriu el teu nom i toca <b>Desa</b>. Inici et saludarà amb aquest nom.</li>",
+    "The name in the greeting on Home (“Good evening, Sam”). Scan the QR code with a phone on the same Wi-Fi and type the name there, or press OK on this screen and type it with the TV’s keyboard. Empty keeps the greeting without a name.": "El nom a la salutació d’Inici («Bon vespre, Sam»). Mostra un codi QR: escaneja’l amb un mòbil a la mateixa Wi-Fi i escriu-hi el nom. Buit: salutació sense nom.",
+    "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Connecta el telèfon a la <b>mateixa xarxa Wi-Fi</b> que el televisor.</li><li>Escaneja el codi amb la càmera.</li><li>Escriu el teu nom i toca <b>Desa</b>. Inici et saludarà amb aquest nom.</li>",
     "Or press OK and type it here": "O prem OK i escriu-ho aquí"
 }

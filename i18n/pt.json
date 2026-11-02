@@ -72,7 +72,7 @@
  "Albums": "Álbuns",
  "Albums saved. Syncing…": "Álbuns salvos. Sincronizando…",
  "All": "Todos",
- "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. A type the TV does not know yet leaves its slot empty.": "Todos os cartões de uma vez, por espaço: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. Um tipo que a TV ainda não conhece deixa o espaço vazio.",
+ "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"line\": \"date\"}}. A name belongs to \"Your name\", not to a card. A type the TV does not know yet leaves its slot empty.": "Todos os cartões de uma vez, por espaço: {\"greeting\": {\"type\": \"greeting\", \"line\": \"date\"}}. Um tipo que a TV ainda não conhece deixa o espaço vazio.",
  "All channels": "Todos os canais",
  "An app...": "Um app...",
  "and enter this code:": "e digite este código:",
@@ -671,7 +671,7 @@
  "Not set": "Não configurado",
  "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Aparece na saudação da Home, por exemplo “Boa noite, Sam”. Deixe em branco para não mostrar nome.",
  "the greeting on Home": "a saudação na Home",
- "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "O nome na saudação da Home (“Boa noite, Sam”). Mostra um código QR: leia-o com um telemóvel na mesma Wi-Fi e escreva lá o nome; na TV não se escreve nada. Em branco: saudação sem nome.",
- "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Digite o seu nome e toque em <b>Salvar</b>. A Home vai cumprimentá-lo com ele.</li>",
+ "The name in the greeting on Home (“Good evening, Sam”). Scan the QR code with a phone on the same Wi-Fi and type the name there, or press OK on this screen and type it with the TV’s keyboard. Empty keeps the greeting without a name.": "O nome na saudação da Home (“Boa noite, Sam”). Mostra um código QR: leia-o com um telemóvel na mesma Wi-Fi e escreva lá o nome. Em branco: saudação sem nome.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Celular na <b>mesma rede Wi-Fi</b> da TV.</li><li>Escaneie o código com a câmera.</li><li>Digite o seu nome e toque em <b>Salvar</b>. A Home vai cumprimentá-lo com ele.</li>",
  "Or press OK and type it here": "Ou pressione OK e digite aqui"
 }

@@ -47,9 +47,10 @@ on.
 QR code with a phone on the same network. It works even when the service is not running, so it can also report a failed setup.
 
 The report is **masked**: addresses, MAC addresses and URL paths are replaced, and the values of `token`, `key`, `password`,
-`pass`, `secret` and `apikey` are removed. It holds the TV model and firmware, the versions, LG's stock Home app, the mounts and
-boot scripts, whether our apps are registered, your options, the remote key codes seen by the input hook, the service status, the
-setup log, the last lines of the service log and the input hook log. Attach it to bug reports.
+`pass`, `secret`, `apikey` and `name` (the name in the greeting: it is personal) are removed. It holds the TV model and firmware, the
+versions, LG's stock Home app, the mounts and boot scripts, whether our apps are registered, your options, the remote key codes seen
+by the input hook, the service status, the setup log, the last lines of the service log and the input hook log. Attach it to bug
+reports. `tools/diagnose.sh` hides the same values in the `config.json` it prints.
 
 ### Compressed memory (experimental)
 

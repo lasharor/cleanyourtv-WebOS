@@ -2848,7 +2848,11 @@ function posOf(e) {
 /* what changes with the time, for the cards: the greeting of the day part, the time and the date as the clock shows them */
 function greetText() {
   var h = new Date().getHours(),
-    n = String(cfg.name || '').slice(0, 40); /* "Your name" (Customise), the same one the Greeting card's Name box on the phone page sets */
+    /* "Your name" (Customise), the same one the Greeting card's Name box on the phone page sets. The service keeps it at 30 characters, so
+       the cut here is only a guard for a config.json written by hand; it drops a half character (an emoji) the cut may have left */
+    n = String(cfg.name || '')
+      .slice(0, 40)
+      .replace(/[\uD800-\uDBFF]$/, '');
   /* the name between direction isolates, so a Hebrew or Arabic name in an English greeting (or the other way round) keeps its own order */
   if (n)
     return (h < 12 ? t('Good morning, %s') : h < 18 ? t('Good afternoon, %s') : t('Good evening, %s')).replace('%s', function () {

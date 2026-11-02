@@ -59,7 +59,7 @@
  "Albums": "Albümler",
  "Albums saved. Syncing…": "Albümler kaydedildi. Eşitleniyor…",
  "All": "Tümü",
- "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. A type the TV does not know yet leaves its slot empty.": "Tüm kartlar bir arada, yere göre: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. TV’nin henüz bilmediği bir tür yerini boş bırakır.",
+ "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"line\": \"date\"}}. A name belongs to \"Your name\", not to a card. A type the TV does not know yet leaves its slot empty.": "Tüm kartlar bir arada, yere göre: {\"greeting\": {\"type\": \"greeting\", \"line\": \"date\"}}. TV’nin henüz bilmediği bir tür yerini boş bırakır.",
  "All channels": "Tüm kanallar",
  "An app...": "Uygulama...",
  "and enter this code:": "ve bu kodu girin:",
@@ -685,7 +685,7 @@
  "Not set": "Ayarlanmadı",
  "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Ana ekrandaki karşılamada görünür, örneğin “İyi akşamlar, Sam”. Ad göstermemek için boş bırakın.",
  "the greeting on Home": "ana ekrandaki karşılama",
- "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "Ana ekrandaki karşılamada görünen ad (“İyi akşamlar, Sam”). Bir QR kodu gösterir: aynı Wi-Fi ağındaki bir telefonla okutun ve adı orada yazın; TV’de hiçbir şey yazılmaz. Boş bırakırsanız karşılama adsız olur.",
- "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Adınızı yazın ve <b>Kaydet</b> düğmesine dokunun. Ana ekran sizi bu adla karşılar.</li>",
+ "The name in the greeting on Home (“Good evening, Sam”). Scan the QR code with a phone on the same Wi-Fi and type the name there, or press OK on this screen and type it with the TV’s keyboard. Empty keeps the greeting without a name.": "Ana ekrandaki karşılamada görünen ad (“İyi akşamlar, Sam”). Bir QR kodu gösterir: aynı Wi-Fi ağındaki bir telefonla okutun ve adı orada yazın. Boş bırakırsanız karşılama adsız olur.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Telefon TV ile <b>aynı Wi-Fi ağında</b> olmalı.</li><li>Kodu kamerayla tarayın.</li><li>Adınızı yazın ve <b>Kaydet</b> düğmesine dokunun. Ana ekran sizi bu adla karşılar.</li>",
  "Or press OK and type it here": "Veya OK’a basıp buraya yazın"
 }

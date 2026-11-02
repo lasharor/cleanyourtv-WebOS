@@ -84,7 +84,7 @@
  "Albums": "Альбомы",
  "Albums saved. Syncing…": "Альбомы сохранены. Синхронизация…",
  "All": "Все",
- "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. A type the TV does not know yet leaves its slot empty.": "Все карточки сразу, по местам: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. Тип, который телевизор ещё не знает, оставляет место пустым.",
+ "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"line\": \"date\"}}. A name belongs to \"Your name\", not to a card. A type the TV does not know yet leaves its slot empty.": "Все карточки сразу, по местам: {\"greeting\": {\"type\": \"greeting\", \"line\": \"date\"}}. Тип, который телевизор ещё не знает, оставляет место пустым.",
  "All channels": "Все каналы",
  "An app...": "Приложение...",
  "and enter this code:": "и введите этот код:",
@@ -710,7 +710,7 @@
  "Not set": "Не задано",
  "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Показывается в приветствии на главном экране, например «Добрый вечер, Sam». Оставьте пустым, чтобы имя не показывалось.",
  "the greeting on Home": "приветствие на главном экране",
- "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "Имя в приветствии на главном экране («Добрый вечер, Sam»). Показывает QR-код: отсканируйте его телефоном в той же сети Wi-Fi и введите имя там; на телевизоре ничего не вводится. Пусто: приветствие без имени.",
- "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Введите своё имя и нажмите <b>Сохранить</b>. Главный экран будет приветствовать вас по имени.</li>",
+ "The name in the greeting on Home (“Good evening, Sam”). Scan the QR code with a phone on the same Wi-Fi and type the name there, or press OK on this screen and type it with the TV’s keyboard. Empty keeps the greeting without a name.": "Имя в приветствии на главном экране («Добрый вечер, Sam»). Показывает QR-код: отсканируйте его телефоном в той же сети Wi-Fi и введите имя там. Пусто: приветствие без имени.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Телефон в <b>той же сети Wi-Fi</b>, что и телевизор.</li><li>Отсканируйте код камерой.</li><li>Введите своё имя и нажмите <b>Сохранить</b>. Главный экран будет приветствовать вас по имени.</li>",
  "Or press OK and type it here": "Или нажмите OK и введите здесь"
 }
