@@ -6,5 +6,5 @@
   "description": "Memory, swap, load and uptime of the TV, live. Useful on a TV with little memory.",
   "entry": { "service": "service.js", "page": "index.html" },
   "permissions": [],
-  "tile": { "label": "Status", "icon": "addon", "placement": "page" }
+  "tile": { "label": "Status", "icon": "chart", "placement": "page" }
 }

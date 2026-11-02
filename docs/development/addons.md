@@ -34,10 +34,12 @@ What is done, and what is not:
   "description": "A full-screen clock.",
   "entry": { "page": "index.html" },
   "permissions": [],
-  "tile": { "label": "Clock", "icon": "addon", "placement": "page" }
+  "tile": { "label": "Clock", "icon": "clock", "placement": "page" }
 }
 ```
 
+- `tile.icon` is the icon of the page in the page strip and on its button: `home`, `tv`, `clock`, `chart`, `globe`, `photo`, `music`, `play`, `star`, `heart`, `cards`,
+  `grid`, `hdmi`, `settings` or `addon` (the default).
 - `kind` is `page` (a web page, no code in the service) or `service` (Node code that runs as root in the service; also needs
   `entry.service`). The folder name is the `id`.
 - `service.js` exports `create(ctx)` and returns `{ handle(req, res, path, body), start() }`; `path` is what follows

@@ -67,7 +67,7 @@ var PAGER = {
       c.x = 96;
       c.y = c.anchor === 'top' ? 8 : 22; /* the top row of Home starts at 54 px */
     }
-    var items = [{ id: '', label: t('Home') }].concat(PAGES);
+    var items = [{ id: '', label: t('Home'), icon: 'home' }].concat(PAGES);
     s.textContent = '';
     s.style.display = PAGES.length && stripOn && c.show ? 'flex' : 'none';
     s.setAttribute('data-style', c.style);
@@ -81,8 +81,14 @@ var PAGER = {
       var e = document.createElement('div');
       e.className = 'pg' + (p.id === PAGER.id ? ' cur' : '');
       var d = document.createElement('i');
-      if (i < 4 && c.colors === 'colour') d.className = 'c' + i;
-      else d.textContent = String(i + 1);
+      if (i < 4 && c.colors === 'colour') {
+        e.className += ' k' + i;
+        if (c.style === 'pills') {
+          /* the pill carries the key's colour as a wash, so the icon the add-on chose (tile.icon) takes the dot's place */
+          d.className = 'ic';
+          d.innerHTML = svg(p.icon);
+        } else d.className = 'c' + i;
+      } else d.textContent = String(i + 1);
       var l = document.createElement('span');
       l.textContent = p.label;
       e.appendChild(d);

@@ -8,7 +8,7 @@
       "kind": "page",
       "permissions": [],
       "files": {
-        "addon.json": "d6d68ebbd3791d939e5bb9a705fc62891e2c415cd2c2ca19a9c21e6386a1d82f",
+        "addon.json": "9ddbb54d9b454076b0c935bdce70c7a67e54eae8f46fddb5fda2ddc75eb5863d",
         "index.html": "ad47a31114832658c41cbbcb46ef2e4cdb9be8ab7cad4308cdea90a2d9da784f"
       }
     },
@@ -20,7 +20,7 @@
       "kind": "service",
       "permissions": [],
       "files": {
-        "addon.json": "1c00e1aef226a11e493ac6f7a863f39d6fb5a416ace840566a0118c8c629bfef",
+        "addon.json": "88c87026d0d4e6af9e7b58c018b7d6ccb78ba4a57f9a12fbe9dacdf94a34db87",
         "index.html": "f844a216c574a7bf965ad85e3d13cadae06c9b5f18cd8f9d04d30577e41f25c8",
         "service.js": "1036e54bd3556779f2f2bafca460793852f98e49833569bb18862e150f641cbc"
       }
@@ -33,7 +33,7 @@
       "kind": "service",
       "permissions": [],
       "files": {
-        "addon.json": "c7c43abe6b509b4c25175e2dcc2f9e29e9f73bf7fc7ee0f7c9318cee87bafce7",
+        "addon.json": "859aeebad40630bf23193d381ba3483cee2ead2e84a2c80ffe356a1ded922ff1",
         "index.html": "cbc683b2bf5aab30023e05284f12a1652a422b7c7dbec2efe4bbcb375756aca6",
         "service.js": "724692ff559fafed1d4f3318d83101af7988700c281b496492c46405385c5903"
       }
