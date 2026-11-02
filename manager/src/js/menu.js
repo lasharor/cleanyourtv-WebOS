@@ -1178,7 +1178,7 @@ function build() {
         push('inputkey');
       },
     });
-    rows.push({ label: 'Key remapping', sub: 'make a remote button open an app or input', fn: openRemap });
+    rows.push({ label: 'Key remapping', sub: 'a button opens an app or input', fn: openRemap });
     rows.push({ sep: true });
     rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
   } else if (tb === 'features') {

@@ -52,7 +52,16 @@ function rmSave(entry) {
   api('/api/remap', body).then(
     function (r) {
       if (r.error) {
-        banner(r.error === 'taken' ? 'That button already has another job' : r.error, 'err');
+        banner(
+          r.error === 'taken'
+            ? 'That button already has another job'
+            : r.error === 'too many keys'
+              ? 'Up to 12 buttons can be used'
+              : r.error === 'off'
+                ? 'Key remapping is off'
+                : r.error,
+          'err'
+        );
         return;
       }
       banner('Saved', 'ok');
@@ -66,7 +75,7 @@ function rmSave(entry) {
 function rmRemove(code) {
   api('/api/remap', { code: code, remove: true }).then(
     function () {
-      banner('The button works as LG made it again', 'ok');
+      banner('The button is back to LG\u2019s own action', 'ok');
       rmBack();
     },
     function () {
@@ -77,7 +86,7 @@ function rmRemove(code) {
 function rmClear() {
   api('/api/remap', { clear: true }).then(
     function () {
-      banner('Every button works as LG made it again', 'ok');
+      banner('Every button is back to LG\u2019s own action', 'ok');
       rmBack();
     },
     function () {
@@ -88,7 +97,7 @@ function rmClear() {
 function rmLearn() {
   api('/api/remap/learn', {}).then(function () {
     push('remaplearn');
-    kText = 'Press the button you want to use now…';
+    kText = 'Press the remote button you want to use.';
     build();
     draw();
     (function poll() {
@@ -105,19 +114,19 @@ function rmLearn() {
               return;
             }
             if (l.state === 'taken') {
-              kText = 'That button already has a job (the Input, Guide, voice or Home key). Clear that one first, or press another button.';
+              kText = 'That button is already the Input, Guide, voice or Home key. Press another button, or clear that key first.';
               build();
               draw();
               return;
             }
             if (l.state === 'unsupported') {
-              kText = 'The hook did not attach on this firmware, so buttons cannot be learned.\nUse Share log to report this.';
+              kText = 'CleanYourTV could not attach to the remote keys on this TV, so buttons cannot be learned.\nUse Share log to report this.';
               build();
               draw();
               return;
             }
             if (l.state === 'timeout') {
-              kText = 'Nothing was pressed.';
+              kText = 'No button was pressed. Go back to try again.';
               build();
               draw();
               return;
@@ -174,11 +183,11 @@ function rmRows() {
         },
       });
     });
-    if (!codes.length) rows.push({ label: 'No buttons yet', sub: 'every button works as LG made it', fn: function () {} });
+    if (!codes.length) rows.push({ label: 'No buttons yet', sub: 'every button is still LG\u2019s', fn: function () {} });
     rows.push({ sep: true });
     rows.push({
       label: 'Add a button',
-      sub: rm && rm.hook === false ? 'not available on this firmware' : 'press it on the remote, then choose what it does',
+      sub: rm && rm.hook === false ? 'not available on this firmware' : 'press it, then choose what it does',
       dim: !!rm && rm.hook === false,
       fn: function () {
         if (!rm || rm.hook !== false) rmLearn();
@@ -250,7 +259,6 @@ function rmRows() {
     rmList.forEach(function (a) {
       rows.push({
         label: a.title,
-        sub: a.id,
         fn: function () {
           rmSave({ type: kind, id: a.id, label: a.title });
         },

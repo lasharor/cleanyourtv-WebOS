@@ -87,11 +87,11 @@ var INFO = {
   'Input key':
     'The remote\u2019s Input button opens our Inputs list over the running app instead of LG\u2019s picker. Open this screen to switch it off or to learn the button.',
   'Key remapping':
-    'Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list. You press the button on your remote so the TV tells us its code. The button then does that instead of what LG gives it. It is off until you switch it on, and while it is off nothing runs for it.',
+    'Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list, instead of LG\u2019s action. You press the button so the TV can tell us which one it is. It is off until you switch it on; while it is off nothing runs for it.',
   'Add a button':
-    'Press the button you want to use. Arrows, OK and Back cannot be used. A reboot without the boot scripts gives every button back to LG.',
-  'Give every button back to LG': 'Removes every remapped button. Each works as LG made it again, at once.',
-  'Give the button back to LG': 'Removes this button’s action. It works as LG made it again, at once.',
+    'Press the button you want to use on the remote. Arrows, OK and Back cannot be used, and neither can the Input, Guide, voice or Home key. You can add up to 12.',
+  'Give every button back to LG': 'Removes every remapped button. Each goes back to LG\u2019s action at once. A reboot without the boot scripts does the same.',
+  'Give the button back to LG': 'Removes this button\u2019s action. It goes back to LG\u2019s action at once.',
   'Share log':
     'Shows a QR code. Scan it with a phone on the same Wi-Fi to copy a report for a bug report. Addresses and URL paths are masked; the page closes after ten minutes.',
   'Uninstall': 'Removes the apps, the boot scripts and your settings, then restarts the TV so LG\u2019s Home comes back.',
