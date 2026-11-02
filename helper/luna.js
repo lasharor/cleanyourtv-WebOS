@@ -22,7 +22,7 @@ function luna(uri, payload, opts) {
   const script = 'luna-send -n 1 -w ' + wait + ' -f "$1" "$2" </dev/null';
   const keep = keepStdinOpen(o);
   const result = keep
-    ? exec.run('/usr/bin/luna-send', ['-n', '1', '-w', String(wait), '-f', uri, JSON.stringify(payload || {})], {
+    ? exec.run('luna-send', ['-n', '1', '-w', String(wait), '-f', uri, JSON.stringify(payload || {})], {
         timeout: o.timeout || wait + 3000,
         keepStdinOpen: true,
       })

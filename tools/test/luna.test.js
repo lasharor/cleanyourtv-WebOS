@@ -32,14 +32,14 @@ run(async () => {
     process.env.CYTV_LUNA_STDIN = 'open';
     const reply = await luna('luna://example/query', payload, { wait: 1234, timeout: 2345 });
     const c = calls[1];
-    ok(reply.returnValue && c.cmd === '/usr/bin/luna-send' && c.opts.keepStdinOpen === true, 'environment opt-in uses an open pipe');
+    ok(reply.returnValue && c.cmd === 'luna-send' && c.opts.keepStdinOpen === true, 'environment opt-in uses an open pipe');
     ok(c.args[c.args.length - 1] === JSON.stringify(payload), 'the payload is a separate argument, not shell source');
     ok(c.args.indexOf('1234') >= 0 && c.opts.timeout === 2345, 'both Luna and process time limits are preserved');
     await luna('luna://example/query', {}, { keepStdinOpen: false });
     ok(calls[2].cmd === '/bin/sh', 'an explicit false overrides the environment opt-in');
     delete process.env.CYTV_LUNA_STDIN;
     await luna('luna://example/query', {}, { keepStdinOpen: true });
-    ok(calls[3].cmd === '/usr/bin/luna-send' && calls[3].opts.timeout === 8000, 'a per-call opt-in retains the default deadline');
+    ok(calls[3].cmd === 'luna-send' && calls[3].opts.timeout === 8000, 'a per-call opt-in retains the default deadline');
     exec.run = async () => ({ out: 'not JSON', error: 'test failure' });
     const bad = await luna('luna://example/query', {}, { keepStdinOpen: true });
     ok(bad.returnValue === false && typeof bad.errorText === 'string', 'invalid replies still resolve to a structured error');

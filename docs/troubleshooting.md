@@ -80,9 +80,9 @@ with their existing lifetimes. If the shell helper is missing after a partial co
 scripts fall back to closed stdin rather than aborting on the missing file.
 
 This option does not bypass installation compatibility checks or make an
-unsupported takeover safe. Equivalent handling was checked in a separately
-managed native deployment; this exact branch's generic install/reboot/update
-cycle and other firmware have not yet been device-validated.
+unsupported takeover safe. The install, software reboot and update cycle with
+the flag set was run on the 70UQ7070ZUD (firmware 04.60.90) through "Set up
+anyway"; other firmware has not been validated.
 
 ## Reporting a problem
 
