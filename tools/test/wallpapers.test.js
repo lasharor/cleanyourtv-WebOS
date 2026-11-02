@@ -197,6 +197,286 @@ run(async () => {
   );
   r = await call(wp, '/api/wallpapers/remove-uploads', 'POST', {});
   ok(r.j.uploads === 0 && r.j.total === 0, 'all uploads can be removed');
+
+  // ---- Unsplash: a stand-in for api.unsplash.com (the clock is moved forward by hand: a new photo is asked for at most every 3 minutes) ----
+  const KEY = 'UnsplashKeyABCDEFGHIJKLMNOP1234';
+  let base = '',
+    hits = [],
+    tracked = [],
+    limit = false,
+    left = '49',
+    imgs = [],
+    portrait = false,
+    topic404 = false,
+    skew = 0,
+    GAP = 190000,
+    rn = 0,
+    evilHits = 0;
+  const realNow = Date.now;
+  Date.now = () => realNow() + skew;
+  const udir = path.join(process.env.CYTV_DIR, 'wallpapers', 'unsplash');
+  const evil = await serve((q, res) => {
+    evilHits++;
+    res.writeHead(404);
+    res.end();
+  });
+  const P = (n, extra) => {
+    const id = 'photo' + n + 'abc';
+    return Object.assign(
+      {
+        id,
+        width: 4000,
+        height: 3000,
+        urls: { raw: () => base + '/img/' + id + '?ixid=IX' + n + '&ixlib=rb-4.0', small: () => base + '/img/' + id + '?w=400' },
+        links: { download_location: 'https://api.unsplash.com/photos/' + id + '/download?ixid=IX' + n },
+        user: { name: 'Jane ' + n, username: 'jane_' + n },
+      },
+      extra || {}
+    );
+  };
+  const wire = x => JSON.parse(JSON.stringify(x, (k, v) => (typeof v === 'function' ? v() : v)));
+  const un = await serve((q, res) => {
+    const u = require('url').parse(q.url, true),
+      send = (c, o, h) => {
+        res.writeHead(c, Object.assign({ 'content-type': 'application/json', 'x-ratelimit-remaining': left }, h || {}));
+        res.end(JSON.stringify(o));
+      };
+    if (/^\/img\//.test(q.url)) {
+      // the image host: no key is sent to it
+      imgs.push({ url: q.url, auth: q.headers.authorization || '' });
+      res.writeHead(200, { 'content-type': 'image/jpeg' });
+      return res.end(JPEG);
+    }
+    hits.push(q.url);
+    if (q.headers.authorization !== 'Client-ID ' + KEY || q.headers['accept-version'] !== 'v1')
+      return send(401, { errors: ['OAuth error: The access token is invalid'] });
+    if (limit) return send(403, 'Rate Limit Exceeded', { 'x-ratelimit-remaining': '0' });
+    if (u.pathname === '/photos') return send(200, []);
+    if (u.pathname === '/photos/random') {
+      if (u.query.query === 'redirect') return send(302, {}, { location: evil.url + '/stolen' });
+      if (u.query.topics && topic404) return send(404, {});
+      return send(200, wire(P(++rn, portrait ? { width: 3000, height: 4000 } : {})));
+    }
+    const m = /^\/photos\/([A-Za-z0-9]+)\/download$/.exec(u.pathname);
+    if (m) {
+      tracked.push(m[1] + '?' + (u.search || ''));
+      return send(200, { url: 'x' });
+    }
+    send(404, {});
+  });
+  base = un.url;
+  process.env.CYTV_UNSPLASH_URL = base;
+  // save only (photo: false), and the way the phone page's button saves: that one also fetches a photo
+  const unsave = b => phone('POST', '/api/unsplash/save', Object.assign({ photo: false }, b), code);
+  const unsaveT = b => phone('POST', '/api/unsplash/save', b, code);
+  const pushed = async () => (await call(wp, '/api/wallpapers/push')).j;
+  const ust = async () => (await call(wp, '/api/wallpapers/status')).j.unsplash;
+  const use = async id => (await call(wp, '/api/wallpapers/unsplash-use', 'POST', { id })).j;
+  await call(wp, '/api/wallpapers/set', 'POST', { size: '4k' });
+  p = await phone('GET', '/');
+  ok(
+    /Configure Unsplash/.test(p.text) && /unsplash\.com\/developers/.test(p.text),
+    'the phone page has a Configure Unsplash part that says where to get a key'
+  );
+  p = await unsave({ key: 'short', query: 'x' });
+  ok(
+    p.code === 400 && /Access Key/.test(p.j.error) && !hits.length,
+    'a key that is not shaped like an Access Key is refused without a request: ' + p.j.error
+  );
+  p = await unsave({ key: 'W'.repeat(40), query: 'mountains' });
+  ok(p.code === 400 && /refused the Access Key/.test(p.j.error) && !(await ust()).configured, 'a wrong key is reported and not saved');
+  // ---- nothing is listed or stored; Home's "s/live" entry asks Unsplash for a new random photo each time ----
+  hits = [];
+  p = await unsave({ key: KEY, query: ' mountains  and lakes ' });
+  ok(p.j.ok === true && hits.join() === '/photos?per_page=1', 'the key is tested with one request, then saved');
+  await wp.sync();
+  let s = await ust();
+  ok(
+    hits.length === 1 &&
+      s.configured &&
+      s.on &&
+      !s.error &&
+      !fs.existsSync(udir) &&
+      (await call(wp, '/api/wallpapers/status')).j.bytes === 0,
+    'saving and syncing ask Unsplash for no photo and no list, and nothing is stored'
+  );
+  ok(
+    s.keyHint === '…1234' &&
+      JSON.stringify([(await call(wp, '/api/wallpapers/status')).j, (await phone('GET', '/api/state', undefined, code)).j]).indexOf(KEY) <
+        0 &&
+      JSON.stringify(config.get().wallpapers.unsplash).indexOf(KEY) > 0,
+    'the key is kept in the settings; the status and the phone page show its last four characters only'
+  );
+  r = await call(wp, '/api/wallpapers/list');
+  ok(r.j.photos.join() === 's/live' && !r.j.credits, 'Home gets one entry that stands for a new photo from Unsplash');
+  let n = hits.length;
+  r = await use('live');
+  ok(
+    r.ok === true &&
+      r.name === 'Jane 1' &&
+      /^http:\/\/127\.0\.0\.1:\d+\/img\/photo1abc\?ixid=IX1&ixlib=rb-4\.0&w=3840&fit=max&q=80&fm=jpg$/.test(r.url) &&
+      hits.length === n + 2 &&
+      tracked.join() === 'photo1abc??ixid=IX1',
+    'a new photo: one random photo asked, its download reported, urls.raw with w, fit, q and fm added (the ixid kept): ' + r.url
+  );
+  ok(
+    /^\/photos\/random\?/.test(hits[n]) &&
+      /query=mountains%20and%20lakes/.test(hits[n]) &&
+      /orientation=landscape/.test(hits[n]) &&
+      /content_filter=high/.test(hits[n]),
+    'the random photo is a landscape one for the search words: ' + hits[n]
+  );
+  r = await use('live');
+  ok(
+    r.ok === true && r.again === true && r.name === 'Jane 1' && hits.length === n + 2,
+    'within 3 minutes of the last photo no request is made: the photo shown before is shown again'
+  );
+  skew += GAP;
+  r = await use('live');
+  ok(r.ok === true && !r.again && r.name === 'Jane 2' && tracked.length === 2, 'after 3 minutes the next photo is a new one');
+  r = await use('live');
+  ok(r.again === true && r.name === 'Jane 1', 'and a repeat shows a photo shown before, not the one on screen');
+  p = await phone('POST', '/api/unsplash/credits', {}, code);
+  ok(
+    p.j.photos.length === 2 &&
+      p.j.photos[0].name === 'Jane 2' &&
+      p.j.photos[0].link === 'https://unsplash.com/@jane_2?utm_source=CleanYourTV&utm_medium=referral' &&
+      /\/img\/photo2abc\?w=400$/.test(p.j.photos[0].thumb),
+    'the phone page gets the photos shown so far, each with its photographer, a link back to Unsplash (utm parameters) and a thumbnail'
+  );
+  skew += GAP;
+  await call(wp, '/api/wallpapers/set', 'POST', { size: 'hd' });
+  r = await use('live');
+  await call(wp, '/api/wallpapers/set', 'POST', { size: '4k' });
+  ok(/&w=1920&/.test(r.url), 'at Full HD the address asks for 1920 pixels');
+  ok((await use('photo1abc')).ok === false && (await use('..%2Fx')).ok === false, 'only "live" is a photo Home may ask for');
+  // Test key and save fetches a photo now, whatever the 3 minutes say, lists it and hands it to Home
+  n = hits.length;
+  let ps = await pushed();
+  p = await unsaveT({ query: ' mountains  and lakes ' });
+  r = await pushed();
+  ok(
+    p.j.ok === true &&
+      /^Jane \d+$/.test(p.j.photo.name) &&
+      p.j.photo.link.indexOf('https://unsplash.com/@jane_') === 0 &&
+      p.j.photo.link.indexOf('utm_source=CleanYourTV&utm_medium=referral') > 0 &&
+      hits.length === n + 2 &&
+      r.seq === ps.seq + 1 &&
+      r.name === p.j.photo.name &&
+      /&w=3840&fit=max&q=80&fm=jpg$/.test(r.url),
+    'Test key and save fetches a new photo at once (2 requests) and Home can pick it up: ' + JSON.stringify(p.j)
+  );
+  p = await phone('POST', '/api/unsplash/credits', {}, code);
+  ok(p.j.photos[0].name === r.name, 'it is the first of the recent photos');
+  ps = r;
+  n = hits.length;
+  p = await unsaveT({ query: ' mountains  and lakes ' });
+  r = await pushed();
+  ok(p.j.photo && p.j.photo.name !== ps.name && r.seq === ps.seq + 1 && hits.length === n + 2, 'every click fetches another photo');
+  // there is no collection field: one that is sent anyway is not kept or used; then the Wallpapers topic
+  skew += GAP;
+  p = await unsave({ collection: 'abc123XYZ', query: 'mountains' });
+  n = hits.length;
+  r = await use('live');
+  ok(
+    r.ok &&
+      /query=mountains/.test(hits[n]) &&
+      !/collections=/.test(hits[n]) &&
+      !('collection' in config.get().wallpapers.unsplash) &&
+      !('collection' in (await ust())),
+    'there is no collection setting: only the search words count: ' + hits[n]
+  );
+  skew += GAP;
+  p = await unsave({ query: '' });
+  n = hits.length;
+  r = await use('live');
+  ok(r.ok && /topics=bo8jQKTaE0Y/.test(hits[n]), 'with no search words the Wallpapers topic is used: ' + hits[n]);
+  skew += GAP;
+  topic404 = true;
+  n = hits.length;
+  r = await use('live');
+  ok(
+    r.ok && hits.length === n + 3 && !/topics=/.test(hits[n + 1]),
+    'if Unsplash does not know the topic any random landscape photo is used'
+  );
+  topic404 = false;
+  skew += GAP;
+  portrait = true;
+  r = await use('live');
+  ok(
+    r.again === true && /no landscape photo/.test((await ust()).error),
+    'a photo that is taller than wide is not shown: one shown before is shown instead'
+  );
+  portrait = false;
+  // the key must not follow a redirect
+  skew += GAP;
+  p = await unsave({ query: 'redirect' });
+  r = await use('live');
+  ok(
+    evilHits === 0 && r.again === true && /Unsplash answered 302/.test((await ust()).error),
+    'a redirect is not followed (the key stays with api.unsplash.com)'
+  );
+  // the hourly limit: say so, leave Unsplash alone for an hour
+  skew += GAP;
+  p = await unsave({ query: 'limit me' });
+  limit = true;
+  r = await use('live');
+  s = await ust();
+  ok(
+    r.ok === true && r.again === true && /hourly limit/.test(s.error) && s.pausedUntil > Date.now() + 3500 * 1000,
+    'the limit is reached: a photo shown before is shown again, a clear message, a pause of an hour: ' + s.error
+  );
+  limit = false;
+  n = hits.length;
+  skew += GAP;
+  r = await use('live');
+  await wp.sync();
+  ok(
+    hits.length === n && r.again === true,
+    'during the pause no request is made, not even with Sync now, and the photos shown before go round'
+  );
+  n = hits.length;
+  p = await unsaveT({ query: 'limit me' });
+  ok(
+    p.j.ok === true && !p.j.photo && /hourly limit/.test(p.j.note) && hits.length === n,
+    'Test key and save during the pause saves, fetches nothing and says why'
+  );
+  // the allowance the replies report runs out
+  await call(wp, '/api/wallpapers/unsplash-disconnect', 'POST', {});
+  p = await unsave({ key: KEY, query: 'mountains' });
+  skew += GAP;
+  left = '2';
+  r = await use('live');
+  skew += GAP;
+  n = hits.length;
+  const r2 = await use('live');
+  left = '49';
+  ok(
+    r.ok === true && !r.again && r2.again === true && hits.length === n,
+    'when the replies say 2 requests or fewer are left no photo is asked for until the next hour: the photos shown before go round'
+  );
+  // switching it off and on
+  skew += 4000 * 1000; // an hour on
+  r = await call(wp, '/api/wallpapers/unsplash-set', 'POST', { on: false });
+  skew += GAP;
+  ok(r.j.unsplash.on === false && r.j.total === 0 && (await use('live')).ok === false, 'switched off, no photo is shown or asked for');
+  r = await call(wp, '/api/wallpapers/unsplash-set', 'POST', { on: true });
+  ok(r.j.unsplash.on === true && r.j.total === 1, 'switched on again, the entry is back');
+  // removing it
+  r = await call(wp, '/api/wallpapers/unsplash-disconnect', 'POST', {});
+  ok(
+    !r.j.unsplash.configured && r.j.total === 0 && !(config.get().wallpapers || {}).unsplash && (await use('photo1abc')).ok === false,
+    'removing Unsplash forgets the key and the list'
+  );
+  ok(
+    JSON.stringify(r.j).indexOf(KEY) < 0 &&
+      !fs.readFileSync(path.join(process.env.CYTV_DIR, 'wallpapers', 'index.json'), 'utf8').includes(KEY),
+    'the key is in neither the reply nor the photo index'
+  );
+  Date.now = realNow;
+  delete process.env.CYTV_UNSPLASH_URL;
   await call(wp, '/api/wallpapers/pair', 'POST', { stop: true });
   im.server.close();
+  un.server.close();
+  evil.server.close();
 });

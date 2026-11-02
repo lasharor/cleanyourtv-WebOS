@@ -1001,14 +1001,15 @@ function build() {
     return;
   }
   if (view === 'wallpapers') {
-    var w = wp || { uploads: 0, immich: {}, total: 0, limits: { uploads: 100 }, bytes: 0 },
+    var w = wp || { uploads: 0, immich: {}, unsplash: {}, total: 0, limits: { uploads: 100 }, bytes: 0 },
       im = w.immich || {},
+      us = w.unsplash || {},
       ago = function (t) {
         if (!t) return 'never';
         var m = Math.round((Date.now() - t) / 60000);
         return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago';
       };
-    rows.push({ label: 'Manage from your phone', sub: 'upload photos, configure Immich', fn: openWallPair });
+    rows.push({ label: 'Manage from your phone', sub: 'upload photos, configure Immich or Unsplash', fn: openWallPair });
     rows.push({ sep: true });
     rows.push({ label: 'Local uploads', sub: w.uploads + ' photos', fn: openWallPair });
     rows.push({
@@ -1021,6 +1022,15 @@ function build() {
       fn: openWallPair,
     });
     rows.push({
+      label: 'Unsplash',
+      sub: !us.configured
+        ? 'not set up · set up from your phone'
+        : (us.on ? '' : 'off · ') +
+          'live · a new photo every 3 min at most' +
+          (us.pausedUntil ? ' · paused for the hourly limit' : us.error ? ' · ' + us.error : ''),
+      fn: openWallPair,
+    });
+    rows.push({
       label: 'Total',
       sub: w.total + ' photos \u00B7 ' + Math.round(w.bytes / 1048576) + ' of 150 MB',
       fn: null,
@@ -1028,10 +1038,18 @@ function build() {
     rows.push({ sep: true });
     rows.push({
       label: 'Sync now',
-      sub: im.configured ? (im.state === 'syncing' ? 'syncing\u2026' : 'Immich: new and changed photos') : 'connect Immich first',
+      sub: im.configured ? (im.state === 'syncing' ? 'syncing…' : 'Immich: new and changed photos') : 'connect Immich first',
       dim: !im.configured || im.state === 'syncing',
       fn: function () {
-        if (im.configured && im.state !== 'syncing') wallCall('/api/wallpapers/sync', {}, 'Syncing with Immich\u2026');
+        if (im.configured && im.state !== 'syncing') wallCall('/api/wallpapers/sync', {}, 'Syncing…');
+      },
+    });
+    rows.push({
+      label: 'Use Unsplash photos',
+      sub: !us.configured ? 'set up from your phone' : us.on ? 'On' : 'Off',
+      dim: !us.configured,
+      fn: function () {
+        if (us.configured) wallCall('/api/wallpapers/unsplash-set', { on: !us.on });
       },
     });
     rows.push({
@@ -1058,21 +1076,34 @@ function build() {
         if (im.configured) push('confirm-wp-immich');
       },
     });
+    rows.push({
+      label: 'Remove Unsplash',
+      sub: us.configured ? '' : 'not set up',
+      dim: !us.configured,
+      fn: function () {
+        if (us.configured) push('confirm-wp-unsplash');
+      },
+    });
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
     return;
   }
-  if (view === 'confirm-wp-uploads' || view === 'confirm-wp-immich') {
-    var upl = view === 'confirm-wp-uploads';
+  if (view === 'confirm-wp-uploads' || view === 'confirm-wp-immich' || view === 'confirm-wp-unsplash') {
+    var upl = view === 'confirm-wp-uploads',
+      uns = view === 'confirm-wp-unsplash';
     rows.push({ label: 'Cancel', fn: pop });
     rows.push({
-      label: upl ? 'Yes, remove all uploads' : 'Yes, disconnect Immich',
-      sub: upl ? 'the uploaded photos are deleted from the TV' : 'the key is forgotten and its photos are deleted from the TV',
+      label: upl ? 'Yes, remove all uploads' : uns ? 'Yes, remove Unsplash' : 'Yes, disconnect Immich',
+      sub: upl
+        ? 'the uploaded photos are deleted from the TV'
+        : uns
+          ? 'the Access Key is forgotten'
+          : 'the key is forgotten and its photos are deleted from the TV',
       fn: function () {
         wallCall(
-          upl ? '/api/wallpapers/remove-uploads' : '/api/wallpapers/disconnect',
+          upl ? '/api/wallpapers/remove-uploads' : uns ? '/api/wallpapers/unsplash-disconnect' : '/api/wallpapers/disconnect',
           {},
-          upl ? 'Uploads removed' : 'Immich disconnected'
+          upl ? 'Uploads removed' : uns ? 'Unsplash removed' : 'Immich disconnected'
         );
       },
     });

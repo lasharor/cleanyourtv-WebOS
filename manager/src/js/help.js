@@ -25,14 +25,18 @@ var INFO = {
     'The language of CleanYourTV\u2019s screens: the launcher, this app and the Inputs list. Automatic follows the TV\u2019s menu language. The percentage says how much of a language is translated; the rest stays English. Translations are files in the repository that anyone can add to.',
   'Automatic': 'Follows the TV\u2019s menu language. English when CleanYourTV has no translation for it.',
   'Wallpapers':
-    'Your own photos behind Home: uploaded from a phone, or synced from Immich albums. Switch them on in the launcher: Customise > Wallpapers.',
+    'Your own photos behind Home: uploaded from a phone, or synced from Immich albums, or a new one from Unsplash now and then. Switch them on in the launcher: Customise > Wallpapers.',
   'App icons':
     'A picture of your own for an app, chosen on a phone: shows a QR code. The app keeps it when it updates. On Home, hold OK on an app for Change icon and Reset icon.',
   'Manage from your phone':
-    'Shows a QR code. On the phone page you upload photos (they are made the right size on the phone), delete uploads, connect Immich, choose albums and hide single photos.',
+    'Shows a QR code. On the phone page you upload photos (they are made the right size on the phone), delete uploads, connect Immich, choose albums, hide single photos and set up Unsplash.',
   'Local uploads': 'Photos uploaded from a phone, kept on the TV. At most 100.',
   'Immich':
     'Photos from the Immich albums you chose, downloaded to the TV every six hours (and with Sync now), so Home never waits for Immich. At most 300.',
+  'Unsplash':
+    'Landscape photos from Unsplash (a search, or its Wallpapers topic) with your own free Access Key. Home asks Unsplash for one new random photo, at most every 3 minutes; between those, and when the hourly limit is used up, photos shown before are shown again. No picture is saved on the TV. A new key may make 50 requests an hour.',
+  'Use Unsplash photos': 'Shows the Unsplash photos on Home, or stops showing them. Nothing is asked of Unsplash while this is off.',
+  'Remove Unsplash': 'Forgets the Access Key and the list of recent photos. Other photos stay.',
   'Total': 'Every photo Wallpapers can show, and the space they use on the TV (at most 150 MB).',
   'Sync now': 'Downloads new and changed photos from the chosen albums now and removes the ones that left them.',
   'Picture size':

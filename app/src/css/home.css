@@ -654,6 +654,21 @@ body {
 body.wpon {
   background-image: none;
 }
+/* the photographer of an Unsplash photo (their guidelines ask for it): small, in the bottom corner, faded in with the photo */
+.wpc {
+  position: absolute;
+  right: 28px;
+  bottom: 16px;
+  font-size: 15px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity calc(1.2s * var(--spd)) linear;
+}
+.wpc.on {
+  opacity: 0.7;
+}
 /* cards: small widgets in the theme's slots (app/src/js/cards.js); placed like the clock, from the slot's edges */
 #cards {
   position: absolute;
@@ -1011,7 +1026,8 @@ body.scenes-on {
 }
 /* the scenes take the place of the theme's wallpaper and of Wallpapers */
 .scenes-on .wp,
-.scenes-on .wpd {
+.scenes-on .wpd,
+.scenes-on .wpc {
   display: none;
 }
 .scene {

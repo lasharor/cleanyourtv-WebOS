@@ -38,6 +38,7 @@ function redact(t) {
     })
     .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, ip => (ip === '127.0.0.1' || ip === '0.0.0.0' ? ip : 'x.x.x.x'))
     .replace(/\b[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}\b/g, 'xx:xx:xx:xx:xx:xx')
+    .replace(/Client-ID [A-Za-z0-9_-]+/g, 'Client-ID …') // an Unsplash Access Key in a header
     .replace(/("(?:token|key|password|pass|secret|apikey)"\s*:\s*")[^"]*"/gi, '$1…"');
 }
 

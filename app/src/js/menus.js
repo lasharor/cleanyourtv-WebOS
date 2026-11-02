@@ -887,7 +887,7 @@ function customizeMenu() {
     },
   ]);
 }
-/* Wallpapers: switched on here and how often the photo changes; the photos are added in the manager (uploads from a phone, Immich) */
+/* Wallpapers: switched on here and how often the photo changes; the photos are added in the manager (uploads from a phone, Immich, Unsplash) */
 function wallMenu() {
   openBuilt(t('Wallpapers'), function () {
     var w = cfg.wall || { on: false },
@@ -909,7 +909,7 @@ function wallMenu() {
         sub: (w.on ? t('On') : t('Off')) + ' \u00B7 ' + (n ? t(n + ' photos') : t('no photos yet')),
         stay: true,
         fn: function () {
-          cfg.wall = { on: !w.on, secs: e };
+          cfg.wall = { on: !w.on, secs: e, credit: w.credit };
           saveCfg();
         },
       },
@@ -919,7 +919,16 @@ function wallMenu() {
         stay: true,
         fn: function () {
           var k = EV.indexOf(e);
-          cfg.wall = { on: !!w.on, secs: EV[(k < 0 ? 6 : k + 1) % EV.length] };
+          cfg.wall = { on: !!w.on, secs: EV[(k < 0 ? 6 : k + 1) % EV.length], credit: w.credit };
+          saveCfg();
+        },
+      },
+      {
+        label: t('Photo credit'),
+        sub: (w.credit === false ? t('Off') : t('On')) + ' · ' + t('the photographer of an Unsplash photo'),
+        stay: true,
+        fn: function () {
+          cfg.wall = { on: !!w.on, secs: e, credit: w.credit === false ? true : false };
           saveCfg();
         },
       },

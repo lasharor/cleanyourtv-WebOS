@@ -39,6 +39,15 @@ limits the sizes (theme 32 KB, wallpaper 1.5 MB, screenshot 600 KB), checks that
 no script or CSS in a theme. Anything merged into `main` becomes available to every TV, which is the same trust you place in the
 releases of this repository; there is no signature.
 
+## Unsplash wallpapers
+
+Only after you set an Unsplash Access Key on the Wallpapers phone page. The service sends the key in an `Authorization: Client-ID` header
+to `api.unsplash.com` over HTTPS (it never follows a redirect with it, and never sends it to the image host), together with your search
+words. The pictures come from Unsplash's image host: the
+launcher's browser loads each one when it shows it (so Unsplash sees the TV's address, as with any website); the TV saves none. The key is in `config.json` (readable by root only); the
+TV's pages show only its last four characters, the log never has it, and the Share log and `tools/diagnose.sh` mask it. The phone page is
+plain HTTP on your Wi-Fi like the others, so the key travels unencrypted while you type it. See [Wallpapers](wallpapers.md#unsplash).
+
 ## Weather card
 
 Only with a weather card on Home. The service asks `api.open-meteo.com` over HTTPS for the weather at the card's place, at most every

@@ -1,4 +1,4 @@
-/* ---------- Wallpapers: the service's photos (uploads and Immich, GET /api/wallpapers/list) behind Home instead of the theme's
+/* ---------- Wallpapers: the service's photos (uploads and Immich, GET /api/wallpapers/list, and a new photo from Unsplash now and then) behind Home instead of the theme's
    background. A random photo each time Home opens and every cfg.wall.secs seconds (0: only when Home opens), cross-faded between two
    layers (opacity only). Darkened like a theme's wallpaper. Off, or no photos: the theme as it is. ---------- */
 /* seconds between photos; settings saved before 1.6.10 hold minutes in "every" */
@@ -7,12 +7,17 @@ function wallSecs() {
   return typeof w.secs === 'number' ? w.secs : typeof w.every === 'number' ? w.every * 60 : 900;
 }
 var WALL = (function () {
-  var list = [],
+  var LIVE = 's/live' /* Unsplash: one entry in the list that stands for "a new photo from Unsplash" */,
+    list = [],
     stamp = '',
     cur = '',
+    curName = '',
     side = 0,
     timer = 0,
-    els = null;
+    pollT = 0,
+    pushSeq = -1,
+    els = null,
+    cr = null;
   function want() {
     return !!(cfg.wall && cfg.wall.on);
   }
@@ -28,14 +33,43 @@ var WALL = (function () {
     });
     return els;
   }
+  /* an Unsplash photo's photographer in a corner, "Photo by NAME on Unsplash"; Customise > Wallpapers > Photo credit switches it off */
+  function credit(name) {
+    if (!cr) {
+      cr = document.createElement('div');
+      cr.id = 'wpc';
+      cr.className = 'wpc';
+      document.body.insertBefore(cr, $('gA'));
+    }
+    if (name && want() && !(cfg.wall && cfg.wall.credit === false)) {
+      cr.textContent = t('Photo by %s on Unsplash').replace('%s', name);
+      cr.classList.add('on');
+    } else cr.classList.remove('on');
+  }
   function dim() {
     var th = cfg.theme || {},
       d = th.wallpaper && th.wallpaper.dim != null ? th.wallpaper.dim : 0.4;
     layers()[2].style.background = 'rgba(' + (th.nightRgb || '7, 8, 11') + ',' + d + ')';
   }
-  function show(id) {
-    var url = API + '/api/wallpapers/photo/' + id,
-      im = new Image();
+  /* the Unsplash entry ("s/live") is asked of the service: it asks Unsplash for a new random photo (or, when that may not be asked for
+     now, takes one shown before) and hands over its address on Unsplash and the photographer. Nothing to show (no photo yet, no
+     network): skip() makes next() pick another photo, and with only Unsplash the one on screen stays */
+  function show(id, skip) {
+    if (id.charAt(0) === 's')
+      return api('/api/wallpapers/unsplash-use', { id: id.slice(2) }).then(
+        function (r) {
+          if (r && r.ok && r.url) load(id, r.url, skip, r.name);
+          else if (skip) skip();
+        },
+        function () {}
+      );
+    load(id, API + '/api/wallpapers/photo/' + id);
+  }
+  function load(id, url, skip, name) {
+    var im = new Image();
+    im.onerror = function () {
+      if (skip && id !== LIVE) skip();
+    };
     im.onload = function () {
       if (!want()) return;
       var l = layers(),
@@ -48,28 +82,58 @@ var WALL = (function () {
       dim();
       document.body.classList.add('wpon');
       cur = id;
+      curName = name || '';
+      credit(curName);
     };
     im.src = url;
   }
-  function next() {
+  function next(tries) {
     if (!list.length) return;
     var pick = list[Math.floor(Math.random() * list.length)];
-    for (var n = 0; pick === cur && list.length > 1 && n < 8; n++) pick = list[Math.floor(Math.random() * list.length)];
-    show(pick);
+    for (var n = 0; pick === cur && pick !== LIVE && list.length > 1 && n < 8; n++) pick = list[Math.floor(Math.random() * list.length)];
+    show(pick, function () {
+      if ((tries || 0) < 5 && list.length > 1) next((tries || 0) + 1);
+    });
   }
   function arm() {
     clearInterval(timer);
+    clearInterval(pollT);
+    if (list.indexOf(LIVE) >= 0) {
+      poll();
+      pollT = setInterval(poll, 4000);
+    }
     var sec = wallSecs();
-    if (sec > 0 && list.length > 1) timer = setInterval(next, sec * 1000);
+    if (sec > 0 && (list.length > 1 || list[0] === LIVE))
+      timer = setInterval(function () {
+        next();
+      }, sec * 1000);
+  }
+  /* the phone page's Test key and save fetches a photo for Home to show at once: while Home is on screen with Unsplash live in the list it
+     asks every few seconds whether there is a new one (the first answer only notes the number, so an old test photo is not shown again) */
+  function poll() {
+    if (!want() || list.indexOf(LIVE) < 0) return;
+    api('/api/wallpapers/push').then(
+      function (r) {
+        if (!r) return;
+        var first = pushSeq < 0;
+        if (r.seq === pushSeq) return;
+        pushSeq = r.seq;
+        if (!first && r.url) load(LIVE, r.url, null, r.name);
+      },
+      function () {}
+    );
   }
   function off() {
     clearInterval(timer);
+    clearInterval(pollT);
     document.body.classList.remove('wpon');
     if (els) {
       els[0].classList.remove('on');
       els[1].classList.remove('on');
     }
+    if (cr) cr.classList.remove('on');
     cur = '';
+    curName = '';
   }
   /* after the settings were read: switched on or off, a new interval, or a different set of photos */
   function sync() {
@@ -77,6 +141,7 @@ var WALL = (function () {
     var st = (cfg.wallpapers && cfg.wallpapers.stamp) || '';
     if (st === stamp && list.length) {
       dim();
+      credit(curName);
       return arm();
     }
     stamp = st;
@@ -101,6 +166,7 @@ var WALL = (function () {
     },
     hidden: function () {
       clearInterval(timer);
+      clearInterval(pollT);
     },
   };
 })();

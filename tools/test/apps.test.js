@@ -27,13 +27,16 @@ run(async () => {
       };
     return { returnValue: true };
   };
-  const config = memoryConfig({ dock: ['a.one'], wallpapers: { immich: { url: 'http://immich', key: 'secret-immich-key' } } });
+  const config = memoryConfig({
+    dock: ['a.one'],
+    wallpapers: { immich: { url: 'http://immich', key: 'secret-immich-key' }, unsplash: { key: 'secret-unsplash-key' } },
+  });
   const wpStub = { stamp: () => '3:abcd' };
   const apps = req('apps').create({ config, luna, version: '1.6.0', feature: n => (n === 'wallpapers' ? wpStub : null) });
   let r = await call(apps, '/api/apps');
   ok(
-    r.out.indexOf('secret-immich-key') < 0 && r.j.config.wallpapers.stamp === '3:abcd',
-    'the launcher gets a stamp of the Wallpapers photos, never the Immich key'
+    r.out.indexOf('secret-immich-key') < 0 && r.out.indexOf('secret-unsplash-key') < 0 && r.j.config.wallpapers.stamp === '3:abcd',
+    'the launcher gets a stamp of the Wallpapers photos, never the Immich or Unsplash key'
   );
   ok(
     asked === 1 && r.j.apps.length === 1 && r.j.apps[0].title === 'One' && r.j.config.dock[0] === 'a.one',
@@ -100,6 +103,13 @@ run(async () => {
   ok(
     w10.on && w10.secs === 10 && wOld.secs === 300 && config.get().wall.secs === 900,
     "Wallpapers: the photo interval is saved in seconds (10 s up to an hour), an older launcher's minutes are converted, an unknown value becomes 15 min"
+  );
+  await call(apps, '/api/config', 'POST', { wall: { on: true, secs: 10, credit: false } });
+  const noCredit = config.get().wall;
+  await call(apps, '/api/config', 'POST', { wall: { on: true, secs: 10, credit: 'no' } });
+  ok(
+    noCredit.credit === false && config.get().wall.credit === undefined,
+    "Wallpapers: the Unsplash photographer's credit on Home is saved only when it is switched off"
   );
 
   config.update('test', c => {

@@ -150,7 +150,7 @@ function openLiveTv() {
     }
   );
 }
-/* Wallpapers: photos uploaded from a phone and synced from Immich (helper/wallpapers.js); the launcher's Customise switches them on */
+/* Wallpapers: photos uploaded from a phone and synced from Immich and Unsplash (helper/wallpapers.js); the launcher's Customise switches them on */
 function openWallpapers() {
   api('/api/wallpapers/status').then(
     function (r) {
@@ -195,7 +195,7 @@ function openWallPair() {
   $('qrbox').style.visibility = 'hidden';
   $('share').querySelector('h2').textContent = tr('Wallpapers');
   $('share').querySelector('ol').innerHTML = tr(
-    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Upload photos</b> or <b>Configure Immich</b>.</li>'
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Upload photos</b>, <b>Configure Immich</b> or <b>Configure Unsplash</b>.</li>'
   );
   $('sharemsg').textContent = tr('Preparing\u2026');
   api('/api/wallpapers/pair', {}).then(
@@ -209,7 +209,7 @@ function openWallPair() {
       $('qrbox').style.visibility = 'visible';
       $('shareurl').textContent = tr(r.url + '   code ' + r.code);
       $('sharemsg').textContent = tr(
-        'The page stays open while you use it, at most an hour. It is not encrypted: your photos and the Immich key travel over your Wi-Fi.'
+        'The page stays open while you use it, at most an hour. It is not encrypted: your photos and the Immich and Unsplash keys travel over your Wi-Fi.'
       );
     },
     function () {

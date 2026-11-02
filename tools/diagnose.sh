@@ -9,7 +9,7 @@ IP="$1"
 # hides what should not leave the house: addresses, MAC addresses, the secret parts of stream URLs, bearer tokens, long hex strings
 # (perl is on macOS and Linux; sed on macOS has no word boundaries)
 mask() {
-  perl -pe 's#(https?://[^/\s"]+)/[^\s"]*#$1/<path>#g; s#Bearer [A-Za-z0-9._~+/=-]+#Bearer <token>#g; s#("(?:token|key|password|secret|bearer)"\s*:\s*")[^"]*#$1<hidden>#g; s#\b(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}\b#<mac>#g; s#\b[0-9a-fA-F]{32,}\b#<hex>#g; s#\b(?!127\.|0\.0\.0\.0)\d{1,3}(?:\.\d{1,3}){3}\b#<ip>#g'
+  perl -pe 's#(https?://[^/\s"]+)/[^\s"]*#$1/<path>#g; s#Bearer [A-Za-z0-9._~+/=-]+#Bearer <token>#g; s#Client-ID [A-Za-z0-9_-]+#Client-ID <token>#g; s#("(?:token|key|password|secret|bearer)"\s*:\s*")[^"]*#$1<hidden>#g; s#\b(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}\b#<mac>#g; s#\b[0-9a-fA-F]{32,}\b#<hex>#g; s#\b(?!127\.|0\.0\.0\.0)\d{1,3}(?:\.\d{1,3}){3}\b#<ip>#g'
 }
 
 ssh -o BatchMode=yes -o ConnectTimeout=8 "root@$IP" 'sh -s' <<'REMOTE' | mask
