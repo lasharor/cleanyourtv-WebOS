@@ -736,5 +736,16 @@
  "Custom static": "Personalizzato (fisso)",
  "Arrange apps...": "Disponi le app...",
  "Use arrows to move, press OK when done": "Usa le frecce per spostare, premi OK quando hai finito",
- "Move": "Sposta"
+ "Move": "Sposta",
+ "Spotify now playing": "Spotify in riproduzione",
+ "Connect from your phone": "Collega dal telefono",
+ "Progress bar": "Barra di avanzamento",
+ "Hide": "Nascondi",
+ "Connected to Spotify.": "Connesso a Spotify.",
+ "Disconnect Spotify": "Scollega Spotify",
+ "Prepare sign-in": "Prepara l'accesso",
+ "Open Spotify sign-in": "Apri l'accesso a Spotify",
+ "Pasted address": "Indirizzo incollato",
+ "Connect": "Collega",
+ "Sign in to Spotify again.": "Accedi di nuovo a Spotify."
 }

@@ -750,5 +750,16 @@
  "System": "System",
  "Look": "Aussehen",
  "Top": "Oben",
- "Top & cards": "Oben & Karten"
+ "Top & cards": "Oben & Karten",
+ "Spotify now playing": "Spotify läuft gerade",
+ "Connect from your phone": "Vom Handy aus verbinden",
+ "Progress bar": "Fortschrittsbalken",
+ "Hide": "Ausblenden",
+ "Connected to Spotify.": "Mit Spotify verbunden.",
+ "Disconnect Spotify": "Spotify trennen",
+ "Prepare sign-in": "Anmeldung vorbereiten",
+ "Open Spotify sign-in": "Spotify-Anmeldung öffnen",
+ "Pasted address": "Eingefügte Adresse",
+ "Connect": "Verbinden",
+ "Sign in to Spotify again.": "Bei Spotify erneut anmelden."
 }

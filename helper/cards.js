@@ -152,6 +152,21 @@ const TYPES = [
     ],
   },
   {
+    type: 'nowplaying',
+    name: 'Spotify now playing',
+    fields: [
+      {
+        key: 'bar',
+        kind: 'choice',
+        label: 'Progress bar',
+        choices: [
+          ['', 'Show'],
+          ['off', 'Hide'],
+        ],
+      },
+    ],
+  },
+  {
     type: 'template',
     name: 'Text',
     about: 'Your own text, with the greeting, time, date and weather filled in as they change.',
@@ -179,7 +194,9 @@ function create(ctx) {
   const config = ctx.config,
     weather = require('./weather').create({ path: require('./paths').WEATHER }),
     ha = require('./hacards').create({ config }),
-    packs = require('./cardcatalog').create(ctx);
+    packs = require('./cardcatalog').create(ctx),
+    np = require('./nowplaying').create({ config }),
+    npPage = require('./nowplayingpage').create({ config, np });
   const slots = () => {
     const th = ctx.feature('theme'),
       r = th && th.resolved();
@@ -314,6 +331,14 @@ function create(ctx) {
       res.writeHead(200, { 'content-type': img.type, 'cache-control': 'no-store' });
       return res.end(img.body);
     }
+    // the cover of what plays now (GET, so the launcher can use it as an image)
+    const cover = /^\/api\/cards\/nowplaying\/art\/([\w-]{1,32})$/.exec(u);
+    if (cover) {
+      const img = await np.art(cover[1]);
+      if (!img) return web.notFound(res);
+      res.writeHead(200, { 'content-type': img.type, 'cache-control': 'private, max-age=3600' });
+      return res.end(img.body);
+    }
     if (req.method !== 'POST') return web.notFound(res);
     const b = await body(req);
     if (u === '/api/cards/pair') return web.json(res, b.stop ? (stopPair(), {}) : await startPair());
@@ -328,12 +353,31 @@ function create(ctx) {
     // the Home Assistant weather card: {id, temp, kind} -> the condition now and the forecast (kept 15 minutes)
     if (u === '/api/cards/ha/weather')
       return web.json(res, await ha.weather(String(b.id || ''), String(b.temp || ''), b.kind === undefined ? 'daily' : String(b.kind)));
+    // the Now playing card: what plays on the user's Spotify account (kept 4 to 10 s), or {playing: false}
+    if (u === '/api/cards/nowplaying') return web.json(res, await np.now(b.fresh === true));
+    if (u === '/api/cards/nowplaying/control') return web.json(res, await np.control(b.action));
+    // the cover: the Spotify app of the TV, on the song that plays and at the place it was
+    if (u === '/api/cards/nowplaying/open')
+      return web.json(
+        res,
+        await np.open(p => ctx.luna('luna://com.webos.applicationManager/launch', { id: 'spotify-beehive', params: p }))
+      );
+    if (u === '/api/cards/nowplaying/status') return web.json(res, np.status());
+    if (u === '/api/cards/nowplaying/pair') return web.json(res, b.stop ? (npPage.stop(), {}) : await npPage.start());
+    if (u === '/api/cards/nowplaying/disconnect') return web.json(res, np.disconnect());
     // the launcher's Customise > Home Assistant: {domains} -> the entities to choose from
     if (u === '/api/cards/ha/entities') return web.json(res, Object.assign({ ha: ha.ready() }, await ha.pick(b.domains)));
     web.notFound(res);
   }
   // the files of a page card are under /card/<id>/ (cardcatalog.js)
-  return { name: 'cards', prefix: '/api/cards/', match: packs.match, handle, stop: stopPair, packs: () => packs.installed() };
+  return {
+    name: 'cards',
+    prefix: '/api/cards/',
+    match: packs.match,
+    handle,
+    stop: () => (stopPair(), npPage.stop()),
+    packs: () => packs.installed(),
+  };
 }
 
 // the phone page: a form per slot (the card type, then its options), and all cards as JSON. Plain script for iOS Safari and Android

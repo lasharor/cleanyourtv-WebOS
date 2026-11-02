@@ -56,6 +56,7 @@ function wantView() {
   if (p && p.open === 'wallpapers') openWallpapers();
   if (p && p.open === 'icons') openIconPair(String(p.app || ''));
   if (p && p.open === 'addons') wantTab = 2;
+  if (p && p.open === 'nowplaying') openSpotify();
   /* the launcher's Customise > Home Assistant > Connection: the Home Assistant screen with its phone page */
   if (p && p.open === 'ha')
     api('/api/voice/status').then(

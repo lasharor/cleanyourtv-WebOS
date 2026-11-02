@@ -16,6 +16,7 @@ local network on request, and an optional notification endpoint is off by defaul
 | 8793 | Android box page | Ten minutes while its QR screen is open in the manager app: a 6-digit code shown on the TV; see [Android box](android-box.md) |
 | 8792 | Cards page | The same, for the options of the cards on Home; see [Cards](launcher.md#cards) |
 | 8794 | App icons page | The same, for choosing a picture for an app; see [Your own icon](launcher.md#your-own-icon) |
+| 8795 | Spotify now playing page | The same, to connect Spotify; see [Spotify now playing](launcher.md#spotify-now-playing) |
 
 What the setup changes on the TV is listed in [What it changes on the TV](tv-changes.md).
 
@@ -50,6 +51,19 @@ nothing else. Searching a place on the phone page sends the name you type to `ge
 They use the Home Assistant address and token set under **More** > **Home Assistant**, the same ones Voice uses; nothing else is stored. The service reads the states with one
 request every 20 seconds at most, switches only lights, switches, fans, input booleans and automations (and runs scenes and scripts)
 when you press OK on a card, and passes a camera's picture to the launcher. Locks, alarms and covers are never switched.
+
+## Spotify now playing
+
+Optional, and only with a Spotify now playing card. You bring your own Spotify app: the service uses its **Client ID** (not a secret) and
+the sign-in code flow with PKCE, so no client secret is ever needed or stored. The sign-in happens on its own phone page (port
+8795, opened from the manager app, ten minutes to an hour, plain HTTP like the other phone pages: the address you paste back and the Client ID are visible on
+your Wi-Fi while you type them). The service then asks `accounts.spotify.com` for the tokens and `api.spotify.com` for what plays,
+over HTTPS, and fetches the cover from `*.scdn.co`. The scopes are `user-read-currently-playing` and `user-read-playback-state`
+(what plays) and `user-modify-playback-state` (the card's buttons: play, pause, next, previous; nothing else is changed, no
+playlist, no library, no volume). The service sends one of those four commands only when you press a button on the card. The access token (valid an hour) and the refresh token (about six months) are
+kept in `config.json` under `spotify`, readable by root only; they are never written to the log, never returned by the service
+(the launcher's settings leave `spotify` out) and `tools/diagnose.sh` hides them and the Client ID. **Disconnect Spotify** deletes them;
+you can also remove the app's access at spotify.com/account/apps.
 
 ## Voice
 

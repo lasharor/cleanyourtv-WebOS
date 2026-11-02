@@ -434,6 +434,7 @@ function create(ctx) {
     delete c.theme;
     delete c.wallpapers; // holds the Immich key; the launcher gets only a stamp that changes with the set of photos
     delete c.androidBox; // the box's address stays with the service
+    delete c.spotify; // the Client ID and the Spotify tokens
     const theme = ctx.feature('theme'),
       wp = ctx.feature('wallpapers');
     if (wp) c.wallpapers = { stamp: wp.stamp() };

@@ -706,5 +706,16 @@
  "System": "Système",
  "Look": "Apparence",
  "Top": "Haut",
- "Top & cards": "Haut & cartes"
+ "Top & cards": "Haut & cartes",
+ "Spotify now playing": "Spotify en cours de lecture",
+ "Connect from your phone": "Connecter depuis le téléphone",
+ "Progress bar": "Barre de progression",
+ "Hide": "Masquer",
+ "Connected to Spotify.": "Connecté à Spotify.",
+ "Disconnect Spotify": "Déconnecter Spotify",
+ "Prepare sign-in": "Préparer la connexion",
+ "Open Spotify sign-in": "Ouvrir la connexion Spotify",
+ "Pasted address": "Adresse collée",
+ "Connect": "Connecter",
+ "Sign in to Spotify again.": "Reconnectez-vous à Spotify."
 }

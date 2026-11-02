@@ -97,6 +97,7 @@ same place.
 | Home Assistant entities | A list of entities, one per line on the phone page, with an optional title. |
 | Home Assistant camera | A camera's picture, renewed every 10, 30 or 60 seconds while Home is shown. |
 | Home Assistant weather | A `weather.*` entity: the sky now with an icon, the temperature (from an outside temperature sensor if you choose one, otherwise the entity's own), humidity and wind, and the forecast for the next days or hours from `weather.get_forecasts` (Home Assistant 2023.9 and newer; older versions are read from the `forecast` attribute). Asked every five minutes, the forecast at most every 15 minutes. It also feeds `{{weather.temp}}`, `{{weather.text}}` and the greeting's weather line. |
+| Spotify now playing | What plays on your Spotify account, on any device, with the cover, the title, the artist, a thin progress bar and three buttons: previous, play or pause, next. It is there while something plays and while a track is paused (to resume it); an advertisement, nothing playing, offline or not set up all leave it away. See [Spotify now playing](#spotify-now-playing). |
 | Text | Your own text. `{{greeting}}`, `{{time}}`, `{{date}}` and `{{weekday}}` are filled in and kept up to date, and `{{weather.temp}}` and `{{weather.text}}` with a weather card on Home; `**bold**`, `*italic*` and a line starting with `#` for a heading. In three sizes. |
 
 **Customise** > **Home Assistant** (the first row, in themes with places for cards) chooses the cards with
@@ -114,6 +115,54 @@ offers your entities while you type.
 
 A Home Assistant card stays hidden while Home Assistant is not set up or no entity is chosen, and is then no place for the focus
 either.
+
+### Spotify now playing
+
+The TV does not share what the LG Spotify app plays: webOS has no equivalent of Android's media session that other apps can read, so
+the card asks Spotify's Web API for what plays on your account (it also shows music playing on your phone or computer). That needs
+a Spotify app of your own, which is free, but Spotify's rules for it apply:
+
+- The Spotify account that owns the app needs **Premium**, or the app stops working (Spotify's rule since February 2026).
+- A Spotify app in development mode serves up to **five users**, added by email under **Users Management** in its settings. That
+  is enough for a household. Nobody else can use your app.
+- Nothing is sent to anyone but Spotify. The TV asks for the current track every 6 seconds while it plays and every 15 seconds
+  while nothing does, only while Home is shown; the service keeps each answer for a few seconds and waits when Spotify says
+  "too many requests".
+
+To set it up, open **Customise** > **Spotify** on Home, below Home Assistant. It works like Home Assistant: **Connection** opens the
+Spotify page of the manager app, and each place of the theme below it shows Spotify there (OK) or empties it again. The manager app has
+the same page under **Spotify now playing**. In the connection page choose **Connect from your phone** and scan the code:
+
+1. On developer.spotify.com create an app. Add `http://127.0.0.1:8888/callback` as its **Redirect URI** (Spotify accepts only https
+   addresses or a loopback address written as an IP) and your own email under **Users Management**. Copy the **Client ID**. You do
+   not need the client secret and should never type it anywhere.
+2. On the phone page paste the Client ID and tap **Prepare sign-in**, then **Open Spotify sign-in** and approve.
+3. Spotify sends the phone's browser to the redirect address, which cannot open on a phone: that is expected. Copy the whole address
+   from the browser's address bar, paste it into the page and tap **Connect**. The code in it works only with the TV that made the
+   sign-in link, and only once.
+4. Back in **Customise** > **Spotify**, choose the place for the card (or choose it for a place in **Cards**, or **Customise** >
+   **Home Assistant**, where the place's menu also has the one option of the card, the progress bar).
+
+**The buttons.** In a place at least 200 px high the card shows previous, play or pause, and next, and the time (`1:05 / 3:54`)
+beside them. They join the top row for the remote like the buttons of the top row (Up from the apps reaches Inputs, Live TV, Settings
+and Customise; Down from there goes to play or pause, Left and Right move between the buttons, OK presses, Up goes back to the top
+row). A smaller place shows the cover and the text only. The buttons send Spotify's player commands (`play`, `pause`, `next`,
+`previous`) to whichever device plays; Spotify allows them only to **Premium** users, and answers "no active device" when nothing is
+playing anywhere. The card changes at once and asks Spotify again after each press until the answer agrees. If you connected before
+the buttons existed, the sign-in lacks the permission to control playback: the settings page says so, and **Sign in again from your
+phone** asks for it.
+
+**The cover and long names.** The cover is a target for the remote and the pointer too (the first one in that row, left of the
+buttons): OK or a click opens the Spotify app of the TV on the song that plays. The app can show the song only when it is started with it,
+and then plays it from the start; the service therefore sets the song back to where it was a moment after the app has started it
+(a short jump back to the beginning can be heard; the music stays on the device that plays it, and a paused song is not touched: the
+app then opens on its Home). A title or an artist wider than the card runs sideways to its end and back, resting at both ends,
+instead of being cut off; a short one stays still.
+
+The sign-in is kept in `config.json` (readable by root only) and is never shown or returned; **Disconnect Spotify** deletes it. Spotify
+lets a sign-in last about six months; after that the settings page says to sign in again (**Sign in again from your phone**). The cover is shown as Spotify sends it and
+is kept in memory for an hour at most. The card names Spotify; it does not carry Spotify's logo or a link back, which a TV cannot
+follow.
 
 Cards dim after three minutes without a key press and shift by a few pixels every few minutes, so nothing stays in one place on an
 OLED panel for hours. How a theme marks its places is in [Themes](themes.md#slots-for-cards).

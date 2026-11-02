@@ -52,7 +52,7 @@ document.addEventListener('mousemove', function (ev) {
   if (Math.abs(ev.clientX - lastMX) + Math.abs(ev.clientY - lastMY) < 24) return;
   lastMX = ev.clientX;
   lastMY = ev.clientY;
-  var el = ev.target.closest ? ev.target.closest('.tile,.pill') : null,
+  var el = ev.target.closest ? ev.target.closest('.tile,.pill,.np-btn,.np-art') : null,
     p = el && posOf(el);
   if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
 });
@@ -133,7 +133,13 @@ document.addEventListener('keydown', function (e) {
     }
     lastMove = tn;
   }
-  if (k === 37 && c > 0) setFocus(r, c - 1);
+  /* the buttons of the Spotify card sit under the buttons of the top row: Down from one of those goes to them (Play or Pause), Up from them
+     goes back, and Up from the dock goes to the buttons of the top row */
+  var cs = ctlStart();
+  if (cs >= 0 && k === 40 && r === 0 && !rows[0][c]._b) setFocus(0, ctlAt('toggle') >= 0 ? ctlAt('toggle') : cs);
+  else if (cs >= 0 && k === 38 && r === 0 && rows[0][c]._b) setFocus(0, cs - 1);
+  else if (cs >= 0 && k === 38 && r === 1 && rows[1] !== rows[0]) setFocus(0, mapCol(len, cs, c));
+  else if (k === 37 && c > 0) setFocus(r, c - 1);
   else if (k === 39 && c < len - 1) setFocus(r, c + 1);
   else if (k === 38 && r > 0) setFocus(r - 1, mapCol(len, rows[r - 1].length, c));
   else if (k === 40 && r < rows.length - 1) setFocus(r + 1, mapCol(len, rows[r + 1].length, c));
@@ -243,6 +249,7 @@ document.addEventListener('visibilitychange', function () {
     liveBlip = false;
     load();
     refreshSoon();
+    if (spReady !== null) spotifyStatus(); /* Customise > Spotify, after the manager app's sign-in */
     WALL.shown();
     SCENES.shown();
   }

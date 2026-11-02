@@ -16,6 +16,11 @@ var HAM_KINDS = [
   ['ha-entities', 'Home Assistant entities', 'Several Home Assistant entities in a list under a title, each with its state.'],
   ['ha-camera', 'Home Assistant camera', 'A Home Assistant camera: a new picture every 10, 30 or 60 seconds.'],
   [
+    'nowplaying',
+    'Spotify now playing',
+    'What plays on your Spotify account, on any device, with the cover, the title, the artist and three buttons: previous, play or pause, next.',
+  ],
+  [
     'greeting',
     'Greeting',
     'Good morning, good afternoon or good evening by the time of day, with a name and a second line: the date or the weather.',
@@ -74,6 +79,7 @@ function hamCopy(sl) {
 }
 /* what a card shows, in a few words, for the row of its place */
 function hamSummary(c) {
+  if (c.type === 'nowplaying') return hamKind(c.type);
   if (c.type === 'ha-weather' || c.type === 'ha-entity' || c.type === 'ha-camera')
     return hamKind(c.type) + (c.entity ? ' · ' + hamName(c.entity) : '');
   if (c.type === 'ha-entities') {
@@ -178,6 +184,54 @@ function haMenu() {
     return items;
   });
 }
+/* Customise > Spotify: like Home Assistant, the places of the theme (OK puts the Spotify now playing card there, or empties the place
+   again) and the connection, which is set up from a phone through the manager app's Spotify screen */
+var spReady = null; /* Spotify connected? null until asked */
+function spotifyStatus() {
+  api('/api/cards/nowplaying/status', {}).then(
+    function (s) {
+      spReady = !!s.connected;
+      var m = stack[stack.length - 1];
+      if (m && m.title === 'Spotify') refreshMenu();
+    },
+    function () {}
+  );
+}
+function spotifyMenu() {
+  spotifyStatus();
+  openBuilt('Spotify', function () {
+    var items = [
+      {
+        label: t('Connection'),
+        sub: spReady === null ? '…' : spReady ? t('Connected') : t('Not connected'),
+        fn: function () {
+          launch('com.cleanyourtv.manager', { open: 'nowplaying' });
+        },
+      },
+      { sep: true },
+    ];
+    (TH.slots || []).forEach(function (sl) {
+      var here = hamCard(sl).type === 'nowplaying';
+      items.push({
+        label: hamPlace(sl),
+        sub: here ? '✓ ' + hamKind('nowplaying') : hamSummary(hamCard(sl)),
+        stay: true,
+        fn: function () {
+          hamSave(sl, { type: here ? 'none' : 'nowplaying' });
+        },
+      });
+    });
+    if (!(TH.slots || []).length)
+      items.push({ note: t('This theme has no places for cards. Choose a theme with cards (Lock Screen) in Customise > Theme.') });
+    items.push(
+      { sep: true },
+      { note: t('OK on a place shows Spotify now playing there, and empties it again. It appears only while something plays.') }
+    );
+    if (spReady === false)
+      items.push({ note: t('Choose Connection to link Spotify: a code on the TV, then your Client ID and sign-in on your phone.') });
+    return items;
+  });
+}
 /* one place: the kind of card, then what it shows */
 function hamPlaceMenu(sl) {
   openBuilt(hamPlace(sl), function () {
@@ -243,6 +297,30 @@ function hamPlaceMenu(sl) {
         }
       );
     }
+    /* Spotify is connected from a phone (the manager app's Spotify screen, also Customise > Spotify); the card appears only while
+       something plays */
+    if (c.type === 'nowplaying')
+      items.push(
+        {
+          label: t('Spotify'),
+          sub: t('Connect from your phone'),
+          stay: true,
+          fn: function () {
+            launch('com.cleanyourtv.manager', { open: 'nowplaying' });
+          },
+        },
+        {
+          label: t('Progress bar'),
+          sub: c.bar === 'off' ? t('Hide') : t('Show'),
+          stay: true,
+          fn: function () {
+            var o = hamCopy(sl);
+            if (o.bar === 'off') delete o.bar;
+            else o.bar = 'off';
+            hamSave(sl, o);
+          },
+        }
+      );
     if (c.type === 'ha-entity')
       items.push({
         label: t('Entity'),

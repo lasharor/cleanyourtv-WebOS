@@ -705,5 +705,16 @@
  "Dial": "Круговой индикатор",
  "Circular dial on the right": "Круговой индикатор справа",
  "System default (LG webOS)": "Системный по умолчанию (LG webOS)",
- "Stock TV volume bar": "Стандартная панель громкости телевизора"
+ "Stock TV volume bar": "Стандартная панель громкости телевизора",
+ "Spotify now playing": "Spotify сейчас играет",
+ "Connect from your phone": "Подключить с телефона",
+ "Progress bar": "Полоса прогресса",
+ "Hide": "Скрыть",
+ "Connected to Spotify.": "Подключено к Spotify.",
+ "Disconnect Spotify": "Отключить Spotify",
+ "Prepare sign-in": "Подготовить вход",
+ "Open Spotify sign-in": "Открыть вход в Spotify",
+ "Pasted address": "Вставленный адрес",
+ "Connect": "Подключить",
+ "Sign in to Spotify again.": "Войдите в Spotify снова."
 }

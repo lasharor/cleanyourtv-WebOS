@@ -793,3 +793,87 @@ function voiceRefresh() {
     }
   );
 }
+/* Now playing: Spotify, connected from a phone (helper/nowplayingpage.js). The card on Home is chosen under Cards. */
+var spt = null;
+function openSpotify() {
+  api('/api/cards/nowplaying/status', {}).then(
+    function (r) {
+      spt = r;
+      if (view !== 'spotify') push('spotify');
+      else {
+        build();
+        draw();
+      }
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function spotRefresh() {
+  if (view === 'spotify') openSpotify();
+}
+function spotDisconnect() {
+  api('/api/cards/nowplaying/disconnect', {}).then(
+    function (r) {
+      spt = r;
+      banner('Spotify disconnected', 'ok');
+      if (view !== 'spotify') pop();
+      else {
+        build();
+        draw();
+      }
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+/* while the QR screen is open: when the phone finishes the sign-in, close it and show that Spotify is connected */
+function spotWatch(base) {
+  setTimeout(function () {
+    if (view !== 'share' || shareMode !== 'spotify') return;
+    api('/api/cards/nowplaying/status', {}).then(
+      function (r) {
+        if (view !== 'share' || shareMode !== 'spotify') return;
+        if (r.connected && r.signedIn > base) {
+          closeShare();
+          banner('Spotify connected', 'ok');
+        } else spotWatch(base);
+      },
+      function () {
+        spotWatch(base);
+      }
+    );
+  }, 2000);
+}
+function openSpotifyPair() {
+  shareMode = 'spotify';
+  push('share');
+  $('share').style.display = 'block';
+  $('shareurl').textContent = '';
+  $('qrbox').style.visibility = 'hidden';
+  $('share').querySelector('h2').textContent = tr('Spotify now playing');
+  $('share').querySelector('ol').innerHTML = tr(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter your Spotify app\u2019s <b>Client ID</b>, sign in, and paste back the address you land on.</li>'
+  );
+  $('sharemsg').textContent = tr('Preparing\u2026');
+  var base = (spt && spt.signedIn) || 0;
+  api('/api/cards/nowplaying/pair', {}).then(
+    function (r) {
+      if (view !== 'share' || shareMode !== 'spotify') return;
+      if (r.error) {
+        $('sharemsg').textContent = tr(r.error);
+        return;
+      }
+      drawQr(r.qr);
+      $('qrbox').style.visibility = 'visible';
+      $('shareurl').textContent = tr(r.url + '   code ' + r.code);
+      $('sharemsg').textContent = tr('The page stays open for ten minutes. It is not encrypted: what you type travels over your Wi-Fi.');
+      spotWatch(base);
+    },
+    function () {
+      $('sharemsg').textContent = tr('The service did not answer.');
+    }
+  );
+}

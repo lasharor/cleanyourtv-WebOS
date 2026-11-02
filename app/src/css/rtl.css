@@ -109,3 +109,23 @@
   margin-right: 0;
   margin-left: 20px;
 }
+[dir="rtl"] .card-nowplaying .np-bar i {
+  transform-origin: 100% 50%;
+}
+[dir="rtl"] .card-nowplaying.np-sm {
+  padding: 0 0 0 20px;
+}
+[dir="rtl"] .card-nowplaying.np-sm .np-art {
+  border-radius: 0 14px 14px 0;
+}
+[dir="rtl"] .card-nowplaying .np-btn {
+  margin-right: 0;
+  margin-left: 14px;
+}
+[dir="rtl"] .card-nowplaying .np-time {
+  margin-left: 0;
+  margin-right: auto;
+}
+[dir="rtl"] .card-nowplaying .np-t {
+  text-align: right;
+}

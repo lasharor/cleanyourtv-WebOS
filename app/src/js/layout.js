@@ -1,5 +1,35 @@
 /* ---------- layout ---------- */
+var tbRow = null; /* the buttons of the top row, without the cards' */
+var building = false;
+/* the cards' buttons changed (the Spotify card came or went): the top row again, with the focus kept where it is */
+function refreshTop() {
+  if (building || !tbRow || !rows.length) return;
+  var old = rows[0],
+    same = rows[1] === old,
+    cur = r === 0 || (r === 1 && same) ? rows[r][c] : null,
+    top = tbRow.concat(cardTargets());
+  rows[0] = top;
+  if (same) rows[1] = top;
+  if (cur) {
+    cur.classList.remove('f');
+    var i = top.indexOf(cur);
+    setFocus(r, i >= 0 ? i : Math.min(c, top.length - 1));
+  }
+}
+/* where the buttons of the Spotify card start in the top row (the cards' targets follow the buttons), or -1 */
+function ctlStart() {
+  var t = rows[0] || [];
+  for (var i = 0; i < t.length; i++) if (t[i]._b) return i;
+  return -1;
+}
+/* the place in the top row of the card button with this name (_b), or -1 */
+function ctlAt(b) {
+  var t = rows[0] || [];
+  for (var i = 0; i < t.length; i++) if (t[i]._b === b) return i;
+  return -1;
+}
 function rebuild(animate) {
+  building = true;
   var rects = {};
   if (animate && moving) {
     for (var k in tiles) {
@@ -57,9 +87,11 @@ function rebuild(animate) {
     fit(t, false);
     return t;
   });
+  tbRow = tb;
   var top = tb.concat(cardTargets());
   placeShelf(d.length);
   rows = [top, d.length ? d : top];
+  building = false;
   for (var i = 0; i < g.length; i += TH.cols) rows.push(g.slice(i, i + TH.cols));
   var nr = Math.min(r, rows.length - 1),
     nc = c;

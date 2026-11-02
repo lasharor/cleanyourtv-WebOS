@@ -680,5 +680,16 @@
  "Dial": "Kadran",
  "Circular dial on the right": "Sağda dairesel kadran",
  "System default (LG webOS)": "Sistem varsayılanı (LG webOS)",
- "Stock TV volume bar": "Orijinal TV ses çubuğu"
+ "Stock TV volume bar": "Orijinal TV ses çubuğu",
+ "Spotify now playing": "Spotify şimdi çalıyor",
+ "Connect from your phone": "Telefondan bağlan",
+ "Progress bar": "İlerleme çubuğu",
+ "Hide": "Gizle",
+ "Connected to Spotify.": "Spotify'a bağlandı.",
+ "Disconnect Spotify": "Spotify bağlantısını kes",
+ "Prepare sign-in": "Girişi hazırla",
+ "Open Spotify sign-in": "Spotify girişini aç",
+ "Pasted address": "Yapıştırılan adres",
+ "Connect": "Bağlan",
+ "Sign in to Spotify again.": "Spotify'da yeniden oturum açın."
 }

@@ -1062,6 +1062,41 @@ function build() {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
+  if (view === 'spotify') {
+    var sp = spt || {};
+    rows.push({
+      label: 'Spotify',
+      sub: sp.connected
+        ? (sp.controls ? 'connected' : 'connected · sign in again to allow the controls') + (sp.error ? ' · ' + sp.error : '')
+        : sp.error
+          ? sp.error
+          : 'not connected \u00B7 set up from your phone',
+      fn: sp.connected ? null : openSpotifyPair,
+    });
+    rows.push({
+      label: sp.connected ? 'Sign in again from your phone' : 'Connect from your phone',
+      sub: 'Client ID of your own Spotify app',
+      fn: openSpotifyPair,
+    });
+    rows.push({ label: 'Show it on Home', sub: 'Cards > choose Spotify now playing for a place', fn: openCards });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Disconnect Spotify',
+      sub: sp.connected ? 'the sign-in is forgotten' : 'not connected',
+      dim: !sp.connected,
+      fn: function () {
+        if (sp.connected) push('confirm-spotify');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'confirm-spotify') {
+    rows.push({ label: 'Cancel', fn: pop });
+    rows.push({ label: 'Yes, disconnect Spotify', sub: 'the tokens are deleted from the TV', fn: spotDisconnect });
+    return;
+  }
   if (view === 'confirm-wp-uploads' || view === 'confirm-wp-immich') {
     var upl = view === 'confirm-wp-uploads';
     rows.push({ label: 'Cancel', fn: pop });
@@ -1189,6 +1224,7 @@ function build() {
         },
       });
     rows.push({ label: 'Cards', sub: 'small widgets on Home', fn: openCards });
+    rows.push({ label: 'Spotify now playing', sub: 'on Home while it plays', fn: openSpotify });
     rows.push({
       label: 'Android box',
       sub: ab && ab.configured ? ab.settings.host : ab ? 'off' : '',

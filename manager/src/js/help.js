@@ -24,6 +24,10 @@ var INFO = {
   'Language':
     'The language of CleanYourTV\u2019s screens: the launcher, this app and the Inputs list. Automatic follows the TV\u2019s menu language. The percentage says how much of a language is translated; the rest stays English. Translations are files in the repository that anyone can add to.',
   'Automatic': 'Follows the TV\u2019s menu language. English when CleanYourTV has no translation for it.',
+  'Spotify now playing':
+    'Shows what plays on your Spotify account (any device) on Home, while it plays. Needs your own free Spotify app (its Client ID) and Spotify Premium for the app owner.',
+  'Connect from your phone':
+    'Shows a QR code. On the phone you enter the Client ID of your Spotify app, sign in to Spotify, and paste back the address you land on.',
   'Wallpapers':
     'Your own photos behind Home: uploaded from a phone, or synced from Immich albums. Switch them on in the launcher: Customise > Wallpapers.',
   'App icons':

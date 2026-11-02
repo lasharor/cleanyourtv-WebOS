@@ -907,6 +907,183 @@ body.wpon {
 .card-ha-camera .ha-n {
   padding: 22px 26px;
 }
+/* Spotify now playing: a pill with the cover (square, unaltered), a small label, the title, the artist and a thin bar;
+   the bar's fill grows with a transform, the GPU's only job. A place smaller than 200 high (np-sm) is compact. */
+.card-nowplaying {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 20px;
+  color: var(--ink);
+  background: rgba(8, 12, 18, 0.62);
+  border-radius: 27px;
+}
+.card-nowplaying .np-art {
+  flex: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.card-nowplaying .np-art {
+  transition: transform calc(0.15s * var(--spd)) ease-out;
+}
+.card-nowplaying .np-art.f {
+  box-shadow: 0 0 0 4px var(--focus);
+  transform: scale(1.04);
+}
+.card-nowplaying .np-art {
+  position: relative;
+}
+.card-nowplaying .np-art img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity calc(0.45s * var(--spd)) ease-out;
+}
+.card-nowplaying .np-t {
+  flex: 1;
+  min-width: 0;
+  padding: 0 30px;
+  text-align: left;
+}
+.card-nowplaying .np-s {
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.card-nowplaying .np-n {
+  font-size: 40px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.card-nowplaying .np-a {
+  font-size: 30px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+.card-nowplaying .np-s,
+.card-nowplaying .np-n,
+.card-nowplaying .np-a {
+  white-space: nowrap;
+  overflow: hidden;
+  direction: ltr;
+}
+.card-nowplaying .np-s span,
+.card-nowplaying .np-n span,
+.card-nowplaying .np-a span {
+  display: inline-block;
+  unicode-bidi: plaintext;
+}
+/* the text is wider than the card: it runs to its end and back, resting a while at each end */
+.card-nowplaying .np-run span {
+  animation: np-fw 10s linear infinite alternate;
+}
+.card-nowplaying .np-run.np-rtl span {
+  animation-name: np-bw;
+}
+@keyframes np-fw {
+  0%,
+  18% {
+    transform: translateX(0);
+  }
+  82%,
+  100% {
+    transform: translateX(var(--np-d));
+  }
+}
+@keyframes np-bw {
+  0%,
+  18% {
+    transform: translateX(var(--np-d));
+  }
+  82%,
+  100% {
+    transform: translateX(0);
+  }
+}
+.card-nowplaying .np-bar {
+  height: 9px;
+  margin-top: 12px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+.card-nowplaying .np-bar i {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+.card-nowplaying .np-c {
+  display: flex;
+  align-items: center;
+  margin-top: 18px;
+}
+.card-nowplaying .np-time {
+  flex: none;
+  margin-left: auto;
+  font-size: 24px;
+  opacity: 0.75;
+  white-space: nowrap;
+  direction: ltr;
+}
+.card-nowplaying .np-btn {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  margin-right: 14px;
+  border-radius: 26px;
+  color: inherit;
+  transition:
+    transform calc(0.15s * var(--spd)) ease-out,
+    background-color calc(0.15s * var(--spd)) linear;
+}
+.card-nowplaying .np-btn svg {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: 12px;
+  fill: currentColor;
+}
+.card-nowplaying .np-btn.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+  transform: scale(1.1);
+}
+.card-nowplaying.np-sm .np-c {
+  display: none;
+}
+.card-nowplaying.np-sm {
+  padding: 0 20px 0 0;
+  border-radius: 14px;
+}
+.card-nowplaying.np-sm .np-art {
+  border-radius: 14px 0 0 14px;
+}
+.card-nowplaying.np-sm .np-t {
+  padding: 0 18px;
+}
+.card-nowplaying.np-sm .np-s {
+  font-size: 16px;
+}
+.card-nowplaying.np-sm .np-n {
+  font-size: 28px;
+  margin-top: 2px;
+}
+.card-nowplaying.np-sm .np-a {
+  font-size: 22px;
+  margin-top: 0;
+}
+.card-nowplaying.np-sm .np-bar {
+  height: 5px;
+  margin-top: 8px;
+}
 /* the Home Assistant weather card: now on the left, the forecast in columns on the right */
 .card-ha-weather {
   display: flex;

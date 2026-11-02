@@ -856,6 +856,8 @@ function customizeMenu() {
           { label: t('Top buttons'), stay: true, fn: topButtonsMenu },
           /* the cards in the theme's places, chosen with the remote (hamenu.js) */
           cards() ? { label: 'Home Assistant', sub: t('Cards on Home'), stay: true, fn: haMenu } : null,
+          /* Spotify now playing: the same places as Home Assistant, and its connection */
+          cards() ? { label: 'Spotify', sub: t('Now playing on Home'), stay: true, fn: spotifyMenu } : null,
           cards()
             ? {
                 label: t('Cards'),

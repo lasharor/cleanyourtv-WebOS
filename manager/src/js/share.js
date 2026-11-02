@@ -76,6 +76,12 @@ function closeShare() {
     pop();
     return;
   }
+  if (shareMode === 'spotify') {
+    api('/api/cards/nowplaying/pair', { stop: true }).catch(function () {});
+    pop();
+    spotRefresh();
+    return;
+  }
   if (shareMode === 'wall') {
     api('/api/wallpapers/pair', { stop: true }).catch(function () {});
     pop();

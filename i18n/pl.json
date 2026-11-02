@@ -749,5 +749,16 @@
  "Dial": "Pokrętło",
  "Circular dial on the right": "Okrągłe pokrętło po prawej",
  "System default (LG webOS)": "Domyślny systemowy (LG webOS)",
- "Stock TV volume bar": "Fabryczny pasek głośności telewizora"
+ "Stock TV volume bar": "Fabryczny pasek głośności telewizora",
+ "Spotify now playing": "Spotify teraz odtwarzane",
+ "Connect from your phone": "Połącz z telefonu",
+ "Progress bar": "Pasek postępu",
+ "Hide": "Ukryj",
+ "Connected to Spotify.": "Połączono ze Spotify.",
+ "Disconnect Spotify": "Rozłącz Spotify",
+ "Prepare sign-in": "Przygotuj logowanie",
+ "Open Spotify sign-in": "Otwórz logowanie do Spotify",
+ "Pasted address": "Wklejony adres",
+ "Connect": "Połącz",
+ "Sign in to Spotify again.": "Zaloguj się ponownie w Spotify."
 }

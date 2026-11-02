@@ -104,6 +104,14 @@ function draw() {
     $('sub').textContent = tr('Live TV: your own playlist');
     return;
   }
+  if (view === 'spotify') {
+    $('sub').textContent = tr('Spotify now playing');
+    return;
+  }
+  if (view === 'confirm-spotify') {
+    $('sub').textContent = tr('Disconnect Spotify?');
+    return;
+  }
   if (view === 'confirm-live-reset') {
     $('sub').textContent = tr('Remove the playlist?');
     return;

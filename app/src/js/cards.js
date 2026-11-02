@@ -306,6 +306,234 @@ function cardMarkup(src, opt) {
     })
     .join('');
 }
+/* Now playing: the service asks Spotify (helper/nowplaying.js) and keeps the answer a few seconds, so the cards ask every 6 seconds
+   while something plays and every 15 while nothing does, and only while Home is shown. Failures and a TV that is offline read as
+   "nothing playing": the card is simply not there. The bar moves with the clock between answers. */
+var NP = { data: null, at: 0, rcv: 0, busy: false, want: null, painted: 0 };
+/* Home is hidden when the page says so and nothing is painted: a Home loaded in the background reports "hidden" until the next switch
+   of apps although it is on the screen, and a hidden page gets no animation frames, so a frame that came shows it is there. */
+function npHidden() {
+  if (!document.hidden) return false;
+  return Date.now() - NP.painted > 3000;
+}
+function npProbe() {
+  requestAnimationFrame(function () {
+    NP.painted = Date.now();
+  });
+}
+/* the card was shown or hidden: its cover and buttons join or leave the top row of the remote */
+function npTop(el, shown) {
+  var on = !!shown;
+  if (el._npTop === on) return;
+  el._npTop = on;
+  if (window.refreshTop) refreshTop();
+}
+function npRedraw() {
+  var els = document.querySelectorAll('#cards .card-nowplaying');
+  for (var i = 0; i < els.length; i++) CARD_TYPES.nowplaying.draw(els[i], els[i]._card);
+}
+function npPoll(fresh) {
+  if (npHidden() || NP.busy || !document.querySelector('#cards .card-nowplaying')) return;
+  if (!fresh && Date.now() - NP.at < (NP.data && NP.data.playing ? 6000 : 15000)) return;
+  NP.busy = true;
+  NP.at = Date.now();
+  api('/api/cards/nowplaying', fresh ? { fresh: true } : {}).then(
+    function (r) {
+      NP.busy = false;
+      /* Spotify takes a few seconds to report what a button did: until it does, the card keeps showing what was asked for */
+      var w = NP.want;
+      if (w && Date.now() < w.until && r.title) {
+        if (w.title !== undefined && r.title === w.title && r.progress > 5000) return; /* next or previous: still the old track */
+        if (w.title === undefined && !!r.playing !== w.playing) {
+          r.playing = w.playing;
+          r.paused = !r.playing;
+        } else NP.want = null;
+      } else NP.want = null;
+      NP.data = r;
+      NP.rcv = Date.now();
+      npRedraw();
+    },
+    function () {
+      NP.busy = false;
+      NP.data = null;
+      npRedraw();
+    }
+  );
+}
+/* 125000 -> 2:05 (and 1:02:05 for a long episode) */
+function npClock(ms) {
+  var s = Math.floor(Math.max(0, ms) / 1000),
+    h = Math.floor(s / 3600),
+    m = Math.floor((s % 3600) / 60);
+  s = s % 60;
+  return (h ? h + ':' + (m < 10 ? '0' : '') : '') + m + ':' + (s < 10 ? '0' : '') + s;
+}
+function npBar() {
+  var d = NP.data;
+  if (npHidden() || !d || !d.duration) return;
+  var at = Math.min(d.duration, d.progress + (d.playing ? Date.now() - NP.rcv : 0)),
+    f = at / d.duration,
+    tx = npClock(at) + ' / ' + npClock(d.duration),
+    bs = document.querySelectorAll('#cards .card-nowplaying .np-bar i'),
+    ts = document.querySelectorAll('#cards .card-nowplaying .np-time'),
+    i;
+  for (i = 0; i < bs.length; i++) bs[i].style.transform = 'scaleX(' + f.toFixed(3) + ')';
+  for (i = 0; i < ts.length; i++) if (ts[i]._tx !== tx) ts[i].textContent = ts[i]._tx = tx;
+  var ls = document.querySelectorAll('#cards .card-nowplaying .np-s, #cards .card-nowplaying .np-n, #cards .card-nowplaying .np-a');
+  for (i = 0; i < ls.length; i++) if (ls[i].clientWidth !== ls[i]._fw) npFit(ls[i]);
+}
+setInterval(function () {
+  npProbe();
+  npPoll();
+  npBar();
+}, 1000);
+npProbe();
+/* the buttons of the Spotify card: previous, play or pause, next. They are separate targets for the remote (the card's buttons join the
+   top row, see cardTargets), so they are made once and only their icons change. */
+var NP_ICON = {
+  prev: '<svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM9.5 12L18 18V6z"/></svg>',
+  next: '<svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>',
+  play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>',
+};
+function npControl(what) {
+  var d = NP.data,
+    a = what === 'toggle' ? (d && d.playing ? 'pause' : 'play') : what;
+  /* the card changes at once; Spotify's own answer follows within a few seconds (asked again at short intervals meanwhile) */
+  if (d) {
+    if (a === 'play' || a === 'pause') {
+      d.progress += d.playing ? Date.now() - NP.rcv : 0;
+      d.playing = a === 'play';
+      d.paused = !d.playing;
+      NP.want = { playing: d.playing, until: Date.now() + 6000 };
+    } else {
+      d.progress = 0;
+      d.playing = true;
+      d.paused = false;
+      NP.want = { playing: true, until: Date.now() + 6000, title: d.title };
+    }
+    NP.rcv = Date.now();
+    npRedraw();
+    npBar();
+  }
+  api('/api/cards/nowplaying/control', { action: a }).then(
+    function (r) {
+      if (r.error) toast(t(r.error), true);
+      [300, 900, 1800, 3000, 5000].forEach(function (ms) {
+        setTimeout(function () {
+          npPoll(true);
+        }, ms);
+      });
+    },
+    function () {
+      toast(t('The service did not answer.'), true);
+    }
+  );
+}
+/* a line of text that is wider than the card runs sideways (back and forth, with a rest at each end) instead of being cut off. The text
+   sits in a span; the box (overflow hidden, left to right) moves it with a transform, towards the end of the text: to the left for
+   a Latin text, to the right for Hebrew or Arabic, which starts at the right. The distance goes in --np-d for the keyframes. */
+function npText(box, text) {
+  var tx = box.firstChild;
+  tx.textContent = text;
+  npFit(box);
+  /* the font may arrive after the first measurement */
+  setTimeout(function () {
+    npFit(box);
+  }, 1500);
+}
+/* does the text start with a letter of a right-to-left script (Hebrew, Arabic: U+0590 to U+08FF)? */
+function npRtl(text) {
+  for (var i = 0; i < text.length; i++) {
+    var c = text.charCodeAt(i);
+    if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122)) return false;
+    if (c >= 1424 && c <= 2303) return true;
+  }
+  return false;
+}
+function npFit(box) {
+  var tx = box.firstChild;
+  box.className = box.className.replace(/ np-run| np-rtl/g, '');
+  tx.style.animationDuration = '';
+  box._fw = box.clientWidth;
+  var d = tx.offsetWidth - box._fw;
+  if (!box._fw || d < 3) return;
+  tx.style.setProperty('--np-d', -d + 'px');
+  tx.style.animationDuration = (5 + d / 45).toFixed(1) + 's';
+  box.className += npRtl(tx.textContent) ? ' np-run np-rtl' : ' np-run';
+}
+/* the cover (OK or a click): the Spotify app of the TV, on the song that plays and at the place it was (the service starts it with the
+   track as its target, which plays it from the start, and then seeks back) */
+function npOpen() {
+  api('/api/cards/nowplaying/open', {}).then(
+    function (r) {
+      if (r && (r.error || r.returnValue === false)) toast(r.error ? t(r.error) : t('Spotify did not open.'), true);
+    },
+    function () {
+      toast(t('The service did not answer.'), true);
+    }
+  );
+}
+/* a new cover fades in over the old one (opacity only) once it has loaded; the old one goes when the new one is in */
+function npCover(box, art) {
+  var imgs = box.getElementsByTagName('img');
+  while (imgs.length > 1) box.removeChild(imgs[0]);
+  var old = imgs[0];
+  if (!art) {
+    if (old) box.removeChild(old);
+    return;
+  }
+  var im = document.createElement('img'),
+    tries = 0;
+  im.alt = '';
+  im.style.opacity = old ? '0' : '1';
+  im.onload = function () {
+    if (!im.parentNode) return;
+    void im.offsetWidth;
+    im.style.opacity = '1';
+    if (old)
+      setTimeout(function () {
+        if (old.parentNode) old.parentNode.removeChild(old);
+      }, 500);
+  };
+  /* a cover that did not come is asked for once more a little later (the service may have just started) */
+  im.onerror = function () {
+    if (!im.parentNode || tries++) return;
+    setTimeout(function () {
+      im.src = API + '/api/cards/nowplaying/art/' + encodeURIComponent(art) + '?again';
+    }, 2000);
+  };
+  im.src = API + '/api/cards/nowplaying/art/' + encodeURIComponent(art);
+  box.appendChild(im);
+}
+function npShell(el) {
+  el.innerHTML =
+    '<div class="np-art"></div><div class="np-t"><div class="np-s"><span></span></div><div class="np-n"><span></span></div><div class="np-a"><span></span></div>' +
+    '<div class="np-bar"><i></i></div><div class="np-c"></div></div>';
+  el._btns = [];
+  var art = el.firstChild;
+  art._card = el._card;
+  art._o = { action: 'card', label: t('Open in Spotify'), fixed: true };
+  art._b = 'cover';
+  art.addEventListener('click', npOpen);
+  el._cover = art;
+  var box = el.querySelector('.np-c');
+  ['previous', 'toggle', 'next'].forEach(function (w) {
+    var p = document.createElement('div');
+    p.className = 'np-btn';
+    p._card = el._card;
+    p._o = { action: 'card', label: '', fixed: true };
+    p._b = w;
+    p.addEventListener('click', function () {
+      npControl(w);
+    });
+    box.appendChild(p);
+    el._btns.push(p);
+  });
+  var tm = document.createElement('div');
+  tm.className = 'np-time';
+  box.appendChild(tm);
+}
 var CARD_TYPES = {
   /* "Good morning" by the time of day, with an optional name and an optional second line (the date); set on the phone page */
   greeting: {
@@ -588,6 +816,75 @@ var CARD_TYPES = {
       el.setAttribute('data-size', o.size === 'small' || o.size === 'large' ? o.size : 'medium');
     },
   },
+  /* what plays on the user's Spotify account: the cover as Spotify sends it, the title, the artist, a thin bar for the progress and
+     the buttons (previous, play or pause, next). Gone while nothing plays (or Spotify is not set up); a paused track stays, to be
+     resumed. The cover is Spotify's and stays unchanged. */
+  nowplaying: {
+    name: function () {
+      return t('Spotify now playing');
+    },
+    draw: function (el, o) {
+      var d = NP.data;
+      npPoll();
+      var show = !!(d && (d.playing || d.paused));
+      if (haHide(el, !show)) {
+        el._k = '';
+        npTop(el, false);
+        return;
+      }
+      /* the size of the place is kept the first time: a place at least 200 high gets a pill (a cover of the height, three lines and the
+         buttons); a smaller one the cover at its own height, without buttons */
+      if (el._nph === undefined) {
+        el._npw = parseFloat(el.style.width) || el.offsetWidth;
+        el._nph = parseFloat(el.style.height) || el.offsetHeight;
+      }
+      var big = el._nph >= 200,
+        hh = big ? Math.min(el._nph, 250) : el._nph;
+      if (!el._btns) {
+        npShell(el);
+        el.className = el.className.replace(/ np-sm/g, '') + (big ? '' : ' np-sm');
+        el.style.height = hh + 'px';
+        el.style.width = (big ? 720 : el._npw) + 'px';
+        var art = el.firstChild;
+        art.style.width = art.style.height = (big ? hh - 40 : hh) + 'px';
+        el.querySelector('.np-bar').style.display = o.bar === 'off' ? 'none' : '';
+      }
+      var key = d.title + '|' + d.artist + '|' + d.art;
+      if (el._k !== key) {
+        el._k = key;
+        npCover(el.firstChild, d.art);
+        var q = el.querySelector.bind(el);
+        npText(q('.np-s'), d.device ? t('Playing on') + ' ' + d.device : t('Now playing'));
+        npText(q('.np-n'), d.title);
+        npText(q('.np-a'), d.artist);
+      }
+      /* the middle button shows what OK does now */
+      var mid = el._btns[1];
+      if (mid._st !== !!d.playing) {
+        mid._st = !!d.playing;
+        mid._o.label = d.playing ? t('Pause') : t('Play');
+        mid.innerHTML = NP_ICON[d.playing ? 'pause' : 'play'];
+      }
+      if (!el._btns[0].firstChild) {
+        el._btns[0].innerHTML = NP_ICON.prev;
+        el._btns[0]._o.label = t('Previous');
+        el._btns[2].innerHTML = NP_ICON.next;
+        el._btns[2]._o.label = t('Next');
+      }
+      el._on = big;
+      npTop(el, true);
+      npBar();
+    },
+    /* OK on one of the buttons */
+    act: function (btn) {
+      if (btn._b === 'cover') npOpen();
+      else npControl(btn._b);
+    },
+    /* what joins the top row for the remote: the cover, and the three buttons in a place big enough for them */
+    targets: function (el) {
+      return el._cover ? [el._cover].concat(el._on ? el._btns : []) : [];
+    },
+  },
 };
 /* A downloaded card that brings its own page (card.json "page"): the service serves it from /card/<id>/ and it runs in a sandboxed frame, with
    no network and no access to this page, which only tells it what it needs: the options, the language, the clock format, the colour and
@@ -727,7 +1024,7 @@ function cardTargets() {
     els = $('cards').children;
   for (var i = 0; i < els.length; i++) {
     var ty = CARD_TYPES[els[i]._card.type];
-    if (ty && ty.act && els[i].style.display !== 'none') out.push(els[i]);
+    if (ty && ty.act && els[i].style.display !== 'none') out = out.concat(ty.targets ? ty.targets(els[i]) : [els[i]]);
   }
   return out;
 }

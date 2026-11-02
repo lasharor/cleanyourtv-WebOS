@@ -726,5 +726,16 @@
   "Maghrib": "المغرب",
   "Isha": "العشاء",
   "in %s h": "بعد %s س",
-  "in %s min": "بعد %s د"
+  "in %s min": "بعد %s د",
+  "Spotify now playing": "Spotify يُشغَّل الآن",
+  "Connect from your phone": "اتصل من هاتفك",
+  "Progress bar": "شريط التقدم",
+  "Hide": "إخفاء",
+  "Connected to Spotify.": "متصل بـ Spotify.",
+  "Disconnect Spotify": "قطع الاتصال بـ Spotify",
+  "Prepare sign-in": "تجهيز تسجيل الدخول",
+  "Open Spotify sign-in": "فتح تسجيل الدخول إلى Spotify",
+  "Pasted address": "العنوان الملصق",
+  "Connect": "اتصال",
+  "Sign in to Spotify again.": "سجّل الدخول إلى Spotify مرة أخرى."
 }

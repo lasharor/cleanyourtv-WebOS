@@ -666,5 +666,16 @@
  "Your firmware is not in the compatibility list and LG’s Home looks different. This tries it anyway; a failed start restarts the TV with LG’s Home.": "Seu firmware não consta na lista de compatibilidade e o Início da LG parece diferente. Isso tentará de qualquer forma; se a inicialização falhar, a TV reinicia com o Início da LG.",
  "Your M3U playlist and its XMLTV guide. Choose it to set up: a QR code opens a page on your phone where you enter the playlist address and the 6-digit code shown here.": "Sua lista de reprodução M3U e o guia XMLTV. Escolha para configurar: um código QR abre uma página no seu celular onde você digita o endereço da lista e o código de 6 dígitos mostrado aqui.",
  "Your own photos behind Home: uploaded from a phone, or synced from Immich albums. Switch them on in the launcher: Customise > Wallpapers.": "Suas próprias fotos como plano de fundo do Início: enviadas do celular ou sincronizadas de álbuns do Immich. Ative-as no inicializador: Personalizar > Papéis de Parede.",
- "Your playlist": "Sua lista de reprodução"
+ "Your playlist": "Sua lista de reprodução",
+ "Spotify now playing": "Spotify tocando agora",
+ "Connect from your phone": "Conectar pelo celular",
+ "Progress bar": "Barra de progresso",
+ "Hide": "Ocultar",
+ "Connected to Spotify.": "Conectado ao Spotify.",
+ "Disconnect Spotify": "Desconectar o Spotify",
+ "Prepare sign-in": "Preparar login",
+ "Open Spotify sign-in": "Abrir login do Spotify",
+ "Pasted address": "Endereço colado",
+ "Connect": "Conectar",
+ "Sign in to Spotify again.": "Entre no Spotify novamente."
 }
