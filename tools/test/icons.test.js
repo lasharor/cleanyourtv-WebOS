@@ -1,10 +1,11 @@
-// Custom app icons (icons.js): a picture kept per app (picture types, the size limit, app ids, a new picture replacing the old one),
+// Custom app icons (the bundled add-on icons): a picture kept per app (picture types, the size limit, app ids, a new picture replacing the old one),
 // the phone page (the code, the apps without the inputs, upload, reset, the app chosen on Home in the QR code), the launcher's Reset
 // icon, and apps.js: GET /icon/<app id> sends the custom picture first and /api/apps marks the app with iv.
 const fs = require('fs'),
   http = require('http'),
   path = require('path');
 const { ok, call, serve, req, memoryConfig, run, sleep, tmp } = require('./lib');
+const addonPath = path.join(__dirname, '..', '..', 'helper', 'addons-bundled', 'icons');
 
 const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 7)]);
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(50, 1)]);
@@ -51,7 +52,7 @@ function get(url) {
 }
 
 run(async () => {
-  const I = req('icons');
+  const I = require(path.join(addonPath, 'service.js'));
   const dir = path.join(process.env.CYTV_DIR, 'icons');
   ok(I.set('com.example.app', PNG) === '' && /\.png$/.test(I.find('com.example.app')), 'a PNG is kept for an app');
   ok(/JPEG, PNG or WebP/.test(I.set('com.example.app', Buffer.from('<svg/>'))), 'a file that is not a picture is refused');
@@ -156,8 +157,24 @@ run(async () => {
     /listApps/.test(uri)
       ? { returnValue: true, apps: [{ id: 'com.example.app', title: 'Example', folderPath: own, icon: 'i.png' }] }
       : { returnValue: true };
-  const apps = req('apps').create({ config: memoryConfig({}), luna, version: '1.6.0', feature: () => null });
+  // apps.js reaches the add-on through the loader (addons.module), and only while it runs
+  let running = null;
+  const apps = req('apps').create({
+    config: memoryConfig({}),
+    luna,
+    version: '1.6.0',
+    feature: n => (n === 'addons' ? { module: id => (id === 'icons' ? running : null) } : null),
+  });
+  I.set('com.example.app', PNG);
   r = await call(apps, '/api/apps');
+  ok(
+    r.j.apps.length === 1 && r.j.apps[0].iv === undefined && r.j.icons === undefined,
+    'with the add-on off, a picture is not used and the launcher is not told to offer Change icon'
+  );
+  I.remove('com.example.app');
+  running = ic;
+  r = await call(apps, '/api/apps');
+  ok(r.j.icons === true, 'with the add-on on, the launcher is told (icons: true)');
   ok(r.j.apps.length === 1 && r.j.apps[0].iv === undefined, 'an app without a picture of its own has no iv');
   const s = await serve((q, res) => apps.handle(q, res, q.url.split('?')[0], async () => ({})));
   let g = await get(s.url + '/icon/com.example.app');

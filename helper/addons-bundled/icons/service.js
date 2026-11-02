@@ -1,9 +1,11 @@
-// Custom app icons: a picture chosen on a phone shows instead of an app's own icon, on Home and in the Inputs list. The app's own files
+// Custom app icons, a bundled add-on (addons-bundled/icons): a picture chosen on a phone shows instead of an app's own icon, on Home and
+// in the Inputs list. The app's own files
 // are never touched, so an app update keeps the picture. One file per app, in one of two folders by how it is shown:
 //   D/icons/<app id>.<png|jpg|webp>        Icon: inside the tile, like the app's own icon (a logo)
 //   D/icons/tile/<app id>.<png|jpg|webp>   Full tile: the picture covers the tile, the middle kept (a photo)
 // GET /icon/<app id> (apps.js) sends it first, and /api/apps marks such an app with iv (the picture's version, so the pages load the
-// new picture and work out its colour again) and it: 1 for a Full tile picture.
+// new picture and work out its colour again) and it: 1 for a Full tile picture. apps.js asks the loader for this add-on
+// (addons.module('icons')) and does nothing of this while it is switched off: the apps then show their own icons.
 // API (loopback, our apps): GET /api/icons/status, POST /api/icons/pair {app, scale, stop}, POST /api/icons/reset {id}. The phone page
 // (POST pair) is a short-lived server on the LAN, port 8794, that needs the code shown on the TV; its API is under /api/ on that port.
 // It and the manager show the picture sizes that fit the tiles of the theme in use (sizes()): scale is the screen's pixels per CSS
@@ -11,11 +13,11 @@
 const fs = require('fs'),
   http = require('http'),
   path = require('path');
-const P = require('./paths'),
-  web = require('./web'),
-  i18n = require('./i18n'),
-  nc = require('./netcompat'),
-  { imageType } = require('./wallpapers');
+const P = require('../../paths'),
+  web = require('../../web'),
+  i18n = require('../../i18n'),
+  nc = require('../../netcompat'),
+  { imageType } = require('../../wallpapers');
 
 const DIR = P.D + '/icons',
   TILE = DIR + '/tile';
@@ -245,7 +247,8 @@ function create(ctx) {
     return web.notFound(res);
   }
 
-  return { name: 'icons', prefix: '/api/icons/', handle, phone };
+  // /api/icons/... is answered through the manifest's "routes" (addon.json); apps.js asks for find(), versions() and mime()
+  return { handle, phone, find, versions, mime };
 }
 
 // the phone page: the apps with their icons, Change and Reset. Change shows a preview of the picture in a dock tile and a grid tile

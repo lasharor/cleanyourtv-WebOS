@@ -1978,6 +1978,7 @@ var apps = [],
   tiles = {},
   lastSig = '',
   tunerOn = false,
+  iconsOn = false /* the App icons add-on runs (helper/addons-bundled/icons): a tile's menu offers Change icon */,
   gSide = 0,
   gColor = '',
   gT = 0,
@@ -2399,7 +2400,7 @@ function fit(d, dock) {
   i.removeAttribute('style');
   d.classList.remove('fill');
   d.style.background = '';
-  /* a picture of your own shown as Full tile (helper/icons.js): it covers the tile, its middle kept, in the dock and the grid alike */
+  /* a picture of your own shown as Full tile (the App icons add-on): it covers the tile, its middle kept, in the dock and the grid alike */
   if (d._it) {
     d.classList.add('fill');
     var st = i.style;
@@ -2458,7 +2459,7 @@ function paint(d, col) {
 }
 /* ---------- tiles (built once per app, reused across rebuilds) ---------- */
 function tile(a) {
-  /* a new custom icon (iv, helper/icons.js) or a new way to show it (it: Full tile): build the tile again, with the colour of the new picture */
+  /* a new custom icon (iv, the App icons add-on) or a new way to show it (it: Full tile): build the tile again, with the colour of the new picture */
   if (tiles[a.id] && ((tiles[a.id]._iv || 0) !== (a.iv || 0) || (tiles[a.id]._it || 0) !== (a.it ? 1 : 0))) {
     delete tiles[a.id];
     delete colors[a.id];
@@ -4287,14 +4288,15 @@ function appMenu(a) {
         },
       });
     else {
-      /* a picture of your own for the app: chosen on a phone, through the manager's App icons screen (helper/icons.js) */
-      items.push({
-        label: t('Change icon'),
-        fn: function () {
-          launch('com.cleanyourtv.manager', { open: 'icons', app: a.id });
-        },
-      });
-      if (a.iv)
+      /* a picture of your own for the app: chosen on a phone, through the manager's App icons screen (the App icons add-on) */
+      if (iconsOn)
+        items.push({
+          label: t('Change icon'),
+          fn: function () {
+            launch('com.cleanyourtv.manager', { open: 'icons', app: a.id });
+          },
+        });
+      if (iconsOn && a.iv)
         items.push({
           label: t('Reset icon'),
           fn: function () {
@@ -5607,6 +5609,7 @@ function load() {
         }),
         x.config,
         rank,
+        x.icons === true,
       ]);
       retryTileIcons();
       if (typeof x.stamp === 'number') appsStamp = x.stamp;
@@ -5618,6 +5621,7 @@ function load() {
           : { id: a.id, title: a.title, removable: !!a.removable, iv: a.iv || 0, it: a.it ? 1 : 0 };
       });
       cfg = x.config || {};
+      iconsOn = x.icons === true;
       tunerOn = x.tuner === true; // the service found LG's own Live TV (the tuner): Customise can offer a TV button
       useLang(cfg.lang);
       applyTheme(cfg.theme);

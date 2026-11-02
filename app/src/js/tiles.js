@@ -1,6 +1,6 @@
 /* ---------- tiles (built once per app, reused across rebuilds) ---------- */
 function tile(a) {
-  /* a new custom icon (iv, helper/icons.js) or a new way to show it (it: Full tile): build the tile again, with the colour of the new picture */
+  /* a new custom icon (iv, the App icons add-on) or a new way to show it (it: Full tile): build the tile again, with the colour of the new picture */
   if (tiles[a.id] && ((tiles[a.id]._iv || 0) !== (a.iv || 0) || (tiles[a.id]._it || 0) !== (a.it ? 1 : 0))) {
     delete tiles[a.id];
     delete colors[a.id];

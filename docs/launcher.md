@@ -139,6 +139,9 @@ gradient icon in the dock gets a tile with the same gradient ([#3](https://githu
 
 ### Your own icon
 
+This is the **App icons** add-on, which ships with CleanYourTV and is on by default (manager > Add-ons). With it off, **Change icon** and
+**Reset icon** are not offered, the **App icons** screen is hidden and every app shows its own icon again; the pictures stay on the TV.
+
 Hold OK on an app and choose **Change icon**: the manager app opens its **App icons** screen with a QR code. On the phone page (port 8794,
 the code shown on the TV, at most an hour) choose **Change** next to the app and a picture. A preview shows it in a dock tile and a grid
 tile of the theme in use, in one of two ways:

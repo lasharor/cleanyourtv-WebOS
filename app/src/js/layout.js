@@ -295,6 +295,7 @@ function load() {
         }),
         x.config,
         rank,
+        x.icons === true,
       ]);
       retryTileIcons();
       if (typeof x.stamp === 'number') appsStamp = x.stamp;
@@ -306,6 +307,7 @@ function load() {
           : { id: a.id, title: a.title, removable: !!a.removable, iv: a.iv || 0, it: a.it ? 1 : 0 };
       });
       cfg = x.config || {};
+      iconsOn = x.icons === true;
       tunerOn = x.tuner === true; // the service found LG's own Live TV (the tuner): Customise can offer a TV button
       useLang(cfg.lang);
       applyTheme(cfg.theme);

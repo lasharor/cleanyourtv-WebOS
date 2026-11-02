@@ -2,7 +2,7 @@
 // settings (dock, hidden apps, sort order, clock, top buttons).
 //   GET /api/apps  GET /api/inputs  GET /api/foreground  POST /api/launch {id, params}  POST /api/config {...}  GET /icon/<app id>
 //   GET /api/apps/stamp: a number that changes whenever the list of apps changes (the launcher checks it every few seconds)
-//   GET /icon/<app id> sends the app's custom picture first (icons.js); /api/apps marks such an app with iv, the picture's version,
+//   GET /icon/<app id> sends the app's custom picture first (the App icons add-on); /api/apps marks such an app with iv, the picture's version,
 //   and with it: 1 when the picture is shown as Full tile
 //   GET /api/inputs: the HDMI ports, plus LG's own Live TV (the tuner) while its app is installed ({appId, tuner: true})
 //   POST /api/power/off   switch the TV off completely (the cold-boot power-off, not the standby of the remote)
@@ -14,7 +14,6 @@ const fs = require('fs'),
 const P = require('./paths'),
   web = require('./web'),
   exec = require('./exec'),
-  icons = require('./icons'),
   cardsShape = require('./cards'),
   { LAUNCHER_KEYS } = require('./config');
 
@@ -296,8 +295,14 @@ function create(ctx) {
         return { id: p.id, title: label, input: (d && d.port) || p.port || 0, off: d ? !d.hdmiPlugIn : false };
       });
   }
+  // the App icons add-on (addons-bundled/icons), while it runs; without it every app shows its own icon
+  const icons = () => {
+    const ad = ctx.feature && ctx.feature('addons');
+    return (ad && ad.module && ad.module('icons')) || null;
+  };
   async function apps() {
-    const own = icons.versions();
+    const ic = icons();
+    const own = ic ? ic.versions() : {};
     return (await installed())
       .map(a => {
         const x = own[a.id];
@@ -438,6 +443,8 @@ function create(ctx) {
       const reply = { apps: await apps(), config: launcherConfig(), usage: usageScores(), version: ctx.version, stamp: appsStamp };
       // the launcher offers its TV button only where LG's Live TV is installed (a TV without a tuner has no such app)
       if (tunerShown() && (await askTuner())) reply.tuner = true;
+      // the launcher offers Change icon only while the App icons add-on runs
+      if (icons()) reply.icons = true;
       return web.json(res, reply);
     }
     if (u === '/api/apps/stamp') return web.json(res, { stamp: await stampNow() });
@@ -472,9 +479,10 @@ function create(ctx) {
     if (u === '/api/audio/volume') return audio.handle(req, res, u);
     const m = u.match(/^\/icon\/([\w.\-]+)$/);
     if (m) {
-      const own = icons.find(m[1]);
+      const ic = icons();
+      const own = ic ? ic.find(m[1]) : '';
       if (own) {
-        res.writeHead(200, { 'content-type': icons.mime(own), 'cache-control': 'max-age=3600' });
+        res.writeHead(200, { 'content-type': ic.mime(own), 'cache-control': 'max-age=3600' });
         return fs.createReadStream(own).pipe(res);
       }
       const a = (await apps()).find(x => x.id === m[1]);

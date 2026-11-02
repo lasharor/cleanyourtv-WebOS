@@ -57,6 +57,14 @@ key in `adb/adbkey`, where they always were. The launch hook in `helper/apps.js`
 (`addons.module('androidbox')`), so an app set up for the box still switches the input. Switch the add-on off in the manager and its
 settings screen has nothing to talk to after the next start; the apps then open on the TV.
 
+## App icons (the icons add-on)
+
+`helper/addons-bundled/icons/` holds the service (`service.js`): the pictures in `icons/` and `icons/tile/`, the phone page on port 8794 and
+the reset. The manifest's `routes` is `/api/icons`. Like the Android box, the core reaches it only through the loader
+(`addons.module('icons')`): `helper/apps.js` sends the picture first on `/icon/<app id>`, marks the app with `iv` (and `it` for Full tile)
+and adds `icons: true` to `/api/apps` while the add-on runs; the launcher offers **Change icon** and **Reset icon** only then, and the
+manager's status has `icons` for its **App icons** row. Switched off, every app shows its own icon and the pictures stay on the TV.
+
 ## Live TV (the iptv add-on)
 
 - The service part is `helper/addons-bundled/iptv/service.js`; it answers `/api/live/...` as before (`routes`).

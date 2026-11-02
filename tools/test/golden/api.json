@@ -148,6 +148,7 @@
      "stamp": "0:d41d8cd9"
     }
    },
+   "icons": true,
    "stamp": 1,
    "usage": {},
    "version": "<version>"
@@ -383,6 +384,7 @@
      "stamp": "0:d41d8cd9"
     }
    },
+   "icons": true,
    "stamp": 1,
    "usage": {},
    "version": "<version>"
@@ -408,6 +410,7 @@
     "fullhome": false,
     "ours": false
    },
+   "icons": true,
    "inputhook": {
     "bound": false,
     "hook": {
@@ -492,6 +495,7 @@
     "fullhome": false,
     "ours": false
    },
+   "icons": true,
    "inputhook": {
     "bound": false,
     "hook": {
@@ -594,6 +598,7 @@
     "fullhome": false,
     "ours": false
    },
+   "icons": true,
    "inputhook": {
     "bound": false,
     "hook": {

@@ -1,0 +1,12 @@
+{
+  "id": "icons",
+  "name": "App icons",
+  "version": "1.0.0",
+  "kind": "service",
+  "description": "A picture of your own for an app, chosen on a phone, shown on Home and in the Inputs list instead of the app's own icon.",
+  "entry": {
+    "service": "service.js"
+  },
+  "permissions": [],
+  "routes": ["/api/icons"]
+}

@@ -1236,13 +1236,14 @@ function build() {
     sub: st.wallpapers ? st.wallpapers.total + ' photos' : '',
     fn: openWallpapers,
   });
-  rows.push({
-    label: 'App icons',
-    sub: 'your own picture for an app',
-    fn: function () {
-      openIconPair('');
-    },
-  });
+  if (st.icons)
+    rows.push({
+      label: 'App icons',
+      sub: 'your own picture for an app',
+      fn: function () {
+        openIconPair('');
+      },
+    });
   rows.push({ label: 'Cards', sub: 'small widgets on Home', fn: openCards });
   rows.push({
     label: 'Android box',

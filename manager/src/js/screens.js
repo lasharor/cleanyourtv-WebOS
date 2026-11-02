@@ -220,7 +220,7 @@ function openWallPair() {
     }
   );
 }
-/* More > App icons, or a tile's Change icon on Home ({open: 'icons', app}): the phone page of helper/icons.js, the app first */
+/* More > App icons, or a tile's Change icon on Home ({open: 'icons', app}): the phone page of the App icons add-on, the app first */
 function openIconPair(app) {
   shareMode = 'icons';
   push('share');

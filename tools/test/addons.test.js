@@ -170,6 +170,12 @@ run(async () => {
     abc.manifest && abc.manifest.routes.join() === '/api/androidbox' && abc.manifest.kind === 'service',
     'the Android box ships as the bundled add-on androidbox, answering /api/androidbox'
   );
+  const icm = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'helper', 'addons-bundled', 'icons', 'addon.json'), 'utf8'));
+  const icc = addons.check(icm, '1.6.12');
+  ok(
+    icc.manifest && icc.manifest.routes.join() === '/api/icons' && icc.manifest.kind === 'service',
+    'App icons ship as the bundled add-on icons, answering /api/icons'
+  );
   const iptvDir = path.join(__dirname, '..', '..', 'helper', 'addons-bundled', 'iptv');
   ok(
     fs.existsSync(path.join(iptvDir, 'page', 'index.html')) &&

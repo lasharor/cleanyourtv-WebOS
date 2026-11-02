@@ -480,14 +480,15 @@ function appMenu(a) {
         },
       });
     else {
-      /* a picture of your own for the app: chosen on a phone, through the manager's App icons screen (helper/icons.js) */
-      items.push({
-        label: t('Change icon'),
-        fn: function () {
-          launch('com.cleanyourtv.manager', { open: 'icons', app: a.id });
-        },
-      });
-      if (a.iv)
+      /* a picture of your own for the app: chosen on a phone, through the manager's App icons screen (the App icons add-on) */
+      if (iconsOn)
+        items.push({
+          label: t('Change icon'),
+          fn: function () {
+            launch('com.cleanyourtv.manager', { open: 'icons', app: a.id });
+          },
+        });
+      if (iconsOn && a.iv)
         items.push({
           label: t('Reset icon'),
           fn: function () {

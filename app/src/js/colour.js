@@ -354,7 +354,7 @@ function fit(d, dock) {
   i.removeAttribute('style');
   d.classList.remove('fill');
   d.style.background = '';
-  /* a picture of your own shown as Full tile (helper/icons.js): it covers the tile, its middle kept, in the dock and the grid alike */
+  /* a picture of your own shown as Full tile (the App icons add-on): it covers the tile, its middle kept, in the dock and the grid alike */
   if (d._it) {
     d.classList.add('fill');
     var st = i.style;
