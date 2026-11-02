@@ -1,11 +1,12 @@
 // The screen saver: our page in place of LG's screen saver app (scripts/20-cleanyourtv-screensaver, docs/screensaver.md). This module
-// serves that page and closes it again:
+// serves that page, closes it again, and opens it over an idle launcher when tvpowerd did not:
 //   GET  /api/screensaver          {replaced, method, running, photos, every}
 //   GET  /api/screensaver/photos   {photos: ['u/<id>', ...], stamp, every}   the wallpaper library (wallpapers.js)
+//   POST /api/screensaver/active   {returnValue}   the launcher reports a key: the TV is in use, do not open the page over it
 //   POST /api/screensaver/dismiss  {returnValue}   close the page: the app that was on screen comes back
-// The page is an overlay window, so a page that stayed up would keep the remote. The page closes itself on the first key; this module
-// closes it as well when the TV is back to Active for a minute while the page is still listed (the system ended the screen saver by
-// itself, which stops the program sam started but not necessarily the page in webapp-mgr).
+// The page keeps LG's own screen-saver window type, and a page that stayed up would keep the remote. The page closes itself on the
+// first key; this module closes it as well when the TV is back to Active for a minute while the page is still listed (the system ended
+// the screen saver by itself, which stops the program sam started but not necessarily the page in webapp-mgr).
 const fs = require('fs');
 const P = require('./paths'),
   web = require('./web');
@@ -30,6 +31,15 @@ function replaced() {
   }
 }
 
+// May this module open the page itself? Only when the launcher has been in front for IDLE_MS since the last key it reported: "Home is
+// in front" alone is not "idle" — a TV that is browsed with the remote is Home in front all evening, and LG's own screen saver only
+// starts when no key arrives. A launcher that never reported anything (LG's Home in front, a launcher from before this endpoint) is
+// no reason to open the page: then tvpowerd's own timer is the way in.
+const IDLE_MS = 120000;
+function mayOpen(now, homeSince, activeAt) {
+  return !!activeAt && now - Math.max(homeSince, activeAt) >= IDLE_MS;
+}
+
 function create(ctx) {
   const { luna, config } = ctx;
   const wp = () => ctx.feature('wallpapers');
@@ -41,7 +51,8 @@ function create(ctx) {
       return [];
     }
   };
-  // the seconds between photos: read from the launcher's wallpapers setting where there is one, else 25
+  // the seconds between photos: 25, or "saver.every" in config.json when a later version sets it (nothing writes it today; the
+  // launcher's own wallpaper rotation, wall.secs, is for Home)
   const every = () => {
     const s = config.get().saver || {};
     return typeof s.every === 'number' && s.every >= 10 ? Math.min(s.every, 3600) : 25;
@@ -59,12 +70,18 @@ function create(ctx) {
 
   // The way out of a page the system left behind, and a fallback way back in. With LG's own window type (`screenSaver`) tvpowerd
   // arms and relaunches the saver by itself (61 s in the measured cycles), but it did not fire in one cycle out of three, so the
-  // service also opens the page after two quiet minutes on the launcher.
-  const HOME = 'com.webos.app.home',
-    IDLE_MS = 120000;
+  // service also opens the page — over an idle launcher only (mayOpen), which the launcher page keeps it informed about.
+  const HOME = 'com.webos.app.home';
   let since = 0,
     homeSince = 0,
-    tickN = 0;
+    tickN = 0,
+    activeAt = 0,
+    saidQuiet = false;
+  // a key on the launcher (or the key that dismissed the page): the TV is in use now
+  function active() {
+    activeAt = Date.now();
+    saidQuiet = false;
+  }
   async function tick() {
     // nothing to watch when LG's screen saver is not replaced: no luna call every ten seconds on those TVs
     if (!replaced()) {
@@ -92,7 +109,13 @@ function create(ctx) {
           homeSince = Date.now();
           return;
         }
-        if (Date.now() - homeSince < IDLE_MS) return;
+        if (!mayOpen(Date.now(), homeSince, activeAt)) {
+          if (!activeAt && !saidQuiet) {
+            saidQuiet = true;
+            console.log('screensaver: the launcher has not reported a key yet; leaving the page to tvpowerd');
+          }
+          return;
+        }
         homeSince = 0;
         console.log('screensaver: the launcher has been idle for two minutes; opening the page');
         await luna(AM + 'launch', { id: SA });
@@ -124,7 +147,12 @@ function create(ctx) {
   async function handle(req, res, u) {
     const json = (o, c) => web.json(res, o, c);
     if (u === '/api/screensaver/photos') return json({ photos: photos(), stamp: wp() ? wp().stamp() : '', every: every() });
+    if (u === '/api/screensaver/active' && req.method === 'POST') {
+      active();
+      return json({ returnValue: true });
+    }
     if (u === '/api/screensaver/dismiss' && req.method === 'POST') {
+      active(); // the key that closed the page is the last thing the user did
       await close();
       return json({ returnValue: true });
     }
@@ -138,7 +166,7 @@ function create(ctx) {
     web.notFound(res);
   }
 
-  return { name: 'screensaver', prefix: '/api/screensaver', handle, start, photos, close };
+  return { name: 'screensaver', prefix: '/api/screensaver', handle, start, photos, close, active, lastActive: () => activeAt };
 }
 
-module.exports = { create, replaced };
+module.exports = { create, replaced, mayOpen };

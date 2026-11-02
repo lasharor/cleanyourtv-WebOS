@@ -1383,7 +1383,7 @@ function build() {
   } else if (tb === 'features') {
     rows.push({
       label: 'Screen saver',
-      sub: onoff(st.saver && st.saver.enabled) + (st.saver && st.saver.replaced ? ' \u00B7 ours now' : ' \u00B7 LG\u2019s'),
+      sub: onoff(st.saver && st.saver.enabled) + (st.saver && st.saver.replaced ? ' \u00B7 ours now' : ' \u00B7 LG\u2019s own'),
       fn: function () {
         push('home');
       },
