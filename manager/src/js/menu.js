@@ -882,6 +882,7 @@ function build() {
     var curT = cardTypeOf(cardSlot) || 'none';
     rows.push({
       label: 'Empty',
+      about: 'Leave this place empty.',
       sub: curT === 'none' ? 'selected' : '',
       fn: function () {
         setCardType('none');
@@ -890,6 +891,8 @@ function build() {
     ((cs && cs.types) || []).forEach(function (x) {
       rows.push({
         label: x.name,
+        about: x.about,
+        pvu: x.preview ? '/api/cards/preview/' + x.preview : '',
         sub:
           (curT === x.type ? 'selected' : '') +
           (/^ha-/.test(x.type) && !cs.ha ? (curT === x.type ? ' \u00B7 ' : '') + 'needs Home Assistant' : ''),

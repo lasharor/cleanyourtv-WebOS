@@ -27,6 +27,8 @@ const MAX_FILE = 64 * 1024,
   MAX_FILES = 8,
   MAX_OPTIONS = 10;
 const KINDS = ['text', 'long', 'choice'];
+// the card types in the launcher itself: their pictures ship in cardpreviews/, and no downloadable card may take these ids
+const BUILTIN = ['greeting', 'weather', 'ha-entity', 'ha-entities', 'ha-weather', 'ha-camera', 'template'];
 const SIZES = ['small', 'medium', 'large'];
 const MIME = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
 const text = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');
@@ -36,6 +38,7 @@ const safeRel = f => typeof f === 'string' && /^[\w][\w.-]{0,60}$/.test(f);
 function clean(m, folder) {
   if (!m || typeof m !== 'object' || Array.isArray(m)) return { error: 'card.json is not an object' };
   if (!ID.test(m.id || '')) return { error: 'id must be lower-case letters, digits and hyphens (2 to 28), starting with a letter' };
+  if (BUILTIN.indexOf(m.id) >= 0) return { error: 'this id is a card of the launcher itself' };
   if (folder && folder !== m.id) return { error: 'the folder name must be the id' };
   if (typeof m.name !== 'string' || !m.name || m.name.length > 40) return { error: 'name is missing or too long' };
   if (!/^\d+\.\d+\.\d+$/.test(m.version || '')) return { error: 'version must look like 1.0.0' };
@@ -210,6 +213,13 @@ function create() {
   // the picture of a card: from GitHub, kept in cardpacks/.previews for a day
   async function preview(id) {
     if (!ID.test(id || '')) return null;
+    if (BUILTIN.indexOf(id) >= 0) {
+      try {
+        return fs.readFileSync(path.join(__dirname, 'cardpreviews', id + '.jpg'));
+      } catch (_) {
+        return null;
+      }
+    }
     const pd = path.join(P.CARDPACKS, '.previews'),
       f = path.join(pd, id + '.img');
     let st = null;
@@ -253,4 +263,4 @@ function create() {
   return { handle, installed, catalog, install, remove, preview };
 }
 
-module.exports = { create, clean, cleanIndex, ID, KINDS };
+module.exports = { create, clean, cleanIndex, ID, KINDS, BUILTIN };

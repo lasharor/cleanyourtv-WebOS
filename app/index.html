@@ -3992,7 +3992,7 @@ function drawSide(it) {
     document.body.appendChild(sideEl);
   }
   var img = sideEl.querySelector('img'),
-    url = it.pv ? API + '/api/theme/preview/' + it.pv : '';
+    url = it.pvu ? API + it.pvu : it.pv ? API + '/api/theme/preview/' + it.pv : '';
   if (img.getAttribute('data-u') !== url) {
     img.setAttribute('data-u', url);
     img.style.visibility = 'hidden';
@@ -5124,13 +5124,23 @@ function hiddenMenu() {
    where the launcher has the Home Assistant weather card, a weather entity and an outside temperature sensor. The entities come from Home Assistant through the service
    (POST /api/cards/ha/entities); the choice is saved with the launcher's settings (cfg.cards, the same as the phone page writes). */
 var HAM_PLACES = { greeting: 'Above the clock', 'clock-side': 'Beside the clock', side: 'Right column', row: 'Above the dock' };
+/* [type, name, what it is]: the texts are the service's (helper/cards.js), so they are in the translations; a picture of each is at
+   /api/cards/preview/<type> */
 var HAM_KINDS = [
-  ['none', 'Empty'],
-  ['ha-weather', 'Home Assistant weather'],
-  ['ha-entity', 'Home Assistant entity'],
-  ['ha-entities', 'Home Assistant entities'],
-  ['ha-camera', 'Home Assistant camera'],
-  ['greeting', 'Greeting'],
+  ['none', 'Empty', ''],
+  [
+    'ha-weather',
+    'Home Assistant weather',
+    'The weather from a Home Assistant weather entity, with the temperature outside and the forecast.',
+  ],
+  ['ha-entity', 'Home Assistant entity', 'One Home Assistant entity with an icon and its state. OK switches a light, a switch or a scene.'],
+  ['ha-entities', 'Home Assistant entities', 'Several Home Assistant entities in a list under a title, each with its state.'],
+  ['ha-camera', 'Home Assistant camera', 'A Home Assistant camera: a new picture every 10, 30 or 60 seconds.'],
+  [
+    'greeting',
+    'Greeting',
+    'Good morning, good afternoon or good evening by the time of day, with a name and a second line: the date or the weather.',
+  ],
 ];
 /* the kinds of entity to choose from for an entity card, in this order */
 var HAM_DOMAINS = [
@@ -5154,6 +5164,8 @@ function hamPlace(sl) {
 }
 function hamKind(type) {
   for (var i = 0; i < HAM_KINDS.length; i++) if (HAM_KINDS[i][0] === type) return t(HAM_KINDS[i][1]);
+  var pk = /^x-(.+)$/.exec(type);
+  if (pk && CARD_PACKS[pk[1]]) return CARD_PACKS[pk[1]].name; /* a downloaded card */
   return type;
 }
 function hamName(id) {
@@ -5433,21 +5445,29 @@ function hamPlaceMenu(sl) {
     return items;
   });
 }
-/* the kind of card for a place; the options stay when the same kind is chosen again */
+/* the kind of card for a place; the options stay when the same kind is chosen again. Each kind has its picture and what it is, left of the
+   list as in the Theme menu; the cards downloaded from the catalog (manager > Cards > Get more cards) come after the launcher's own. */
 function hamKindMenu(sl) {
   var cur = hamCard(sl).type,
     kinds = HAM_KINDS.filter(function (k) {
       return k[0] === 'none' || CARD_TYPES[k[0]];
+    }).map(function (k) {
+      return { type: k[0], name: t(k[1]), about: k[2] ? t(k[2]) : t('Leave this place empty.'), pic: k[0] === 'none' ? '' : k[0] };
     });
+  Object.keys(CARD_PACKS).forEach(function (id) {
+    kinds.push({ type: 'x-' + id, name: CARD_PACKS[id].name, about: CARD_PACKS[id].about, pic: id });
+  });
   openMenu(
     hamPlace(sl),
     kinds.map(function (k) {
       return {
-        label: t(k[1]),
-        sub: k[0] === cur ? '✓' : '',
+        label: k.name,
+        sub: k.type === cur ? '\u2713' : '',
+        desc: k.about,
+        pvu: k.pic ? '/api/cards/preview/' + k.pic : '',
         stay: true,
         fn: function () {
-          if (k[0] !== cur) hamSave(sl, { type: k[0] });
+          if (k.type !== cur) hamSave(sl, { type: k.type });
           backMenu();
         },
       };
@@ -5456,7 +5476,7 @@ function hamKindMenu(sl) {
       0,
       kinds
         .map(function (k) {
-          return k[0];
+          return k.type;
         })
         .indexOf(cur)
     )

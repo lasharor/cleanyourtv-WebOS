@@ -38,6 +38,7 @@ run(async () => {
   );
   chk({ id: 'Bad Id' }, /id must/, 'an id with capitals or spaces is refused');
   chk({ id: 'x'.repeat(30) }, /id must/, 'an id that makes a card type longer than 31 characters is refused');
+  chk({ id: 'greeting' }, /launcher itself/, 'an id that is a card of the launcher is refused');
   chk({ version: 'one' }, /version/, 'a version that is not 1.0.0-like is refused');
   chk({ template: '' }, /template/, 'a card without a template is refused');
   chk({ template: 'x'.repeat(1501) }, /template/, 'a template over 1500 characters is refused');
@@ -102,6 +103,8 @@ run(async () => {
       r.j.cards[0].installed === '',
     'the catalog lists only clean entries, with their text and a picture: ' + r.out
   );
+  r = await call(cards, '/api/cards/preview/greeting', 'GET');
+  ok(r.code === 200 && Buffer.isBuffer(r.out) && r.out.length > 1000, "the launcher's own cards have a picture too");
   r = await call(cards, '/api/cards/preview/hello', 'GET');
   ok(r.code === 200 && Buffer.isBuffer(r.out) && r.out.equals(JPG), 'the picture is read from the catalog');
   tampered = true;
@@ -126,6 +129,11 @@ run(async () => {
   const withTheme = req('cards').create({ config: memoryConfig({}), feature: n => (n === 'theme' ? theme : null) });
   r = await call(withTheme, '/api/cards/status', 'POST', {});
   const ty = (r.j.types || []).filter(x => x.type === 'x-hello')[0];
+  const gr = (r.j.types || []).filter(x => x.type === 'greeting')[0];
+  ok(
+    gr && gr.about.length > 20 && gr.preview === 'greeting' && ty.preview === 'hello',
+    'every card type has a text and the picture to show next to it'
+  );
   ok(
     ty && ty.name === 'Hello' && ty.fields[0].key === 'who' && ty.fields[1].choices.length === 2,
     'it is a card type with its options as the form: ' + JSON.stringify(ty)

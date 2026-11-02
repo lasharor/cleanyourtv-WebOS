@@ -450,6 +450,8 @@ function create(ctx) {
         reply.cardPacks = {};
         for (const id of Object.keys(have))
           reply.cardPacks[id] = {
+            name: have[id].name,
+            about: have[id].about || have[id].description,
             template: have[id].template,
             size: have[id].size,
             options: have[id].options.map(o => ({ key: o.key, def: o.kind === 'choice' && !o.default ? o.choices[0][0] : o.default })),

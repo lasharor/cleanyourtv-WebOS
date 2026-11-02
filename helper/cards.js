@@ -51,6 +51,7 @@ const TYPES = [
   {
     type: 'greeting',
     name: 'Greeting',
+    about: 'Good morning, good afternoon or good evening by the time of day, with a name and a second line: the date or the weather.',
     fields: [
       { key: 'name', kind: 'text', label: 'Name (optional)' },
       {
@@ -68,6 +69,7 @@ const TYPES = [
   {
     type: 'weather',
     name: 'Weather',
+    about: 'The weather now at a place you choose on your phone, with the next days if you like.',
     fields: [
       { key: 'place', kind: 'place', label: 'Place' },
       {
@@ -93,6 +95,7 @@ const TYPES = [
   {
     type: 'ha-entity',
     name: 'Home Assistant entity',
+    about: 'One Home Assistant entity with an icon and its state. OK switches a light, a switch or a scene.',
     ha: true,
     fields: [
       { key: 'entity', kind: 'entity', label: 'Entity' },
@@ -102,6 +105,7 @@ const TYPES = [
   {
     type: 'ha-entities',
     name: 'Home Assistant entities',
+    about: 'Several Home Assistant entities in a list under a title, each with its state.',
     ha: true,
     fields: [
       { key: 'title', kind: 'text', label: 'Title (optional)' },
@@ -111,6 +115,7 @@ const TYPES = [
   {
     type: 'ha-weather',
     name: 'Home Assistant weather',
+    about: 'The weather from a Home Assistant weather entity, with the temperature outside and the forecast.',
     ha: true,
     fields: [
       { key: 'entity', kind: 'entity', label: 'Weather entity', only: 'weather' },
@@ -130,6 +135,7 @@ const TYPES = [
   {
     type: 'ha-camera',
     name: 'Home Assistant camera',
+    about: 'A Home Assistant camera: a new picture every 10, 30 or 60 seconds.',
     ha: true,
     fields: [
       { key: 'entity', kind: 'entity', label: 'Camera', only: 'camera' },
@@ -148,6 +154,7 @@ const TYPES = [
   {
     type: 'template',
     name: 'Text',
+    about: 'Your own text, with the greeting, time, date and weather filled in as they change.',
     fields: [
       { key: 'text', kind: 'long', label: 'Text' },
       {
@@ -179,11 +186,13 @@ function create(ctx) {
     return (r && r.slots) || [];
   };
   // the downloaded cards as card types (x-<id>), their options as the fields of the form on the phone page
+  /** @returns {any[]} */
   function packTypes() {
     const have = packs.installed();
     return Object.keys(have).map(id => ({
       type: 'x-' + id,
       name: have[id].name,
+      pack: have[id],
       fields: have[id].options.map(o =>
         Object.assign({ key: o.key, kind: o.kind, label: o.label, default: o.default }, o.choices ? { choices: o.choices } : {})
       ),
@@ -195,9 +204,11 @@ function create(ctx) {
       slots: slots().map(sl => ({ id: sl.id, name: T(SLOT_NAMES[sl.id] || sl.id), card: sl.card })),
       cards: config.get().cards || {},
       ha: ha.ready(),
-      types: TYPES.concat(packTypes()).map(ty => ({
+      types: /** @type {any[]} */ (TYPES).concat(packTypes()).map(ty => ({
         type: ty.type,
         name: T(ty.name),
+        about: ty.about ? T(ty.about) : ty.pack ? ty.pack.about || ty.pack.description : '',
+        preview: ty.pack ? ty.pack.id : ty.type,
         fields: ty.fields.map(f => Object.assign({}, f, { label: T(f.label), choices: f.choices && f.choices.map(c => [c[0], T(c[1])]) })),
       })),
     };
@@ -205,7 +216,8 @@ function create(ctx) {
   // the manager's Cards screen: a card type for one slot ('none' leaves it empty); the options stay when the same type is chosen again
   function setType(slot, type) {
     if (!slots().some(sl => sl.id === slot)) return { error: 'this theme has no such place' };
-    if (type !== 'none' && !TYPES.concat(packTypes()).some(ty => ty.type === type)) return { error: 'unknown card type' };
+    if (type !== 'none' && !(/** @type {any[]} */ (TYPES).concat(packTypes()).some(ty => ty.type === type)))
+      return { error: 'unknown card type' };
     config.update('cards (manager)', conf => {
       const c = Object.assign({}, conf.cards || {}),
         old = c[slot] || {};

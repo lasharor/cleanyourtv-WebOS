@@ -98,7 +98,7 @@ function drawSide(it) {
     document.body.appendChild(sideEl);
   }
   var img = sideEl.querySelector('img'),
-    url = it.pv ? API + '/api/theme/preview/' + it.pv : '';
+    url = it.pvu ? API + it.pvu : it.pv ? API + '/api/theme/preview/' + it.pv : '';
   if (img.getAttribute('data-u') !== url) {
     img.setAttribute('data-u', url);
     img.style.visibility = 'hidden';
