@@ -88,7 +88,7 @@ Home Assistant and without a card place in the theme; the same card can be picke
 sit under the clock. It is the same Open-Meteo weather as the [Weather card](#cards) (free, no account),
 so a place needs choosing once:
 
-- **Place**: type a city or town with the TV's keyboard (the one Live TV search uses) and press OK; pick the right one from the list
+- **City**: type a city or town with the TV's keyboard (the one Live TV search uses) and press OK; pick the right one from the list
   (name and region). Nothing needs the phone. The same place can also be set on the phone page: in the manager app, **Cards** >
   **Set up from your phone**, in the **Under the clock** section;
 - **Show on Home**: on or off (the place stays chosen). It cannot be switched on before a place is chosen, and it replaces any other card

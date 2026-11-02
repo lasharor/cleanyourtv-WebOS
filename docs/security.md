@@ -43,7 +43,7 @@ releases of this repository; there is no signature.
 
 Only with a weather card on Home (also the one Customise > Weather puts under the clock). The service asks `api.open-meteo.com` over HTTPS for the weather at the card's place, at most every
 30 minutes, and keeps the last answer in `weather.json`; the request carries the place's coordinates (rounded to about a kilometre) and
-nothing else, and a second request to `air-quality-api.open-meteo.com` the same way, for the air quality in the weather drawer (it may fail without the weather failing). Searching a place (on the TV in Customise > Weather, or on the phone page) sends the name you type to `geocoding-api.open-meteo.com`. No account or key.
+nothing else, and a second request to `air-quality-api.open-meteo.com` the same way, for the air quality in the weather drawer (it may fail without the weather failing). Searching a city (on the TV in Customise > Weather, or on the phone page) sends the words you type to `geocoding-api.open-meteo.com`. No account or key.
 
 ## Home Assistant cards
 

@@ -1259,14 +1259,14 @@ function wxMenu() {
         sub: on ? t('On') : t('Off'),
         stay: true,
         fn: function () {
-          if (!on && !has) return toast(t('Choose a place first.'), true);
+          if (!on && !has) return toast(t('Choose a city first.'), true);
           wxSet(function (o) {
             o.type = on ? 'none' : 'weather';
           });
         },
       },
       {
-        label: t('Place'),
+        label: t('City'),
         sub: c.place || t('Not set'),
         stay: true,
         fn: wxSearch,
@@ -1294,7 +1294,7 @@ function wxMenu() {
         },
       },
       { sep: true },
-      { note: t('Weather and city search by Open-Meteo. Only the city you type and the place you pick are sent. No account.') },
+      { note: t('Weather and city search by Open-Meteo. Only the city you type and its coordinates are sent. No account.') },
     ].filter(function (it) {
       return it; /* the note above only where the theme hides the place */
     });
@@ -1355,8 +1355,8 @@ function wxFind(q) {
     function (r) {
       var list = (r && r.places) || [];
       wxSearchEnd();
-      if (!list.length) return toast(t('No place found.'), true);
-      openBuilt(t('Place'), function () {
+      if (!list.length) return toast(t('No city found.'), true);
+      openBuilt(t('City'), function () {
         return list.map(function (p) {
           return {
             label: p.name,
@@ -1375,7 +1375,7 @@ function wxFind(q) {
     },
     function () {
       wxSearchEnd();
-      toast(t('Place search is not available now.'), true);
+      toast(t('City search is not available now.'), true);
     }
   );
 }

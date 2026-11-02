@@ -95,9 +95,9 @@ const TYPES = [
   {
     type: 'weather',
     name: 'Weather',
-    about: 'The weather now at a place you choose on your phone, with the next days if you like.',
+    about: 'The weather now at a city you choose on your phone, with the next days if you like.',
     fields: [
-      { key: 'place', kind: 'place', label: 'Place' },
+      { key: 'place', kind: 'place', label: 'City' },
       {
         key: 'unit',
         kind: 'choice',
@@ -369,12 +369,12 @@ function create(ctx) {
     if (u === '/api/cards/set') return web.json(res, setType(String(b.slot || ''), String(b.type || '')));
     // the launcher's Customise > Weather: {slot, card} -> the card with its options (the place typed on the TV) saved
     if (u === '/api/cards/card') return web.json(res, setCard(String(b.slot || ''), b.card));
-    // the launcher's own city search (Customise > Weather > Place, typed with the TV's keyboard): {q} -> {places} like the phone page's
+    // the launcher's own city search (Customise > Weather > City, typed with the TV's keyboard): {q} -> {places} like the phone page's
     if (u === '/api/cards/places') {
       try {
         return web.json(res, { places: await weather.search(b.q, i18n.lang(req, config.get().lang)) });
       } catch (e) {
-        return web.json(res, { error: 'Place search is not available now.', places: [] });
+        return web.json(res, { error: 'City search is not available now.', places: [] });
       }
     }
     // the weather card: {lat, lon, unit} -> the weather there (Open-Meteo, at most every 30 minutes)

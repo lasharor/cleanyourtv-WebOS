@@ -407,7 +407,6 @@
  "Photos uploaded from a phone, kept on the TV. At most 100.": "Photos uploaded from a phone, kept on the TV. At most 100.",
  "Pick an app": "Pick an app",
  "Picture size": "Picture size",
- "Place": "Place",
  "Playlist": "Playlist",
  "Playlist address (M3U)": "Playlist address (M3U)",
  "Playlist removed": "Playlist removed",
@@ -788,8 +787,6 @@
  "Leave this place empty.": "Leave this place empty.",
  "Show on Home": "Show on Home",
  "Not set": "Not set",
- "Choose a place first.": "Choose a place first.",
- "Place search is not available now.": "Place search is not available now.",
  "Under the clock": "Under the clock",
  "Low": "Low",
  "Moderate": "Moderate",
@@ -845,7 +842,11 @@
  "North-west": "North-west",
  "The weather for a place you choose, from Open-Meteo, with a drawer of the next hours and days.": "The weather for a place you choose, from Open-Meteo, with a drawer of the next hours and days.",
  "This theme hides this place.": "This theme hides this place.",
- "Weather and city search by Open-Meteo. Only the city you type and the place you pick are sent. No account.": "Weather and city search by Open-Meteo. Only the city you type and the place you pick are sent. No account.",
  "Type at least two letters.": "Type at least two letters.",
- "No place found.": "No place found."
+ "Choose a city first.": "Choose a city first.",
+ "City": "City",
+ "Weather and city search by Open-Meteo. Only the city you type and its coordinates are sent. No account.": "Weather and city search by Open-Meteo. Only the city you type and its coordinates are sent. No account.",
+ "No city found.": "No city found.",
+ "City search is not available now.": "City search is not available now.",
+ "The weather now at a city you choose on your phone, with the next days if you like.": "The weather now at a city you choose on your phone, with the next days if you like."
 }
