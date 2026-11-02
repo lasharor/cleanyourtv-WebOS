@@ -9,6 +9,13 @@
    "preview": "classic/preview.jpg"
   },
   {
+   "id": "aerial",
+   "name": "Aerial",
+   "author": "gasparegas",
+   "description": "Apple TV-inspired: cinematic aerial scenes, frosted-glass dock at the bottom, blue focus rings and smooth animations.",
+   "preview": "aerial/preview.jpg"
+  },
+  {
    "id": "big-tiles",
    "name": "Big Tiles",
    "author": "CleanYourTV",
