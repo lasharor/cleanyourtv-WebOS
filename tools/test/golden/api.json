@@ -139,6 +139,7 @@
       "--tile-h": "151px",
       "--tile-r": "34px",
       "--tile-w": "151px",
+      "--under-d": "flex",
       "--view-top": "300px"
      },
      "viewH": 780,
@@ -375,6 +376,7 @@
       "--tile-h": "151px",
       "--tile-r": "34px",
       "--tile-w": "151px",
+      "--under-d": "flex",
       "--view-top": "300px"
      },
      "viewH": 780,

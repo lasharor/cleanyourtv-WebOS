@@ -85,6 +85,8 @@ function wxdIdle() {
 /* the unit is the card's: switching it saves the card and asks for the weather in the other unit */
 function wxdUnit() {
   var c = Object.assign({}, (cfg.cards || {})[WXD.slot]);
+  /* a place whose card comes from the theme itself (slot.card) has no saved entry yet: keep it a weather card, or the save drops it */
+  if (!c.type) c.type = 'weather';
   if (c.unit === 'f') delete c.unit;
   else c.unit = 'f';
   cfg.cards = Object.assign({}, cfg.cards);
@@ -118,8 +120,9 @@ function wxdKey(k, e) {
 }
 function wxdHours() {
   var o = wxdCard(),
-    w = o && wxFor(o);
-  return w && w.detail && w.detail.hours.length ? w.detail.hours.length : 1;
+    w = o && wxFor(o),
+    hs = w && w.detail && w.detail.hours;
+  return hs && hs.length ? hs.length : 1;
 }
 /* what a press or a click on a button does */
 function wxdPick(row, col) {
@@ -182,8 +185,14 @@ function wxdAqi(v) {
               ? t('Very poor')
               : t('Extremely poor');
 }
+/* the wind's direction in words, clockwise from the north: whole names, not N/E/S/W, so a one-letter text is not a translation key
+   (build-pages.js takes a text as used when its letters appear anywhere in the page, so "E" would land in every page) */
 function wxdCompass(deg) {
-  return deg === null ? '' : [t('N'), t('NE'), t('E'), t('SE'), t('S'), t('SW'), t('W'), t('NW')][Math.round(deg / 45) % 8];
+  return deg === null
+    ? ''
+    : [t('North'), t('North-east'), t('East'), t('South-east'), t('South'), t('South-west'), t('West'), t('North-west')][
+        Math.round(deg / 45) % 8
+      ];
 }
 function wxdTile(icon, label, value, sub) {
   return (

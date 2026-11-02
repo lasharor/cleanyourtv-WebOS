@@ -740,12 +740,13 @@
  "Offline, data from %s": "Sense connexió, dades de %s",
  "Updated %s": "Actualitzat a les %s",
  "Weather data by Open-Meteo.com": "Dades meteorològiques d'Open-Meteo.com",
- "N": "N",
- "NE": "NE",
- "E": "E",
- "SE": "SE",
- "S": "S",
- "SW": "SO",
- "W": "O",
- "NW": "NO"
+ "North": "Nord",
+ "North-east": "Nord-est",
+ "East": "Est",
+ "South-east": "Sud-est",
+ "South": "Sud",
+ "South-west": "Sud-oest",
+ "West": "Oest",
+ "North-west": "Nord-oest",
+ "This theme hides the place under the clock.": "Aquest tema amaga el lloc sota el rellotge."
 }

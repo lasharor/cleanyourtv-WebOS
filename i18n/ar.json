@@ -767,12 +767,13 @@
  "Offline, data from %s": "غير متصل، بيانات من %s",
  "Updated %s": "تم التحديث %s",
  "Weather data by Open-Meteo.com": "بيانات الطقس من Open-Meteo.com",
- "N": "الشمال",
- "NE": "الشمال الشرقي",
- "E": "الشرق",
- "SE": "الجنوب الشرقي",
- "S": "الجنوب",
- "SW": "الجنوب الغربي",
- "W": "الغرب",
- "NW": "الشمال الغربي"
+ "North": "الشمال",
+ "North-east": "الشمال الشرقي",
+ "East": "الشرق",
+ "South-east": "الجنوب الشرقي",
+ "South": "الجنوب",
+ "South-west": "الجنوب الغربي",
+ "West": "الغرب",
+ "North-west": "الشمال الغربي",
+ "This theme hides the place under the clock.": "هذا المظهر يخفي المكان أسفل الساعة."
 }

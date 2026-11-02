@@ -303,8 +303,9 @@ where the card is, under a dark tint. Without scenes it is a plain translucent p
 ### Slots for cards
 
 A theme can mark places where **cards** go: small widgets the user chooses in **Customise** > **Cards** (greeting, weather,
-text and Home Assistant cards). A theme without slots shows no cards and has no Cards row in Customise (every theme still has the place **Under the clock**, `clock.under`; `under-clock` is its id and not available as a slot id). Slots are a
-list in `theme.json`:
+text and Home Assistant cards). A theme without slots has no places of its own, but every theme still has **Under the clock**
+(`clock.under` turns it off; `under-clock` is its id and not available as a slot id), so the Cards row in Customise is there whether
+or not a theme declares slots. Slots are a list in `theme.json`:
 
 ```json
 "slots": [

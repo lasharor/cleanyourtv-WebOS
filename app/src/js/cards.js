@@ -787,7 +787,9 @@ function cardTargets() {
     els = cardEls();
   for (var i = 0; i < els.length; i++) {
     var ty = CARD_TYPES[els[i]._card.type];
-    if (ty && ty.act && (!ty.focus || ty.focus(els[i]._card)) && els[i].style.display !== 'none') out.push(els[i]);
+    /* only while the card is drawn: a theme can leave the place under the clock out (a glass clock, clock.under off, no clock at all), and
+       haHide hides a card with nothing to show yet; offsetParent is null then, and in no case for a card on screen */
+    if (ty && ty.act && (!ty.focus || ty.focus(els[i]._card)) && els[i].offsetParent) out.push(els[i]);
   }
   return out;
 }

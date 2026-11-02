@@ -26,6 +26,8 @@ var HAM_KINDS = [
     'Greeting',
     'Good morning, good afternoon or good evening by the time of day, with a name and a second line: the date or the weather.',
   ],
+  /* the weather card of Customise > Weather, offered only for a place that already has it (hamKindsFor): it needs a place, chosen there */
+  ['weather', 'Weather', 'The weather for a place you choose, from Open-Meteo, with a drawer of the next hours and days.'],
 ];
 /* the kinds of entity to choose from for an entity card, in this order */
 var HAM_DOMAINS = [
@@ -52,6 +54,14 @@ function hamKind(type) {
   var pk = /^x-(.+)$/.exec(type);
   if (pk && CARD_PACKS[pk[1]]) return CARD_PACKS[pk[1]].name; /* a downloaded card */
   return type;
+}
+/* the kinds a place can be given: the ones the launcher knows, and the weather card only for a place that already shows it (it is chosen
+   in Customise > Weather, with its place, and picking it again there keeps that place) */
+function hamKindsFor(cur) {
+  return HAM_KINDS.filter(function (k) {
+    if (k[0] === 'weather') return cur === 'weather';
+    return k[0] === 'none' || CARD_TYPES[k[0]];
+  });
 }
 function hamName(id) {
   return hamNames[id] || (HA.by[id] && HA.by[id].name) || id;
@@ -332,9 +342,7 @@ function hamPlaceMenu(sl) {
    list as in the Theme menu; the cards downloaded from the catalog (manager > Cards > Get more cards) come after the launcher's own. */
 function hamKindMenu(sl) {
   var cur = hamCard(sl).type,
-    kinds = HAM_KINDS.filter(function (k) {
-      return k[0] === 'none' || CARD_TYPES[k[0]];
-    }).map(function (k) {
+    kinds = hamKindsFor(cur).map(function (k) {
       return { type: k[0], name: t(k[1]), about: k[2] ? t(k[2]) : t('Leave this place empty.'), pic: k[0] === 'none' ? '' : k[0] };
     });
   Object.keys(CARD_PACKS).forEach(function (id) {

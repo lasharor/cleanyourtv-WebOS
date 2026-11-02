@@ -789,12 +789,13 @@
  "Offline, data from %s": "Offline, gegevens van %s",
  "Updated %s": "Bijgewerkt om %s",
  "Weather data by Open-Meteo.com": "Weergegevens van Open-Meteo.com",
- "N": "N",
- "NE": "NO",
- "E": "O",
- "SE": "ZO",
- "S": "Z",
- "SW": "ZW",
- "W": "W",
- "NW": "NW"
+ "North": "Noord",
+ "North-east": "Noordoost",
+ "East": "Oost",
+ "South-east": "Zuidoost",
+ "South": "Zuid",
+ "South-west": "Zuidwest",
+ "West": "West",
+ "North-west": "Noordwest",
+ "This theme hides the place under the clock.": "Dit thema verbergt de plek onder de klok."
 }

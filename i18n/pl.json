@@ -791,12 +791,13 @@
  "Offline, data from %s": "Offline, dane z %s",
  "Updated %s": "Zaktualizowano o %s",
  "Weather data by Open-Meteo.com": "Dane pogodowe: Open-Meteo.com",
- "N": "N",
- "NE": "NE",
- "E": "E",
- "SE": "SE",
- "S": "S",
- "SW": "SW",
- "W": "W",
- "NW": "NW"
+ "North": "Północ",
+ "North-east": "Północny wschód",
+ "East": "Wschód",
+ "South-east": "Południowy wschód",
+ "South": "Południe",
+ "South-west": "Południowy zachód",
+ "West": "Zachód",
+ "North-west": "Północny zachód",
+ "This theme hides the place under the clock.": "Ten motyw ukrywa miejsce pod zegarem."
 }

@@ -835,5 +835,15 @@
  "SW": "SW",
  "W": "W",
  "NW": "NW",
- "Add-ons: features you can install": "Add-ons: features you can install"
+ "Add-ons: features you can install": "Add-ons: features you can install",
+ "North": "North",
+ "North-east": "North-east",
+ "East": "East",
+ "South-east": "South-east",
+ "South": "South",
+ "South-west": "South-west",
+ "West": "West",
+ "North-west": "North-west",
+ "This theme hides the place under the clock.": "This theme hides the place under the clock.",
+ "The weather for a place you choose, from Open-Meteo, with a drawer of the next hours and days.": "The weather for a place you choose, from Open-Meteo, with a drawer of the next hours and days."
 }

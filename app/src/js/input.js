@@ -219,6 +219,7 @@ function wantInputs() {
 }
 document.addEventListener('webOSRelaunch', function () {
   wxdClose();
+  wxSearchEnd(); /* a city half typed when Home is pressed again */
   var p = {};
   try {
     p = JSON.parse(webOSSystem.launchParams || '{}');
@@ -249,6 +250,7 @@ document.addEventListener('visibilitychange', function () {
     WALL.hidden();
     stopMoving(); /* leaving Home while a tile is moved keeps where it is now */
     wxdClose();
+    wxSearchEnd(); /* and the TV's keyboard with it */
     SCENES.hidden();
     if (LIVE.on) LIVE.exit();
     closeRunningMenu();

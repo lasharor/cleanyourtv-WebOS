@@ -747,12 +747,13 @@
  "Offline, data from %s": "Нет сети, данные от %s",
  "Updated %s": "Обновлено в %s",
  "Weather data by Open-Meteo.com": "Данные о погоде: Open-Meteo.com",
- "N": "С",
- "NE": "СВ",
- "E": "В",
- "SE": "ЮВ",
- "S": "Ю",
- "SW": "ЮЗ",
- "W": "З",
- "NW": "СЗ"
+ "North": "Север",
+ "North-east": "Северо-восток",
+ "East": "Восток",
+ "South-east": "Юго-восток",
+ "South": "Юг",
+ "South-west": "Юго-запад",
+ "West": "Запад",
+ "North-west": "Северо-запад",
+ "This theme hides the place under the clock.": "Эта тема скрывает место под часами."
 }

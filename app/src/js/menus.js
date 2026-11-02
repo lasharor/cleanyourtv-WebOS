@@ -1242,3 +1242,61 @@ function hiddenMenu() {
     );
   });
 }
+
+function wxMenu() {
+  openBuilt(t('Weather'), function () {
+    var c = (cfg.cards || {})['under-clock'] || {},
+      has = c.lat !== undefined && c.lon !== undefined,
+      on = c.type === 'weather',
+      /* the theme decides whether the place is drawn (a glass clock leaves it out, and so do clock.under and a hidden clock): say so,
+         because the card is then on Home in the settings only (home.css #under) */
+      box = $('under'),
+      hidden = !!box && getComputedStyle(box).display === 'none';
+    return [
+      hidden ? { note: t('This theme hides the place under the clock.') } : null,
+      {
+        label: t('Show on Home'),
+        sub: on ? t('On') : t('Off'),
+        stay: true,
+        fn: function () {
+          if (!on && !has) return toast(t('Choose a place first.'), true);
+          wxSet(function (o) {
+            o.type = on ? 'none' : 'weather';
+          });
+        },
+      },
+      {
+        label: t('Place'),
+        sub: c.place || t('Not set'),
+        stay: true,
+        fn: wxSearch,
+      },
+      {
+        label: t('Temperature'),
+        sub: c.unit === 'f' ? '°F' : '°C',
+        stay: true,
+        fn: function () {
+          wxSet(function (o) {
+            if (o.unit === 'f') delete o.unit;
+            else o.unit = 'f';
+          });
+        },
+      },
+      {
+        label: t('Forecast'),
+        sub: c.show === 'days' ? t('Now and the next days') : t('Now'),
+        stay: true,
+        fn: function () {
+          wxSet(function (o) {
+            if (o.show === 'days') delete o.show;
+            else o.show = 'days';
+          });
+        },
+      },
+      { sep: true },
+      { note: t('Weather and city search by Open-Meteo. Only the name you type and the place you choose are sent. No account.') },
+    ].filter(function (it) {
+      return it; /* the note above only where the theme hides the place */
+    });
+  });
+}

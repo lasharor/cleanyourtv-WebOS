@@ -89,7 +89,7 @@ so a place needs choosing once:
 
 - **Place**: type a city or town with the TV's keyboard (the one Live TV search uses) and press OK; pick the right one from the list
   (name and region). Nothing needs the phone. The same place can also be set on the phone page: in the manager app, **Cards** >
-  **Under the clock** > **Set up from your phone**;
+  **Set up from your phone**, in the **Under the clock** section;
 - **Show on Home**: on or off (the place stays chosen). It cannot be switched on before a place is chosen, and it replaces any other card
   you chose for **Under the clock**;
 - **Temperature**: °C or °F;
@@ -124,8 +124,9 @@ Cards are set up in the [manager app](manager.md), **Cards**, and with the remot
 It lists the places (above the clock, beside the clock, a column on the right, above the dock, under the clock); choose one to put a card
 there or leave it empty. **Under the clock** is in every theme and takes any card, centred or aligned like the clock, right under it; the
 themes with more places (**Lock Screen**, **Bloom** and **Horizon**) add theirs. A theme can switch it off with `clock.under`
-(see [Themes](themes.md)); the glass clock of some themes leaves it out, and the app name steps down when the card would cover it. A card you chose stays when you switch to another theme with the
-same place.
+(see [Themes](themes.md)); the glass clock of some themes leaves it out, and Customise > Weather then says so. The app name steps down
+when the card would cover it, and the card is only in the row of buttons for the remote while the place is drawn. A card you chose stays
+when you switch to another theme with the same place.
 
 **More cards** are downloaded: in the manager, **Cards** > **Get more cards** lists the cards in the project's catalog on GitHub, each with a picture and a text, and installs or removes them (a countdown to a date, a quote, the progress of the year, prayer times and a remembrance in Arabic (cards with a page of their own, which runs in a closed frame), and more as people add them). An installed card is one more kind of card for each place, and its options (a title, a date, a text) are typed on the phone page. A card has no script, only a template, so it cannot run anything on the TV; how to make one is in [Making a card](development/cards.md).
 

@@ -258,4 +258,78 @@ run(async () => {
     !thrown && /Offline, data from/.test(drawn(0, holes, '')),
     'the weather drawer copes with missing data, and says so when what it shows is old' + (thrown ? ': ' + thrown : '')
   );
+  // the page functions on their own, with their globals stood in for: what a key or a click runs, without drawing the whole drawer
+  const runIn = (extra, code) => {
+    const sandbox = Object.assign(
+      {
+        WXD: null,
+        document: { addEventListener() {} },
+        $: () => ({}),
+        cfg: { cards: {} },
+        LOC: 'en-GB',
+        clockOpts: () => ({ hour: 'numeric', hourCycle: 'h23' }),
+        t: x => x,
+        wxKind: () => ['part', 'Partly cloudy'],
+        wxSvg: () => '<svg></svg>',
+        lineSvg: () => '<svg></svg>',
+        WX_ICON: { rain: '', sun: '' },
+        setHtml: (el, h) => {
+          el.innerHTML = h;
+          return el;
+        },
+        cardEls: () => [],
+        wxFor: () => null,
+        saveCfg() {},
+        clearTimeout() {},
+        setTimeout: () => 0,
+      },
+      extra
+    );
+    vm.createContext(sandbox);
+    vm.runInContext(src + '\n;' + code, sandbox);
+    return sandbox;
+  };
+  // a place whose weather came back with a detail but without hours (an answer written by something else): Hours has one hour, not a throw
+  const noHours = runIn(
+    {
+      cardEls: () => [{ _slot: 'side', _card: { type: 'weather' } }],
+      wxFor: () => ({ at: Date.now(), detail: { feels: 3 } }),
+    },
+    'WXD.slot = "side"; var n = wxdHours();'
+  );
+  ok(noHours.n === 1, 'the Hours tab copes with an answer that has a detail but no hours');
+  // the unit button on a place the theme fills (no saved card yet) writes a weather card, not an entry without a type, which the service drops
+  const unit = runIn({ cfg: { cards: { side: {} } } }, 'WXD.slot = "side"; wxdUnit();');
+  ok(
+    unit.cfg.cards.side.type === 'weather' && unit.cfg.cards.side.unit === 'f',
+    'the unit button keeps a card the theme put there a weather card'
+  );
+  // the wind's direction is a whole word: a one-letter text would count as used on every page (build-pages.js usedIn)
+  const compass = runIn({}, 'var d = [wxdCompass(0), wxdCompass(45), wxdCompass(315), wxdCompass(null)];');
+  ok(compass.d.join('|') === 'North|North-east|North-west|', "the wind's direction is a word, and empty without one");
+  ok(!/t\('N'\)/.test(src) && !/t\('E'\)/.test(src), 'no one-letter text is translated in the weather drawer');
+  // a card joins the row of buttons for the remote only while it is drawn: a theme can leave the place under the clock out (a glass clock,
+  // clock.under off, no clock at all), and then the card must not be a stop in that row
+  const target = /function cardTargets\(\) \{[\s\S]*?\n\}/.exec(fs.readFileSync(path.join(root, 'app', 'src', 'js', 'cards.js'), 'utf8'));
+  const targets = { CARD_TYPES: { weather: { act() {}, focus: () => true } } };
+  targets.cardEls = () => [
+    { _card: { type: 'weather' }, offsetParent: {} },
+    { _card: { type: 'weather' }, offsetParent: null },
+  ];
+  vm.createContext(targets);
+  vm.runInContext((target ? target[0] : '') + '\n;var out = cardTargets().length;', targets);
+  ok(target && targets.out === 1, 'a card is in the row of buttons for the remote only while it is drawn');
+  // Customise > Home Assistant lists the kinds a place can be given: the weather card of Customise > Weather is one only where it already is
+  const ham = { CARD_TYPES: { 'ha-entity': {}, greeting: {}, weather: {} }, t: x => x, cfg: { cards: {} } };
+  vm.createContext(ham);
+  vm.runInContext(
+    fs.readFileSync(path.join(root, 'app', 'src', 'js', 'hamenu.js'), 'utf8') +
+      '\n;var withW = hamKindsFor("weather").map(function (k) { return k[0]; });\n' +
+      'var without = hamKindsFor("none").map(function (k) { return k[0]; });\nvar label = hamKind("weather");',
+    ham
+  );
+  ok(
+    ham.withW.indexOf('weather') >= 0 && ham.without.indexOf('weather') < 0 && ham.label === 'Weather',
+    'the weather card is a kind of card only where it already is, and it is named Weather there'
+  );
 });

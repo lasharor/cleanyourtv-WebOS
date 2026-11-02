@@ -792,12 +792,13 @@
  "Offline, data from %s": "Offline, Daten von %s",
  "Updated %s": "Aktualisiert um %s",
  "Weather data by Open-Meteo.com": "Wetterdaten von Open-Meteo.com",
- "N": "N",
- "NE": "NO",
- "E": "O",
- "SE": "SO",
- "S": "S",
- "SW": "SW",
- "W": "W",
- "NW": "NW"
+ "North": "Nord",
+ "North-east": "Nordost",
+ "East": "Ost",
+ "South-east": "Südost",
+ "South": "Süd",
+ "South-west": "Südwest",
+ "West": "West",
+ "North-west": "Nordwest",
+ "This theme hides the place under the clock.": "Dieses Design blendet den Platz unter der Uhr aus."
 }

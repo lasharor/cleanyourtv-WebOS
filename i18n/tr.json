@@ -722,12 +722,13 @@
  "Offline, data from %s": "Çevrimdışı, %s verileri",
  "Updated %s": "Güncellendi: %s",
  "Weather data by Open-Meteo.com": "Hava verileri: Open-Meteo.com",
- "N": "K",
- "NE": "KD",
- "E": "D",
- "SE": "GD",
- "S": "G",
- "SW": "GB",
- "W": "B",
- "NW": "KB"
+ "North": "Kuzey",
+ "North-east": "Kuzeydoğu",
+ "East": "Doğu",
+ "South-east": "Güneydoğu",
+ "South": "Güney",
+ "South-west": "Güneybatı",
+ "West": "Batı",
+ "North-west": "Kuzeybatı",
+ "This theme hides the place under the clock.": "Bu tema saatin altındaki yeri gizler."
 }
