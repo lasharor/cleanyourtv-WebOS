@@ -775,5 +775,13 @@
  "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Change</b> next to an app, then a picture, <b>Full tile</b> or <b>Icon</b>.</li>": "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Change</b> next to an app, then a picture, <b>Full tile</b> or <b>Icon</b>.</li>",
  "The page stays open while you use it, at most an hour. It is not encrypted: the pictures travel over your Wi-Fi.": "The page stays open while you use it, at most an hour. It is not encrypted: the pictures travel over your Wi-Fi.",
  "Best size for Full tile: %s pixels. Edges that don’t fit are trimmed, keeping the middle.": "Best size for Full tile: %s pixels. Edges that don’t fit are trimmed, keeping the middle.",
- "Best size for Icon: %s pixels. Ideally with a transparent background.": "Best size for Icon: %s pixels. Ideally with a transparent background."
+ "Best size for Icon: %s pixels. Ideally with a transparent background.": "Best size for Icon: %s pixels. Ideally with a transparent background.",
+ "Add-on": "Add-on",
+ "Updates & Home": "Updates & Home",
+ "Features": "Features",
+ "Add-ons": "Add-ons",
+ "System": "System",
+ "Look": "Look",
+ "Top & cards": "Top & cards",
+ "Top": "Top"
 }

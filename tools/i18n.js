@@ -29,6 +29,13 @@ function pageText() {
           .readdirSync(path.join(root, 'helper'))
           .filter(f => /\.js$/.test(f))
           .map(f => fs.readFileSync(path.join(root, 'helper', f), 'utf8'))
+          // and the bundled add-ons' services (the App icons phone page)
+          .concat(
+            fs
+              .readdirSync(path.join(root, 'helper', 'addons-bundled'))
+              .filter(d => fs.existsSync(path.join(root, 'helper', 'addons-bundled', d, 'service.js')))
+              .map(d => fs.readFileSync(path.join(root, 'helper', 'addons-bundled', d, 'service.js'), 'utf8'))
+          )
       )
       .join('\n')
   );

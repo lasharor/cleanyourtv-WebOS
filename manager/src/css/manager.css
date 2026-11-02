@@ -17,14 +17,49 @@ body {
   color: var(--ink);
   font-family: var(--font);
 }
+#tabs {
+  position: absolute;
+  left: 96px;
+  right: 96px;
+  top: 56px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+#tabs .tab {
+  height: 64px;
+  padding: 0 34px;
+  margin-right: 14px;
+  border-radius: 32px;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 64px;
+  white-space: nowrap;
+  color: var(--ink2);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+#tabs .tab.on {
+  background: var(--ink);
+  color: #0b0c10;
+}
+/* inside a sub-screen the tabs only show where you are */
+#tabs.sub .tab {
+  opacity: 0.5;
+}
+#tabs.sub .tab.on {
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--ink);
+}
 #head {
   position: absolute;
   left: 96px;
-  top: 70px;
+  top: 190px;
   width: 640px;
 }
 #head h1 {
-  font-size: 76px;
+  font-size: 56px;
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.05;
@@ -52,9 +87,9 @@ body {
 #panel {
   position: absolute;
   left: 820px;
-  top: 60px;
+  top: 190px;
   width: 1000px;
-  height: 960px;
+  height: 850px;
   display: flex;
   flex-direction: column;
 }

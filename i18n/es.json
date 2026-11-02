@@ -701,5 +701,10 @@
  "Dial": "Dial",
  "Circular dial on the right": "Dial circular a la derecha",
  "System default (LG webOS)": "Predeterminado del sistema (LG webOS)",
- "Stock TV volume bar": "Barra de volumen original del televisor"
+ "Stock TV volume bar": "Barra de volumen original del televisor",
+ "Features": "Funciones",
+ "System": "Sistema",
+ "Look": "Aspecto",
+ "Top": "Arriba",
+ "Top & cards": "Arriba y tarjetas"
 }

@@ -28,6 +28,35 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* a tabbed menu (Customise): the tabs across the top of the panel; the panel hangs from a fixed place so they do not move from tab to tab */
+#ov.tb {
+  align-items: flex-start;
+}
+#ov.tb .panel {
+  margin-top: 150px;
+}
+#ov .mtabs {
+  display: flex;
+  margin-top: 0;
+}
+#ov .mt {
+  height: 56px;
+  padding: 0 28px;
+  margin-right: 12px;
+  border-radius: var(--row-r);
+  font-size: calc(26px * var(--fs));
+  font-weight: 500;
+  line-height: 56px;
+  white-space: nowrap;
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  opacity: 0.7;
+}
+#ov .mt.on {
+  background: var(--acc);
+  color: var(--acc-ink);
+  opacity: 1;
+}
 .row {
   display: flex;
   align-items: center;

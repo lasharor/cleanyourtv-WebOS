@@ -2,6 +2,8 @@ document.addEventListener('keydown', function (e) {
   var k = e.keyCode;
   if (k === 38) next(-1);
   else if (k === 40) next(1);
+  else if (k === 37) setTab(tab - 1);
+  else if (k === 39) setTab(tab + 1);
   else if (k === 13) act();
   else if (k === 461 || k === 27 || k === 8 || k === 10009) {
     if (view === 'share') closeShare();
@@ -18,6 +20,11 @@ document.addEventListener('keydown', function (e) {
 document.addEventListener('click', function (e) {
   if (e.target.closest && e.target.closest('#shareclose')) {
     closeShare();
+    return;
+  }
+  var tb = e.target.closest && e.target.closest('.tab');
+  if (tb) {
+    setTab(+tb.getAttribute('data-t'));
     return;
   }
   var r = e.target.closest && e.target.closest('.row');
@@ -66,6 +73,7 @@ function wantView() {
 }
 document.addEventListener('webOSRelaunch', function () {
   view = 'main';
+  tab = 0;
   idx = 0;
   idxStack = [];
   listY = 0;

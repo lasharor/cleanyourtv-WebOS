@@ -424,63 +424,6 @@ function build() {
     });
     return;
   }
-  if (view === 'addons') {
-    if (ad.paused)
-      rows.push({
-        label: 'Add-ons are paused',
-        sub: 'the file DISABLE-ADDONS is present; remove it and restart',
-        dim: true,
-        fn: function () {},
-      });
-    ad.installed.forEach(function (a) {
-      rows.push({
-        label: a.name,
-        sub:
-          (a.status === 'running' ? 'on' : a.status === 'off' ? 'off' : a.status === 'failed' ? 'failed' : a.status) +
-          (a.version ? ' \u00B7 ' + a.version : '') +
-          (a.bundled ? ' \u00B7 ships with CleanYourTV' : ''),
-        fn: function () {
-          ad.sel = a.id;
-          push('addon');
-        },
-      });
-    });
-    var offer = ad.catalog.filter(function (e) {
-      return !e.installed || e.update;
-    });
-    if (offer.length) rows.push({ sep: true });
-    offer.forEach(function (e) {
-      rows.push({
-        label: e.name,
-        sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version + (e.description ? ' \u00B7 ' + e.description : ''),
-        fn: function () {
-          addonDo('/api/addons/install', { id: e.id }, e.name + ' installed');
-        },
-      });
-    });
-    if (bookPages().length) {
-      rows.push({ sep: true });
-      rows.push({
-        label: 'Page strip position',
-        sub: stripPosLabel(ad.book.position) + ' \u00B7 the theme sets its look and the default place',
-        fn: function () {
-          var i = STRIP_POS.indexOf(ad.book.position || '');
-          bookSet({ position: STRIP_POS[(i + 1) % STRIP_POS.length] }, 'Saved');
-        },
-      });
-      rows.push({
-        label: 'Page strip on Home',
-        sub: onoff(ad.book.strip !== false) + ' \u00B7 shows which button turns to which page',
-        fn: function () {
-          bookSet({ strip: ad.book.strip === false }, 'Saved');
-        },
-      });
-    }
-    if (ad.error) rows.push({ label: 'The catalog could not be read', sub: ad.error, dim: true, fn: function () {} });
-    rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
-    return;
-  }
   if (view === 'addon') {
     var a1 = addonSel() || {};
     rows.push({ label: a1.name || '', sub: (a1.description || '') + (a1.error ? ' \u00B7 ' + a1.error : ''), fn: function () {} });
@@ -719,40 +662,6 @@ function build() {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
-  if (view === 'debloat') {
-    DEBLOAT.forEach(function (g) {
-      rows.push({
-        label: g.label,
-        sub: onoff(debloatOn(g.id)) + ' \u00B7 ' + g.what,
-        fn: function () {
-          debloatToggle(g.id);
-        },
-      });
-    });
-    rows.push({ sep: true });
-    PRELOAD.forEach(function (a) {
-      rows.push({
-        label: 'Close ' + a.label + ' preloaded at boot',
-        sub: onoff(preloadClosed(a.id)) + ' \u00B7 closes it in the background about 90 s after boot (not when it is in front)',
-        fn: function () {
-          preloadToggle(a.id);
-        },
-      });
-    });
-    rows.push({ sep: true });
-    var anyOff = DEBLOAT.some(function (g) {
-      return !debloatOn(g.id);
-    });
-    rows.push({
-      label: anyOff ? 'Switch all on' : 'Switch all off',
-      fn: function () {
-        opt(anyOff ? { debloat: true, debloatOff: [] } : { debloat: false, debloatOff: [] });
-      },
-    });
-    rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
-    return;
-  }
   if (view === 'experimental') {
     rows.push({
       label: 'Experimental',
@@ -946,56 +855,6 @@ function build() {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
-  if (view === 'more') {
-    rows.push({ label: 'Home Assistant', sub: st.voice && st.voice.ha ? 'set up' : 'not set up', fn: openHa });
-    rows.push({
-      label: 'Voice',
-      sub: st.voice ? (st.voice.installed ? onoff(st.voice.enabled) : 'not installed') : '',
-      fn: function () {
-        api('/api/voice/status').then(
-          function (v) {
-            vo = v;
-            push('voice');
-            if ((v.job && v.job.state === 'working') || v.listening) voiceRefresh();
-          },
-          function () {
-            banner('The service did not answer', 'err');
-          }
-        );
-      },
-    });
-    rows.push({
-      label: 'Language',
-      sub: (function () {
-        var n = 'Automatic';
-        languages().forEach(function (x) {
-          if (x.code === st.lang) n = x.name;
-        });
-        return n;
-      })(),
-      fn: function () {
-        push('language');
-      },
-    });
-    rows.push({
-      label: 'Network notifications',
-      sub: onoff(st.notifyApi && st.notifyApi.enabled),
-      fn: function () {
-        api('/api/manager/notify-api').then(
-          function (n) {
-            napi = n;
-            push('notifyapi');
-          },
-          function () {
-            banner('The service did not answer', 'err');
-          }
-        );
-      },
-    });
-    rows.push({ sep: true });
-    rows.push({ label: 'Back', fn: pop });
-    return;
-  }
   if (view === 'abapps') {
     rows.push({
       label: 'Apps on the box',
@@ -1178,117 +1037,239 @@ function build() {
             : 'Cannot check'
           : 'Up to date';
   };
-  // updates, then the settings, then support; the destructive row last
-  rows.push({
-    label: 'Launcher ' + fe.version,
-    sub: uptxt(fe.updateTo),
-    dim: busy,
-    fn: fe.updateTo
-      ? function () {
-          run('/api/manager/update-frontend', { version: fe.updateTo });
-        }
-      : null,
-  });
-  rows.push({
-    label: 'Service ' + sv.version,
-    sub: uptxt(sv.updateTo),
-    dim: busy,
-    fn: sv.updateTo
-      ? function () {
-          run('/api/manager/update-service', { version: sv.updateTo });
-        }
-      : null,
-  });
-  rows.push({
-    label: 'Check for updates',
-    dim: busy,
-    fn: function () {
-      banner('Checking…', 'work');
-      api('/api/manager/check', {}).then(refreshDone, refreshDone);
-    },
-  });
-  rows.push({
-    label: 'Update channel',
-    sub: st.channel ? 'Dev builds' : 'Stable releases',
-    dim: busy,
-    fn: openChannel,
-  });
-  if (fe.previous)
+  // the tabs: what each holds is in TABS (core.js); Left and Right turn to the next, the list below is that tab's options
+  var tb = TABS[tab] ? TABS[tab].id : 'updates';
+  if (tb === 'updates') {
     rows.push({
-      label: 'Go back to launcher ' + fe.previous,
+      label: 'Launcher ' + fe.version,
+      sub: uptxt(fe.updateTo),
+      dim: busy,
+      fn: fe.updateTo
+        ? function () {
+            run('/api/manager/update-frontend', { version: fe.updateTo });
+          }
+        : null,
+    });
+    rows.push({
+      label: 'Service ' + sv.version,
+      sub: uptxt(sv.updateTo),
+      dim: busy,
+      fn: sv.updateTo
+        ? function () {
+            run('/api/manager/update-service', { version: sv.updateTo });
+          }
+        : null,
+    });
+    rows.push({
+      label: 'Check for updates',
       dim: busy,
       fn: function () {
-        run('/api/manager/rollback-frontend', {});
+        banner('Checking…', 'work');
+        api('/api/manager/check', {}).then(refreshDone, refreshDone);
       },
     });
-  rows.push({ sep: true });
-  rows.push({
-    label: 'CleanYourTV as Home',
-    sub: onoff(st.home && st.home.enabled),
-    fn: function () {
-      push('home');
-    },
-  });
-  rows.push({ label: 'Live TV', sub: onoff(st.options.liveTv !== false), fn: openLiveTv });
-  rows.push({ label: 'Add-ons', sub: 'install, switch off or remove', fn: openAddons });
-  rows.push({
-    label: 'Wallpapers',
-    sub: st.wallpapers ? st.wallpapers.total + ' photos' : '',
-    fn: openWallpapers,
-  });
-  if (st.icons)
     rows.push({
-      label: 'App icons',
-      sub: 'your own picture for an app',
+      label: 'Update channel',
+      sub: st.channel ? 'Dev builds' : 'Stable releases',
+      dim: busy,
+      fn: openChannel,
+    });
+    if (fe.previous)
+      rows.push({
+        label: 'Go back to launcher ' + fe.previous,
+        dim: busy,
+        fn: function () {
+          run('/api/manager/rollback-frontend', {});
+        },
+      });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'CleanYourTV as Home',
+      sub: onoff(st.home && st.home.enabled),
       fn: function () {
-        openIconPair('');
+        push('home');
       },
     });
-  rows.push({ label: 'Cards', sub: 'small widgets on Home', fn: openCards });
-  rows.push({
-    label: 'Android box',
-    sub: ab && ab.configured ? ab.settings.host : ab ? 'off' : '',
-    fn: openAndroidBox,
+    rows.push({
+      label: 'Input key',
+      sub: st.inputhook && st.inputhook.hook && !st.inputhook.hook.attached ? 'not available' : onoff(st.options.inputKey),
+      fn: function () {
+        push('inputkey');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
+  } else if (tb === 'features') {
+    rows.push({ label: 'Live TV', sub: onoff(st.options.liveTv !== false), fn: openLiveTv });
+    rows.push({
+      label: 'Wallpapers',
+      sub: st.wallpapers ? st.wallpapers.total + ' photos' : '',
+      fn: openWallpapers,
+    });
+    if (st.icons)
+      rows.push({
+        label: 'App icons',
+        sub: 'your own picture for an app',
+        fn: function () {
+          openIconPair('');
+        },
+      });
+    rows.push({ label: 'Cards', sub: 'small widgets on Home', fn: openCards });
+    rows.push({
+      label: 'Android box',
+      sub: ab && ab.configured ? ab.settings.host : ab ? 'off' : '',
+      fn: openAndroidBox,
+    });
+    rows.push({ label: 'Home Assistant', sub: st.voice && st.voice.ha ? 'set up' : 'not set up', fn: openHa });
+    rows.push({
+      label: 'Voice',
+      sub: st.voice ? (st.voice.installed ? onoff(st.voice.enabled) : 'not installed') : '',
+      fn: function () {
+        api('/api/voice/status').then(
+          function (v) {
+            vo = v;
+            push('voice');
+            if ((v.job && v.job.state === 'working') || v.listening) voiceRefresh();
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+    rows.push({
+      label: 'Network notifications',
+      sub: onoff(st.notifyApi && st.notifyApi.enabled),
+      fn: function () {
+        api('/api/manager/notify-api').then(
+          function (n) {
+            napi = n;
+            push('notifyapi');
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+  } else if (tb === 'addons') {
+    addonRows();
+  } else if (tb === 'debloat') {
+    debloatRows();
+  } else {
+    rows.push({
+      label: 'Language',
+      sub: (function () {
+        var n = 'Automatic';
+        languages().forEach(function (x) {
+          if (x.code === st.lang) n = x.name;
+        });
+        return n;
+      })(),
+      fn: function () {
+        push('language');
+      },
+    });
+    rows.push({ label: 'Experimental', sub: 'compressed memory, volume bar', fn: zramLoad });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Reset Home customisation',
+      fn: function () {
+        push('confirm-reset');
+      },
+    });
+    rows.push({
+      label: 'Uninstall',
+      fn: function () {
+        push('confirm-uninstall');
+      },
+    });
+  }
+}
+
+function addonRows() {
+  if (ad.paused)
+    rows.push({
+      label: 'Add-ons are paused',
+      sub: 'the file DISABLE-ADDONS is present; remove it and restart',
+      dim: true,
+      fn: function () {},
+    });
+  ad.installed.forEach(function (a) {
+    rows.push({
+      label: a.name,
+      sub:
+        (a.status === 'running' ? 'on' : a.status === 'off' ? 'off' : a.status === 'failed' ? 'failed' : a.status) +
+        (a.version ? ' \u00B7 ' + a.version : '') +
+        (a.bundled ? ' \u00B7 ships with CleanYourTV' : ''),
+      fn: function () {
+        ad.sel = a.id;
+        push('addon');
+      },
+    });
   });
-  rows.push({
-    label: 'Input key',
-    sub: st.inputhook && st.inputhook.hook && !st.inputhook.hook.attached ? 'not available' : onoff(st.options.inputKey),
-    fn: function () {
-      push('inputkey');
-    },
+  var offer = ad.catalog.filter(function (e) {
+    return !e.installed || e.update;
   });
-  rows.push({
-    label: 'Debloat',
-    sub: (function () {
-      var n = DEBLOAT.filter(function (g) {
-        return debloatOn(g.id);
-      }).length;
-      return n === DEBLOAT.length ? onoff(true) : n ? n + ' of ' + DEBLOAT.length + ' on' : onoff(false);
-    })(),
-    fn: function () {
-      push('debloat');
-    },
+  if (offer.length) rows.push({ sep: true });
+  offer.forEach(function (e) {
+    rows.push({
+      label: e.name,
+      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version + (e.description ? ' \u00B7 ' + e.description : ''),
+      fn: function () {
+        addonDo('/api/addons/install', { id: e.id }, e.name + ' installed');
+      },
+    });
   });
-  rows.push({ label: 'Experimental', sub: 'compressed memory, volume bar', fn: zramLoad });
-  rows.push({
-    label: 'More',
-    sub: 'Home Assistant, voice, language, network notifications',
-    fn: function () {
-      push('more');
-    },
+  if (bookPages().length) {
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Page strip position',
+      sub: stripPosLabel(ad.book.position) + ' \u00B7 the theme sets its look and the default place',
+      fn: function () {
+        var i = STRIP_POS.indexOf(ad.book.position || '');
+        bookSet({ position: STRIP_POS[(i + 1) % STRIP_POS.length] }, 'Saved');
+      },
+    });
+    rows.push({
+      label: 'Page strip on Home',
+      sub: onoff(ad.book.strip !== false) + ' \u00B7 shows which button turns to which page',
+      fn: function () {
+        bookSet({ strip: ad.book.strip === false }, 'Saved');
+      },
+    });
+  }
+  if (ad.error) rows.push({ label: 'The catalog could not be read', sub: ad.error, dim: true, fn: function () {} });
+}
+
+function debloatRows() {
+  DEBLOAT.forEach(function (g) {
+    rows.push({
+      label: g.label,
+      sub: onoff(debloatOn(g.id)) + ' \u00B7 ' + g.what,
+      fn: function () {
+        debloatToggle(g.id);
+      },
+    });
   });
   rows.push({ sep: true });
-  rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
-  rows.push({
-    label: 'Reset Home customisation',
-    fn: function () {
-      push('confirm-reset');
-    },
+  PRELOAD.forEach(function (a) {
+    rows.push({
+      label: 'Close ' + a.label + ' preloaded at boot',
+      sub: onoff(preloadClosed(a.id)) + ' \u00B7 closes it in the background about 90 s after boot (not when it is in front)',
+      fn: function () {
+        preloadToggle(a.id);
+      },
+    });
+  });
+  rows.push({ sep: true });
+  var anyOff = DEBLOAT.some(function (g) {
+    return !debloatOn(g.id);
   });
   rows.push({
-    label: 'Uninstall',
+    label: anyOff ? 'Switch all on' : 'Switch all off',
     fn: function () {
-      push('confirm-uninstall');
+      opt(anyOff ? { debloat: true, debloatOff: [] } : { debloat: false, debloatOff: [] });
     },
   });
 }

@@ -28,6 +28,25 @@ function openMenu(title, items, idx, build) {
 function openBuilt(title, build, idx) {
   openMenu(title, null, idx, build);
 }
+/* A tabbed menu (Customise): the tabs across the top, the rows of the chosen tab below. Left and Right turn the tabs, the rows work as in
+   any menu; Back from a menu opened by a row returns to the same tab. tabs: [{label, build}], build gives the rows of that tab. */
+function openTabbed(title, tabs, tab) {
+  var m = { title: title, tabs: tabs, tab: tab || 0, items: [], idx: 0 };
+  m.build = function () {
+    return m.tabs[m.tab].build();
+  };
+  m.items = m.build();
+  m.idx = usable(m, 0);
+  stack.push(m);
+  drawMenu();
+}
+function menuTab(m, n) {
+  if (!m.tabs || n < 0 || n >= m.tabs.length || n === m.tab) return;
+  m.tab = n;
+  m.items = m.build();
+  m.idx = usable(m, 0);
+  drawMenu(0);
+}
 function skip(it) {
   return !it || it.sep || it.note !== undefined;
 }
@@ -107,7 +126,7 @@ function hoverDir(k, start, N, len) {
 function drawMenu(win) {
   // win: the first visible row, when the pointer asks for a window (otherwise the selection sits on the fourth row)
   var m = stack[stack.length - 1],
-    N = 8,
+    N = m.tabs ? 7 : 8, // the tab bar takes the place of a row
     start = Math.max(0, Math.min(m.idx - 3, m.items.length - N));
   if (typeof win === 'number') start = Math.max(0, Math.min(win, m.items.length - N));
   m.start = start;
@@ -116,7 +135,13 @@ function drawMenu(win) {
     ovEl.id = 'ov';
     document.body.appendChild(ovEl);
   }
-  var h = '<div class="panel"><h2></h2><div class="more">' + (start > 0 ? '▲' : '') + '</div>';
+  var h = '<div class="panel"><h2></h2>';
+  if (m.tabs) {
+    h += '<div class="mtabs">';
+    for (var j = 0; j < m.tabs.length; j++) h += '<div class="mt' + (j === m.tab ? ' on' : '') + '" data-t="' + j + '"></div>';
+    h += '</div>';
+  }
+  h += '<div class="more">' + (start > 0 ? '▲' : '') + '</div>';
   for (var i = start; i < Math.min(m.items.length, start + N); i++) {
     var it = m.items[i];
     if (it.sep) {
@@ -144,9 +169,16 @@ function drawMenu(win) {
   var side = m.items.some(function (x) {
     return x.desc !== undefined;
   });
-  ovEl.className = side ? 'ws' : '';
+  ovEl.className = (side ? 'ws' : '') + (m.tabs ? ' tb' : '');
   drawSide(side && !skip(m.items[m.idx]) ? m.items[m.idx] : null);
   ovEl.querySelector('h2').textContent = m.title;
+  [].forEach.call(ovEl.querySelectorAll('.mt'), function (el) {
+    var n = +el.getAttribute('data-t');
+    el.textContent = m.tabs[n].label;
+    el.addEventListener('click', function () {
+      menuTab(m, n);
+    });
+  });
   [].forEach.call(ovEl.querySelectorAll('.mnote'), function (el) {
     el.textContent = m.items[+el.getAttribute('data-n')].note;
   });
@@ -216,7 +248,8 @@ function menuKey(k) {
     drawMenu();
   } else if (k === 38 || k === 40) {
     /* the first or last row: nothing to move to */
-  } else if (k === 13) pickMenu();
+  } else if ((k === 37 || k === 39) && m.tabs) menuTab(m, m.tab + (k === 39 ? 1 : -1));
+  else if (k === 13) pickMenu();
   else if (k === 461 || k === 27 || k === 8) backMenu();
   else return false;
   return true;
@@ -731,86 +764,117 @@ function barMenu(o) {
 }
 /* Customise: how Home looks. What the TV and the service do is in the manager app (More settings...) */
 function customizeMenu() {
-  openBuilt(t('Customise'), function () {
-    var nh = hiddenIds().length;
-    return [
-      /* the cards in the theme's places, chosen with the remote (hamenu.js); first, so it is found */
-      (TH.slots || []).length ? { label: 'Home Assistant', sub: t('Cards on Home'), stay: true, fn: haMenu } : null,
-      { label: t('Dock'), stay: true, fn: dockMenu },
-      { label: t('Top buttons'), stay: true, fn: topButtonsMenu },
-      { label: t('Hidden apps'), sub: nh ? String(nh) : '', stay: true, fn: hiddenMenu },
-      {
-        label: t('App order'),
-        sub: cfg.sort === 'alpha' ? t('A to Z') : cfg.sort === 'custom' ? t('Custom static') : t('Most used first'),
-        stay: true,
-        fn: function () {
-          cfg.sort = cfg.sort === 'alpha' ? 'custom' : cfg.sort === 'custom' ? 'usage' : 'alpha';
-          if (cfg.sort === 'custom' && (!cfg.order || !cfg.order.length)) {
-            cfg.order = gridAppIds();
-          }
-          saveCfg();
-        },
-      },
-      cfg.sort === 'custom'
-        ? {
-            label: t('Arrange apps...'),
+  var cards = function () {
+    return (TH.slots || []).length;
+  };
+  openTabbed(t('Customise'), [
+    {
+      /* the apps: where they sit and in which order */
+      label: t('Apps'),
+      build: function () {
+        var nh = hiddenIds().length;
+        return [
+          { label: t('Dock'), stay: true, fn: dockMenu },
+          { label: t('Hidden apps'), sub: nh ? String(nh) : '', stay: true, fn: hiddenMenu },
+          {
+            label: t('App order'),
+            sub: cfg.sort === 'alpha' ? t('A to Z') : cfg.sort === 'custom' ? t('Custom static') : t('Most used first'),
             stay: true,
-            fn: gridAppsMenu,
-          }
-        : null,
-      {
-        label: t('Mark running apps'),
-        sub: cfg.runDots === true ? t('Green dot') : t('No dot'),
-        stay: true,
-        fn: function () {
-          if (cfg.runDots === true) delete cfg.runDots;
-          else cfg.runDots = true;
-          saveCfg();
-        },
-      },
-      {
-        label: t('Clock'),
-        sub: cfg.clock === '24' ? t('24-hour') : cfg.clock === '12' ? t('12-hour') : t('Automatic'),
-        stay: true,
-        fn: function () {
-          cfg.clock = cfg.clock === '24' ? '12' : cfg.clock === '12' ? 'auto' : '24';
-          saveCfg();
-          tick();
-        },
-      },
-      { sep: true },
-      { label: t('Theme'), stay: true, fn: themeMenu },
-      /* only where the theme has slots for cards */
-      (TH.slots || []).length
-        ? {
-            label: t('Cards'),
-            sub: t('in the CleanYourTV app'),
             fn: function () {
-              launch('com.cleanyourtv.manager', { open: 'cards' });
+              cfg.sort = cfg.sort === 'alpha' ? 'custom' : cfg.sort === 'custom' ? 'usage' : 'alpha';
+              if (cfg.sort === 'custom' && (!cfg.order || !cfg.order.length)) {
+                cfg.order = gridAppIds();
+              }
+              saveCfg();
             },
-          }
-        : null,
-      {
-        label: t('Wallpapers'),
-        sub: cfg.wall && cfg.wall.on ? t('On') : t('Off'),
-        stay: true,
-        fn: wallMenu,
+          },
+          cfg.sort === 'custom'
+            ? {
+                label: t('Arrange apps...'),
+                stay: true,
+                fn: gridAppsMenu,
+              }
+            : null,
+          {
+            label: t('Mark running apps'),
+            sub: cfg.runDots === true ? t('Green dot') : t('No dot'),
+            stay: true,
+            fn: function () {
+              if (cfg.runDots === true) delete cfg.runDots;
+              else cfg.runDots = true;
+              saveCfg();
+            },
+          },
+          { note: t('Hold OK on an app for its options. Back on Home lists the open apps.') },
+        ].filter(function (it) {
+          return it;
+        });
       },
-      { label: t('Accent colour'), stay: true, fn: accentMenu },
-      { sep: true },
-      {
-        label: t('More settings...'),
-        sub: t('Home, Live TV, Debloat, updates'),
-        fn: function () {
-          launch('com.cleanyourtv.manager');
-        },
+    },
+    {
+      /* how Home looks */
+      label: t('Look'),
+      build: function () {
+        return [
+          { label: t('Theme'), stay: true, fn: themeMenu },
+          { label: t('Accent colour'), stay: true, fn: accentMenu },
+          {
+            label: t('Wallpapers'),
+            sub: cfg.wall && cfg.wall.on ? t('On') : t('Off'),
+            stay: true,
+            fn: wallMenu,
+          },
+          {
+            label: t('Clock'),
+            sub: cfg.clock === '24' ? t('24-hour') : cfg.clock === '12' ? t('12-hour') : t('Automatic'),
+            stay: true,
+            fn: function () {
+              cfg.clock = cfg.clock === '24' ? '12' : cfg.clock === '12' ? 'auto' : '24';
+              saveCfg();
+              tick();
+            },
+          },
+        ];
       },
-      /* the hidden gestures, said where people already look instead of over Home (issue: hold OK was undiscoverable) */
-      { note: t('Hold OK on an app for its options. Back on Home lists the open apps.') },
-    ].filter(function (it) {
-      return it;
-    });
-  });
+    },
+    {
+      /* the buttons at the top and, where the theme has places for them, the cards */
+      label: cards() ? t('Top & cards') : t('Top'),
+      build: function () {
+        return [
+          { label: t('Top buttons'), stay: true, fn: topButtonsMenu },
+          /* the cards in the theme's places, chosen with the remote (hamenu.js) */
+          cards() ? { label: 'Home Assistant', sub: t('Cards on Home'), stay: true, fn: haMenu } : null,
+          cards()
+            ? {
+                label: t('Cards'),
+                sub: t('in the CleanYourTV app'),
+                fn: function () {
+                  launch('com.cleanyourtv.manager', { open: 'cards' });
+                },
+              }
+            : null,
+        ].filter(function (it) {
+          return it;
+        });
+      },
+    },
+    {
+      /* what the TV and the service do is in the manager app */
+      label: t('More'),
+      build: function () {
+        return [
+          {
+            label: t('More settings...'),
+            sub: t('Home, Live TV, Debloat, updates'),
+            fn: function () {
+              launch('com.cleanyourtv.manager');
+            },
+          },
+        ];
+      },
+    },
+  ]);
 }
 /* Wallpapers: switched on here and how often the photo changes; the photos are added in the manager (uploads from a phone, Immich) */
 function wallMenu() {

@@ -26,11 +26,20 @@ var napi = null,
   rows = [],
   idx = 0,
   view = 'main',
+  tab = 0,
   pending = null,
   pollT = 0,
   setup = { debloat: true, inputKey: true },
   offline = false,
   busyMsg = '';
+/* the main screen: the tabs across the top, the options of the chosen tab in the list below (Left and Right turn the tabs) */
+var TABS = [
+  { id: 'updates', label: 'Updates & Home' },
+  { id: 'features', label: 'Features' },
+  { id: 'addons', label: 'Add-ons' },
+  { id: 'debloat', label: 'Debloat' },
+  { id: 'system', label: 'System' },
+];
 function $(i) {
   return document.getElementById(i);
 }

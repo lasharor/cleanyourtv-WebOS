@@ -52,7 +52,15 @@ system apps are never in it. The list is read when it opens and closes when you 
 
 ![Customise menu](screenshots/customise.jpg)
 
-**Customise** holds how Home looks:
+**Customise** has four tabs across the top, **Apps**, **Look**, **Top & cards** and **More**; Left and Right turn to another tab and the
+rows of that tab are below. A menu opened from a row (the dock, the theme) returns to the same tab with Back.
+
+- **Apps**: the dock, hidden apps, app order (and **Arrange apps...**) and **Mark running apps**.
+- **Look**: **Theme**, **Accent colour**, **Wallpapers** and **Clock**.
+- **Top & cards**: the top buttons and, in themes with places for cards, **Home Assistant** and **Cards**.
+- **More**: **More settings...**, the manager app.
+
+In detail:
 
 - the **dock**: each app in it can be replaced (an app already in the dock swaps places), moved or removed, and **Add an app...**
   fills a free place. Holding OK on an app gives **Move** (to rearrange tiles interactively with arrow keys and confirm with OK), **Add to dock** or **Remove from dock**, **Change icon** and **Reset icon** (see [Your own icon](#your-own-icon)), **Hide app** and **Uninstall** (with a confirmation prompt, for user-installed LG Store and Homebrew apps);

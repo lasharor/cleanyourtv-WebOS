@@ -1,3 +1,24 @@
+/* turn to another tab: what its list needs (the add-ons, the Android box) is read, and the list is drawn again */
+function setTab(n) {
+  if (offline || view !== 'main' || n < 0 || n >= TABS.length || n === tab) return;
+  tab = n;
+  idx = 0;
+  listY = 0;
+  build();
+  draw();
+  if (TABS[n].id === 'addons') loadAddons();
+  if (TABS[n].id === 'features')
+    api('/api/androidbox').then(
+      function (r) {
+        ab = r;
+        if (view === 'main' && TABS[tab].id === 'features') {
+          build();
+          draw();
+        }
+      },
+      function () {}
+    );
+}
 var listY = 0;
 /* the list can be taller than the screen: keep the focused row in view and show a fade where more rows are hidden */
 function scrollList() {
@@ -25,6 +46,7 @@ function draw() {
     curLang = want;
     setLang(want);
   }
+  drawTabs();
   var h = '';
   rows.forEach(function (r, i) {
     h += r.sep
@@ -70,10 +92,6 @@ function draw() {
   }
   if (view === 'channel') {
     $('sub').textContent = tr('Where updates come from');
-    return;
-  }
-  if (view === 'addons') {
-    $('sub').textContent = tr('Add-ons: features you can install');
     return;
   }
   if (view === 'addon') {
@@ -155,6 +173,30 @@ function draw() {
     $('sub').textContent = tr(
       offline ? 'The service is not running. Set it up to replace LG’s Home, take over the Input key and keep everything up to date.' : ''
     );
+}
+/* the tab bar: every screen shows it, the one you are in marked; inside a sub-screen it only tells where you are */
+function drawTabs() {
+  var el = $('tabs');
+  if (offline || !st) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = '';
+  el.className = view === 'main' ? '' : 'sub';
+  if (el.childNodes.length !== TABS.length) {
+    el.textContent = '';
+    TABS.forEach(function (tb, i) {
+      var d = document.createElement('div');
+      d.className = 'tab';
+      d.setAttribute('data-t', String(i));
+      el.appendChild(d);
+    });
+  }
+  TABS.forEach(function (tb, i) {
+    var d = el.childNodes[i];
+    d.textContent = tr(tb.label);
+    d.className = 'tab' + (i === tab ? ' on' : '');
+  });
 }
 function next(dir) {
   var n = rows.length,

@@ -49,7 +49,7 @@ function openNotifyQr() {
   );
 }
 /* Add-ons (helper/addons.js): the ones on the TV and the project's catalog */
-function openAddons(stay) {
+function loadAddons() {
   Promise.all([api('/api/addons'), api('/api/addons/catalog')]).then(
     function (r) {
       ad.installed = (r[0] && r[0].addons) || [];
@@ -57,13 +57,10 @@ function openAddons(stay) {
       ad.error = (r[1] && r[1].error) || '';
       ad.paused = !!(r[0] && r[0].paused);
       ad.book = (r[0] && r[0].book) || ad.book;
-      if (view !== 'addons' && view !== 'addon') push('addons');
-      else {
-        if (view === 'addon' && !addonSel()) pop();
-        build();
-        if (idx >= rows.length) idx = 0;
-        draw();
-      }
+      if (view === 'addon' && !addonSel()) pop();
+      build();
+      if (idx >= rows.length) idx = Math.max(0, rows.length - 1);
+      draw();
     },
     function () {
       banner('The service did not answer', 'err');
@@ -80,7 +77,7 @@ function addonDo(path, body, done) {
     function (r) {
       if (r.error) return banner(r.error, 'err');
       banner(r.restartNeeded ? done + ' \u00B7 restart the TV to apply it' : done, 'ok');
-      openAddons(true);
+      loadAddons();
     },
     function () {
       banner('The service did not answer', 'err');
@@ -108,7 +105,7 @@ function bookSet(body, done) {
     function (r) {
       if (r.error) return banner(r.error, 'err');
       banner(done, 'ok');
-      openAddons(true);
+      loadAddons();
     },
     function () {
       banner('The service did not answer', 'err');

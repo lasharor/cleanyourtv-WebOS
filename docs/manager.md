@@ -1,6 +1,16 @@
 # The manager app
 
-**CleanYourTV** in LG's app list sets up, updates and removes everything. The left side of the screen explains the focused row.
+**CleanYourTV** in LG's app list sets up, updates and removes everything. The tabs across the top group the rows (**Updates & Home**, **Features**, **Add-ons**, **Debloat**, **System**): Left and Right turn to
+another tab, Up and Down move through its rows, and the left side of the screen explains the focused row. A screen opened from a row
+(Live TV, Voice, Language, ...) shows the tabs dimmed, and Back returns to the same tab and row. The tabs hold:
+
+- **Updates & Home**: Launcher, Service, Check for updates, Update channel, Go back to launcher, CleanYourTV as Home, Input key, Share log.
+- **Features**: Live TV, Wallpapers, App icons, Cards, Android box, Home Assistant, Voice, Network notifications.
+- **Add-ons**: the installed and available add-ons, and the page strip.
+- **Debloat**: the four groups and the apps LG preloads at boot.
+- **System**: Language, Experimental, Reset Home customisation, Uninstall.
+
+The rows, in the order of the old list:
 
 ![Manager app](screenshots/manager.jpg)
 
