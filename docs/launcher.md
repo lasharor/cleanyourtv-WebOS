@@ -74,17 +74,57 @@ tuner) and is offered only when the TV has that app and **Show LG's own Live TV*
 - **mark running apps** (a green dot on their tiles, or none);
 - the **clock** format (automatic, 12 or 24 hour);
 - the **theme** (see [Themes](themes.md)) and the **accent colour**; the theme list shows each theme's screenshot;
+- **Weather**: a weather card under the clock, in every theme (see [Weather on Home](#weather-on-home));
 - **Wallpapers**: your own photos behind Home, and how often they change (see [Wallpapers](wallpapers.md));
 - **More settings...**, which opens the [manager app](manager.md) for everything the TV and the service do.
 
 Putting the dock, buttons, hidden apps, order and clock back to the defaults is in the manager app: **Reset Home customisation**.
 
 
+## Weather on Home
+
+**Customise** > **Weather** puts a weather card in the place **Under the clock**, which every theme has (see [Cards](#cards)), without
+Home Assistant and without a card place in the theme. It is the same Open-Meteo weather as the [Weather card](#cards) (free, no account),
+so a place needs choosing once:
+
+- **Place**: type a city or town with the TV's keyboard (the one Live TV search uses) and press OK; pick the right one from the list
+  (name and region). Nothing needs the phone. The same place can also be set on the phone page: in the manager app, **Cards** >
+  **Under the clock** > **Set up from your phone**;
+- **Show on Home**: on or off (the place stays chosen). It cannot be switched on before a place is chosen, and it replaces any other card
+  you chose for **Under the clock**;
+- **Temperature**: °C or °F;
+- **Forecast**: just now, or now and the next days.
+
+The weather shows when the first answer is in and stays away while there is none (no internet and nothing kept yet): Home never waits for
+the weather and shows no error for it. The TV asks at most every 30 minutes, keeps the last answer for a day and shows it while the
+internet is away. Where the weather goes and what is sent: [Security](security.md#weather-card).
+
+### The weather drawer
+
+The weather card is one of the things the remote can select (it joins the row with the top buttons). **OK** on it opens the weather
+drawer: a panel from the right (from the left in a right-to-left language) over a dimmed Home. **Back** closes it, and so does five
+minutes without a key. It has three tabs, and **Up** and **Down** move between the buttons at the top (the unit, **Close**), the tabs and
+the hours:
+
+- **Now**: the temperature and the sky, what it feels like, the day's high and low, when rain is likely next, humidity, wind with its
+  direction, the chance of rain now and its peak, UV, pressure, the air quality (the European index), and the sun: sunrise, sunset, the
+  length of the day and the time to the next sunrise or sunset;
+- **Hours**: the next 24 hours. **Left** and **Right** move over the hours; the hour you are on shows its sky, temperature, chance of rain
+  and wind, and a bar chart shows the chance of rain hour by hour;
+- **Days**: the next seven days with the sky, the chance of rain and the low and high of each.
+
+The °C / °F button at the top changes the unit of the card (the same setting as **Temperature** in Customise > Weather). The drawer shows
+what the TV kept: it opens at once, and it says **Offline, data from ...** when the answer it has is more than 40 minutes old. The place's
+time zone is the one used for the hours and the sun. The weather and the air quality are Open-Meteo's (the credit is at the bottom of the
+drawer).
+
 ## Cards
 
-Cards are set up in the [manager app](manager.md), **Cards**. Themes with places for cards (**Lock Screen**, **Bloom** and **Horizon**)
-also have a **Cards** row in **Customise** that opens it. It lists the places (above the clock, beside the clock, a column on the right,
-above the dock); choose one to put a card there or leave it empty. A card you chose stays when you switch to another theme with the
+Cards are set up in the [manager app](manager.md), **Cards**, and with the remote in **Customise** > **Home Assistant** and **Cards**.
+It lists the places (above the clock, beside the clock, a column on the right, above the dock, under the clock); choose one to put a card
+there or leave it empty. **Under the clock** is in every theme and takes any card, centred or aligned like the clock, right under it; the
+themes with more places (**Lock Screen**, **Bloom** and **Horizon**) add theirs. A theme can switch it off with `clock.under`
+(see [Themes](themes.md)); the glass clock of some themes leaves it out, and the app name steps down when the card would cover it. A card you chose stays when you switch to another theme with the
 same place.
 
 **More cards** are downloaded: in the manager, **Cards** > **Get more cards** lists the cards in the project's catalog on GitHub, each with a picture and a text, and installs or removes them (a countdown to a date, a quote, the progress of the year, prayer times and a remembrance in Arabic (cards with a page of their own, which runs in a closed frame), and more as people add them). An installed card is one more kind of card for each place, and its options (a title, a date, a text) are typed on the phone page. A card has no script, only a template, so it cannot run anything on the TV; how to make one is in [Making a card](development/cards.md).

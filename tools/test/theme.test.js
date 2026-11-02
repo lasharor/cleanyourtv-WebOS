@@ -106,6 +106,12 @@ run(async () => {
     plain.vars['--greet-d'] === 'none' && plain.vars['--dock-tile-alpha'] === '1',
     'by default there is no greeting and the dock tiles are opaque'
   );
+  // clock.under: the card under the clock is allowed unless a theme turns it off; its place id is not a theme slot
+  const noWx = themeMod.resolve(themeMod.normalize({ clock: { under: false }, slots: [{ id: 'under-clock' }, { id: 'side' }] }, 'nowx'));
+  ok(
+    plain.vars['--under-d'] === 'flex' && noWx.vars['--under-d'] === 'none' && noWx.slots.length === 1 && noWx.slots[0].id === 'side',
+    'clock.under can hide the card under the clock, and a theme cannot use under-clock as a slot of its own'
+  );
   // clock.style, effects.scenes and cards.style (scenes.js): only a theme that uses them carries the keys, so other replies stay the same
   const couch = themeMod.resolve(
     themeMod.normalize({ clock: { style: 'glass' }, effects: { scenes: 'couch', sceneSecs: 5 }, cards: { style: 'glass' } }, 'couch')

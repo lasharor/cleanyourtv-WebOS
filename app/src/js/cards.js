@@ -77,6 +77,7 @@ function wxFor(o) {
         if (w && w.now) {
           e.w = w;
           tickCards();
+          if (WXD.on) wxdDraw(); /* the weather drawer shows the new answer */
         }
       })
       .catch(function () {
@@ -121,7 +122,7 @@ function haState(e) {
 }
 function haIds() {
   var ids = [],
-    els = $('cards').children;
+    els = cardEls();
   for (var i = 0; i < els.length; i++) {
     var c = els[i]._card;
     if (c.type === 'ha-entity' && c.entity) ids.push(String(c.entity).trim());
@@ -230,7 +231,7 @@ function haHide(el, hide) {
 /* camera cards get a new picture on their own schedule (every 10, 30 or 60 seconds) while Home is shown */
 setInterval(function () {
   if (document.hidden) return;
-  var imgs = document.querySelectorAll('#cards .card-ha-camera img');
+  var imgs = document.querySelectorAll('.card-ha-camera img');
   for (var i = 0; i < imgs.length; i++) {
     var im = imgs[i],
       c = im.parentNode._card,
@@ -332,6 +333,10 @@ var CARD_TYPES = {
       var w = wxFor(o),
         place = String(o.place || '').slice(0, 40),
         h;
+      el._o = {
+        action: 'card',
+        label: place || t('Weather'),
+      }; /* OK opens the drawer; the name shows under the clock while it has the focus */
       if (!w) h = '<div class="wx-none"></div>';
       else {
         var k = wxKind(w.now.code, w.now.day);
@@ -376,6 +381,17 @@ var CARD_TYPES = {
         : o.lat === undefined
           ? t('Choose a place from your phone')
           : place;
+    },
+    /* OK opens the weather drawer (wxdrawer.js); the card joins the row of top buttons for the remote */
+    focus: function (o) {
+      return o.lat !== undefined && o.lon !== undefined;
+    },
+    pointer: true /* a click does what OK does */,
+    can: function (o) {
+      return !!wxFor(o);
+    },
+    act: function (el) {
+      wxdOpen(el);
     },
   },
   /* one Home Assistant entity: its icon, its state big and its name; OK switches a light, switch or fan, or runs a scene or script */
@@ -682,15 +698,40 @@ function cardFor(sl) {
   if (c && c.type) return c.type === 'none' || !cardType(c.type) ? null : c;
   return cardType(sl.card) ? { type: sl.card } : null;
 }
+/* the built-in place every theme has: under the clock, for any card (the clock box is its positioning parent; home.css #under) */
+var UNDER = { id: 'under-clock', card: '', under: true };
+/* the places for cards: the theme's own, then the one under the clock */
+function cardSlots() {
+  return (TH.slots || []).concat([UNDER]);
+}
+/* every card on Home, wherever it is placed */
+function cardEls() {
+  return Array.prototype.slice.call($('cards').children).concat(Array.prototype.slice.call($('under').children));
+}
 function drawCards() {
   var box = $('cards'),
-    list = TH.slots || [];
+    under = $('under');
   box.textContent = '';
-  list.forEach(function (sl) {
+  under.textContent = '';
+  cardSlots().forEach(function (sl) {
     var c = cardFor(sl);
     if (!c) return;
     var el = document.createElement('div'),
       st = el.style;
+    if (CARD_TYPES[c.type] && CARD_TYPES[c.type].pointer)
+      el.addEventListener('click', function () {
+        if (!moving) cardAct(el);
+      });
+    if (sl.under) {
+      /* sized by its content, 560 px wide and at most 160 px high, in the clock's alignment (home.css) */
+      el.className = 'card ' + (CARD_TYPES[c.type] ? '' : 'card-template ') + 'card-' + c.type;
+      el.setAttribute('data-align', 'left');
+      st.setProperty('--ch', '160px');
+      el._card = c;
+      el._slot = sl.id;
+      under.appendChild(el);
+      return;
+    }
     el.className = 'card ' + (CARD_TYPES[c.type] ? '' : 'card-template ') + 'card-' + c.type + (sl.keep ? ' keep' : '');
     el.setAttribute('data-align', sl.align || 'left');
     st.setProperty('--cl', sl.l);
@@ -704,30 +745,49 @@ function drawCards() {
     st.height = sl.h;
     st.setProperty('--ch', sl.h);
     el._card = c;
+    el._slot = sl.id;
     box.appendChild(el);
   });
   tickCards();
   /* glass cards: the scene behind them (scenes.js) */
   if (window.SCENES) SCENES.glassCards();
 }
+/* the app name steps down when the card under the clock would cover it (the card's height is known only once it is drawn) */
+var underS = 0;
+function underFit() {
+  var u = $('under'),
+    n = $('name'),
+    sh = $('shelf'),
+    s = 0;
+  if (u && n && u.children.length && sh && getComputedStyle(sh).display !== 'none') {
+    var ub = u.getBoundingClientRect().bottom,
+      nt = n.getBoundingClientRect().top - underS; /* where the name sits without the step */
+    s = Math.max(0, Math.min(170, Math.ceil(ub + 10 - nt)));
+  }
+  if (s !== underS) {
+    underS = s;
+    document.documentElement.style.setProperty('--under-s', s + 'px');
+  }
+}
 /* the clock tick: cards that change with the time redraw themselves */
 function tickCards() {
   /* weather cards first, so a text card or the greeting can use their weather */
-  var els = $('cards').children,
+  var els = cardEls(),
     pass,
     i;
   for (pass = 0; pass < 2; pass++)
     for (i = 0; i < els.length; i++)
       if (/^(ha-)?weather$/.test(els[i]._card.type) === (pass === 0)) cardType(els[i]._card.type).draw(els[i], els[i]._card);
+  underFit();
   haPoll();
 }
 /* the cards that OK can do something with: they join the top row (with the buttons) for the remote */
 function cardTargets() {
   var out = [],
-    els = $('cards').children;
+    els = cardEls();
   for (var i = 0; i < els.length; i++) {
     var ty = CARD_TYPES[els[i]._card.type];
-    if (ty && ty.act && els[i].style.display !== 'none') out.push(els[i]);
+    if (ty && ty.act && (!ty.focus || ty.focus(els[i]._card)) && els[i].style.display !== 'none') out.push(els[i]);
   }
   return out;
 }

@@ -2,7 +2,13 @@
    For each place (above the dock, the right column, ...) the kind of card and what it shows: one or more entities, a camera, and
    where the launcher has the Home Assistant weather card, a weather entity and an outside temperature sensor. The entities come from Home Assistant through the service
    (POST /api/cards/ha/entities); the choice is saved with the launcher's settings (cfg.cards, the same as the phone page writes). */
-var HAM_PLACES = { greeting: 'Above the clock', 'clock-side': 'Beside the clock', side: 'Right column', row: 'Above the dock' };
+var HAM_PLACES = {
+  greeting: 'Above the clock',
+  'clock-side': 'Beside the clock',
+  side: 'Right column',
+  row: 'Above the dock',
+  'under-clock': 'Under the clock',
+};
 /* [type, name, what it is]: the texts are the service's (helper/cards.js), so they are in the translations; a picture of each is at
    /api/cards/preview/<type> */
 var HAM_KINDS = [
@@ -158,7 +164,7 @@ function haMenu() {
       },
       { sep: true },
     ];
-    (TH.slots || []).forEach(function (sl) {
+    cardSlots().forEach(function (sl) {
       items.push({
         label: hamPlace(sl),
         sub: hamSummary(hamCard(sl)),
@@ -168,8 +174,6 @@ function haMenu() {
         },
       });
     });
-    if (!(TH.slots || []).length)
-      items.push({ note: t('This theme has no places for cards. Choose a theme with cards (Lock Screen) in Customise > Theme.') });
     if (hamReady === false)
       items.push(
         { sep: true },

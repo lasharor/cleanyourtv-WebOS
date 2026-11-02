@@ -865,6 +865,12 @@ function customizeMenu() {
                 },
               }
             : null,
+          {
+            label: t('Weather'),
+            sub: (cfg.cards || {})['under-clock'] && cfg.cards['under-clock'].type === 'weather' ? t('On') : t('Off'),
+            stay: true,
+            fn: wxMenu,
+          },
         ].filter(function (it) {
           return it;
         });

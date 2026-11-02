@@ -13,6 +13,17 @@
 [dir="rtl"] [data-clock="stack"] #date {
   margin-right: 0;
 }
+[dir="rtl"] #under .wx-i svg {
+  margin: 0 0 0 12px;
+}
+[dir="rtl"] #under .wx-days > div + div {
+  margin-left: 0;
+  margin-right: 20px;
+}
+[dir="rtl"] #under .wx-days small {
+  margin-left: 0;
+  margin-right: 4px;
+}
 [dir="rtl"] #bar {
   left: var(--bar-r);
   right: var(--bar-l);
@@ -108,4 +119,39 @@
 [dir="rtl"] .ha-i svg {
   margin-right: 0;
   margin-left: 20px;
+}
+/* the weather drawer comes from the left; its icons move to the other side of their text (its charts keep their left-to-right time) */
+[dir="rtl"] #wxd .pn {
+  right: auto;
+  left: 0;
+  transform: translateX(-100%);
+  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.1);
+}
+[dir="rtl"] #wxd.in .pn {
+  transform: none;
+}
+[dir="rtl"] #wxd .bt > * + *,
+[dir="rtl"] #wxd .tabs > * + * {
+  margin-left: 0;
+  margin-right: 12px;
+}
+[dir="rtl"] #wxd .cls svg,
+[dir="rtl"] #wxd .off svg,
+[dir="rtl"] #wxd .hl svg,
+[dir="rtl"] #wxd .tn svg,
+[dir="rtl"] #wxd .sk svg {
+  margin-right: 0;
+  margin-left: 10px;
+}
+[dir="rtl"] #wxd .sel .hi {
+  margin-right: 0;
+  margin-left: 22px;
+}
+[dir="rtl"] #wxd .se {
+  margin-left: 0;
+  margin-right: auto;
+}
+[dir="rtl"] #wxd .di {
+  margin-right: 0;
+  margin-left: 14px;
 }

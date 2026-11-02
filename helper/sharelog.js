@@ -29,6 +29,7 @@ const read = (f, tail) => {
 };
 
 // ---- masking ----
+// (also the weather place of a card, helper/cards.js: its name and coordinates say where the TV is)
 function redact(t) {
   return t
     .replace(/https?:\/\/[^\s"'<>)]+/g, u => {
@@ -38,7 +39,8 @@ function redact(t) {
     })
     .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, ip => (ip === '127.0.0.1' || ip === '0.0.0.0' ? ip : 'x.x.x.x'))
     .replace(/\b[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}\b/g, 'xx:xx:xx:xx:xx:xx')
-    .replace(/("(?:token|key|password|pass|secret|apikey)"\s*:\s*")[^"]*"/gi, '$1…"');
+    .replace(/("(?:token|key|password|pass|secret|apikey)"\s*:\s*")[^"]*"/gi, '$1…"')
+    .replace(/("(?:place|lat|lon)"\s*:\s*)(?:"[^"]*"|-?[\d.]+)/g, '$1"…"');
 }
 
 function report() {

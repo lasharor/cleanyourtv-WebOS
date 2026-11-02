@@ -24,28 +24,58 @@ function phone(method, p, body, code) {
 
 run(async () => {
   // Open-Meteo stand-ins: the forecast and the place search
-  let asked = 0;
+  let asked = 0,
+    airAsked = 0,
+    lastQuery = '';
   const om = await serve((rq, rs) => {
     rs.writeHead(200, { 'content-type': 'application/json' });
     if (/\/search/.test(rq.url))
       return rs.end(
         JSON.stringify({ results: [{ name: 'Utrecht', admin1: 'Utrecht', country: 'Nederland', latitude: 52.0908, longitude: 5.1222 }] })
       );
+    if (/\/air/.test(rq.url)) {
+      airAsked++;
+      return rs.end(JSON.stringify({ current: { european_aqi: 31.4, pm2_5: 7.26, pm10: 12.04 } }));
+    }
     asked++;
+    lastQuery = rq.url;
     rs.end(
       JSON.stringify({
-        current: { temperature_2m: 11.6, weather_code: 3, is_day: 1 },
+        utc_offset_seconds: 3600,
+        current: {
+          temperature_2m: 11.6,
+          weather_code: 3,
+          is_day: 1,
+          apparent_temperature: 9.4,
+          relative_humidity_2m: 71,
+          wind_speed_10m: 14.2,
+          wind_direction_10m: 315,
+          surface_pressure: 1015.6,
+          uv_index: 2.34,
+        },
+        hourly: {
+          time: ['2026-10-27T14:00', '2026-10-27T15:00', 'nonsense'],
+          temperature_2m: [11.6, 12.2, 12],
+          weather_code: [3, 61, 3],
+          precipitation_probability: [10, 65, 0],
+          wind_speed_10m: [14.2, 18, 10],
+          is_day: [1, 1, 0],
+        },
         daily: {
           time: ['2026-10-27', '2026-10-28'],
           weather_code: [3, 61],
           temperature_2m_max: [13.2, 12],
           temperature_2m_min: [7.9, 6.1],
+          precipitation_probability_max: [65, 40],
+          sunrise: ['2026-10-27T07:40', '2026-10-28T07:41'],
+          sunset: ['2026-10-27T17:12', '2026-10-28T17:10'],
         },
       })
     );
   });
   process.env.CYTV_WEATHER_URL = om.url + '/v1/forecast';
   process.env.CYTV_GEO_URL = om.url + '/v1/search';
+  process.env.CYTV_AIR_URL = om.url + '/v1/air';
   const C = req('cards');
   const config = memoryConfig({ lang: 'nl', cards: { greeting: { type: 'greeting', name: 'Sam' } } });
   const theme = {
@@ -72,7 +102,7 @@ run(async () => {
   ok(p.code === 403, 'the API needs the code');
   p = await phone('GET', '/api/state', undefined, code);
   ok(
-    p.j.slots.length === 3 &&
+    p.j.slots.length === 4 &&
       p.j.slots[0].name === 'Boven de klok' &&
       p.j.slots[2].name === 'odd-one' &&
       p.j.cards.greeting.name === 'Sam' &&
@@ -93,7 +123,18 @@ run(async () => {
   ok(config.get().cards === undefined, 'saving no cards removes them');
   // the manager's Cards screen: the places and a card type for one of them
   r = await call(cards, '/api/cards/status', 'POST', {});
-  ok(r.j.slots.length === 3 && r.j.types.some(t => t.type === 'ha-camera'), 'the manager gets the places and the card types');
+  ok(r.j.slots.length === 4 && r.j.types.some(t => t.type === 'ha-camera'), 'the manager gets the places and the card types');
+  // under the clock: a built-in place every theme has, for any card the others take
+  const wl = r.j.slots[3];
+  ok(
+    wl.id === 'under-clock' && wl.card === 'none' && wl.name === 'Onder de klok',
+    'every theme also has a place under the clock (named in the language)'
+  );
+  for (const ty of ['weather', 'ha-camera', 'template', 'greeting']) {
+    r = await call(cards, '/api/cards/set', 'POST', { slot: 'under-clock', type: ty });
+    if (!(r.j.ok && config.get().cards['under-clock'].type === ty)) ok(false, 'the place under the clock takes a ' + ty + ' card');
+  }
+  ok(true, 'the place under the clock takes any kind of card');
   r = await call(cards, '/api/cards/set', 'POST', { slot: 'side', type: 'ha-camera' });
   ok(r.j.ok && config.get().cards.side.type === 'ha-camera', 'the manager picks a card for a place');
   config.update('test', c => {
@@ -107,10 +148,65 @@ run(async () => {
   const bad = await call(cards, '/api/cards/set', 'POST', { slot: 'side', type: 'rocket' });
   ok(r.j.error && bad.j.error && config.get().cards.side.type === 'ha-camera', 'an unknown place or card type is refused');
   await phone('POST', '/api/save', { cards: {} }, code);
+  // what the phone page and the launcher may save for a weather card is checked: text trimmed, coordinates in range and in pairs, units
+  p = await phone(
+    'POST',
+    '/api/save',
+    {
+      cards: {
+        'under-clock': {
+          type: 'weather',
+          place: '  Utrecht' + String.fromCharCode(10) + '<b>x</b> ' + 'y'.repeat(80),
+          lat: 52.0912,
+          lon: 5.1234,
+          unit: 'k',
+          show: 'days',
+          extra: 1,
+        },
+        side: { type: 'weather', place: 'Nowhere', lat: 91, lon: 5 },
+        row: { type: 'weather', lat: 10, unit: 'f' },
+      },
+    },
+    code
+  );
+  const sv = config.get().cards;
+  ok(
+    sv['under-clock'].type === 'weather' &&
+      sv['under-clock'].place.length === 40 &&
+      !/[<>]/.test(sv['under-clock'].place) &&
+      sv['under-clock'].place.indexOf(String.fromCharCode(10)) < 0 &&
+      sv['under-clock'].lat === 52.09 &&
+      sv['under-clock'].lon === 5.12 &&
+      sv['under-clock'].unit === undefined &&
+      sv['under-clock'].show === 'days' &&
+      sv['under-clock'].extra === undefined,
+    'a weather card keeps a short place name, rounded coordinates, a known unit and show; other options are dropped'
+  );
+  ok(
+    sv.side.place === 'Nowhere' &&
+      sv.side.lat === undefined &&
+      sv.side.lon === undefined &&
+      sv.row.lat === undefined &&
+      sv.row.unit === 'f',
+    'coordinates out of range, or without their pair, are dropped'
+  );
+  await phone('POST', '/api/save', { cards: { 'under-clock': { type: 'template', text: 'x' } } }, code);
+  ok(
+    config.get().cards['under-clock'].type === 'template' && config.get().cards['under-clock'].text === 'x',
+    'a text card can be saved for the place under the clock'
+  );
+  await phone('POST', '/api/save', { cards: {} }, code);
   p = await phone('POST', '/api/places', { q: 'Utrecht' }, code);
   ok(
     p.j.places.length === 1 && p.j.places[0].lat === 52.09 && p.j.places[0].area === 'Utrecht, Nederland',
     'the phone page finds a place by name'
+  );
+  // the launcher's own search (Customise > Weather > Place, typed on the TV): the same places, and no search for less than two letters
+  r = await call(cards, '/api/cards/places', 'POST', { q: 'Utrecht' });
+  const r1 = await call(cards, '/api/cards/places', 'POST', { q: 'U' });
+  ok(
+    r.j.places.length === 1 && r.j.places[0].lat === 52.09 && r.j.places[0].name === 'Utrecht' && r1.j.places.length === 0,
+    'the launcher searches a place by name through the service'
   );
   r = await call(cards, '/api/cards/weather', 'POST', { lat: 52.09, lon: 5.12 });
   const r2 = await call(cards, '/api/cards/weather', 'POST', { lat: 52.09, lon: 5.12 });
@@ -118,6 +214,32 @@ run(async () => {
     r.j.now.temp === 12 && r.j.now.code === 3 && r.j.days.length === 2 && r.j.days[1].max === 12 && r2.j.at === r.j.at && asked === 1,
     'the weather of a place is asked once and then kept (at most every 30 minutes)'
   );
+  // what the weather drawer shows: asked for in the same request, and kept with the rest
+  const dt = r.j.detail;
+  ok(
+    /hourly=/.test(lastQuery) && /forecast_days=7/.test(lastQuery) && !/wind_speed_unit/.test(lastQuery) && airAsked === 1,
+    'one forecast request with the hours and the week, and one for the air quality'
+  );
+  ok(
+    dt.feels === 9 && dt.humidity === 71 && dt.wind === 14 && dt.dir === 315 && dt.pressure === 1016 && dt.uv === 2.3 && dt.offset === 3600,
+    'the drawer gets what it feels like, humidity, wind, pressure, UV and the time zone'
+  );
+  ok(
+    dt.hours.length === 3 &&
+      dt.hours[1].temp === 12 &&
+      dt.hours[1].rain === 65 &&
+      dt.hours[0].t === '2026-10-27T14:00' &&
+      dt.hours[2].t === '' &&
+      dt.hours[2].day === false &&
+      dt.week.length === 2 &&
+      dt.week[0].rain === 65 &&
+      dt.week[0].sunset === '2026-10-27T17:12',
+    'the hours, and the days with their rain chance, sunrise and sunset, read as the place writes them'
+  );
+  ok(dt.air.aqi === 31 && dt.air.pm25 === 7.3 && dt.air.pm10 === 12, 'the air quality comes with the weather');
+  ok(r.j.days.length === 2 && r.j.days[0].max === 13, 'the card keeps its own days');
+  r = await call(cards, '/api/cards/weather', 'POST', { lat: 52.09, lon: 5.12, unit: 'f' });
+  ok(/temperature_unit=fahrenheit/.test(lastQuery) && /wind_speed_unit=mph/.test(lastQuery), 'in Fahrenheit the wind is in miles an hour');
   r = await call(cards, '/api/cards/weather', 'POST', { lat: 'x' });
   ok(r.j.error === 'no place chosen', 'no weather without a place');
   // Home Assistant cards, with the address and token set for Voice
@@ -239,5 +361,13 @@ run(async () => {
   await sleep(50);
   p = await phone('GET', '/').catch(() => ({ code: 0 }));
   ok(p.code === 0, 'the page is closed after stop');
+  // the report people attach to issues does not say where the TV is: the weather place and its coordinates are masked
+  const red = require('../../helper/sharelog').redact(
+    JSON.stringify({ cards: { 'under-clock': { type: 'weather', place: 'Utrecht', lat: 52.09, lon: -5.12, unit: 'f' } } })
+  );
+  ok(
+    !/Utrecht|52\.09|5\.12/.test(red) && /"unit":"f"/.test(red) && /"type":"weather"/.test(red),
+    'Share log masks the weather place and its coordinates'
+  );
   om.server.close();
 });

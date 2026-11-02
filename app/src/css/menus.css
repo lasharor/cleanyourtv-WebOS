@@ -11,6 +11,24 @@
   align-items: center;
   justify-content: center;
 }
+/* the city typed for the weather (menus.js, wxSearch) above the menu; the TV's keyboard types into it */
+#wxq {
+  display: none;
+  position: absolute;
+  left: 560px;
+  top: 150px;
+  width: 800px;
+  height: 64px;
+  z-index: 40;
+  border: 0;
+  outline: 0;
+  border-radius: 32px;
+  padding: 0 28px;
+  font: inherit;
+  font-size: 28px;
+  background: var(--ink);
+  color: #0b0c10;
+}
 #ov .panel {
   width: 760px;
   display: flex;

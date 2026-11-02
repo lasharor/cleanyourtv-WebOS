@@ -153,4 +153,109 @@ run(async () => {
       /healthyT = setTimeout\(function \(\) \{\s*reloads = 0;\s*\}, 30000\)/.test(live),
     'Live TV reloads a stream whose picture time stops without a waiting event (issue 109)'
   );
+  // the focused weather card has a ring with rounded corners of its own, like the tiles (an outline is a rectangle before Chromium 94)
+  ok(
+    /\.card-weather\.f::before\s*\{[^}]*border-radius:/.test(launcher) && !/\.card-weather\.f\s*\{[^}]*outline/.test(launcher),
+    'the focused weather card has a ring with rounded corners'
+  );
+  // the weather drawer (wxdrawer.js) drawn from what the service keeps: the page's own code, with the page's globals stood in for
+  const vm = require('vm'),
+    src = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'wxdrawer.js'), 'utf8');
+  const hrs = [0, 1, 2].map(i => ({
+    t: '2026-10-31T' + (18 + i) + ':00',
+    temp: 20 - i,
+    code: i === 1 ? 61 : 2,
+    rain: i === 1 ? 70 : null,
+    wind: 12,
+    day: true,
+  }));
+  const week = [0, 1].map(i => ({
+    date: '2026-10-3' + (1 + i),
+    code: 3,
+    max: 22 - i,
+    min: 14,
+    rain: 30,
+    sunrise: '2026-10-31T07:40',
+    sunset: '2026-10-31T17:12',
+  }));
+  const drawn = (tab, w, place) => {
+    const sandbox = {
+      WXD: null,
+      document: { addEventListener() {} },
+      $: () => ({}),
+      cfg: {},
+      LOC: 'en-GB',
+      clockOpts: () => ({ hour: 'numeric', minute: '2-digit', hourCycle: 'h23' }),
+      t: x => x,
+      wxKind: c => [c === 61 ? 'rain' : 'part', c === 61 ? 'Rain' : 'Partly cloudy'],
+      wxSvg: k => '<svg class="' + k + '"></svg>',
+      lineSvg: p => '<svg>' + p + '</svg>',
+      WX_ICON: { rain: '', sun: '' },
+      setHtml: (el, h) => {
+        el.innerHTML = h;
+        return el;
+      },
+      cardEls: () => [{ _slot: 'under-clock', _card: { type: 'weather', place: place, lat: 1, lon: 2 } }],
+      wxFor: () => w,
+      saveCfg() {},
+      clearTimeout() {},
+      setTimeout: () => 0,
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(
+      src +
+        ';WXD.on = true; WXD.slot = "under-clock"; WXD.p = { innerHTML: "" }; WXD.tab = ' +
+        tab +
+        '; WXD.hour = 1; wxdDraw(); var out = WXD.p.innerHTML;',
+      sandbox
+    );
+    return sandbox.out;
+  };
+  const full = {
+    at: Date.now(),
+    unit: 'c',
+    now: { temp: 19, code: 2, day: true },
+    detail: { feels: 17, humidity: 60, wind: 14, dir: 315, pressure: 1016, uv: 4.2, offset: 3600, hours: hrs, week, air: { aqi: 38 } },
+  };
+  const nowTab = drawn(0, full, 'A<b>x</b>');
+  ok(
+    /Feels like/.test(nowTab) &&
+      />1016</.test(nowTab) &&
+      />4</.test(nowTab) &&
+      /Rain likely from/.test(nowTab) &&
+      /Air quality/.test(nowTab),
+    'the weather drawer shows what it feels like, the pressure, UV, the next rain and the air quality'
+  );
+  ok(!/<b>x<\/b>/.test(nowTab) && /A&lt;b&gt;x&lt;\/b&gt;/.test(nowTab), "the place's name is escaped in the weather drawer");
+  const hoursTab = drawn(1, full, 'A'),
+    daysTab = drawn(2, full, 'A');
+  ok(
+    /class="chip/.test(hoursTab) && /Chance of rain, hour by hour/.test(hoursTab) && (daysTab.match(/class="dr"/g) || []).length === 2,
+    'the Hours tab has the hour chips and the Days tab a row a day'
+  );
+  // an answer kept by an earlier version, or one with holes, is still drawn (the drawer never throws on missing data)
+  const holes = {
+    at: Date.now() - 3 * 3600000,
+    unit: 'c',
+    now: { temp: 19, code: 2, day: true },
+    detail: {
+      feels: null,
+      hours: [{ t: '', temp: null, code: 0, rain: null, wind: null, day: true }],
+      week: [{ date: '2026-10-31', code: 0, max: null, min: null, rain: null, sunrise: '', sunset: '' }],
+      air: null,
+    },
+  };
+  let thrown = '';
+  try {
+    [0, 1, 2].forEach(tab => {
+      drawn(tab, holes, '');
+      drawn(tab, { at: Date.now(), unit: 'c', now: { temp: 5, code: 0, day: false } }, '');
+    });
+  } catch (e) {
+    thrown = e.message;
+  }
+  ok(
+    !thrown && /Offline, data from/.test(drawn(0, holes, '')),
+    'the weather drawer copes with missing data, and says so when what it shows is old' + (thrown ? ': ' + thrown : '')
+  );
 });

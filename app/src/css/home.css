@@ -33,6 +33,8 @@
   --clock-d: flex;
   --date-d: block;
   --greet-d: none;
+  --under-d: flex;
+  --under-s: 0px;
   --bar-l: auto;
   --bar-r: 96px;
   --bar-t: 54px;
@@ -169,6 +171,65 @@ body {
   margin: 8px 0 0 6px;
   padding: 0;
 }
+/* the place under the clock (cards.js, UNDER): a card of any kind right under the clock box, which is its positioning parent, in the clock's
+   alignment. The app name steps down when it would sit under the card (--under-s, set by underFit in cards.js). */
+#under {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: var(--under-d);
+  justify-content: var(--clock-ai);
+  margin-top: 8px;
+}
+#under .card {
+  position: relative;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+  transform: none;
+  flex: none;
+  width: 560px;
+  max-width: 800px;
+  max-height: 160px;
+}
+/* the weather card is smaller here than in a slot */
+#under .wx-i svg {
+  width: calc(40px * var(--fs));
+  height: calc(40px * var(--fs));
+  margin-right: 12px;
+}
+#under .wx-t {
+  font-size: calc(40px * var(--fs));
+}
+#under .wx-p {
+  margin-top: 2px;
+  font-size: calc(22px * var(--fs));
+}
+/* the days side by side, each on one line (weekday, icon, high, low) */
+#under .wx-days {
+  margin-top: 8px;
+  font-size: calc(20px * var(--fs));
+}
+#under .wx-days > div {
+  flex-direction: row;
+  min-width: 0;
+}
+#under .wx-days > div + div {
+  margin-left: 20px;
+}
+#under .wx-days svg {
+  width: 24px;
+  height: 24px;
+  margin: 0 6px;
+}
+#under .wx-days small {
+  margin-left: 4px;
+}
+[data-cstyle="glass"] #under {
+  display: none;
+}
 #bar {
   pointer-events: auto;
   position: absolute;
@@ -233,7 +294,7 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  top: var(--name-y);
+  top: calc(var(--name-y) + var(--under-s));
   height: 120px;
   padding: 0 var(--name-x);
   text-align: var(--name-a);
@@ -800,6 +861,25 @@ body.wpon {
 .wx-days small {
   color: var(--ink2);
   font-size: 1em;
+}
+/* OK or a click on the weather card opens the weather drawer (wxdrawer.js) */
+.card-weather {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.card-weather.f {
+  overflow: visible;
+}
+.card-weather.f::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  left: -14px;
+  top: -8px;
+  right: -14px;
+  bottom: -8px;
+  border: var(--ring-w) solid var(--focus);
+  border-radius: 22px;
 }
 /* a list keeps its height to its rows (at most the slot's), and its text starts on the reading side */
 .card-ha-entities {

@@ -1,0 +1,488 @@
+/* the weather drawer (wxdrawer.js): a panel from the right over a dimmed Home; only transform and opacity animate. Its right-to-left
+   rules are in rtl.css. */
+#wxd {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  z-index: 28;
+}
+#wxd.on {
+  display: block;
+}
+#wxd .sc {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity calc(0.25s * var(--spd)) linear;
+}
+#wxd.in .sc {
+  opacity: 1;
+}
+#wxd .pn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 820px;
+  height: 1080px;
+  box-sizing: border-box;
+  padding: 36px 40px;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  box-shadow: -1px 0 0 rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+  transform: translateX(100%);
+  transition: transform calc(0.3s * var(--spd)) ease-out;
+}
+#wxd.in .pn {
+  transform: none;
+}
+#wxd .pn > * + * {
+  margin-top: 22px;
+}
+#wxd .ts {
+  font-size: 22px;
+  line-height: 1.25;
+  color: var(--ink2);
+}
+#wxd svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#wxd .hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#wxd .ti {
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+#wxd .bt {
+  display: flex;
+  flex: none;
+}
+#wxd .bt > * + * {
+  margin-left: 12px;
+}
+/* a button for the remote: a pill that turns the accent colour when it has the focus, like the pills on Home */
+#wxd .b {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  padding: 0 24px;
+  border-radius: 28px;
+  box-sizing: border-box;
+  font-size: 24px;
+  font-weight: 600;
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+#wxd .b.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+  box-shadow: none;
+}
+#wxd .cls svg {
+  width: 26px;
+  height: 26px;
+  margin-right: 10px;
+}
+#wxd .tr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#wxd .tabs {
+  display: flex;
+}
+#wxd .tabs > * + * {
+  margin-left: 10px;
+}
+#wxd .tab {
+  padding: 0 30px;
+}
+#wxd .tab.on:not(.f) {
+  background: var(--pill-bg);
+  box-shadow: inset 0 0 0 2px var(--acc);
+}
+#wxd .off {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 22px;
+  font-size: 22px;
+  font-weight: 600;
+  background: #3a2a10;
+  color: #ffcf85;
+}
+#wxd .off svg {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+}
+#wxd .hero {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+}
+#wxd .hi svg {
+  display: block;
+  width: 120px;
+  height: 120px;
+  stroke-width: 1.3;
+}
+#wxd .ht {
+  margin: 0 24px;
+  font-size: 108px;
+  font-weight: 700;
+  line-height: 1;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+#wxd .hs {
+  font-size: 32px;
+  font-weight: 700;
+}
+#wxd .hl {
+  display: flex;
+  align-items: center;
+  padding: 12px 18px;
+  border-radius: 16px;
+  font-size: 24px;
+  font-weight: 600;
+  background: var(--pill-bg);
+  box-shadow: inset 0 0 0 1px var(--pill-ring);
+}
+#wxd .hl svg {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-right: 12px;
+  color: #6cb8ff;
+}
+#wxd .tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-gap: 14px;
+}
+#wxd .tl {
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  min-width: 0;
+}
+#wxd .tn {
+  display: flex;
+  align-items: center;
+  font-size: 22px;
+  color: var(--ink2);
+}
+#wxd .tn span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#wxd .unit {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+#wxd .tn svg {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin-right: 8px;
+  color: #6cb8ff;
+}
+#wxd .tv {
+  margin-top: 6px;
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+#wxd .sun {
+  padding: 16px 20px 18px;
+  border-radius: 18px;
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+#wxd .sa {
+  display: block;
+  width: 100%;
+  height: 120px;
+  direction: ltr;
+}
+#wxd .sh {
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 2;
+}
+#wxd .sc2 {
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 3;
+  stroke-dasharray: 3 9;
+}
+#wxd .sp {
+  stroke: #ffbf5e;
+  stroke-width: 4;
+}
+#wxd .sd {
+  fill: #ffbf5e;
+  stroke: var(--panel2);
+  stroke-width: 4;
+}
+#wxd .sr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+#wxd .sk {
+  display: flex;
+  align-items: center;
+}
+#wxd .sk svg {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
+}
+#wxd .sm {
+  text-align: center;
+}
+#wxd .sv {
+  font-size: 30px;
+  font-weight: 700;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+#wxd .k-sun,
+#wxd .k-part,
+#wxd .k-moon {
+  color: #ffbf5e;
+}
+#wxd .k-rain,
+#wxd .k-storm,
+#wxd .k-snow {
+  color: #6cb8ff;
+}
+#wxd .k-cloud,
+#wxd .k-fog {
+  color: #b9c6da;
+}
+#wxd .sel {
+  display: flex;
+  align-items: center;
+  padding: 18px 22px;
+  border-radius: 18px;
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+#wxd .sel .hi svg {
+  width: 76px;
+  height: 76px;
+  stroke-width: 1.5;
+}
+#wxd .sel .hi {
+  margin-right: 22px;
+}
+#wxd .ht2 {
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1.05;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+#wxd .se {
+  margin-left: auto;
+  text-align: end;
+}
+#wxd .ltr {
+  direction: ltr;
+}
+#wxd .spk {
+  display: block;
+  width: 100%;
+  height: 96px;
+}
+#wxd .spk path {
+  stroke: #6cb8ff;
+  stroke-width: 4;
+}
+#wxd .chips {
+  display: flex;
+}
+#wxd .chip {
+  flex: 1 1 0;
+  min-width: 0;
+  height: auto;
+  padding: 12px 0 10px;
+  margin-right: 6px;
+  border-radius: 16px;
+  flex-direction: column;
+  font-weight: 700;
+}
+#wxd .chip:last-child {
+  margin-right: 0;
+}
+#wxd .chip.sel:not(.f) {
+  box-shadow: inset 0 0 0 2px #6cb8ff;
+}
+#wxd .chip > * + * {
+  margin-top: 6px;
+}
+#wxd .chip .cl,
+#wxd .chip .cr {
+  font-size: 22px;
+  font-weight: 400;
+}
+#wxd .chip .cl {
+  color: var(--ink2);
+}
+#wxd .chip.f .cl {
+  color: inherit;
+}
+#wxd .chip .cr {
+  color: #8fc6ff;
+}
+#wxd .chip.f .cr {
+  color: inherit;
+}
+#wxd .chip .ci svg {
+  display: block;
+  width: 38px;
+  height: 38px;
+}
+#wxd .chip.f .ci {
+  color: inherit;
+}
+#wxd .chip .ct {
+  font-size: 28px;
+}
+#wxd .hint {
+  margin-top: 8px;
+}
+#wxd .rb {
+  padding: 16px 20px 14px;
+  border-radius: 18px;
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+#wxd .bars {
+  display: flex;
+  align-items: flex-end;
+  height: 150px;
+  margin-top: 10px;
+}
+#wxd .bars i {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-right: 4px;
+  border-radius: 4px 4px 0 0;
+  background: #3b8fd9;
+}
+#wxd .bars i:last-child {
+  margin-right: 0;
+}
+#wxd .ax {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+#wxd .days > * + * {
+  margin-top: 8px;
+}
+#wxd .dr {
+  display: flex;
+  align-items: center;
+  height: 78px;
+  box-sizing: border-box;
+  padding: 0 20px;
+  border-radius: 16px;
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  font-size: 26px;
+}
+#wxd .dd {
+  flex: none;
+  width: 110px;
+  font-weight: 700;
+}
+#wxd .di {
+  flex: none;
+  width: 40px;
+  margin-right: 14px;
+}
+#wxd .di svg {
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+#wxd .dp {
+  flex: none;
+  width: 74px;
+  font-size: 22px;
+  color: #8fc6ff;
+}
+#wxd .dl {
+  flex: none;
+  width: 56px;
+  text-align: end;
+  color: var(--ink2);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+#wxd .db {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 10px;
+  margin: 0 14px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.14);
+  position: relative;
+}
+#wxd .db i {
+  position: absolute;
+  top: 0;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #6cb8ff, #ffbf5e);
+}
+#wxd .dh {
+  flex: none;
+  width: 56px;
+  font-weight: 700;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+#wxd .ft {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 22px;
+  color: var(--ink2);
+}
+#wxd .kc {
+  padding: 1px 10px;
+  border-radius: 8px;
+  font-weight: 400;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}

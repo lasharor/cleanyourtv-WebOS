@@ -43,7 +43,7 @@ function options(e) {
 /* Pointer focus follows real pointer movement only: a tile sliding under a still cursor, a cursor jitter when
    the remote is picked up, or a pointer move right after a button press must not steal the focus. */
 document.addEventListener('mousemove', function (ev) {
-  if (stack.length || LIVE.on || PAGER.on || Date.now() - lastKey < 1500) return;
+  if (stack.length || LIVE.on || PAGER.on || WXD.on || Date.now() - lastKey < 1500) return;
   if (lastMX < 0) {
     lastMX = ev.clientX;
     lastMY = ev.clientY;
@@ -62,6 +62,20 @@ document.addEventListener('keydown', function (e) {
   /* a right-to-left layout: Left moves to what is on the left, which is the next tile in the row (Live TV keeps left-to-right) */
   if (rtl() && !LIVE.on && (k === 37 || k === 39)) k = 76 - k;
   lastKey = Date.now();
+  /* the city typed for the weather: OK searches, Back closes the field, the rest types */
+  if (e.target && e.target.id === 'wxq') {
+    if (k === 13) wxFind(e.target.value);
+    if (k === 13 || k === 461 || k === 27) {
+      wxSearchEnd();
+      e.preventDefault();
+    }
+    return;
+  }
+  /* the weather drawer has the keys while it is open */
+  if (WXD.on) {
+    wxdKey(k, e);
+    return;
+  }
   if (PAGER.on) {
     PAGER.key(e);
     return;
@@ -204,6 +218,7 @@ function wantInputs() {
   }
 }
 document.addEventListener('webOSRelaunch', function () {
+  wxdClose();
   var p = {};
   try {
     p = JSON.parse(webOSSystem.launchParams || '{}');
@@ -233,6 +248,7 @@ document.addEventListener('visibilitychange', function () {
     }
     WALL.hidden();
     stopMoving(); /* leaving Home while a tile is moved keeps where it is now */
+    wxdClose();
     SCENES.hidden();
     if (LIVE.on) LIVE.exit();
     closeRunningMenu();

@@ -236,7 +236,7 @@ var SCENES = (function () {
   function glassCards() {
     var cards = $('cards');
     if (!cards) return;
-    var els2 = cards.children,
+    var els2 = cardEls(),
       g = cardsGlass() && on ? fillOf(lib[cur]) : '';
     if (frost) frost.style.backgroundImage = g ? 'linear-gradient(rgba(16,14,26,0.34),rgba(16,14,26,0.46)),' + g : '';
     for (var i = 0; i < els2.length; i++) {

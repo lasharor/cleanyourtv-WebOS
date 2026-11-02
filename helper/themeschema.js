@@ -76,6 +76,13 @@ const SCHEMA = [
     false,
     'Show a greeting (Good morning / afternoon / evening, in the language) in capitals above the time. Needs the stacked layout.',
   ],
+  [
+    'clock.under',
+    'bool',
+    null,
+    true,
+    'Allow the card the user puts under the clock (Customise > Weather, or the Cards screen in the manager).',
+  ],
   ['clock.layout', 'enum', ['inline', 'stack'], 'inline', '`inline`: the date beside the time; `stack`: under it.'],
   ['clock.anchor', 'enum', TOPBOT, 'top', 'Which screen edge `clock.y` counts from.'],
   ['clock.align', 'enum', POS, 'left', 'Which side `clock.x` counts from; `center` centres it.'],
@@ -354,7 +361,8 @@ function slots(list) {
   const out = [];
   for (const o of list) {
     if (out.length >= MAX_SLOTS) break;
-    if (!o || typeof o !== 'object' || !SLOT_ID.test(o.id) || out.some(x => x.id === o.id)) continue;
+    // under-clock is the built-in place for a card under the clock (cards.js)
+    if (!o || typeof o !== 'object' || !SLOT_ID.test(o.id) || o.id === 'under-clock' || out.some(x => x.id === o.id)) continue;
     out.push({
       id: o.id,
       anchor: TOPBOT.indexOf(o.anchor) >= 0 ? o.anchor : 'top',
@@ -484,6 +492,7 @@ function resolve(t, accent) {
     '--clock-d': v['clock.show'] ? 'flex' : 'none',
     '--date-d': v['clock.date'] ? 'block' : 'none',
     '--greet-d': v['clock.greeting'] ? 'block' : 'none',
+    '--under-d': v['clock.under'] ? 'flex' : 'none',
     '--bar-l': bar.l,
     '--bar-r': bar.r,
     '--bar-t': bar.t,

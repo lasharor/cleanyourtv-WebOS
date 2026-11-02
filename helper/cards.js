@@ -8,6 +8,8 @@ const http = require('http');
 const web = require('./web'),
   i18n = require('./i18n'),
   nc = require('./netcompat');
+// a place every theme has: under the clock, for any card (the launcher draws it there, app/src/js/cards.js); empty until a card is chosen
+const UNDER_SLOT = { id: 'under-clock', card: 'none' };
 const SLOT_ID = /^[a-z][a-z0-9-]{0,19}$/,
   TYPE = /^[a-z][a-z0-9-]{0,30}$/,
   MAX_SLOTS = 12;
@@ -34,6 +36,30 @@ function options(o, depth) {
   }
   return out;
 }
+// the weather card's options: the place's name (text, at most 40 characters), its coordinates (both, within range, or neither), the
+// temperature unit ('f' or the default) and whether the days follow ('days' or just now); the rest is dropped
+function weatherCard(card) {
+  const out = { type: card.type };
+  const place =
+    typeof card.place === 'string'
+      ? card.place
+          .split('')
+          .filter(ch => ch.charCodeAt(0) > 31 && ch.charCodeAt(0) !== 127 && ch !== '<' && ch !== '>')
+          .join('')
+          .trim()
+          .slice(0, 40)
+      : '';
+  if (place) out.place = place;
+  const lat = card.lat,
+    lon = card.lon;
+  if (typeof lat === 'number' && typeof lon === 'number' && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+    out.lat = Math.round(lat * 100) / 100;
+    out.lon = Math.round(lon * 100) / 100;
+  }
+  if (card.unit === 'f') out.unit = 'f';
+  if (card.show === 'days') out.show = 'days';
+  return out;
+}
 // the cards as the launcher sent them, or undefined when there is nothing usable
 function sanitize(c) {
   if (!c || typeof c !== 'object' || Array.isArray(c)) return undefined;
@@ -41,7 +67,7 @@ function sanitize(c) {
   for (const id of Object.keys(c).slice(0, MAX_SLOTS)) {
     const card = c[id];
     if (!SLOT_ID.test(id) || !card || typeof card !== 'object' || !TYPE.test(card.type)) continue;
-    out[id] = Object.assign(options(card, 0), { type: card.type });
+    out[id] = card.type === 'weather' ? weatherCard(card) : Object.assign(options(card, 0), { type: card.type });
   }
   return out;
 }
@@ -171,7 +197,13 @@ const TYPES = [
   },
 ];
 // the usual slot ids, named as in the launcher
-const SLOT_NAMES = { greeting: 'Above the clock', 'clock-side': 'Beside the clock', side: 'Right column', row: 'Above the dock' };
+const SLOT_NAMES = {
+  greeting: 'Above the clock',
+  'clock-side': 'Beside the clock',
+  side: 'Right column',
+  row: 'Above the dock',
+  'under-clock': 'Under the clock',
+};
 const PAIR_PORT = 8792, // after the Wallpapers page (8791)
   PAIR_MS = 10 * 60 * 1000;
 
@@ -183,7 +215,7 @@ function create(ctx) {
   const slots = () => {
     const th = ctx.feature('theme'),
       r = th && th.resolved();
-    return (r && r.slots) || [];
+    return ((r && r.slots) || []).filter(sl => sl.id !== UNDER_SLOT.id).concat([UNDER_SLOT]);
   };
   // the downloaded cards as card types (x-<id>), their options as the fields of the form on the phone page
   /** @returns {any[]} */
@@ -320,6 +352,14 @@ function create(ctx) {
     // the manager's Cards screen: the theme's places with their cards, and a card type picked for one of them
     if (u === '/api/cards/status') return web.json(res, state(i18n.lang(req, config.get().lang)));
     if (u === '/api/cards/set') return web.json(res, setType(String(b.slot || ''), String(b.type || '')));
+    // the launcher's own city search (Customise > Weather > Place, typed with the TV's keyboard): {q} -> {places} like the phone page's
+    if (u === '/api/cards/places') {
+      try {
+        return web.json(res, { places: await weather.search(b.q, i18n.lang(req, config.get().lang)) });
+      } catch (e) {
+        return web.json(res, { error: 'Place search is not available now.', places: [] });
+      }
+    }
     // the weather card: {lat, lon, unit} -> the weather there (Open-Meteo, at most every 30 minutes)
     if (u === '/api/cards/weather') return web.json(res, await weather.get(b.lat, b.lon, b.unit));
     // Home Assistant cards: {ids} -> their states (kept 20 s); {id} -> switched (lights, switches, fans, scenes, scripts)
