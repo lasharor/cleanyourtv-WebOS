@@ -16,7 +16,11 @@
 //                  (issues 14, 23 and 24). TVs with the flutter or web Home (webOS 24 and newer) restart what depends on SAM themselves.
 //                  On webOS 26 (SDK 11) with the flutter or web Home, HDMI ARC to a soundbar stayed silent after the restart until
 //                  arccontroller was restarted (issue 21, OLED65C35LA), and on a 50NU850BPSA video apps stayed black because umediaserver
-//                  lost its subscription to SAM (pull request 73): both are restarted there. webOS 25 (SDK 10) keeps eARC.
+//                  lost its subscription to SAM (pull request 73): both are restarted there. webOS 25 (SDK 10) keeps eARC, but on an
+//                  OLED65B2RLA (SDK 10.3.2, flutter Home, CRIU) video apps now and then played with a black picture: the media services had
+//                  no foreground app after the restart, and restarting videooutputd and then umediaserver brought picture and sound back
+//                  (issue 122). That is restarted there too, ARC left alone; other webOS 25 TVs (a C3 on 10.3.0 among them) were fine without
+//                  it, so a file after-sam-services in the service folder replaces the list on one TV (an empty file: none).
 //                  scripts/after-sam.sh restarts only services that exist and are active.
 //   homeTakeover   how the launcher becomes Home. 'mount': its folder is mounted over LG's Home app and the app manager is restarted
 //                  to read it (flutter and web Home). 'standin' where LG's Home is the native program: a small script is mounted over
@@ -74,7 +78,9 @@ function decide(facts, compat) {
         ? 'eim webapp-mgr preload-manager memorymanager'
         : major === 11 && /\s(?:flutter|web)$/.test(homeKind)
           ? 'arccontroller umediaserver'
-          : '',
+          : major === 10 && /\s(?:flutter|web)$/.test(homeKind)
+            ? 'videooutputd umediaserver'
+            : '',
     criu: /(^|\s)criu_enabled(\s|=|$)/.test(String(f.cmdline || '')),
     homeTakeover: /^com\.webos\.app\.home native$/.test(homeKind) ? 'standin' : 'mount',
   };

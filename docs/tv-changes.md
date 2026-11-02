@@ -49,8 +49,11 @@ uninstall. Optional features contact other services only when you switch them on
    On webOS 26 (SDK 11) with the flutter or web Home, the same hook restarts `arccontroller` and `umediaserver` after the app manager,
    if they run. On an OLED65C35LA HDMI ARC to the soundbar stayed silent although the right output was chosen and the controller was
    running, and restarting that controller brought the sound back (issue 21, found by karim7878). On a 50NU850BPSA `umediaserver` lost
-   its subscription to the app manager's foreground apps, so every video app showed a black screen (pull request 73). webOS 25 is left
-   alone; eARC keeps working there.
+   its subscription to the app manager's foreground apps, so every video app showed a black screen (pull request 73). On webOS 25 (SDK 10)
+   with the flutter or web Home it restarts `videooutputd` and then `umediaserver` (issue 122: on an OLED65B2RLA a video app now and then
+   played with a black picture after the takeover, because the media services had no foreground app; restarting those two brought picture
+   and sound back). The ARC controller is left alone there; eARC keeps working. Other webOS 25 TVs were fine without it, so a file
+   `after-sam-services` in `/media/developer/cleanyourtv/` replaces the list on one TV (an empty file switches it off; updates leave it).
 3. About a minute later the debloat runs, if it is on.
 
 Either bind mount lives in RAM. A reboot without the boot scripts, or the Homebrew Channel's failsafe mode, leaves LG's Home as it was.

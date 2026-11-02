@@ -77,9 +77,23 @@ run(async () => {
     tv.decide(Object.assign({}, arc, { home: 'com.webos.app.home web' })).afterSam === 'arccontroller umediaserver',
     'also with the web Home'
   );
-  for (const change of [{ sdk: '10.2.2' }, { sdk: '' }, { home: '' }]) {
-    ok(tv.decide(Object.assign({}, arc, change)).afterSam === '', 'not on webOS 25 or an unknown TV ' + JSON.stringify(change));
+  for (const change of [{ sdk: '' }, { home: '' }]) {
+    ok(tv.decide(Object.assign({}, arc, change)).afterSam === '', 'not on an unknown TV ' + JSON.stringify(change));
   }
+  // issue 122: webOS 25 with the flutter or web Home, black video after the restart of SAM
+  const b2 = { model: 'OLED65B2RLA', sdk: '10.3.2', home: 'com.webos.app.home flutter' };
+  ok(
+    tv.decide(b2).afterSam === 'videooutputd umediaserver' &&
+      tv.decide(Object.assign({}, b2, { home: 'com.webos.app.home web' })).afterSam === 'videooutputd umediaserver' &&
+      tv.decide(Object.assign({}, b2, { sdk: '10.2.2' })).afterSam === 'videooutputd umediaserver',
+    'webOS 25 restarts videooutputd and then umediaserver after SAM (issue 122), ARC left alone'
+  );
+  ok(
+    tv.decide(Object.assign({}, b2, { home: 'com.webos.app.home native' })).afterSam === 'eim webapp-mgr preload-manager memorymanager' &&
+      tv.decide(Object.assign({}, b2, { home: '' })).afterSam === '' &&
+      tv.decide(Object.assign({}, b2, { sdk: '' })).afterSam === '',
+    'the native Home keeps its own list on webOS 25, and an unknown Home or SDK restarts nothing'
+  );
   // the setup script asks the same rules from the shell
   const cli = args => cp.spawnSync(process.execPath, [path.join(helper, 'tvprofile.js')].concat(args), { encoding: 'utf8' }).stdout.trim();
   ok(
