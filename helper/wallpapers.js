@@ -40,6 +40,7 @@ const ID = /^[a-f0-9]{16}$/,
 const unsplashBase = () => process.env.CYTV_UNSPLASH_URL || 'https://api.unsplash.com', // overridden only by the tests
   UNSPLASH_APP = 'CleanYourTV', // the utm_source of every link back to Unsplash
   UNSPLASH_WAIT_MS = 61 * 60 * 1000, // the hourly limit is counted in hours
+  UNSPLASH_PUSH_MS = 10 * 60 * 1000, // a photo from Test key and save waits this long for Home to show it
   WALLPAPERS_TOPIC = 'bo8jQKTaE0Y'; // the id of Unsplash's Wallpapers topic (/photos/random takes topic ids)
 const UKEY = /^[A-Za-z0-9_-]{20,100}$/, // an Access Key; also keeps anything else out of the Authorization header
   UPHOTO = /^[A-Za-z0-9_-]{6,20}$/,
@@ -421,11 +422,21 @@ function create(ctx) {
     lastShown = p.id;
     return { ok: true, url: sized(p.raw, cfg().size), name: p.name, again: true };
   }
-  // Home is about to show the Unsplash entry (id "live"): a new photo when one may be asked for, else one shown before; {ok: false} when
-  // there is none yet and nothing can be asked now (Home then keeps what it shows)
+  // the photo the phone page's Test key and save fetched: handed to Home once, by its poll (GET /api/wallpapers/push) or by the next
+  // photo it asks for, whichever comes first; after ten minutes it is dropped and the photos shown before go round again
+  let push = { seq: 0, raw: '', name: '', at: 0, taken: false };
+  function takePush() {
+    if (!push.raw || push.taken || Date.now() - push.at > UNSPLASH_PUSH_MS) return null;
+    push.taken = true;
+    return { seq: push.seq, url: sized(push.raw, cfg().size), name: push.name };
+  }
+  // Home is about to show the Unsplash entry (id "live"): the photo the phone page just fetched, else a new one when one may be asked
+  // for, else one shown before; {ok: false} when there is none yet and nothing can be asked now (Home then keeps what it shows)
   async function unsplashUse(id) {
     const uc = ucfg();
     if (!uc.key || !uc.on || id !== 'live') return { ok: false };
+    const p = takePush();
+    if (p) return { ok: true, url: p.url, name: p.name };
     const r = await unsplashNew(uc, false);
     return r.ok ? { ok: true, url: r.url, name: r.name } : replay() || { ok: false };
   }
@@ -453,6 +464,7 @@ function create(ctx) {
       return {
         ok: true,
         url: sized(p.raw, cfg().size),
+        raw: p.raw,
         name: p.name,
         photo: { name: p.name, link: p.user ? profile(p.user) : '', thumb: p.thumb },
       };
@@ -467,8 +479,7 @@ function create(ctx) {
       busy = false;
     }
   }
-  // the photo the phone page's Test key and save just fetched: Home asks for it now and then (GET /api/wallpapers/push) and shows it at once
-  let push = { seq: 0, url: '', name: '' };
+  // the photo the phone page's Test key and save just fetched, for Home to show next (takePush)
   async function unsplashSave(b) {
     const old = ucfg(),
       key = String(b.key || '').trim() || old.key,
@@ -496,7 +507,7 @@ function create(ctx) {
     // Test key and save fetches a photo now (2 requests), shows it on Home and lists it, so a change of the settings can be seen
     const r = await unsplashNew(ucfg(), true);
     if (!r.ok) return { ok: true, note: r.note };
-    push = { seq: push.seq + 1, url: r.url, name: r.name };
+    push = { seq: push.seq + 1, raw: r.raw, name: r.name, at: Date.now(), taken: false };
     return { ok: true, photo: r.photo };
   }
   function unsplashOn(on) {
@@ -509,6 +520,7 @@ function create(ctx) {
     idx().seen = [];
     lastShown = '';
     lastLive = 0;
+    push = { seq: push.seq, raw: '', name: '', at: 0, taken: true };
     idx().usync = { error: '', ok: 0, wait: 0, remaining: null, remainingAt: 0 };
     saveIdx();
     setCfg(w => {
@@ -720,7 +732,10 @@ function create(ctx) {
     const m = /^\/api\/wallpapers\/photo\/([ui])\/([0-9a-f-]{16,36})$/i.exec(u);
     if (m) return sendPhoto(res, m[1], m[2]);
     if (u === '/api/wallpapers/status') return json(status());
-    if (u === '/api/wallpapers/push') return json(liveOn() ? push : { seq: 0, url: '', name: '' });
+    if (u === '/api/wallpapers/push') {
+      const p = liveOn() ? takePush() : null;
+      return json(p || { seq: push.seq, url: '', name: '' });
+    }
     if (u === '/api/wallpapers/list') {
       return json({ photos: list(), stamp: stamp() });
     }
@@ -820,10 +835,16 @@ $('ts').onclick=function(){tab('ts');LP=-1;if(S.unsplash&&S.unsplash.configured)
 /* the synced photos, each with its credit under it: "Photo by NAME on Unsplash", NAME linked to the photographer's page and Unsplash to
    unsplash.com, both with the utm parameters (Unsplash's attribution rule) */
 function link(txt,href){if(!href)return document.createTextNode(txt);var e=document.createElement('a');e.href=href;e.target='_blank';e.rel='noopener';e.textContent=txt;return e}
+/* the credit with the photographer and the site linked wherever the translation puts each one: the name is marked with \\u0001 and the
+   site with \\u0002, so a language that puts Unsplash before the name (tr) reads right too */
+function credit(k,p,home){var s=t('Photo by %s on Unsplash'),A=String.fromCharCode(1),B=String.fromCharCode(2),i;
+ s=s.replace('%s',A);i=s.indexOf('Unsplash');if(i>=0)s=s.slice(0,i)+B+s.slice(i+8);
+ s.split(A).forEach(function(part,n){if(n)k.appendChild(link(p.name||'?',p.link));
+  part.split(B).forEach(function(x,j){if(j)k.appendChild(link('Unsplash',home));if(x)k.appendChild(document.createTextNode(x))})})}
 function loadUnsplash(){api('unsplash/credits',{}).then(function(r){var ps=r.photos||[],g=$('sg'),home='https://unsplash.com/?utm_source=CleanYourTV&utm_medium=referral';$('sph').className=ps.length?'':'hide';g.innerHTML='';
- ps.forEach(function(p){var c=document.createElement('div'),d=document.createElement('div'),k=document.createElement('div'),pre=t('Photo by %s on Unsplash').split('%s'),post=(pre[1]||'').split('Unsplash');c.className='uc';d.className='ph';
+ ps.forEach(function(p){var c=document.createElement('div'),d=document.createElement('div'),k=document.createElement('div');c.className='uc';d.className='ph';
   if(p.thumb){var m=document.createElement('img');m.loading='lazy';m.src=p.thumb;d.appendChild(m)}
-  c.appendChild(d);k.className='cap';k.appendChild(document.createTextNode(pre[0]));k.appendChild(link(p.name||'?',p.link));k.appendChild(document.createTextNode(post[0]));k.appendChild(link('Unsplash',home));if(post.length>1)k.appendChild(document.createTextNode(post.slice(1).join('Unsplash')));
+  c.appendChild(d);k.className='cap';credit(k,p,home);
   c.appendChild(k);g.appendChild(c)})})}
 $('ss').onclick=function(){msg(t('Testing the key…'));api('unsplash/save',{key:$('sk').value,query:$('sq').value}).then(function(r){if(r.error)return msg(t(r.error),1);$('sk').value='';UF=0;msg(r.photo?fm('Saved. A new photo by %s is on the TV.',r.photo.name):r.note?t('Saved')+': '+t(r.note):t('Saved'));if(r.photo)loadUnsplash();setTimeout(state,1500)})};
 $('so').onclick=function(){api('unsplash/on',{on:!(S.unsplash&&S.unsplash.on)}).then(function(){setTimeout(state,500)})};

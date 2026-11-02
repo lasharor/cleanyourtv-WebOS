@@ -74,7 +74,7 @@ tuner) and is offered only when the TV has that app and **Show LG's own Live TV*
 - **mark running apps** (a green dot on their tiles, or none);
 - the **clock** format (automatic, 12 or 24 hour);
 - the **theme** (see [Themes](themes.md)) and the **accent colour**; the theme list shows each theme's screenshot;
-- **Wallpapers**: photos behind Home, how often they change and whether an Unsplash photo shows its photographer (see [Wallpapers](wallpapers.md));
+- **Wallpapers**: photos behind Home and how often they change (see [Wallpapers](wallpapers.md));
 - **More settings...**, which opens the [manager app](manager.md) for everything the TV and the service do.
 
 Putting the dock, buttons, hidden apps, order and clock back to the defaults is in the manager app: **Reset Home customisation**.

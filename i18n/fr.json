@@ -724,8 +724,6 @@
  "Yes, remove Unsplash": "Oui, retirer Unsplash",
  "upload photos, configure Immich or Unsplash": "envoyer des photos, configurer Immich ou Unsplash",
  "paused for the hourly limit": "en pause à cause de la limite horaire",
- "the photographer of an Unsplash photo": "le photographe d’une photo Unsplash",
- "Photo credit": "Crédit photo",
  "Photo by %s on Unsplash": "Photo de %s sur Unsplash",
  "The page stays open while you use it, at most an hour. It is not encrypted: your photos and the Immich and Unsplash keys travel over your Wi-Fi.": "La page reste ouverte tant que vous l’utilisez, une heure au plus. Elle n’est pas chiffrée : vos photos et les clés Immich et Unsplash passent par votre Wi-Fi.",
  "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Upload photos</b>, <b>Configure Immich</b> or <b>Configure Unsplash</b>.</li>": "<li>Téléphone sur le <b>même Wi-Fi</b> que le téléviseur.</li><li>Scannez le code avec l’appareil photo.</li><li>Choisissez <b>Envoyer des photos</b>, <b>Configurer Immich</b> ou <b>Configurer Unsplash</b>.</li>",

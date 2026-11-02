@@ -33,7 +33,7 @@ var WALL = (function () {
     });
     return els;
   }
-  /* an Unsplash photo's photographer in a corner, "Photo by NAME on Unsplash"; Customise > Wallpapers > Photo credit switches it off */
+  /* an Unsplash photo's photographer in a corner, "Photo by NAME on Unsplash": Unsplash's guidelines ask for it, so it is not switchable */
   function credit(name) {
     if (!cr) {
       cr = document.createElement('div');
@@ -41,7 +41,7 @@ var WALL = (function () {
       cr.className = 'wpc';
       document.body.insertBefore(cr, $('gA'));
     }
-    if (name && want() && !(cfg.wall && cfg.wall.credit === false)) {
+    if (name && want()) {
       cr.textContent = t('Photo by %s on Unsplash').replace('%s', name);
       cr.classList.add('on');
     } else cr.classList.remove('on');
@@ -109,16 +109,15 @@ var WALL = (function () {
       }, sec * 1000);
   }
   /* the phone page's Test key and save fetches a photo for Home to show at once: while Home is on screen with Unsplash live in the list it
-     asks every few seconds whether there is a new one (the first answer only notes the number, so an old test photo is not shown again) */
+     asks every few seconds whether there is one, and the service hands it out once (a photo already taken by Home is not shown again) */
   function poll() {
     if (!want() || list.indexOf(LIVE) < 0) return;
     api('/api/wallpapers/push').then(
       function (r) {
         if (!r) return;
-        var first = pushSeq < 0;
         if (r.seq === pushSeq) return;
         pushSeq = r.seq;
-        if (!first && r.url) load(LIVE, r.url, null, r.name);
+        if (r.url) load(LIVE, r.url, null, r.name);
       },
       function () {}
     );

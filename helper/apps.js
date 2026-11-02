@@ -405,7 +405,6 @@ function create(ctx) {
       // secs: how often the photo changes while Home is shown, in seconds (0: each time Home opens); "every" (minutes) came before it
       const secs = typeof b.wall.secs === 'number' ? b.wall.secs : typeof b.wall.every === 'number' ? b.wall.every * 60 : 900;
       out.wall = { on: b.wall.on === true, secs: WALL_SECS.indexOf(secs) >= 0 ? secs : 900 };
-      if (b.wall.credit === false) out.wall.credit = false; // the Unsplash photographer's credit on Home is on unless switched off
     }
     // the cards in the theme's slots (Customise > Cards), checked for shape only (cards.js)
     const cards = cardsShape.sanitize(b.cards);

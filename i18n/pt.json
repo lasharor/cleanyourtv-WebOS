@@ -685,8 +685,6 @@
  "upload photos, configure Immich or Unsplash": "enviar fotos, configurar o Immich ou o Unsplash",
  "not set up": "não configurado",
  "paused for the hourly limit": "pausado pelo limite por hora",
- "the photographer of an Unsplash photo": "o fotógrafo de uma foto do Unsplash",
- "Photo credit": "Crédito da foto",
  "Photo by %s on Unsplash": "Foto de %s no Unsplash",
  "The page stays open while you use it, at most an hour. It is not encrypted: your photos and the Immich and Unsplash keys travel over your Wi-Fi.": "A página fica aberta enquanto você a utiliza, no máximo uma hora. Não é criptografada: suas fotos e as chaves do Immich e do Unsplash trafegam pelo seu Wi-Fi.",
  "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Upload photos</b>, <b>Configure Immich</b> or <b>Configure Unsplash</b>.</li>": "<li>Celular no <b>mesmo Wi-Fi</b> que a TV.</li><li>Escaneie o código com a câmera.</li><li>Escolha <b>Enviar fotos</b>, <b>Configurar o Immich</b> ou <b>Configurar o Unsplash</b>.</li>",

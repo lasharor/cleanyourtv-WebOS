@@ -698,8 +698,6 @@
  "Yes, remove Unsplash": "Evet, Unsplash'i kaldır",
  "upload photos, configure Immich or Unsplash": "fotoğraf yükle, Immich veya Unsplash'i ayarla",
  "paused for the hourly limit": "saatlik sınır nedeniyle duraklatıldı",
- "the photographer of an Unsplash photo": "bir Unsplash fotoğrafının fotoğrafçısı",
- "Photo credit": "Fotoğraf künyesi",
  "Photo by %s on Unsplash": "Unsplash'te %s fotoğrafı",
  "The page stays open while you use it, at most an hour. It is not encrypted: your photos and the Immich and Unsplash keys travel over your Wi-Fi.": "Sayfa siz kullandıkça açık kalır, en fazla bir saat. Şifrelenmez: fotoğraflarınız ile Immich ve Unsplash anahtarlarınız Wi-Fi ağınızda iletilir.",
  "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Upload photos</b>, <b>Configure Immich</b> or <b>Configure Unsplash</b>.</li>": "<li>Telefon TV ile <b>aynı Wi-Fi ağında</b> olmalı.</li><li>Kodu kamerayla tarayın.</li><li><b>Fotoğraf yükle</b>, <b>Immich'i ayarla</b> veya <b>Unsplash'i ayarla</b> seçeneğini seçin.</li>",

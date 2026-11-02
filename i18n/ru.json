@@ -723,8 +723,6 @@
  "Yes, remove Unsplash": "Да, удалить Unsplash",
  "upload photos, configure Immich or Unsplash": "загрузить фото, настроить Immich или Unsplash",
  "paused for the hourly limit": "приостановлено из-за часового лимита",
- "the photographer of an Unsplash photo": "автор фото Unsplash",
- "Photo credit": "Автор фото",
  "Photo by %s on Unsplash": "Фото: %s, Unsplash",
  "The page stays open while you use it, at most an hour. It is not encrypted: your photos and the Immich and Unsplash keys travel over your Wi-Fi.": "Страница открыта, пока вы ею пользуетесь, но не дольше часа. Она не зашифрована: ваши фото и ключи Immich и Unsplash передаются по вашей сети Wi-Fi.",
  "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Upload photos</b>, <b>Configure Immich</b> or <b>Configure Unsplash</b>.</li>": "<li>Телефон в <b>той же сети Wi-Fi</b>, что и телевизор.</li><li>Отсканируйте код камерой.</li><li>Выберите <b>Загрузить фото</b>, <b>Настроить Immich</b> или <b>Настроить Unsplash</b>.</li>",

@@ -765,8 +765,6 @@
  "Yes, remove Unsplash": "Ja, Unsplash verwijderen",
  "upload photos, configure Immich or Unsplash": "foto’s uploaden, Immich of Unsplash instellen",
  "paused for the hourly limit": "gepauzeerd door het uurlimiet",
- "the photographer of an Unsplash photo": "de fotograaf van een Unsplash-foto",
- "Photo credit": "Fotocredit",
  "Photo by %s on Unsplash": "Foto van %s op Unsplash",
  "The page stays open while you use it, at most an hour. It is not encrypted: your photos and the Immich and Unsplash keys travel over your Wi-Fi.": "De pagina blijft open zolang je hem gebruikt, hooguit een uur. Hij is niet versleuteld: je foto’s en de sleutels van Immich en Unsplash gaan over je wifi.",
  "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Upload photos</b>, <b>Configure Immich</b> or <b>Configure Unsplash</b>.</li>": "<li>Telefoon op <b>hetzelfde wifi-netwerk</b> als de TV.</li><li>Scan de code met de camera.</li><li>Kies <b>Foto’s uploaden</b>, <b>Immich instellen</b> of <b>Unsplash instellen</b>.</li>",

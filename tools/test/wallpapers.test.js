@@ -3,7 +3,8 @@
 // deleted, hidden ones too, a failed sync keeps the cache, the key stays in the service).
 const fs = require('fs'),
   http = require('http'),
-  path = require('path');
+  path = require('path'),
+  vm = require('vm');
 const { ok, call, serve, req, memoryConfig, run, sleep } = require('./lib');
 
 const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 7)]);
@@ -280,6 +281,32 @@ run(async () => {
     /Configure Unsplash/.test(p.text) && /unsplash\.com\/developers/.test(p.text),
     'the phone page has a Configure Unsplash part that says where to get a key'
   );
+  // the page's scripts are ES5 built by hand: they must at least parse (a browser is needed to run them)
+  const scripts = p.text.match(/<script>([\s\S]*?)<\/script>/g) || [];
+  ok(
+    scripts.length > 0 &&
+      scripts.every(s => {
+        try {
+          new vm.Script(s.slice(8, -9)); // <script> … </script>
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }),
+    'the phone page scripts parse: ' + scripts.length
+  );
+  // the phone page builds each credit from the translation, linking the photographer and Unsplash wherever the language puts them.
+  // A language translated after this text (Vietnamese arrived upstream later) has no such key: it is incomplete, not wrong.
+  const creditTexts = fs
+    .readdirSync(path.join(__dirname, '../../i18n'))
+    .filter(f => /^[a-z]{2}\.json$/.test(f))
+    .map(f => JSON.parse(fs.readFileSync(path.join(__dirname, '../../i18n', f), 'utf8'))['Photo by %s on Unsplash'])
+    .filter(v => typeof v === 'string');
+  ok(
+    creditTexts.length >= 12 &&
+      creditTexts.every(v => (v.match(/%s/g) || []).length === 1 && (v.match(/Unsplash/g) || []).length === 1),
+    'every language that translates it credits the photographer and Unsplash once, in whatever order: ' + creditTexts.length
+  );
   p = await unsave({ key: 'short', query: 'x' });
   ok(
     p.code === 400 && /Access Key/.test(p.j.error) && !hits.length,
@@ -375,6 +402,25 @@ run(async () => {
   p = await unsaveT({ query: ' mountains  and lakes ' });
   r = await pushed();
   ok(p.j.photo && p.j.photo.name !== ps.name && r.seq === ps.seq + 1 && hits.length === n + 2, 'every click fetches another photo');
+  // the photo from Test key and save is handed to Home once, by its poll or by the next photo it asks for
+  p = await unsaveT({ query: ' mountains  and lakes ' });
+  const pushedOnce = await pushed();
+  const pushedAgain = await pushed();
+  ok(
+    pushedOnce.url && pushedAgain.seq === pushedOnce.seq && !pushedAgain.url,
+    'the photo from Test key and save is handed to Home once, then the poll gets nothing'
+  );
+  p = await unsaveT({ query: ' mountains  and lakes ' });
+  r = await use('live');
+  const afterUse = await pushed();
+  ok(
+    r.ok === true && r.name === p.j.photo.name && !afterUse.url,
+    'Home asking for a photo takes the photo from Test key and save first, and the poll does not show it again'
+  );
+  p = await unsaveT({ query: ' mountains  and lakes ' });
+  skew += 11 * 60 * 1000;
+  const expired = await pushed();
+  ok(expired.seq > 0 && !expired.url, 'a photo from Test key and save is dropped after ten minutes');
   // a request that fails is not a photo: the next one may come after 30 seconds, not after the 3 minutes
   skew += GAP;
   fail = true;

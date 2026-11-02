@@ -105,11 +105,9 @@ run(async () => {
     "Wallpapers: the photo interval is saved in seconds (10 s up to an hour), an older launcher's minutes are converted, an unknown value becomes 15 min"
   );
   await call(apps, '/api/config', 'POST', { wall: { on: true, secs: 10, credit: false } });
-  const noCredit = config.get().wall;
-  await call(apps, '/api/config', 'POST', { wall: { on: true, secs: 10, credit: 'no' } });
   ok(
-    noCredit.credit === false && config.get().wall.credit === undefined,
-    "Wallpapers: the Unsplash photographer's credit on Home is saved only when it is switched off"
+    config.get().wall.credit === undefined,
+    "Wallpapers: the Unsplash photographer's credit cannot be switched off, so the launcher stores no credit setting"
   );
 
   config.update('test', c => {

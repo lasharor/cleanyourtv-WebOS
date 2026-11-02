@@ -12,7 +12,6 @@ In the launcher, **Customise** > **Wallpapers**:
 |---|---|
 | Use Wallpapers | On: a photo from the library replaces the theme's background, in every theme. Off: the theme as it is. |
 | New photo | When the photo changes: each time Home opens, or also every 10 or 30 seconds, every minute, or every 3, 5, 15 or 60 minutes while Home is on screen. The photos cross-fade. |
-| Photo credit | On: an Unsplash photo shows "Photo by NAME on Unsplash" in the bottom corner, as Unsplash's guidelines ask. Off: no credit on Home (the phone page still lists the photographers). Other photos never show one. |
 | Add photos... | Opens the manager app on its Wallpapers screen. |
 
 The photo is chosen at random and darkened like a theme's wallpaper (the theme's own darkening, or 40 % when it has none). With
@@ -93,16 +92,18 @@ addresses and photographers, in `index.json`; no pictures) and they go round. Ph
 time.
 
 **Test key and save.** Checks a new key (1 request), then fetches one new photo at once (2 requests, whatever the 3 minutes say): it is
-listed under Recent photos and Home shows it within a few seconds. While Unsplash is paused for the hourly limit it saves the settings,
-fetches nothing and says why.
+listed under Recent photos and becomes the next photo Home shows — within a few seconds while Home is on screen, else the next time Home
+comes back (up to ten minutes later; the manager is in front while the page is open). While Unsplash is paused for the hourly limit it
+saves the settings, fetches nothing and says why.
 
 **When the hourly limit is used up** (Unsplash answers that it is, or its replies say fewer than two requests are left), nothing is asked
 for an hour with a clear message on the phone page and in the manager, and the photos shown before go round. A key Unsplash refuses is
 reported at once. **Without internet**, or while no photo has been shown yet, Home keeps what it shows.
 
 **Credit.** The phone page lists every photographer as "Photo by NAME on Unsplash" with a link to their Unsplash page (with the
-`utm_source=CleanYourTV&utm_medium=referral` parameters Unsplash asks for), and Home shows the same text, without a link, for the
-current photo unless **Photo credit** is off.
+`utm_source=CleanYourTV&utm_medium=referral` parameters Unsplash asks for), and Home shows the same text, without a link, in the bottom
+corner of the current photo. The credit is not optional: Unsplash's guidelines require it, so there is no switch to hide it. Other
+photos never show one.
 
 **Turning it off.** **Use Unsplash photos** (manager) or **Turn Unsplash off** (phone page) stops showing them and asking Unsplash but
 keeps the key. **Remove Unsplash** forgets the key and the list of recent photos.

@@ -909,7 +909,7 @@ function wallMenu() {
         sub: (w.on ? t('On') : t('Off')) + ' \u00B7 ' + (n ? t(n + ' photos') : t('no photos yet')),
         stay: true,
         fn: function () {
-          cfg.wall = { on: !w.on, secs: e, credit: w.credit };
+          cfg.wall = { on: !w.on, secs: e };
           saveCfg();
         },
       },
@@ -919,16 +919,7 @@ function wallMenu() {
         stay: true,
         fn: function () {
           var k = EV.indexOf(e);
-          cfg.wall = { on: !!w.on, secs: EV[(k < 0 ? 6 : k + 1) % EV.length], credit: w.credit };
-          saveCfg();
-        },
-      },
-      {
-        label: t('Photo credit'),
-        sub: (w.credit === false ? t('Off') : t('On')) + ' · ' + t('the photographer of an Unsplash photo'),
-        stay: true,
-        fn: function () {
-          cfg.wall = { on: !!w.on, secs: e, credit: w.credit === false ? true : false };
+          cfg.wall = { on: !!w.on, secs: EV[(k < 0 ? 6 : k + 1) % EV.length] };
           saveCfg();
         },
       },
