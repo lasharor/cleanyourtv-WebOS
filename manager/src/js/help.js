@@ -26,6 +26,8 @@ var INFO = {
   'Automatic': 'Follows the TV\u2019s menu language. English when CleanYourTV has no translation for it.',
   'Wallpapers':
     'Your own photos behind Home: uploaded from a phone, or synced from Immich albums. Switch them on in the launcher: Customise > Wallpapers.',
+  'App icons':
+    'A picture of your own for an app, chosen on a phone: shows a QR code. The app keeps it when it updates. On Home, hold OK on an app for Change icon and Reset icon.',
   'Manage from your phone':
     'Shows a QR code. On the phone page you upload photos (they are made the right size on the phone), delete uploads, connect Immich, choose albums and hide single photos.',
   'Local uploads': 'Photos uploaded from a phone, kept on the TV. At most 100.',

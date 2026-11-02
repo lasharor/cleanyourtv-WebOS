@@ -480,6 +480,20 @@ function appMenu(a) {
         },
       });
     else {
+      /* a picture of your own for the app: chosen on a phone, through the manager's App icons screen (helper/icons.js) */
+      items.push({
+        label: t('Change icon'),
+        fn: function () {
+          launch('com.cleanyourtv.manager', { open: 'icons', app: a.id });
+        },
+      });
+      if (a.iv)
+        items.push({
+          label: t('Reset icon'),
+          fn: function () {
+            resetIcon(a);
+          },
+        });
       items.push({
         label: t('Hide app'),
         fn: function () {
@@ -498,6 +512,19 @@ function appMenu(a) {
     }
     return items;
   });
+}
+
+function resetIcon(a) {
+  api('/api/icons/reset', { id: a.id }).then(
+    function (x) {
+      if (!x || x.ok !== true) return toast(t('Could not reset the icon. Try again in a moment.'), true);
+      toast(t('%s has its own icon again.').replace('%s', a.title));
+      load();
+    },
+    function () {
+      toast(t('Could not reset the icon. Try again in a moment.'), true);
+    }
+  );
 }
 
 function disintegrateApp(a, done) {
