@@ -127,6 +127,8 @@ run(async () => {
       fs.lstatSync(path.join(initd, '15-cleanyourtv-debloat')).isSymbolicLink(),
     'the boot scripts are linked'
   );
+  const stdinFlag = path.join(D, 'luna-stdin-open');
+  fs.writeFileSync(stdinFlag, '');
   b = boot(['update', '1.6.0', '--no-start']);
   const out2 = b.stdout + b.stderr;
   conf = JSON.parse(fs.readFileSync(path.join(D, 'config.json'), 'utf8'));
@@ -135,6 +137,7 @@ run(async () => {
     'an update keeps the Input key switched off (issues 6 and 7)'
   );
   ok(fs.existsSync(path.join(D, 'backup', 'service-prev.tgz')), 'an update keeps the previous service files for a rollback');
+  ok(fs.existsSync(stdinFlag), 'an update preserves the Luna stdin opt-in flag');
   fs.writeFileSync(
     path.join(R, 'usr/palm/applications/com.webos.app.home/appinfo.json'),
     JSON.stringify({ id: 'com.webos.app.home', type: 'native' })

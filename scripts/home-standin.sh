@@ -7,6 +7,8 @@
 # Every step is written to /tmp/cleanyourtv-boot.log, which Share log includes.
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
 L=/media/developer/cleanyourtv
+luna_send() { command luna-send "$@" </dev/null; }
+[ ! -r "$L/luna-compat.sh" ] || . "$L/luna-compat.sh"
 LOG=/tmp/cleanyourtv-boot.log
 up() { cut -d' ' -f1 /proc/uptime; }
 log() { echo "$(up) home-standin[$$]: $*" >> $LOG 2>/dev/null; }
@@ -51,7 +53,7 @@ show() {
     [ -f $f ] || continue
     req=$(cat $f)
     case "$req" in *"$k"*) req="${req%%"$k"*}\"parameters\":$p${req#*"$k"}" ;; esac
-    r=$(luna-send -n 1 -w 8000 luna://com.palm.webappmanager/launchApp "$req" </dev/null 2>&1 | tr -d '\n')
+    r=$(luna_send -n 1 -w 8000 luna://com.palm.webappmanager/launchApp "$req" 2>&1 | tr -d '\n')
     if echo "$r" | grep -q '"returnValue": *true'; then log "launcher shown ($1) with $(echo "$p" | cut -c1-120)"; return 0; fi
     log "webapp-mgr refused ${f##*/}: $(echo "$r" | cut -c1-200)"
   done
@@ -63,7 +65,7 @@ show start "$1"
 
 # the registration: SAM's events arrive one JSON line each
 for m in registerApp registerNativeApp; do
-  luna-send -i -a com.webos.app.home "luna://com.webos.applicationManager/$m" '{}' </dev/null 2>&1 | while read -r line; do
+  luna_send -i -a com.webos.app.home "luna://com.webos.applicationManager/$m" '{}' 2>&1 | while read -r line; do
     case "$line" in
       *'"event"'*relaunch*) show relaunch "$line" ;;
       *'"event"'*close*) log "closed by the app manager"; kill $$ 2>/dev/null; exit 0 ;;
