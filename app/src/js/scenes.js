@@ -54,7 +54,7 @@ var SCENES = (function () {
     /* frosted glass behind the app grid (cards.style glass): the blurred scene instead of the dark layer */
     frost = document.createElement('div');
     frost.id = 'sglass';
-    document.body.insertBefore(frost, $('view'));
+    $('view').parentNode.insertBefore(frost, $('view')); /* #view is inside #homepage, not the body */
   }
   function fillOf(s) {
     return s ? 'url("scene-' + s.id + '-glass.jpg")' : '';
@@ -155,7 +155,7 @@ var SCENES = (function () {
       solo = document.createElement('div');
       solo.id = 'gsolo';
       solo.innerHTML = '<div class="gclock"></div>';
-      document.body.insertBefore(solo, $('top'));
+      $('top').parentNode.insertBefore(solo, $('top'));
     }
     if (solo) {
       solo.style.display = want ? '' : 'none';

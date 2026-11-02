@@ -23,7 +23,7 @@ var WALL = (function () {
       var d = document.createElement('div');
       d.id = id;
       d.className = id === 'wpD' ? 'wpd' : 'wp';
-      document.body.insertBefore(d, g);
+      g.parentNode.insertBefore(d, g); /* inside #homepage, so the photo turns with Home when the book turns to a page */
       return d;
     });
     return els;
