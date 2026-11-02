@@ -1,0 +1,77 @@
+{
+  "id": "prayer",
+  "name": "Prayer times",
+  "version": "1.0.0",
+  "minService": "1.6.15",
+  "description": "The next prayer with the time left, and with a choice the five times of the day.",
+  "about": "The next of the five prayers with its time and what is left, and if you like the times of the whole day below it, worked out on the TV from your place: no network and no account. Choose the place on the phone page, and the method and the Asr rule your mosque follows. The times can differ by a minute or two from a mosque's timetable. This card brings its own page and code, which runs in a closed frame. The calculation and the idea are from @mashhour134 (pull request 121).",
+  "size": "medium",
+  "page": "card.html",
+  "options": [
+    {
+      "key": "place",
+      "kind": "place",
+      "label": "Place"
+    },
+    {
+      "key": "method",
+      "kind": "choice",
+      "label": "Method",
+      "default": "ummalqura",
+      "choices": [
+        [
+          "ummalqura",
+          "Umm al-Qura (Saudi Arabia and the Gulf)"
+        ],
+        [
+          "mwl",
+          "Muslim World League (Europe, the Far East)"
+        ],
+        [
+          "isna",
+          "North America (ISNA)"
+        ],
+        [
+          "egypt",
+          "Egyptian General Authority of Survey"
+        ],
+        [
+          "karachi",
+          "University of Islamic Sciences, Karachi"
+        ]
+      ]
+    },
+    {
+      "key": "asr",
+      "kind": "choice",
+      "label": "Asr",
+      "default": "standard",
+      "choices": [
+        [
+          "standard",
+          "Standard (Shafi, Maliki, Hanbali)"
+        ],
+        [
+          "hanafi",
+          "Hanafi"
+        ]
+      ]
+    },
+    {
+      "key": "show",
+      "kind": "choice",
+      "label": "Show",
+      "default": "next",
+      "choices": [
+        [
+          "next",
+          "The next prayer"
+        ],
+        [
+          "all",
+          "The next prayer and the times of the day"
+        ]
+      ]
+    }
+  ]
+}

@@ -87,7 +87,7 @@ also have a **Cards** row in **Customise** that opens it. It lists the places (a
 above the dock); choose one to put a card there or leave it empty. A card you chose stays when you switch to another theme with the
 same place.
 
-**More cards** are downloaded: in the manager, **Cards** > **Get more cards** lists the cards in the project's catalog on GitHub, each with a picture and a text, and installs or removes them (a countdown to a date, a quote, the progress of the year, the next prayer, today's prayer times and a remembrance in Arabic, and more as people add them). An installed card is one more kind of card for each place, and its options (a title, a date, a text) are typed on the phone page. A card has no script, only a template, so it cannot run anything on the TV; how to make one is in [Making a card](development/cards.md).
+**More cards** are downloaded: in the manager, **Cards** > **Get more cards** lists the cards in the project's catalog on GitHub, each with a picture and a text, and installs or removes them (a countdown to a date, a quote, the progress of the year, prayer times and a remembrance in Arabic (cards with a page of their own, which runs in a closed frame), and more as people add them). An installed card is one more kind of card for each place, and its options (a title, a date, a text) are typed on the phone page. A card has no script, only a template, so it cannot run anything on the TV; how to make one is in [Making a card](development/cards.md).
 
 | Card | What it shows |
 |---|---|

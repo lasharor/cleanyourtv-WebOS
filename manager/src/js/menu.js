@@ -844,10 +844,18 @@ function build() {
         label: c.name,
         pvu: c.preview ? '/api/cards/preview/' + c.id : '',
         about: c.about || c.description,
-        sub: c.update ? 'Update to ' + c.version : c.installed ? 'installed \u00B7 ' + c.installed : 'Install \u00B7 ' + c.version,
+        sub: c.needs
+          ? 'needs service ' + c.needs
+          : c.update
+            ? 'Update to ' + c.version
+            : c.installed
+              ? 'installed \u00B7 ' + c.installed
+              : 'Install \u00B7 ' + c.version,
+        dim: !!c.needs,
         fn: function () {
           cardCat.sel = c.id;
-          if (c.installed && !c.update) push('cardone');
+          if (c.needs) banner('Update the service first: this card needs service ' + c.needs, 'err');
+          else if (c.installed && !c.update) push('cardone');
           else cardDo('/api/cards/install', c.id, c.name + (c.update ? ' updated' : ' installed'));
         },
       });

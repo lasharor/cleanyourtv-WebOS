@@ -454,6 +454,7 @@ function create(ctx) {
             name: have[id].name,
             about: have[id].about || have[id].description,
             template: have[id].template,
+            page: have[id].page,
             size: have[id].size,
             options: have[id].options.map(o => ({
               key: o.key,

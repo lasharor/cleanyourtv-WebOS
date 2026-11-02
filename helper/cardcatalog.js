@@ -42,7 +42,13 @@ function clean(m, folder) {
   if (folder && folder !== m.id) return { error: 'the folder name must be the id' };
   if (typeof m.name !== 'string' || !m.name || m.name.length > 40) return { error: 'name is missing or too long' };
   if (!/^\d+\.\d+\.\d+$/.test(m.version || '')) return { error: 'version must look like 1.0.0' };
-  if (typeof m.template !== 'string' || !m.template || m.template.length > 1500)
+  // a card is a template (drawn by the launcher) or a page of its own (card.html, run in a sandbox: it brings its own code)
+  const hasPage = m.page !== undefined;
+  if (hasPage) {
+    if (m.template !== undefined) return { error: 'a card has a template or a page, not both' };
+    if (typeof m.page !== 'string' || !safeRel(m.page) || !/\.html$/.test(m.page))
+      return { error: 'page must be an .html file in the folder of the card' };
+  } else if (typeof m.template !== 'string' || !m.template || m.template.length > 1500)
     return { error: 'template is missing or longer than 1500 characters' };
   const raw = Array.isArray(m.options) ? m.options : [];
   if (raw.length > MAX_OPTIONS) return { error: 'at most ' + MAX_OPTIONS + ' options' };
@@ -69,8 +75,10 @@ function clean(m, folder) {
       description: text(m.description, 200),
       about: text(m.about, 600),
       size: SIZES.indexOf(m.size) >= 0 ? m.size : 'medium',
+      minService: /^\d+\.\d+\.\d+$/.test(m.minService || '') ? m.minService : '',
       options,
-      template: m.template,
+      template: hasPage ? '' : m.template,
+      page: hasPage ? m.page : '',
     },
   };
 }
@@ -95,6 +103,7 @@ function cleanIndex(raw) {
       description: text(e.description, 200),
       about: text(e.about, 600),
       preview: /^preview\.(?:jpg|png|webp)$/.test(e.preview || '') ? e.preview : '',
+      minService: /^\d+\.\d+\.\d+$/.test(e.minService || '') ? e.minService : '',
       files,
     });
   }
@@ -113,7 +122,8 @@ const rmrf = d => {
 };
 const sha256 = b => crypto.createHash('sha256').update(b).digest('hex');
 
-function create() {
+function create(ctx) {
+  const serviceVersion = () => (ctx && ctx.version) || '';
   const base = () => {
     if (process.env.CYTV_CARDS_URL) return process.env.CYTV_CARDS_URL;
     const ref = require('./updates').catalogRef();
@@ -166,6 +176,7 @@ function create() {
         description: e.description,
         about: e.about,
         preview: !!e.preview,
+        needs: e.minService && serviceVersion() && version.cmp(serviceVersion(), e.minService) < 0 ? e.minService : '',
         installed: have[e.id] ? have[e.id].version : '',
         update: !!(have[e.id] && version.cmp(e.version, have[e.id].version) > 0),
       })),
@@ -175,6 +186,10 @@ function create() {
   async function install(id) {
     const e = (await index()).filter(x => x.id === id)[0];
     if (!e) return { error: 'not in the catalog' };
+    if (e.minService && serviceVersion() && version.cmp(serviceVersion(), e.minService) < 0)
+      return {
+        error: 'this card needs service ' + e.minService + ' or newer (this is ' + serviceVersion() + '): update the service first',
+      };
     const stage = path.join(P.CARDPACKS, '.staging-' + id),
       old = path.join(P.CARDPACKS, '.old-' + id),
       dest = path.join(P.CARDPACKS, id);
@@ -238,6 +253,42 @@ function create() {
     }
   }
 
+  // the files of an installed page card, for the card's frame in the launcher (a sandbox without network: default-src none)
+  const TYPES = {
+    html: 'text/html; charset=utf-8',
+    js: 'application/javascript; charset=utf-8',
+    css: 'text/css; charset=utf-8',
+    svg: 'image/svg+xml',
+    json: 'application/json',
+    woff2: 'font/woff2',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+  };
+  const CARD_CSP =
+    "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data:; font-src data: 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'";
+  function serve(req, res, u) {
+    const m = /^\/card\/([a-z][a-z0-9-]*)\/([\w][\w.-]{0,60})$/.exec(u);
+    const card = m && installed()[m[1]];
+    if (!card || !card.page || req.method !== 'GET') return web.notFound(res);
+    const file = path.join(P.CARDPACKS, m[1], m[2]);
+    let st;
+    try {
+      st = fs.statSync(file);
+    } catch (_) {
+      return web.notFound(res);
+    }
+    const type = TYPES[m[2].split('.').pop().toLowerCase()];
+    if (!st.isFile() || !type) return web.notFound(res);
+    res.writeHead(200, {
+      'content-type': type,
+      'content-length': st.size,
+      'cache-control': 'no-cache',
+      'x-content-type-options': 'nosniff',
+      'content-security-policy': CARD_CSP,
+    });
+    fs.createReadStream(file).pipe(res);
+  }
+
   // GET/POST under /api/cards/ that belong here; true when it answered, false when the path is not ours
   async function handle(req, res, u, body) {
     if (u === '/api/cards/catalog' && req.method === 'GET') return web.json(res, await catalog()), true;
@@ -257,7 +308,8 @@ function create() {
     }
     return false;
   }
-  return { handle, installed, catalog, install, remove, preview };
+  const match = u => u.indexOf('/card/') === 0;
+  return { handle, installed, catalog, install, remove, preview, serve, match };
 }
 
 module.exports = { create, clean, cleanIndex, ID, KINDS, BUILTIN };

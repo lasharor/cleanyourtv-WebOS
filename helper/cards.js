@@ -179,7 +179,7 @@ function create(ctx) {
   const config = ctx.config,
     weather = require('./weather').create({ path: require('./paths').WEATHER }),
     ha = require('./hacards').create({ config }),
-    packs = require('./cardcatalog').create();
+    packs = require('./cardcatalog').create(ctx);
   const slots = () => {
     const th = ctx.feature('theme'),
       r = th && th.resolved();
@@ -305,6 +305,7 @@ function create(ctx) {
 
   async function handle(req, res, u, body) {
     // a Home Assistant camera's picture for the camera card (GET, so the launcher can use it as an image)
+    if (u.indexOf('/card/') === 0) return packs.serve(req, res, u);
     if (await packs.handle(req, res, u, body)) return;
     const cam = /^\/api\/cards\/ha\/camera\/(camera\.[\w]{1,120})$/.exec(u);
     if (cam) {
@@ -331,7 +332,8 @@ function create(ctx) {
     if (u === '/api/cards/ha/entities') return web.json(res, Object.assign({ ha: ha.ready() }, await ha.pick(b.domains)));
     web.notFound(res);
   }
-  return { name: 'cards', prefix: '/api/cards/', handle, stop: stopPair, packs: () => packs.installed() };
+  // the files of a page card are under /card/<id>/ (cardcatalog.js)
+  return { name: 'cards', prefix: '/api/cards/', match: packs.match, handle, stop: stopPair, packs: () => packs.installed() };
 }
 
 // the phone page: a form per slot (the card type, then its options), and all cards as JSON. Plain script for iOS Safari and Android

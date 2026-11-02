@@ -8,6 +8,13 @@ run(async () => {
   const pages = ['app', 'manager/app', 'picker/app', 'notify/app', 'helper/addons-bundled/iptv/page'].map(d =>
     path.join(root, d, 'index.html')
   );
+  // the cards that bring a page of their own run on the TV too
+  fs.readdirSync(path.join(root, 'cards', 'catalog')).forEach(id => {
+    ['card.html', id + '.js'].forEach(f => {
+      const file = path.join(root, 'cards', 'catalog', id, f);
+      if (fs.existsSync(file)) pages.push(file);
+    });
+  });
   const rules = [
     [/\?\?|\?\.[A-Za-z_\[(]/, 'optional chaining or ??'],
     [/\|\|=|&&=/, 'logical assignment'],

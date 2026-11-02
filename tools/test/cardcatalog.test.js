@@ -45,6 +45,18 @@ run(async () => {
   chk({ options: [{ key: 'a b', kind: 'text' }] }, /option needs a key/, 'an option key with a space is refused');
   chk({ options: [{ key: 'a', kind: 'script' }] }, /option needs a key/, 'an option kind that does not exist is refused');
   chk({ options: [{ key: 'a', kind: 'choice' }] }, /choices/, 'a choice without choices is refused');
+  chk({ page: 'card.html' }, /not both/, 'a card has a template or a page, not both');
+  const pageOnly = Object.assign({}, good, { page: 'card.html' });
+  delete pageOnly.template;
+  ok(
+    cc.clean(pageOnly).card && cc.clean(pageOnly).card.page === 'card.html' && cc.clean(pageOnly).card.template === '',
+    'a card with a page and no template is accepted'
+  );
+  ok(
+    cc.clean(Object.assign({}, pageOnly, { page: '../card.html' })).error &&
+      cc.clean(Object.assign({}, pageOnly, { page: 'card.js' })).error,
+    'a page outside the folder or not an .html file is refused'
+  );
   chk({ options: [{ key: 'where', kind: 'place' }] }, /key place/, 'a place option must be called place');
   ok(
     cc.clean(Object.assign({}, good, { options: [{ key: 'place', kind: 'place', label: 'Place' }] })).card.options[0].kind === 'place',
@@ -87,6 +99,7 @@ run(async () => {
               preview: 'preview.jpg',
               files: { 'card.json': sha(files['card.json']) },
             },
+            { id: 'future', name: 'Future', version: '1.0.0', minService: '99.0.0', files: { 'card.json': sha(files['card.json']) } },
             { id: 'Bad Id', version: '1.0.0', files: { 'card.json': sha('x') } },
             { id: 'nohash', version: '1.0.0', files: { 'card.json': 'xyz' } },
           ],
@@ -98,15 +111,24 @@ run(async () => {
     rs.end();
   });
   process.env.CYTV_CARDS_URL = gh.url;
-  const cards = req('cards').create({ config: memoryConfig({}), feature: () => null });
+  const cards = req('cards').create({ config: memoryConfig({}), feature: () => null, version: '1.6.14' });
   let r = await call(cards, '/api/cards/catalog', 'GET');
   ok(
-    r.j.cards.length === 1 &&
+    r.j.cards.length === 2 &&
       r.j.cards[0].id === 'hello' &&
       r.j.cards[0].about === 'Says hello.' &&
       r.j.cards[0].preview === true &&
       r.j.cards[0].installed === '',
     'the catalog lists only clean entries, with their text and a picture: ' + r.out
+  );
+  ok(
+    r.j.cards[1].id === 'future' && r.j.cards[1].needs === '99.0.0' && r.j.cards[0].needs === '',
+    'a card that needs a newer service says so, the others do not'
+  );
+  r = await call(cards, '/api/cards/install', 'POST', { id: 'future' });
+  ok(
+    r.code === 400 && /needs service 99\.0\.0/.test(r.j.error) && !fs.existsSync(path.join(process.env.CYTV_CARDPACKS, 'future')),
+    'and is not installed on an older one: ' + r.out
   );
   r = await call(cards, '/api/cards/preview/greeting', 'GET');
   ok(r.code === 200 && Buffer.isBuffer(r.out) && r.out.length > 1000, "the launcher's own cards have a picture too");
@@ -160,6 +182,36 @@ run(async () => {
       r.j.cardPacks.hello.options[1].def === 'small',
     '/api/apps tells the launcher about the installed cards (a choice without a default starts at its first choice): ' + r.out
   );
+  // the files of a card with a page: served from /card/<id>/ in a sandbox, only for an installed card with a page
+  const pdir = path.join(process.env.CYTV_CARDPACKS, 'framed');
+  fs.mkdirSync(pdir);
+  fs.writeFileSync(path.join(pdir, 'card.json'), JSON.stringify({ id: 'framed', name: 'Framed', version: '1.0.0', page: 'card.html' }));
+  fs.writeFileSync(path.join(pdir, 'card.html'), '<b>framed</b>');
+  fs.writeFileSync(path.join(pdir, 'x.php'), 'nope');
+  const fileOver = await serve((rq, rs) => cards.handle(rq, rs, rq.url.split('?')[0], async () => ({})));
+  const get = u =>
+    new Promise(resolve =>
+      require('http').get(fileOver.url + u, res => {
+        const b = [];
+        res.on('data', c => b.push(c));
+        res.on('end', () => resolve({ code: res.statusCode, headers: res.headers, body: Buffer.concat(b).toString() }));
+      })
+    );
+  let g = await get('/card/framed/card.html');
+  ok(
+    g.code === 200 &&
+      g.body === '<b>framed</b>' &&
+      /sandbox allow-scripts/.test(g.headers['content-security-policy']) &&
+      /connect-src 'none'/.test(g.headers['content-security-policy']),
+    'a page card is served with a policy that has no network: ' + g.code
+  );
+  ok((await get('/card/framed/x.php')).code === 404, 'a file of a type that is not a page asset is not served');
+  ok(
+    (await get('/card/framed/..%2Fconfig.json')).code === 404 && (await get('/card/nothere/card.html')).code === 404,
+    'a path outside the card, or a card that is not installed, is not served'
+  );
+  ok((await get('/card/hello/card.html')).code === 404, 'a card without a page serves no files');
+  fileOver.server.close();
   r = await call(cards, '/api/cards/remove', 'POST', { id: 'hello' });
   ok(r.code === 200 && !fs.existsSync(path.join(process.env.CYTV_CARDPACKS, 'hello')), 'an installed card can be removed');
   r = await call(cards, '/api/cards/remove', 'POST', { id: 'hello' });

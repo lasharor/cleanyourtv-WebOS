@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Adhkar</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  body { color: #f5f6f8; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); --fs: 1; }
+  #d { font-size: calc(34px * var(--fs)); line-height: 1.6; }
+  body[data-size="small"] #d { font-size: calc(26px * var(--fs)); }
+  body[data-size="large"] #d { font-size: calc(46px * var(--fs)); }
+  #d span { animation: in 1.6s ease-out; }
+  #h { margin-top: 8px; font-size: calc(20px * var(--fs)); color: rgba(245, 246, 248, 0.7); }
+  @keyframes in { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+<div id="d" dir="rtl" lang="ar"></div><div id="h"></div>
+<script src="adhkar.js"></script>
+<script>
+  /* ES5 only: this page runs on Chromium 68 (webOS 5) too. The launcher sends {cytvCard: {opt, lang, size, align, dir, ink, font, fs}}; the
+     page keeps its own time and has no network (a content security policy that allows none). */
+  var ctx = null, shown = '';
+  function $(id) { return document.getElementById(id); }
+  function hijri() {
+    try {
+      return new Date().toLocaleDateString(String((ctx && ctx.lang) || 'en').split('-u-')[0] + '-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (e) { return ''; }
+  }
+  function render() {
+    if (!ctx) return;
+    var s = adhkarAt(new Date(), (ctx.opt || {}).secs);
+    $('h').textContent = hijri();
+    if (s === shown) return;
+    shown = s;
+    $('d').textContent = '';
+    var span = document.createElement('span');
+    span.textContent = s;
+    $('d').appendChild(span); /* a new element each time, so the fade starts again */
+  }
+  function apply() {
+    var b = document.body;
+    b.setAttribute('data-size', /^(small|medium|large)$/.test(ctx.size) ? ctx.size : 'medium');
+    b.style.setProperty('--fs', String(ctx.fs || 1));
+    if (ctx.font) b.style.fontFamily = ctx.font;
+    if (ctx.ink) b.style.color = ctx.ink;
+    var a = ctx.align === 'right' ? 'right' : ctx.align === 'center' ? 'center' : 'left';
+    $('d').style.textAlign = a;
+    $('h').style.textAlign = a;
+  }
+  window.addEventListener('message', function (e) {
+    var m = e.data && e.data.cytvCard;
+    if (!m || typeof m !== 'object') return;
+    ctx = m;
+    apply();
+    render();
+  });
+  setInterval(render, 5000);
+  parent.postMessage({ cytvCard: 'ready' }, '*');
+</script>
+</body>
+</html>

@@ -251,24 +251,6 @@ function dayDiff(s) {
   b = new Date(b.getFullYear(), b.getMonth(), b.getDate());
   return Math.round((a - b) / 86400000);
 }
-/* {{prayer.name}}, {{prayer.time}}, {{prayer.left}} of the next prayer, and {{prayer.fajr}} {{prayer.sunrise}} {{prayer.dhuhr}} {{prayer.asr}}
-   {{prayer.maghrib}} {{prayer.isha}} with {{prayer.name.fajr}} and so on for their names; without a place the name asks for one */
-function prayerVars(vars, opt) {
-  var now = new Date(),
-    o = { lat: opt.lat, lon: opt.lon, method: opt.method, asr: opt.asr },
-    nx = prayerReady(o) ? PRAYER.next(now, o) : null;
-  if (!nx) {
-    vars['prayer.name'] = t('Choose a place in Cards');
-    return;
-  }
-  vars['prayer.name'] = prayerName(nx.id);
-  vars['prayer.time'] = prayerClock(nx.at);
-  vars['prayer.left'] = prayerLeft(nx.at - now);
-  ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'].forEach(function (id) {
-    vars['prayer.' + id] = prayerClock(nx.times[id]);
-    vars['prayer.name.' + id] = prayerName(id);
-  });
-}
 function cardMarkup(src, opt) {
   var yr = new Date(),
     y0 = new Date(yr.getFullYear(), 0, 1),
@@ -286,10 +268,6 @@ function cardMarkup(src, opt) {
   };
   /* what was filled in for a downloaded card, as {{opt.<key>}} */
   for (var k0 in opt || {}) vars['opt.' + k0] = String(opt[k0]);
-  /* prayer times (prayer.js), worked out on the TV from the card's place (opt.lat, opt.lon), method and asr; one remembrance; today's Islamic date */
-  if (/\{\{\s*prayer\./.test(src)) prayerVars(vars, opt || {});
-  if (/\{\{\s*adhkar/.test(src)) vars.adhkar = adhkarAt(new Date(), (opt || {}).secs);
-  if (/\{\{\s*hijri/.test(src)) vars.hijri = hijriText();
   var esc = function (x) {
     return String(x).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -611,12 +589,74 @@ var CARD_TYPES = {
     },
   },
 };
+/* A downloaded card that brings its own page (card.json "page"): the service serves it from /card/<id>/ and it runs in a sandboxed frame, with
+   no network and no access to this page, which only tells it what it needs: the options, the language, the clock format, the colour and
+   size of the text. The card draws itself and keeps its own time. The frame never takes the keys (pointer-events none). */
+function cardFrameCtx(el, pk, o) {
+  var opt = {};
+  pk.options.forEach(function (q) {
+    opt[q.key] = o[q.key] !== undefined && o[q.key] !== '' ? o[q.key] : q.def;
+    if (q.kind === 'place') {
+      opt.lat = o.lat;
+      opt.lon = o.lon;
+    }
+  });
+  var cs = getComputedStyle(el);
+  return {
+    opt: opt,
+    lang: LOC,
+    clock: clockOpts(),
+    size: /^(small|medium|large)$/.test(opt.size) ? opt.size : pk.size,
+    align: el.getAttribute('data-align') || 'left',
+    dir: document.documentElement.dir || 'ltr',
+    ink: cs.color,
+    font: cs.fontFamily,
+    fs: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fs')) || 1,
+  };
+}
+function cardFrameSend(el) {
+  try {
+    el._f.contentWindow.postMessage({ cytvCard: el._ctx }, '*');
+  } catch (e) {}
+}
+window.addEventListener('message', function (e) {
+  /* a card page that has loaded asks for what it should show */
+  if (!e.data || e.data.cytvCard !== 'ready') return;
+  var els = $('cards').children;
+  for (var i = 0; i < els.length; i++) if (els[i]._f && els[i]._f.contentWindow === e.source) cardFrameSend(els[i]);
+});
+function cardFrame(id, pk) {
+  return {
+    draw: function (el, o) {
+      if (!el._f) {
+        var f = document.createElement('iframe');
+        f.setAttribute('sandbox', 'allow-scripts');
+        f.setAttribute('tabindex', '-1');
+        f.setAttribute('scrolling', 'no');
+        f.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none';
+        f.onload = function () {
+          cardFrameSend(el);
+        };
+        f.src = API + '/card/' + id + '/' + pk.page;
+        el._f = f;
+        el.appendChild(f);
+      }
+      var ctx = cardFrameCtx(el, pk, o),
+        key = JSON.stringify(ctx);
+      if (el._k === key) return;
+      el._k = key;
+      el._ctx = ctx;
+      cardFrameSend(el);
+    },
+  };
+}
 /* a card downloaded from the catalog (helper/cardcatalog.js) is the type x-<id>: drawn from its template, with what was filled in */
 var CARD_PACKS = {};
 function cardType(name) {
   if (CARD_TYPES[name]) return CARD_TYPES[name];
   var pk = /^x-(.+)$/.test(name) && CARD_PACKS[name.slice(2)];
   if (!pk) return null;
+  if (pk.page) return cardFrame(name.slice(2), pk);
   return {
     draw: function (el, o) {
       var opt = {};
@@ -634,7 +674,6 @@ function cardType(name) {
       el.innerHTML = h;
       /* an option called size (small, medium, large) is the card's size, else the card's own */
       el.setAttribute('data-size', /^(small|medium|large)$/.test(opt.size) ? opt.size : pk.size);
-      el.setAttribute('data-fade', /\{\{\s*adhkar/.test(pk.template) ? '1' : ''); /* a new remembrance fades in */
     },
   };
 }

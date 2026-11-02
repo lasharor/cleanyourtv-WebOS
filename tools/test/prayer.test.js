@@ -1,6 +1,5 @@
-// Prayer times and adhkar (app/src/js/prayer.js): the five times of a day worked out from a place, the method and the Asr rule, the next
-// prayer (and tomorrow's Fajr after Isha), the time left, the adhkar of the hour. prayer.js has no browser calls apart from Intl and the
-// launcher's t(), LOC and clockOpts(), so it is loaded as it is. Times are compared as instants (UTC hours), so the TV's own time zone
+// Prayer times and adhkar (cards/catalog/prayer/prayer.js and cards/catalog/adhkar/adhkar.js, the code of two downloadable cards): the five times of a day worked out from a place, the method and the Asr rule, the next
+// prayer (and tomorrow's Fajr after Isha), the time left, the adhkar of the hour. The two files need nothing of a page apart from Intl, so they are loaded as they are. Times are compared as instants (UTC hours), so the TV's own time zone
 // of the machine that runs the test does not matter.
 const fs = require('fs'),
   path = require('path'),
@@ -21,9 +20,12 @@ run(async () => {
   };
   vm.createContext(sandbox);
   vm.runInContext(
-    fs.readFileSync(path.join(root, 'app', 'src', 'js', 'prayer.js'), 'utf8') + '\nthis.P = PRAYER; this.A = ADHKAR;',
+    fs.readFileSync(path.join(root, 'cards', 'catalog', 'prayer', 'prayer.js'), 'utf8') +
+      '\n' +
+      fs.readFileSync(path.join(root, 'cards', 'catalog', 'adhkar', 'adhkar.js'), 'utf8') +
+      '\nthis.P = PRAYER; this.A = ADHKAR;',
     sandbox,
-    { filename: 'prayer.js' }
+    { filename: 'prayer card' }
   );
   const P = sandbox.P;
   const hours = d => d.getUTCHours() + d.getUTCMinutes() / 60;

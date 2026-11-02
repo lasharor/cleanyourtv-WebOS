@@ -30,6 +30,7 @@ function build() {
       version: m.version,
       description: m.description || '',
       about: m.about || '',
+      minService: m.minService || '',
       preview: ['jpg', 'png', 'webp'].map(x => 'preview.' + x).filter(f => fs.existsSync(path.join(dir, f)))[0] || '',
       files,
     });

@@ -5,10 +5,13 @@
       "name": "Adhkar",
       "version": "1.0.0",
       "description": "One short remembrance at a time, in Arabic.",
-      "about": "A short remembrance from the Qur'an and the Sunnah in Arabic, a new one every 30 seconds, minute or 5 minutes with a slow fade, with today's date in the Islamic calendar. The morning ones show until noon and the evening ones from the afternoon. The calculation and the idea are from @mashhour134 (pull request 121).",
+      "about": "A short remembrance from the Qur'an and the Sunnah in Arabic, a new one every 30 seconds, minute or 5 minutes with a slow fade, and today's date in the Islamic calendar. The morning ones show until noon and the evening ones from the afternoon. This card brings its own page and code, which runs in a closed frame. The calculation and the idea are from @mashhour134 (pull request 121).",
+      "minService": "1.6.15",
       "preview": "preview.jpg",
       "files": {
-        "card.json": "3151071ebbd0b3ded4b4b5269fc1523c1ed3280f2c7f162a5dad9a5903f271cf"
+        "adhkar.js": "62278ee681643938ab66efedfe5a7c05270278d54971527ced36be05e26a2804",
+        "card.html": "11eac0dace3ab47b0188e3f8111fc350fb7dea59c50e66c9954e8243594e234a",
+        "card.json": "b6752d88e5661f2be2daedc1ed3626f9f59624ec2cccd20af08a7742226980bf"
       }
     },
     {
@@ -17,31 +20,24 @@
       "version": "1.0.0",
       "description": "The days left until a date you choose.",
       "about": "A heading and the number of days to go until a date: a holiday, a birthday, a trip. Fill in the title and the date (YYYY-MM-DD) on the phone page; the number changes by itself each day. Before the date it counts down, after it the card says how long ago it was.",
+      "minService": "",
       "preview": "preview.jpg",
       "files": {
         "card.json": "ed6f5d9311910b5bfa7562cba0600835179f6d4f50963bd20ad8b443a23fd0df"
       }
     },
     {
-      "id": "prayer-next",
-      "name": "Next prayer",
-      "version": "1.0.0",
-      "description": "The next prayer, its time and how long is left.",
-      "about": "The next of the five prayers with its time and what is left, worked out on the TV from your place: no network and no account. Choose the place on the phone page, and the method and the Asr rule that your mosque follows. The times can differ by a minute or two from a mosque's timetable. The calculation and the idea are from @mashhour134 (pull request 121).",
-      "preview": "preview.jpg",
-      "files": {
-        "card.json": "bac6e5116fe5f8839dcee796a944c0a7d7856045e6e59aa312d5f64ba7baa095"
-      }
-    },
-    {
-      "id": "prayer-times",
+      "id": "prayer",
       "name": "Prayer times",
       "version": "1.0.0",
-      "description": "The five prayers and the sunrise of today.",
-      "about": "Today's Fajr, sunrise, Dhuhr, Asr, Maghrib and Isha under the next prayer and the time left, worked out on the TV from your place: no network and no account. Choose the place on the phone page, and the method and the Asr rule that your mosque follows. The calculation and the idea are from @mashhour134 (pull request 121).",
+      "description": "The next prayer with the time left, and with a choice the five times of the day.",
+      "about": "The next of the five prayers with its time and what is left, and if you like the times of the whole day below it, worked out on the TV from your place: no network and no account. Choose the place on the phone page, and the method and the Asr rule your mosque follows. The times can differ by a minute or two from a mosque's timetable. This card brings its own page and code, which runs in a closed frame. The calculation and the idea are from @mashhour134 (pull request 121).",
+      "minService": "1.6.15",
       "preview": "preview.jpg",
       "files": {
-        "card.json": "2ca8dfb52868110f6f7af8c5cd094965a217ce7f6b78fa0b0e4ef8e222b5ea60"
+        "card.html": "11a5120b7a94e825c8d025b684ccd6f9cb680386728b8078637263106663e433",
+        "card.json": "b1bcdcb9f50fc8ae36296cf29a45aa5fbf8d8198ee4f2e2af4e32280c78cfed1",
+        "prayer.js": "dcbcf4053df2c7a55eda1422be47c5dd3235818368b894c894024ee7af17f9b4"
       }
     },
     {
@@ -50,6 +46,7 @@
       "version": "1.0.0",
       "description": "A line you like, with who said it.",
       "about": "A short quote in italics with the name of who said it, in three sizes. Type the text and the name on the phone page. A quiet card for a place beside the clock.",
+      "minService": "",
       "preview": "preview.jpg",
       "files": {
         "card.json": "015c283bdf7ee3b8fc0d8723adcd0c6dc42e78ce8b079f12e468e06cf2694d66"
@@ -61,6 +58,7 @@
       "version": "1.0.0",
       "description": "How much of the year has gone.",
       "about": "The year, the percentage that has passed and the days that are left. Nothing to set up: it updates by itself, and is a nice small card above the dock.",
+      "minService": "",
       "preview": "preview.jpg",
       "files": {
         "card.json": "283bed2e05785dc2e4e0b4eb0e6fad574bc8f6489d0f0131389dc5c4ec7ece90"

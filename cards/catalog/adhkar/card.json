@@ -2,9 +2,11 @@
   "id": "adhkar",
   "name": "Adhkar",
   "version": "1.0.0",
+  "minService": "1.6.15",
   "description": "One short remembrance at a time, in Arabic.",
-  "about": "A short remembrance from the Qur'an and the Sunnah in Arabic, a new one every 30 seconds, minute or 5 minutes with a slow fade, with today's date in the Islamic calendar. The morning ones show until noon and the evening ones from the afternoon. The calculation and the idea are from @mashhour134 (pull request 121).",
+  "about": "A short remembrance from the Qur'an and the Sunnah in Arabic, a new one every 30 seconds, minute or 5 minutes with a slow fade, and today's date in the Islamic calendar. The morning ones show until noon and the evening ones from the afternoon. This card brings its own page and code, which runs in a closed frame. The calculation and the idea are from @mashhour134 (pull request 121).",
   "size": "medium",
+  "page": "card.html",
   "options": [
     {
       "key": "secs",
@@ -12,9 +14,18 @@
       "label": "A new one",
       "default": "30",
       "choices": [
-        ["30", "Every 30 seconds"],
-        ["60", "Every minute"],
-        ["300", "Every 5 minutes"]
+        [
+          "30",
+          "Every 30 seconds"
+        ],
+        [
+          "60",
+          "Every minute"
+        ],
+        [
+          "300",
+          "Every 5 minutes"
+        ]
       ]
     },
     {
@@ -23,11 +34,19 @@
       "label": "Size",
       "default": "medium",
       "choices": [
-        ["medium", "Medium"],
-        ["small", "Small"],
-        ["large", "Large"]
+        [
+          "medium",
+          "Medium"
+        ],
+        [
+          "small",
+          "Small"
+        ],
+        [
+          "large",
+          "Large"
+        ]
       ]
     }
-  ],
-  "template": "{{adhkar}}\n> {{hijri}}"
+  ]
 }
