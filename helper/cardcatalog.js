@@ -115,11 +115,7 @@ const sha256 = b => crypto.createHash('sha256').update(b).digest('hex');
 function create() {
   const base = () => {
     if (process.env.CYTV_CARDS_URL) return process.env.CYTV_CARDS_URL;
-    let ref = 'main';
-    try {
-      const x = fs.readFileSync(P.SOURCE, 'utf8').trim().split(/\s+/)[1];
-      if (/^[\w.\/-]{1,60}$/.test(x || '')) ref = x;
-    } catch (_) {}
+    const ref = require('./updates').catalogRef();
     return 'https://raw.githubusercontent.com/' + require('./updates').repo() + '/' + ref + '/cards';
   };
   const get = (url, max) =>

@@ -31,6 +31,7 @@ next stable release. The stable updater never sees pre-releases.
 | | |
 |---|---|
 | Follow the dev builds | **Update channel** > **Dev builds** (it shows the commit and date), then install with the **Launcher** and **Service** rows. Expect updates several times a day. |
+| Catalogs on the dev channel | The themes, the add-ons and the cards are read from the `dev` branch on the dev channel, so a new one shows up in the manager as soon as it is pushed; on the stable channel they come from `main`. |
 | Back to the stable releases | **Update channel** > **Stable releases**. The stable release is offered again, also when it is older than the dev build. |
 | Install from scratch | `ssh root@<tv-ip> 'curl -fsSL https://raw.githubusercontent.com/lasharor/cleanyourtv-WebOS/main/install.sh \| CYTV_CHANNEL=dev sh'`. The manager then follows the dev builds. |
 | Same version number | A dev build records its commit in a `BUILD` file, so a newer push of the same version is still offered. |

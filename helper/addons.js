@@ -332,11 +332,7 @@ function create(ctx) {
   const catalogBase = () => {
     if (process.env.CYTV_ADDONS_URL) return process.env.CYTV_ADDONS_URL;
     const updates = require('./updates');
-    let ref = 'main';
-    try {
-      const x = fs.readFileSync(P.SOURCE, 'utf8').trim().split(/\s+/)[1];
-      if (/^[\w.\/-]{1,60}$/.test(x || '')) ref = x;
-    } catch (_) {}
+    const ref = updates.catalogRef();
     return 'https://raw.githubusercontent.com/' + updates.repo() + '/' + ref + '/addons';
   };
   const get = (url, max) =>

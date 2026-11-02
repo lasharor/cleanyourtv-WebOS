@@ -76,7 +76,7 @@ function load() {
 }
 
 // ---- reading from GitHub ----
-// the themes folder of the repository (main branch); https only, except the address a test sets
+// the themes folder of the repository (main branch, dev on the dev channel); https only, except the address a test sets
 function baseUrl(slug, ref) {
   return process.env.CYTV_THEMES_URL || 'https://raw.githubusercontent.com/' + slug + '/' + (ref || 'main') + '/themes';
 }
@@ -117,14 +117,7 @@ const rmrf = d => {
 function create(ctx) {
   // the repository and branch the themes come from: this project's main branch, unless D/source names another (to try a theme)
   const slug = () => (ctx.slug && ctx.slug()) || require('./updates').repo();
-  const ref = () => {
-    if (ctx.ref) return ctx.ref();
-    let x = '';
-    try {
-      x = fs.readFileSync(require('./paths').SOURCE, 'utf8').trim().split(/\s+/)[1];
-    } catch (_) {}
-    return /^[\w.\/-]{1,60}$/.test(x || '') ? x : 'main';
-  };
+  const ref = () => (ctx.ref ? ctx.ref() : require('./updates').catalogRef());
   const conf = () => ctx.config.get();
   const base = () => baseUrl(slug(), ref());
   const cur = () => {
