@@ -764,8 +764,11 @@
  "The button works as LG made it again": "La touche refonctionne comme LG l’a prévu",
  "Every button works as LG made it again": "Toutes les touches refonctionnent comme LG l’a prévu",
  "Change what it does": "Changer son action",
- "Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list. You press the button on your remote so the TV tells us its code. The button then does that instead of what LG gives it.": "Fait ouvrir une appli, passer à une entrée, ouvrir Live TV, aller à l’accueil ou afficher la liste des entrées par une touche de la télécommande. Vous appuyez sur la touche pour que le téléviseur nous donne son code. La touche fait alors cela au lieu de ce que LG lui donne.",
+ "Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list. You press the button on your remote so the TV tells us its code. The button then does that instead of what LG gives it. It is off until you switch it on, and while it is off nothing runs for it.": "Fait ouvrir une appli, passer à une entrée, ouvrir Live TV, aller à l’accueil ou afficher la liste des entrées par une touche de la télécommande. Vous appuyez sur la touche pour que le téléviseur nous donne son code. La touche fait alors cela au lieu de ce que LG lui donne. Elle est désactivée tant que vous ne l’activez pas, et rien ne s’exécute pour elle tant qu’elle l’est.",
  "Press the button you want to use. Arrows, OK and Back cannot be used. A reboot without the boot scripts gives every button back to LG.": "Appuyez sur la touche à utiliser. Les flèches, OK et Retour ne peuvent pas l’être. Un redémarrage sans les scripts de démarrage rend toutes les touches à LG.",
  "Removes every remapped button. Each works as LG made it again, at once.": "Retire toutes les touches réaffectées. Chacune refonctionne aussitôt comme LG l’a prévu.",
- "Removes this button’s action. It works as LG made it again, at once.": "Retire l’action de cette touche. Elle refonctionne aussitôt comme LG l’a prévu."
+ "Removes this button’s action. It works as LG made it again, at once.": "Retire l’action de cette touche. Elle refonctionne aussitôt comme LG l’a prévu.",
+ "Key remapping is on": "Réaffectation des touches activée",
+ "Key remapping is off": "Réaffectation des touches désactivée",
+ "Off. Switch it on to remap buttons.": "Désactivé. Activez-la pour réaffecter des touches."
 }

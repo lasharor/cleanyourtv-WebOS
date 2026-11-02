@@ -808,8 +808,11 @@
  "The button works as LG made it again": "Die Taste arbeitet wieder wie von LG vorgesehen",
  "Every button works as LG made it again": "Alle Tasten arbeiten wieder wie von LG vorgesehen",
  "Change what it does": "Aktion ändern",
- "Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list. You press the button on your remote so the TV tells us its code. The button then does that instead of what LG gives it.": "Lässt eine Fernbedienungstaste eine App öffnen, einen Eingang wählen, Live TV öffnen, zum Startbildschirm gehen oder die Eingangsliste zeigen. Du drückst die Taste an der Fernbedienung, damit der Fernseher uns ihren Code nennt. Die Taste tut dann das, statt was LG ihr gibt.",
+ "Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list. You press the button on your remote so the TV tells us its code. The button then does that instead of what LG gives it. It is off until you switch it on, and while it is off nothing runs for it.": "Lässt eine Fernbedienungstaste eine App öffnen, einen Eingang wählen, Live TV öffnen, zum Startbildschirm gehen oder die Eingangsliste zeigen. Du drückst die Taste an der Fernbedienung, damit der Fernseher uns ihren Code nennt. Die Taste tut dann das, statt was LG ihr gibt. Sie ist aus, bis du sie einschaltest, und solange sie aus ist, läuft nichts dafür.",
  "Press the button you want to use. Arrows, OK and Back cannot be used. A reboot without the boot scripts gives every button back to LG.": "Drücke die Taste, die du verwenden möchtest. Pfeile, OK und Zurück können nicht verwendet werden. Ein Neustart ohne die Boot-Skripte gibt alle Tasten an LG zurück.",
  "Removes every remapped button. Each works as LG made it again, at once.": "Entfernt jede umbelegte Taste. Jede arbeitet sofort wieder wie von LG vorgesehen.",
- "Removes this button’s action. It works as LG made it again, at once.": "Entfernt die Aktion dieser Taste. Sie arbeitet sofort wieder wie von LG vorgesehen."
+ "Removes this button’s action. It works as LG made it again, at once.": "Entfernt die Aktion dieser Taste. Sie arbeitet sofort wieder wie von LG vorgesehen.",
+ "Key remapping is on": "Tasten belegen ist an",
+ "Key remapping is off": "Tasten belegen ist aus",
+ "Off. Switch it on to remap buttons.": "Aus. Schalte es ein, um Tasten umzubelegen."
 }

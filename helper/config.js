@@ -39,6 +39,7 @@ function create(file, opts) {
     keys: Object.assign({}, KEYS, c.keys),
     picker: { mode: (c.picker || {}).mode },
     remap: c.remap && typeof c.remap === 'object' ? c.remap : {},
+    remapOn: { on: c.remapOn === true },
   });
   function report(source, before, after) {
     const a = watched(before),

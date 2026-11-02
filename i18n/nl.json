@@ -805,8 +805,11 @@
  "The button works as LG made it again": "De knop werkt weer zoals LG het bedoeld heeft",
  "Every button works as LG made it again": "Alle knoppen werken weer zoals LG het bedoeld heeft",
  "Change what it does": "Wijzigen wat hij doet",
- "Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list. You press the button on your remote so the TV tells us its code. The button then does that instead of what LG gives it.": "Laat een knop van de afstandsbediening een app openen, naar een ingang schakelen, Live TV openen, naar Home gaan of de lijst met ingangen tonen. Je drukt op de knop zodat de tv ons zijn code geeft. De knop doet dan dat in plaats van wat LG hem geeft.",
+ "Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list. You press the button on your remote so the TV tells us its code. The button then does that instead of what LG gives it. It is off until you switch it on, and while it is off nothing runs for it.": "Laat een knop van de afstandsbediening een app openen, naar een ingang schakelen, Live TV openen, naar Home gaan of de lijst met ingangen tonen. Je drukt op de knop zodat de tv ons zijn code geeft. De knop doet dan dat in plaats van wat LG hem geeft. Staat uit tot je het aanzet, en zolang het uit staat draait er niets voor.",
  "Press the button you want to use. Arrows, OK and Back cannot be used. A reboot without the boot scripts gives every button back to LG.": "Druk op de knop die je wilt gebruiken. Pijlen, OK en Terug kunnen niet worden gebruikt. Herstarten zonder de opstartscripts geeft alle knoppen terug aan LG.",
  "Removes every remapped button. Each works as LG made it again, at once.": "Verwijdert elke toegewezen knop. Elke werkt meteen weer zoals LG het bedoeld heeft.",
- "Removes this button’s action. It works as LG made it again, at once.": "Verwijdert de actie van deze knop. Hij werkt meteen weer zoals LG het bedoeld heeft."
+ "Removes this button’s action. It works as LG made it again, at once.": "Verwijdert de actie van deze knop. Hij werkt meteen weer zoals LG het bedoeld heeft.",
+ "Key remapping is on": "Toetsen toewijzen staat aan",
+ "Key remapping is off": "Toetsen toewijzen staat uit",
+ "Off. Switch it on to remap buttons.": "Uit. Zet het aan om knoppen toe te wijzen."
 }

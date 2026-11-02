@@ -25,6 +25,19 @@ function openRemap() {
     }
   );
 }
+/* the switch: the feature is off until it is switched on, and while it is off nothing runs for it */
+function rmToggle() {
+  var on = !(rm && rm.enabled);
+  api('/api/remap', { enabled: on }).then(
+    function () {
+      banner(on ? 'Key remapping is on' : 'Key remapping is off', 'ok');
+      openRemap();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
 /* back to the list of keys, however many screens were opened on the way */
 function rmBack() {
   while (view !== 'remap' && idxStack.length) {
@@ -142,7 +155,15 @@ function rmChoose(kind) {
 function rmRows() {
   if (view === 'remap') {
     var keys = (rm && rm.keys) || {},
-      codes = Object.keys(keys);
+      codes = Object.keys(keys),
+      on = !!(rm && rm.enabled);
+    rows.push({ label: 'Key remapping', sub: onoff(on), fn: rmToggle });
+    if (!on) {
+      rows.push({ sep: true });
+      rows.push({ label: 'Back', fn: pop });
+      return;
+    }
+    rows.push({ sep: true });
     codes.forEach(function (c) {
       rows.push({
         label: 'Button ' + c,
@@ -244,5 +265,6 @@ function rmSub() {
   if (view === 'remapact' || view === 'remapkey') return 'Button ' + rmCode;
   if (view === 'remapapps') return 'Open which app?';
   if (view === 'remapinputs') return 'Switch to which input?';
+  if (view === 'remap' && !(rm && rm.enabled)) return 'Off. Switch it on to remap buttons.';
   return 'Remap buttons';
 }

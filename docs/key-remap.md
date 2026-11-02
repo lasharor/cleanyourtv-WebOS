@@ -3,7 +3,9 @@
 A button on the remote can open something of your choice: an app, an input, Live TV, Home or the Inputs list. Use it for the buttons
 you never press (the Netflix, Prime or other shortcut keys, the colour keys) or for any spare button.
 
-Set it up in the manager app: **Key remapping**.
+Set it up in the manager app: **Key remapping**. It is **off** until you switch it on with the first row of that screen. While it is off
+nothing runs for it: no binds in the hook, no hook injected for it, and a button press does nothing. The buttons you saved are kept, so
+switching it on again brings them back.
 
 | Step | What happens |
 |---|---|
@@ -37,4 +39,5 @@ kept in `config.json` under `remap`.
 
 Nothing on the TV's disk changes. The binds only work while the hook is in LG's input service, which the service puts there at
 every boot. A reboot without the boot scripts (the Homebrew Channel's failsafe mode) gives every button back to LG, and so does
-**Give every button back to LG** at once. If the hook cannot attach on a firmware, the manager shows **Add a button** as not available.
+**Give every button back to LG** at once. Switching the feature off also takes every bind away at once; a hook that is already in LG's input
+service stays there (for the Input key and the Guide key) until the next boot, and is not injected again for remapping. If the hook cannot attach on a firmware, the manager shows **Add a button** as not available.

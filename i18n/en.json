@@ -846,8 +846,11 @@
  "The button works as LG made it again": "The button works as LG made it again",
  "Every button works as LG made it again": "Every button works as LG made it again",
  "Change what it does": "Change what it does",
- "Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list. You press the button on your remote so the TV tells us its code. The button then does that instead of what LG gives it.": "Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list. You press the button on your remote so the TV tells us its code. The button then does that instead of what LG gives it.",
+ "Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list. You press the button on your remote so the TV tells us its code. The button then does that instead of what LG gives it. It is off until you switch it on, and while it is off nothing runs for it.": "Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list. You press the button on your remote so the TV tells us its code. The button then does that instead of what LG gives it. It is off until you switch it on, and while it is off nothing runs for it.",
  "Press the button you want to use. Arrows, OK and Back cannot be used. A reboot without the boot scripts gives every button back to LG.": "Press the button you want to use. Arrows, OK and Back cannot be used. A reboot without the boot scripts gives every button back to LG.",
  "Removes every remapped button. Each works as LG made it again, at once.": "Removes every remapped button. Each works as LG made it again, at once.",
- "Removes this button’s action. It works as LG made it again, at once.": "Removes this button’s action. It works as LG made it again, at once."
+ "Removes this button’s action. It works as LG made it again, at once.": "Removes this button’s action. It works as LG made it again, at once.",
+ "Key remapping is on": "Key remapping is on",
+ "Key remapping is off": "Key remapping is off",
+ "Off. Switch it on to remap buttons.": "Off. Switch it on to remap buttons."
 }

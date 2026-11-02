@@ -1,10 +1,13 @@
 // Remote key remapping: a button on the remote (the Netflix or Prime key, a colour key, ...) opens an app, an input, Live TV, Home or
 // the Inputs list. The code of a button is learned from the TV (inputhook.js, as for the Input, Guide and voice keys), never assumed.
-//   GET  /api/remap              the remapped keys, and the actions the manager can offer
-//   POST /api/remap              {code, type, id?, label?} sets (or changes) one key; {code, remove: true} removes it; {clear: true} removes all
+//   GET  /api/remap              {enabled, keys, ...}: whether the feature is on, the remapped keys, and the actions the manager can offer
+//   POST /api/remap              {enabled: true|false} switches the feature on or off (off by default);
+//                                {code, type, id?, label?} sets (or changes) one key; {code, remove: true} removes it; {clear: true} removes all
 //   POST /api/remap/learn        starts listening for the next button press
 //   GET  /api/remap/learn-state  {state: idle|waiting|got|timeout|unsupported|taken, code?}
 //   POST /api/remap/fire         {code} runs the key's action; scripts/remapkey.sh calls it when the hook reports the key
+// The feature is off until the manager switches it on (config.json: remapOn). While it is off nothing runs: no binds in the hook, the hook is
+// not injected for it, a button press does nothing. The saved keys are kept, so switching it on again brings them back.
 // The keys are kept in config.json (remap: {"<code>": {type, id, label}}). An action is one of: app (id: the TV's app id), input (id: the
 // input's app id, com.webos.app.hdmiN), live (Live TV in the launcher), home (the Home screen), picker (the Inputs list).
 // Nothing is changed on the TV's disk: the binds live in the hook's keybinds.json, which only works while the hook is in LG's input
@@ -55,6 +58,8 @@ function create(ctx) {
     return out;
   };
   const codes = () => Object.keys(table());
+  const enabled = () => config.get().remapOn === true;
+  const active = () => (enabled() ? codes() : []); // the keys the hook gets binds for
   // the keys that already do something of ours
   const taken = () => {
     const k = config.keys(),
@@ -99,6 +104,7 @@ function create(ctx) {
     return { returnValue: true };
   }
   async function fire(code) {
+    if (!enabled()) return { error: 'off' };
     const e = table()[code];
     if (!e) return { error: 'no action for this key' };
     const now = Date.now();
@@ -120,6 +126,14 @@ function create(ctx) {
   }
 
   function set(b) {
+    if (typeof b.enabled === 'boolean') {
+      config.update('manager', c => {
+        if (b.enabled) c.remapOn = true;
+        else delete c.remapOn;
+      });
+      sync();
+      return { returnValue: true, enabled: b.enabled };
+    }
     if (b.clear === true) {
       config.update('manager', c => {
         delete c.remap;
@@ -138,6 +152,7 @@ function create(ctx) {
     }
     const e = clean(b);
     if (!e) return { error: 'bad action' };
+    if (!enabled()) return { error: 'off' };
     if (taken().indexOf(code) >= 0) return { error: 'taken' };
     if (!table()[code] && codes().length >= MAX_KEYS) return { error: 'too many keys' };
     config.update('manager', c => {
@@ -160,10 +175,11 @@ function create(ctx) {
     const json = (o, c) => web.json(res, o, c);
     if (u === '/api/remap/learn-state') return json(learnState());
     if (u === '/api/remap' && req.method !== 'POST')
-      return json({ keys: table(), types: TYPES, max: MAX_KEYS, hook: inputhook.hookInfo().attached, last: fired });
+      return json({ enabled: enabled(), keys: table(), types: TYPES, max: MAX_KEYS, hook: inputhook.hookInfo().attached, last: fired });
     if (req.method !== 'POST') return json({ error: 'POST expected' }, 405);
     const b = (await body(req)) || {};
     if (u === '/api/remap/learn') {
+      if (!enabled()) return json({ error: 'off' }, 400);
       inputhook.startLearn('remap');
       return json({ returnValue: true });
     }
@@ -176,7 +192,7 @@ function create(ctx) {
   }
 
   function start() {
-    inputhook.setRemapKeys(codes);
+    inputhook.setRemapKeys(active);
     setTimeout(sync, 1000);
   }
 

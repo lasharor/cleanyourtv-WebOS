@@ -31,7 +31,7 @@ run(async () => {
   ok(mod.clean({ type: 'home', label: '  ' }).label === undefined, 'an empty label is dropped');
 
   // ---- the feature ----
-  const conf = memoryConfig({ keys: { input: '', home: '777', voice: '', guide: '' } });
+  const conf = memoryConfig({ remap: {}, keys: { input: '', home: '777', voice: '', guide: '' } });
   const launched = [];
   const luna = async (uri, payload) => {
     launched.push(uri.split('/').pop() + ' ' + JSON.stringify(payload));
@@ -53,6 +53,15 @@ run(async () => {
   f.start();
   let r = await call(f, '/api/remap');
   ok(r.code === 200 && JSON.stringify(r.j.keys) === '{}' && r.j.types.length === 5, 'nothing is remapped at first');
+  ok(r.j.enabled === false, 'the feature is off until it is switched on');
+
+  // ---- off: nothing runs, nothing is bound ----
+  r = await call(f, '/api/remap', 'POST', { code: '403', type: 'app', id: 'netflix', label: 'Netflix' });
+  ok(r.code === 400 && r.j.error === 'off' && !conf.get().remap['403'], 'a key cannot be added while the feature is off');
+  r = await call(f, '/api/remap/learn', 'POST', {});
+  ok(r.code === 400 && r.j.error === 'off', 'a button cannot be learned while the feature is off');
+  r = await call(f, '/api/remap', 'POST', { enabled: true });
+  ok(r.code === 200 && conf.get().remapOn === true && (await call(f, '/api/remap')).j.enabled === true, 'switching it on is kept in config.json');
 
   r = await call(f, '/api/remap', 'POST', { code: '403', type: 'app', id: 'netflix', label: 'Netflix' });
   ok(r.code === 200 && r.j.keys['403'].id === 'netflix', 'a key is saved');
@@ -108,7 +117,7 @@ run(async () => {
   r = await call(f, '/api/remap/fire', 'POST', { code: '4;ls' });
   ok(r.j.error === 'bad code', 'only digits are accepted as a code');
   const bad = mod.create({
-    config: memoryConfig({ remap: { 9: { type: 'app', id: 'gone' } } }),
+    config: memoryConfig({ remapOn: true, remap: { 9: { type: 'app', id: 'gone' } } }),
     luna: async () => ({ returnValue: false, errorText: 'no such app' }),
     inputhook: hook,
   });
@@ -124,6 +133,18 @@ run(async () => {
   ok(r.code === 200 && conf.get().remap['403'].type === 'home', 'a key that is already there can still be changed when the list is full');
 
   // ---- giving keys back ----
+  // ---- off again: the keys are kept, their binds and actions are not ----
+  await call(f, '/api/remap', 'POST', { code: '403', type: 'app', id: 'netflix', label: 'Netflix' });
+  r = await call(f, '/api/remap', 'POST', { enabled: false });
+  ok(r.code === 200 && conf.get().remapOn === undefined && Object.keys(conf.get().remap).length === 12, 'switching it off keeps the saved keys');
+  ok(!Object.keys(binds()).some(k => /remapkey/.test(binds()[k].command)), 'but every remap bind leaves the hook');
+  ok(binds()['241'] && binds()['241'].command.indexOf('inputkey.sh') > 0, 'the Input key bind stays');
+  launched.length = 0;
+  r = await call(f, '/api/remap/fire', 'POST', { code: '403' });
+  ok(r.j.error === 'off' && launched.length === 0, 'a button does nothing while the feature is off');
+  await call(f, '/api/remap', 'POST', { enabled: true });
+  ok(binds()['403'] && binds()['403'].command === CMD('403'), 'switching it on again brings the binds back');
+
   r = await call(f, '/api/remap', 'POST', { code: '403', remove: true });
   ok(r.code === 200 && !conf.get().remap['403'] && !binds()['403'], 'a removed key loses its action and its bind');
   r = await call(f, '/api/remap', 'POST', { clear: true });
