@@ -34,7 +34,7 @@ def add_dir(files, arc_root, src, mode_for=None, skip=(), skip_dirs=()):
             if n in skip or n.startswith('.'):
                 continue
             p = os.path.join(root, n)
-            rel = os.path.relpath(p, src)
+            rel = os.path.relpath(p, src).replace(os.sep, '/')   # / in the archive, also on Windows
             mode = 0o755 if (n.endswith('.sh') or n in ('ezinject', '10-cleanyourtv-home', '15-cleanyourtv-debloat')) else 0o644
             body = open(p, 'rb').read()
             add(files, arc_root + '/' + rel, body, mode)
@@ -73,7 +73,7 @@ for app_id, src in (('com.cleanyourtv.manager', 'manager/app'), ('com.cleanyourt
     d = '/usr/palm/applications/' + app_id
     for root, _, names in os.walk(P(src)):
         for n in sorted(names):
-            p = os.path.join(root, n); rel = os.path.relpath(p, P(src)); body = open(p, 'rb').read()
+            p = os.path.join(root, n); rel = os.path.relpath(p, P(src)).replace(os.sep, '/'); body = open(p, 'rb').read()
             if n == 'appinfo.json' and app_id == PKG:   # the package version is the service version
                 o = json.loads(body); o['version'] = version; body = json.dumps(o).encode()
             add(data, '.' + d + '/' + rel, body)
