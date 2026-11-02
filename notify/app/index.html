@@ -414,8 +414,11 @@ function setBoth(name, value) {
 setBoth('setInputRegion', [{ x: 0, y: 0, width: 0, height: 0 }]);
 setBoth('setKeyMask', []);
 
-/* safety net: if the region was not honoured and a key reaches this window anyway, close the cards at once */
-document.addEventListener('keydown', function () {
+/* safety net: if the region was not honoured and a key reaches this window anyway, close the cards at once.
+   Volume and mute keys must not close the overlay: on webOS without topui (or if keys leak) they arrive here on every volume press. */
+document.addEventListener('keydown', function (e) {
+  var k = e.keyCode || e.which;
+  if (k === 447 || k === 448 || k === 449 || k === 175 || k === 174 || k === 173) return;
   clearTimeout(timer);
   clearTimeout(volTimer);
   card.classList.remove('on');
@@ -447,7 +450,6 @@ var lastVolSeq = 0;
 var volPollXhr = null;
 var isPollingVolume = false;
 var pendingVolState = null;
-var volRafId = 0;
 
 function stopVolumePoll() {
   isPollingVolume = false;
@@ -503,7 +505,6 @@ function pollNext(seq) {
 }
 
 function applyVolumeUpdate() {
-  volRafId = 0;
   if (!pendingVolState) return;
   var p = pendingVolState;
   pendingVolState = null;
@@ -539,9 +540,7 @@ function showVolume(p) {
     lastVolSeq = p.seq;
   }
   pendingVolState = p;
-  if (!volRafId) {
-    volRafId = requestAnimationFrame(applyVolumeUpdate);
-  }
+  applyVolumeUpdate();
 
   clearTimeout(volTimer);
   volTimer = setTimeout(function () {
