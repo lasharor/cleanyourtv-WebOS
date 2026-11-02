@@ -443,6 +443,18 @@ function create(ctx) {
       const reply = { apps: await apps(), config: launcherConfig(), usage: usageScores(), version: ctx.version, stamp: appsStamp };
       // the launcher offers its TV button only where LG's Live TV is installed (a TV without a tuner has no such app)
       if (tunerShown() && (await askTuner())) reply.tuner = true;
+      // downloaded cards (cardcatalog.js): what the launcher needs to draw them, only when there are any
+      const cp = ctx.feature && ctx.feature('cards'),
+        have = cp && cp.packs ? cp.packs() : {};
+      if (Object.keys(have).length) {
+        reply.cardPacks = {};
+        for (const id of Object.keys(have))
+          reply.cardPacks[id] = {
+            template: have[id].template,
+            size: have[id].size,
+            options: have[id].options.map(o => ({ key: o.key, def: o.kind === 'choice' && !o.default ? o.choices[0][0] : o.default })),
+          };
+      }
       // the launcher offers Change icon only while the App icons add-on runs
       if (icons()) reply.icons = true;
       return web.json(res, reply);

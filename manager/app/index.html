@@ -1379,6 +1379,7 @@ function build() {
       });
     });
     rows.push({ sep: true });
+    rows.push({ label: 'Get more cards', sub: 'download from the catalog', fn: openCardCatalog });
     rows.push({
       label: 'Set up from your phone',
       sub: 'names, texts, card options',
@@ -1402,6 +1403,46 @@ function build() {
         pop();
       },
     });
+    return;
+  }
+  if (view === 'cardcat') {
+    cc.cards.forEach(function (c) {
+      rows.push({
+        label: c.name,
+        pvu: c.preview ? '/api/cards/preview/' + c.id : '',
+        about: c.about || c.description,
+        sub: c.update ? 'Update to ' + c.version : c.installed ? 'installed \u00B7 ' + c.installed : 'Install \u00B7 ' + c.version,
+        fn: function () {
+          cc.sel = c.id;
+          if (c.installed && !c.update) push('cardone');
+          else cardDo('/api/cards/install', c.id, c.name + (c.update ? ' updated' : ' installed'));
+        },
+      });
+    });
+    if (!cc.cards.length && !cc.error) rows.push({ label: 'The catalog has no cards yet', dim: true, fn: function () {} });
+    if (cc.error) rows.push({ label: 'The catalog could not be read', sub: cc.error, dim: true, fn: function () {} });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'cardone') {
+    var c1 = cardSel() || {};
+    rows.push({
+      label: c1.name || '',
+      pvu: c1.preview ? '/api/cards/preview/' + c1.id : '',
+      about: c1.about || c1.description,
+      sub: 'installed \u00B7 ' + (c1.installed || ''),
+      fn: function () {},
+    });
+    rows.push({
+      label: 'Remove',
+      sub: 'a place that used it shows the theme\u2019s own card again',
+      fn: function () {
+        cardDo('/api/cards/remove', c1.id, c1.name + ' removed');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
     return;
   }
   if (view === 'cardtype') {
@@ -2262,13 +2303,13 @@ function draw() {
 function drawAbout(r, ie) {
   if (!r || !r.about) return;
   $('head').className = 'ab'; /* the version lines make room for the picture */
-  if (r.pv) {
+  if (r.pv || r.pvu) {
     var im = document.createElement('img');
     im.alt = '';
     im.onerror = function () {
       im.style.display = 'none';
     };
-    im.src = API + '/api/addons/preview/' + r.pv;
+    im.src = API + (r.pvu || '/api/addons/preview/' + r.pv);
     ie.appendChild(im);
   }
   var b = document.createElement('b');
@@ -2596,6 +2637,43 @@ function openHa() {
 /* Cards: a card for each place of the theme (/api/cards/status, /api/cards/set); also opened from the launcher's Customise > Cards */
 var cs = null,
   cardSlot = null;
+/* Cards > Get more cards: the catalog of downloadable cards (helper/cardcatalog.js), with a picture and a text each */
+var cc = { cards: [], error: '', sel: '' };
+function openCardCatalog() {
+  api('/api/cards/catalog').then(
+    function (r) {
+      cc.cards = (r && r.cards) || [];
+      cc.error = (r && r.error) || '';
+      if (view !== 'cardcat' && view !== 'cardone') push('cardcat');
+      else {
+        build();
+        if (idx >= rows.length) idx = Math.max(0, rows.length - 1);
+        draw();
+      }
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function cardSel() {
+  for (var i = 0; i < cc.cards.length; i++) if (cc.cards[i].id === cc.sel) return cc.cards[i];
+  return null;
+}
+function cardDo(path, id, done) {
+  banner('Working…', 'work');
+  api(path, { id: id }, 60000).then(
+    function (r) {
+      if (r.error) return banner(r.error, 'err');
+      banner(done, 'ok');
+      if (view === 'cardone') pop();
+      openCardCatalog();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
 function openCards() {
   api('/api/cards/status', {}).then(
     function (r) {

@@ -1,0 +1,10 @@
+{
+  "id": "year-progress",
+  "name": "Year progress",
+  "version": "1.0.0",
+  "description": "How much of the year has gone.",
+  "about": "The year, the percentage that has passed and the days that are left. Nothing to set up: it updates by itself, and is a nice small card above the dock.",
+  "size": "small",
+  "options": [],
+  "template": "# {{year}}\n**{{year.percent}}%** gone\n{{year.left}} days left"
+}

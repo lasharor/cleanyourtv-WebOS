@@ -20,6 +20,7 @@ module.exports = {
   THEMES: env.CYTV_THEMES || path.join(__dirname, 'themes'),
   VOICE: D + '/voice',
   ADDONS_BUNDLED: env.CYTV_ADDONS_BUNDLED || path.join(__dirname, 'addons-bundled'), // add-ons that ship in the package (helper files sit beside it on the TV too)
+  CARDPACKS: env.CYTV_CARDPACKS || D + '/cardpacks', // downloaded cards: one folder each with a card.json (cardcatalog.js)
   ADDONS: env.CYTV_ADDONS || D + '/addons', // add-ons: one folder each with an addon.json (addons.js)
   ADDON_DATA: env.CYTV_ADDON_DATA || D + '/addon-data', // what each add-on stores, apart from its code
   WEATHER: D + '/weather.json', // the weather card's last answers (weather.js)

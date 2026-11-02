@@ -41,6 +41,7 @@ nav = [
     { "Contributing" = "development/index.md" },
     { "Testing and CI" = "development/testing.md" },
     { "Internals" = "development/internals.md" },
+    { "Making a card" = "development/cards.md" },
   ] },
   { "Credits and licences" = "credits.md" },
 ]

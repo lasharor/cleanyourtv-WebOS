@@ -3008,8 +3008,23 @@ setInterval(function () {
   }
 }, 5000);
 /* a template card's text: {{greeting}}, {{time}}, {{date}}, {{weekday}} filled in, then **bold**, *italic* and "# heading" lines */
-function cardMarkup(src) {
+/* a day number: today's, for a date (YYYY-MM-DD) in the template's filters |days and |ago */
+function dayDiff(s) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '').trim());
+  if (!m) return null;
+  var a = new Date(+m[1], +m[2] - 1, +m[3]),
+    b = new Date();
+  b = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((a - b) / 86400000);
+}
+function cardMarkup(src, opt) {
+  var yr = new Date(),
+    y0 = new Date(yr.getFullYear(), 0, 1),
+    y1 = new Date(yr.getFullYear() + 1, 0, 1);
   var vars = {
+    year: String(yr.getFullYear()),
+    'year.percent': String(Math.round(((yr - y0) / (y1 - y0)) * 100)),
+    'year.left': String(Math.ceil((y1 - yr) / 86400000)),
     greeting: greetText(''),
     time: timeText(),
     date: dateText(),
@@ -3017,14 +3032,34 @@ function cardMarkup(src) {
     'weather.temp': WX_LAST && WX_LAST.now ? WX_LAST.now.temp + '\u00B0' : '',
     'weather.text': WX_LAST && WX_LAST.now ? wxKind(WX_LAST.now.code, WX_LAST.now.day)[1] : '',
   };
+  /* what was filled in for a downloaded card, as {{opt.<key>}} */
+  for (var k0 in opt || {}) vars['opt.' + k0] = String(opt[k0]);
   var esc = function (x) {
     return String(x).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
     });
   };
-  return esc(String(src || '').slice(0, 1000))
-    .replace(/\{\{\s*([\w.]+)\s*\}\}/g, function (m, k) {
-      return k in vars ? esc(vars[k]) : '';
+  /* filters: |days (days until a date), |ago (days since it), |upper, |lower */
+  var FILTER = {
+    days: function (v) {
+      var d = dayDiff(v);
+      return d === null ? '' : String(d);
+    },
+    ago: function (v) {
+      var d = dayDiff(v);
+      return d === null ? '' : String(-d);
+    },
+    upper: function (v) {
+      return v.toUpperCase();
+    },
+    lower: function (v) {
+      return v.toLowerCase();
+    },
+  };
+  return esc(String(src || '').slice(0, 1500))
+    .replace(/\{\{\s*([\w.]+)(?:\|(\w+))?\s*\}\}/g, function (m, k, f) {
+      var v = k in vars ? vars[k] : '';
+      return esc(f && FILTER[f] ? FILTER[f](v) : v);
     })
     .split('\n')
     .map(function (l) {
@@ -3316,10 +3351,31 @@ var CARD_TYPES = {
     },
   },
 };
+/* a card downloaded from the catalog (helper/cardcatalog.js) is the type x-<id>: drawn from its template, with what was filled in */
+var CARD_PACKS = {};
+function cardType(name) {
+  if (CARD_TYPES[name]) return CARD_TYPES[name];
+  var pk = /^x-(.+)$/.test(name) && CARD_PACKS[name.slice(2)];
+  if (!pk) return null;
+  return {
+    draw: function (el, o) {
+      var opt = {};
+      pk.options.forEach(function (q) {
+        opt[q.key] = o[q.key] !== undefined && o[q.key] !== '' ? o[q.key] : q.def;
+      });
+      var h = cardMarkup(pk.template, opt);
+      if (el._k === h) return;
+      el._k = h;
+      el.innerHTML = h;
+      /* an option called size (small, medium, large) is the card's size, else the card's own */
+      el.setAttribute('data-size', /^(small|medium|large)$/.test(opt.size) ? opt.size : pk.size);
+    },
+  };
+}
 function cardFor(sl) {
   var c = (cfg.cards || {})[sl.id];
-  if (c && c.type) return c.type === 'none' || !CARD_TYPES[c.type] ? null : c;
-  return CARD_TYPES[sl.card] ? { type: sl.card } : null;
+  if (c && c.type) return c.type === 'none' || !cardType(c.type) ? null : c;
+  return cardType(sl.card) ? { type: sl.card } : null;
 }
 function drawCards() {
   var box = $('cards'),
@@ -3330,7 +3386,7 @@ function drawCards() {
     if (!c) return;
     var el = document.createElement('div'),
       st = el.style;
-    el.className = 'card card-' + c.type + (sl.keep ? ' keep' : '');
+    el.className = 'card ' + (CARD_TYPES[c.type] ? '' : 'card-template ') + 'card-' + c.type + (sl.keep ? ' keep' : '');
     el.setAttribute('data-align', sl.align || 'left');
     st.setProperty('--cl', sl.l);
     st.setProperty('--cr', sl.r);
@@ -3357,7 +3413,7 @@ function tickCards() {
     i;
   for (pass = 0; pass < 2; pass++)
     for (i = 0; i < els.length; i++)
-      if (/^(ha-)?weather$/.test(els[i]._card.type) === (pass === 0)) CARD_TYPES[els[i]._card.type].draw(els[i], els[i]._card);
+      if (/^(ha-)?weather$/.test(els[i]._card.type) === (pass === 0)) cardType(els[i]._card.type).draw(els[i], els[i]._card);
   haPoll();
 }
 /* the cards that OK can do something with: they join the top row (with the buttons) for the remote */
@@ -3366,12 +3422,13 @@ function cardTargets() {
     els = $('cards').children;
   for (var i = 0; i < els.length; i++) {
     var ty = CARD_TYPES[els[i]._card.type];
-    if (ty.act && els[i].style.display !== 'none') out.push(els[i]);
+    if (ty && ty.act && els[i].style.display !== 'none') out.push(els[i]);
   }
   return out;
 }
 function cardAct(el) {
   var ty = CARD_TYPES[el._card.type];
+  if (!ty) return; /* a downloaded card has nothing to do on OK */
   if (ty.can && !ty.can(el._card)) return;
   ty.act(el, el._card);
 }
@@ -5703,6 +5760,7 @@ function load() {
         x.config,
         rank,
         x.icons === true,
+        x.cardPacks,
       ]);
       retryTileIcons();
       if (typeof x.stamp === 'number') appsStamp = x.stamp;
@@ -5715,6 +5773,7 @@ function load() {
       });
       cfg = x.config || {};
       iconsOn = x.icons === true;
+      CARD_PACKS = x.cardPacks || {};
       tunerOn = x.tuner === true; // the service found LG's own Live TV (the tuner): Customise can offer a TV button
       useLang(cfg.lang);
       applyTheme(cfg.theme);

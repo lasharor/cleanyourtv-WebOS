@@ -281,6 +281,43 @@ function openHa() {
 /* Cards: a card for each place of the theme (/api/cards/status, /api/cards/set); also opened from the launcher's Customise > Cards */
 var cs = null,
   cardSlot = null;
+/* Cards > Get more cards: the catalog of downloadable cards (helper/cardcatalog.js), with a picture and a text each */
+var cc = { cards: [], error: '', sel: '' };
+function openCardCatalog() {
+  api('/api/cards/catalog').then(
+    function (r) {
+      cc.cards = (r && r.cards) || [];
+      cc.error = (r && r.error) || '';
+      if (view !== 'cardcat' && view !== 'cardone') push('cardcat');
+      else {
+        build();
+        if (idx >= rows.length) idx = Math.max(0, rows.length - 1);
+        draw();
+      }
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function cardSel() {
+  for (var i = 0; i < cc.cards.length; i++) if (cc.cards[i].id === cc.sel) return cc.cards[i];
+  return null;
+}
+function cardDo(path, id, done) {
+  banner('Working…', 'work');
+  api(path, { id: id }, 60000).then(
+    function (r) {
+      if (r.error) return banner(r.error, 'err');
+      banner(done, 'ok');
+      if (view === 'cardone') pop();
+      openCardCatalog();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
 function openCards() {
   api('/api/cards/status', {}).then(
     function (r) {

@@ -171,19 +171,31 @@ const PAIR_PORT = 8792, // after the Wallpapers page (8791)
 function create(ctx) {
   const config = ctx.config,
     weather = require('./weather').create({ path: require('./paths').WEATHER }),
-    ha = require('./hacards').create({ config });
+    ha = require('./hacards').create({ config }),
+    packs = require('./cardcatalog').create();
   const slots = () => {
     const th = ctx.feature('theme'),
       r = th && th.resolved();
     return (r && r.slots) || [];
   };
+  // the downloaded cards as card types (x-<id>), their options as the fields of the form on the phone page
+  function packTypes() {
+    const have = packs.installed();
+    return Object.keys(have).map(id => ({
+      type: 'x-' + id,
+      name: have[id].name,
+      fields: have[id].options.map(o =>
+        Object.assign({ key: o.key, kind: o.kind, label: o.label, default: o.default }, o.choices ? { choices: o.choices } : {})
+      ),
+    }));
+  }
   function state(lang) {
     const T = x => i18n.tr(lang, x);
     return {
       slots: slots().map(sl => ({ id: sl.id, name: T(SLOT_NAMES[sl.id] || sl.id), card: sl.card })),
       cards: config.get().cards || {},
       ha: ha.ready(),
-      types: TYPES.map(ty => ({
+      types: TYPES.concat(packTypes()).map(ty => ({
         type: ty.type,
         name: T(ty.name),
         fields: ty.fields.map(f => Object.assign({}, f, { label: T(f.label), choices: f.choices && f.choices.map(c => [c[0], T(c[1])]) })),
@@ -193,7 +205,7 @@ function create(ctx) {
   // the manager's Cards screen: a card type for one slot ('none' leaves it empty); the options stay when the same type is chosen again
   function setType(slot, type) {
     if (!slots().some(sl => sl.id === slot)) return { error: 'this theme has no such place' };
-    if (type !== 'none' && !TYPES.some(ty => ty.type === type)) return { error: 'unknown card type' };
+    if (type !== 'none' && !TYPES.concat(packTypes()).some(ty => ty.type === type)) return { error: 'unknown card type' };
     config.update('cards (manager)', conf => {
       const c = Object.assign({}, conf.cards || {}),
         old = c[slot] || {};
@@ -281,6 +293,7 @@ function create(ctx) {
 
   async function handle(req, res, u, body) {
     // a Home Assistant camera's picture for the camera card (GET, so the launcher can use it as an image)
+    if (await packs.handle(req, res, u, body)) return;
     const cam = /^\/api\/cards\/ha\/camera\/(camera\.[\w]{1,120})$/.exec(u);
     if (cam) {
       const img = await ha.camera(cam[1]);
@@ -306,7 +319,7 @@ function create(ctx) {
     if (u === '/api/cards/ha/entities') return web.json(res, Object.assign({ ha: ha.ready() }, await ha.pick(b.domains)));
     web.notFound(res);
   }
-  return { name: 'cards', prefix: '/api/cards/', handle, stop: stopPair };
+  return { name: 'cards', prefix: '/api/cards/', handle, stop: stopPair, packs: () => packs.installed() };
 }
 
 // the phone page: a form per slot (the card type, then its options), and all cards as JSON. Plain script for iOS Safari and Android
@@ -330,7 +343,7 @@ function draw(){var box=$('slots');box.innerHTML='';$('sum').textContent=S.slots
 function fields(f,c){f.innerHTML='';var ty=typeOf(c.type);if(!ty)return;ty.fields.forEach(function(fd){var l=el('label',{},fd.label),i;
   if(fd.kind==='choice'){i=el('select',{'data-k':fd.key});fd.choices.forEach(function(ch){i.appendChild(el('option',{value:ch[0]},ch[1]))})}
   else if(fd.kind==='long'){i=el('textarea',{'data-k':fd.key,rows:4})}else if(fd.kind==='place'){f.appendChild(l);place(f,c);return}else if(fd.kind==='entities'){i=el('textarea',{'data-k':fd.key,rows:5,list:'ents',autocapitalize:'off',spellcheck:'false'})}else if(fd.kind==='entity'){i=el('input',{'data-k':fd.key,type:'text',list:fd.only==='camera'?'cams':fd.only==='weather'?'wxs':fd.only==='sensor'?'sens':'ents',autocomplete:'off',autocapitalize:'off'})}else i=el('input',{'data-k':fd.key,type:'text',autocomplete:'off'});
-  i.value=c[fd.key]===undefined?'':String(c[fd.key]);f.appendChild(l);f.appendChild(i)});
+  if(fd.default)i.setAttribute('placeholder',fd.default);i.value=c[fd.key]===undefined?'':String(c[fd.key]);f.appendChild(l);f.appendChild(i)});
  if(ty.ha&&!S.ha)f.insertBefore(el('p',{'class':'m e'},t('Home Assistant is not set up yet: set its address and token in the manager app, More > Home Assistant.')),f.firstChild);
  if(c.type==='template')f.appendChild(el('p',{'class':'h'},t('Use {{greeting}}, {{time}}, {{date}} and {{weekday}} for what changes, and {{weather.temp}} and {{weather.text}} when a weather card is on Home; **bold**, *italic* and a line starting with # for a heading.')))}
 /* a place for the weather: searched by name (Open-Meteo, through the TV), its coordinates kept in two hidden fields */

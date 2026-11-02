@@ -180,13 +180,13 @@ function draw() {
 function drawAbout(r, ie) {
   if (!r || !r.about) return;
   $('head').className = 'ab'; /* the version lines make room for the picture */
-  if (r.pv) {
+  if (r.pv || r.pvu) {
     var im = document.createElement('img');
     im.alt = '';
     im.onerror = function () {
       im.style.display = 'none';
     };
-    im.src = API + '/api/addons/preview/' + r.pv;
+    im.src = API + (r.pvu || '/api/addons/preview/' + r.pv);
     ie.appendChild(im);
   }
   var b = document.createElement('b');

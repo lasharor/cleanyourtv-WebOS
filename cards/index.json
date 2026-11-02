@@ -1,0 +1,37 @@
+{
+  "cards": [
+    {
+      "id": "countdown",
+      "name": "Countdown",
+      "version": "1.0.0",
+      "description": "The days left until a date you choose.",
+      "about": "A heading and the number of days to go until a date: a holiday, a birthday, a trip. Fill in the title and the date (YYYY-MM-DD) on the phone page; the number changes by itself each day. Before the date it counts down, after it the card says how long ago it was.",
+      "preview": "preview.jpg",
+      "files": {
+        "card.json": "ed6f5d9311910b5bfa7562cba0600835179f6d4f50963bd20ad8b443a23fd0df"
+      }
+    },
+    {
+      "id": "quote",
+      "name": "Quote",
+      "version": "1.0.0",
+      "description": "A line you like, with who said it.",
+      "about": "A short quote in italics with the name of who said it, in three sizes. Type the text and the name on the phone page. A quiet card for a place beside the clock.",
+      "preview": "preview.jpg",
+      "files": {
+        "card.json": "015c283bdf7ee3b8fc0d8723adcd0c6dc42e78ce8b079f12e468e06cf2694d66"
+      }
+    },
+    {
+      "id": "year-progress",
+      "name": "Year progress",
+      "version": "1.0.0",
+      "description": "How much of the year has gone.",
+      "about": "The year, the percentage that has passed and the days that are left. Nothing to set up: it updates by itself, and is a nice small card above the dock.",
+      "preview": "preview.jpg",
+      "files": {
+        "card.json": "283bed2e05785dc2e4e0b4eb0e6fad574bc8f6489d0f0131389dc5c4ec7ece90"
+      }
+    }
+  ]
+}

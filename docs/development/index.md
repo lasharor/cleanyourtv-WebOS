@@ -10,6 +10,7 @@ reports from TVs that are not in the [tested list](../tested-tvs.md).
 | `app/` | The launcher: `src/` (its CSS and script files), the built `index.html` and `version.json`. |
 | `manager/`, `picker/`, `notify/` | The three apps of the package (manager, Inputs picker, picture notification card); the manager is built from `manager/src`. |
 | `themes/` | The [themes](../themes.md): one folder each (`theme.json`, `preview.jpg`, a wallpaper) and `index.json`. Read by the TVs from GitHub, not shipped with the service; [contribute one](../themes.md#contributing-a-theme). |
+| `cards/` | The catalog of downloadable cards (`catalog/<id>/card.json`, `index.json`): see [Making a card](cards.md). |
 | `helper/` | The root service (Node.js), one module per part: see [Internals](internals.md#the-service). |
 | `scripts/` | Boot, setup and restore scripts: `bootstrap.sh`, `10-cleanyourtv-home`, `stage-home.sh`, `undo-home.sh`, the debloat scripts. |
 | `voice/` | Source of the small speech program `cytv-asr` and its build script. |

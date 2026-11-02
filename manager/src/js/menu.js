@@ -812,6 +812,7 @@ function build() {
       });
     });
     rows.push({ sep: true });
+    rows.push({ label: 'Get more cards', sub: 'download from the catalog', fn: openCardCatalog });
     rows.push({
       label: 'Set up from your phone',
       sub: 'names, texts, card options',
@@ -835,6 +836,46 @@ function build() {
         pop();
       },
     });
+    return;
+  }
+  if (view === 'cardcat') {
+    cc.cards.forEach(function (c) {
+      rows.push({
+        label: c.name,
+        pvu: c.preview ? '/api/cards/preview/' + c.id : '',
+        about: c.about || c.description,
+        sub: c.update ? 'Update to ' + c.version : c.installed ? 'installed \u00B7 ' + c.installed : 'Install \u00B7 ' + c.version,
+        fn: function () {
+          cc.sel = c.id;
+          if (c.installed && !c.update) push('cardone');
+          else cardDo('/api/cards/install', c.id, c.name + (c.update ? ' updated' : ' installed'));
+        },
+      });
+    });
+    if (!cc.cards.length && !cc.error) rows.push({ label: 'The catalog has no cards yet', dim: true, fn: function () {} });
+    if (cc.error) rows.push({ label: 'The catalog could not be read', sub: cc.error, dim: true, fn: function () {} });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'cardone') {
+    var c1 = cardSel() || {};
+    rows.push({
+      label: c1.name || '',
+      pvu: c1.preview ? '/api/cards/preview/' + c1.id : '',
+      about: c1.about || c1.description,
+      sub: 'installed \u00B7 ' + (c1.installed || ''),
+      fn: function () {},
+    });
+    rows.push({
+      label: 'Remove',
+      sub: 'a place that used it shows the theme\u2019s own card again',
+      fn: function () {
+        cardDo('/api/cards/remove', c1.id, c1.name + ' removed');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
     return;
   }
   if (view === 'cardtype') {
