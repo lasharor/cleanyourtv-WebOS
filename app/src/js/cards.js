@@ -2,9 +2,14 @@
    cfg.cards is {<slot id>: {type, ...options}}; a slot without an entry shows the card the theme puts there (slot.card), and
    {type: 'none'} leaves it empty. Each card type draws itself into its box; draw() runs on every rebuild and every clock tick. */
 /* what changes with the time, for the cards: the greeting of the day part, the time and the date as the clock shows them */
-function greetText(name) {
-  var h = new Date().getHours();
-  if (name) return (h < 12 ? t('Good morning, %s') : h < 18 ? t('Good afternoon, %s') : t('Good evening, %s')).replace('%s', name);
+function greetText() {
+  var h = new Date().getHours(),
+    n = String(cfg.name || '').slice(0, 40); /* "Your name" (Customise), the same one the Greeting card's Name box on the phone page sets */
+  /* the name between direction isolates, so a Hebrew or Arabic name in an English greeting (or the other way round) keeps its own order */
+  if (n)
+    return (h < 12 ? t('Good morning, %s') : h < 18 ? t('Good afternoon, %s') : t('Good evening, %s')).replace('%s', function () {
+      return '\u2068' + n + '\u2069';
+    });
   return h < 12 ? t('Good morning') : h < 18 ? t('Good afternoon') : t('Good evening');
 }
 function dateText(o) {
@@ -259,7 +264,7 @@ function cardMarkup(src, opt) {
     year: String(yr.getFullYear()),
     'year.percent': String(Math.round(((yr - y0) / (y1 - y0)) * 100)),
     'year.left': String(Math.ceil((y1 - yr) / 86400000)),
-    greeting: greetText(''),
+    greeting: greetText(),
     time: timeText(),
     date: dateText(),
     weekday: dateText({ weekday: 'long' }),
@@ -313,7 +318,7 @@ var CARD_TYPES = {
       return t('Greeting');
     },
     draw: function (el, o) {
-      var s = greetText(String(o.name || '').slice(0, 40)),
+      var s = greetText(),
         l2 = o.line === 'date' ? dateText() : o.line === 'weather' ? wxText(WX_LAST) : '',
         key = s + '|' + l2;
       if (el._k === key) return;

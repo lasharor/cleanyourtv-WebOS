@@ -1180,6 +1180,13 @@ function build() {
       sub: st.wallpapers ? st.wallpapers.total + ' photos' : '',
       fn: openWallpapers,
     });
+    rows.push({
+      label: 'Your name',
+      sub: st.name || 'not set \u00B7 the greeting on Home',
+      fn: function () {
+        openCardsPair('name');
+      },
+    });
     if (st.icons)
       rows.push({
         label: 'App icons',

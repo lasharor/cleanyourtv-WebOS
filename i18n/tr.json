@@ -680,5 +680,12 @@
  "Dial": "Kadran",
  "Circular dial on the right": "Sağda dairesel kadran",
  "System default (LG webOS)": "Sistem varsayılanı (LG webOS)",
- "Stock TV volume bar": "Orijinal TV ses çubuğu"
+ "Stock TV volume bar": "Orijinal TV ses çubuğu",
+ "Your name": "Adınız",
+ "Not set": "Ayarlanmadı",
+ "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Ana ekrandaki karşılamada görünür, örneğin “İyi akşamlar, Sam”. Ad göstermemek için boş bırakın.",
+ "the greeting on Home": "ana ekrandaki karşılama",
+ "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "Ana ekrandaki karşılamada görünen ad (“İyi akşamlar, Sam”). Bir QR kodu gösterir: aynı Wi-Fi ağındaki bir telefonla okutun ve adı orada yazın; TV’de hiçbir şey yazılmaz. Boş bırakırsanız karşılama adsız olur.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Adınızı yazın ve <b>Kaydet</b> düğmesine dokunun. Ana ekran sizi bu adla karşılar.</li>",
+ "Or press OK and type it here": "Veya OK’a basıp buraya yazın"
 }

@@ -486,21 +486,54 @@ function openAbPair() {
     }
   );
 }
-/* Cards: the options of the cards in the theme's slots, typed on a phone page (helper/cards.js) */
-function openCardsPair() {
-  shareMode = 'cards';
+/* the Your name screen follows the name while it is open: a name saved on the phone shows in the field at once (not while it is being typed) */
+var nameT = 0;
+function nameWatch(last) {
+  clearTimeout(nameT);
+  nameT = setTimeout(function () {
+    if (view !== 'share' || shareMode !== 'name') return;
+    api('/api/cards/status', {}).then(
+      function (r) {
+        var ni = $('nameinput'),
+          now = typeof r.name === 'string' ? r.name : last;
+        if (now !== last) {
+          st.name = now || undefined;
+          if (document.activeElement !== ni) ni.value = now;
+          $('sharemsg').textContent = tr('Saved');
+        }
+        nameWatch(now);
+      },
+      function () {
+        nameWatch(last);
+      }
+    );
+  }, 2000);
+}
+/* Cards: the options of the cards in the theme's slots, typed on a phone page (helper/cards.js). With mode 'name' (Your name in the main list, the
+   launcher's Customise > Your name) it is the same page, opened for the name in the Home greeting. */
+function openCardsPair(mode) {
+  var forName = mode === 'name';
+  shareMode = forName ? 'name' : 'cards';
   push('share');
   $('share').style.display = 'block';
   $('shareurl').textContent = '';
   $('qrbox').style.visibility = 'hidden';
-  $('share').querySelector('h2').textContent = tr('Cards');
+  $('share').querySelector('h2').textContent = tr(forName ? 'Your name' : 'Cards');
   $('share').querySelector('ol').innerHTML = tr(
-    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose a card for each place and fill in its options, then tap <b>Save</b>.</li>'
+    forName
+      ? '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>'
+      : '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose a card for each place and fill in its options, then tap <b>Save</b>.</li>'
   );
   $('sharemsg').textContent = tr('Preparing\u2026');
-  api('/api/cards/pair', {}).then(
+  /* or typed here, with the TV's keyboard: OK opens it, OK again saves */
+  var ni = $('nameinput');
+  ni.style.display = forName ? 'block' : 'none';
+  ni.value = (st && st.name) || '';
+  ni.placeholder = tr('Or press OK and type it here');
+  if (forName) nameWatch(ni.value);
+  api('/api/cards/pair', forName ? { name: true } : {}).then(
     function (r) {
-      if (view !== 'share' || shareMode !== 'cards') return;
+      if (view !== 'share' || shareMode !== (forName ? 'name' : 'cards')) return;
       if (r.error) {
         $('sharemsg').textContent = tr(r.error);
         return;

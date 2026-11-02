@@ -1,11 +1,21 @@
 document.addEventListener('keydown', function (e) {
   var k = e.keyCode;
+  /* typing a name (the field on the Your name screen): the keyboard gets the keys; OK saves, Back leaves the field */
+  if (document.activeElement === $('nameinput')) {
+    if (k === 13) saveTypedName();
+    else if (k === 461 || k === 27 || k === 10009) $('nameinput').blur();
+    else return;
+    e.preventDefault();
+    return;
+  }
   if (k === 38) next(-1);
   else if (k === 40) next(1);
   else if (k === 37) setTab(tab - 1);
   else if (k === 39) setTab(tab + 1);
-  else if (k === 13) act();
-  else if (k === 461 || k === 27 || k === 8 || k === 10009) {
+  else if (k === 13) {
+    if (view === 'share' && shareMode === 'name') $('nameinput').focus();
+    else act();
+  } else if (k === 461 || k === 27 || k === 8 || k === 10009) {
     if (view === 'share') closeShare();
     else if (view === 'keys') closeKeys();
     else if (view !== 'main') pop();
@@ -45,9 +55,10 @@ document.addEventListener('wheel', function (e) {
   if (e.deltaY > 0) next(1);
   else if (e.deltaY < 0) next(-1);
 }); /* the Magic Remote wheel */
-/* opened with {"open":"wallpapers"}, {"open":"cards"}, {"open":"addons"} or {"open":"ha"} (the launcher's Customise menu), or {"open":"icons", "app": id}
-   (a tile's Change icon): straight to that screen */
-var cardsFromHome = false;
+/* opened with {"open":"wallpapers"}, {"open":"cards"}, {"open":"addons"}, {"open":"name"} or {"open":"ha"} (the launcher's Customise
+   menu), or {"open":"icons", "app": id} (a tile's Change icon): straight to that screen */
+var cardsFromHome = false,
+  nameFromHome = false;
 function wantView() {
   var p = {};
   try {
@@ -70,6 +81,10 @@ function wantView() {
   if (p && p.open === 'cards') {
     cardsFromHome = true;
     openCards();
+  }
+  if (p && p.open === 'name') {
+    nameFromHome = true;
+    openCardsPair('name');
   }
 }
 document.addEventListener('webOSRelaunch', function () {

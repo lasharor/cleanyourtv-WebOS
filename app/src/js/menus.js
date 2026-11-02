@@ -845,6 +845,14 @@ function customizeMenu() {
               tick();
             },
           },
+          /* typed on the phone (a QR code in the CleanYourTV app); the greeting on Home shows it */
+          {
+            label: t('Your name'),
+            sub: cfg.name || t('Not set'),
+            fn: function () {
+              launch('com.cleanyourtv.manager', { open: 'name' });
+            },
+          },
         ];
       },
     },

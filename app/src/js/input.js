@@ -259,8 +259,7 @@ function tick() {
   /* greeting line (shown only when the theme turns clock.greeting on, with the stacked layout) */
   var g = $('greet');
   if (g) {
-    var h = d.getHours();
-    g.textContent = h < 12 ? t('Good morning') : h < 18 ? t('Good afternoon') : t('Good evening');
+    g.textContent = greetText();
   }
   tickCards();
   SCENES.tick();

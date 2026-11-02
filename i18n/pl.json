@@ -749,5 +749,12 @@
  "Dial": "Pokrętło",
  "Circular dial on the right": "Okrągłe pokrętło po prawej",
  "System default (LG webOS)": "Domyślny systemowy (LG webOS)",
- "Stock TV volume bar": "Fabryczny pasek głośności telewizora"
+ "Stock TV volume bar": "Fabryczny pasek głośności telewizora",
+ "Your name": "Twoje imię",
+ "Not set": "Nie ustawiono",
+ "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Pojawia się w powitaniu na ekranie głównym, np. „Dobry wieczór, Sam”. Zostaw puste, aby nie pokazywać imienia.",
+ "the greeting on Home": "powitanie na ekranie głównym",
+ "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "Imię w powitaniu na ekranie głównym („Dobry wieczór, Sam”). Pokazuje kod QR: zeskanuj go telefonem w tej samej sieci Wi-Fi i wpisz tam imię; na telewizorze nic się nie wpisuje. Puste: powitanie bez imienia.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Wpisz swoje imię i dotknij <b>Zapisz</b>. Home będzie Cię tak witać.</li>",
+ "Or press OK and type it here": "Albo naciśnij OK i wpisz tutaj"
 }

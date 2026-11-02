@@ -785,5 +785,12 @@
  "Look": "Look",
  "Top & cards": "Top & cards",
  "Top": "Top",
- "Leave this place empty.": "Leave this place empty."
+ "Leave this place empty.": "Leave this place empty.",
+ "Your name": "Your name",
+ "Not set": "Not set",
+ "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.",
+ "the greeting on Home": "the greeting on Home",
+ "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>",
+ "Or press OK and type it here": "Or press OK and type it here"
 }

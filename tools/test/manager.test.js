@@ -1,7 +1,8 @@
 // The manager's options and keys (manager.js, inputkey.js, config.js): what is stored, what is logged, and how the Input key follows.
 const fs = require('fs'),
-  path = require('path');
-const { ok, call, req, run } = require('./lib');
+  path = require('path'),
+  vm = require('vm');
+const { root, ok, call, req, run } = require('./lib');
 const config = req('config');
 
 run(async () => {
@@ -67,6 +68,26 @@ run(async () => {
   ok(r.j.options.volumeTheme === 'dial' && conf.get().options.volumeTheme === 'dial', 'volumeTheme option is saved');
   r = await ask('options', 'POST', { volumeTheme: 'no-such-theme' });
   ok(r.j.options.volumeTheme === 'dial', 'a theme that does not exist is not saved');
+
+  // "Your name" for the Home greeting
+  ok(r.j.name === undefined && conf.get().name === undefined, 'no name is set to begin with, and the status has none');
+  r = await ask('options', 'POST', { name: '  Alex \u0007 <b>Sam</b>  ' });
+  ok(conf.get().name === 'Alex b Sam /b', 'a name is saved without control characters or markup');
+  r = await ask('status', 'GET');
+  ok(r.j.name === conf.get().name, 'the status carries the name once there is one');
+  const cleaned = config.cleanName;
+  ok(cleaned('\u202eevil\u2066x\u2069') === 'evil x', 'direction marks cannot turn the greeting around');
+  ok(cleaned(new Array(80).join('a')).length === config.NAME_MAX, 'the name is cut at ' + config.NAME_MAX + ' characters');
+  ok(Array.from(cleaned('😀'.repeat(40))).length === config.NAME_MAX, 'the cut keeps whole characters, not half an emoji');
+  ok(cleaned('עדן') === 'עדן' && cleaned('عدن') === 'عدن', 'Hebrew and Arabic names are kept');
+  ok(cleaned(null) === '' && cleaned(42) === '42' && cleaned('   ') === '', 'nothing, a number and only spaces');
+  r = await ask('options', 'POST', { name: 7 });
+  ok(conf.get().name !== undefined, 'a name that is not text changes nothing');
+  r = await ask('options', 'POST', { name: '' });
+  ok(conf.get().name === undefined, 'an empty name clears it');
+  r = await ask('status', 'GET');
+  ok(r.j.name === undefined, 'the status has no name again');
+  ok(!lines.some(l => /Alex/.test(l)), 'the name is personal data: it is not written to the log');
 
   r = await ask('options', 'POST', { pickerMode: 'overlay' });
   ok(
@@ -171,4 +192,63 @@ run(async () => {
       calls.every(c => !/youtube|browser/.test(c) || !/^close/.test(c)),
     'only a listed app that runs in the background is closed: ' + calls.join(' ')
   );
+
+  // the Your name screen (manager/src/js/screens.js, nameWatch) follows a name saved on the phone while it is open, as the manager has it
+  {
+    const js = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'screens.js'), 'utf8');
+    const start = js.indexOf('function nameWatch(');
+    let depth = 0,
+      end = js.indexOf('{', start);
+    for (; end < js.length; end++) {
+      if (js[end] === '{') depth++;
+      else if (js[end] === '}' && --depth === 0) break;
+    }
+    const field = { value: '' },
+      msg = { textContent: '' },
+      timers = [];
+    let served = { name: '' },
+      typing = false;
+    const sb = {
+      view: 'share',
+      shareMode: 'name',
+      st: {},
+      nameT: 0,
+      document: {
+        get activeElement() {
+          return typing ? field : null;
+        },
+      },
+      $: id => (id === 'nameinput' ? field : msg),
+      tr: s => s,
+      api: () => Promise.resolve(served),
+      clearTimeout() {},
+      setTimeout: f => timers.push(f) && timers.length,
+    };
+    vm.createContext(sb);
+    vm.runInContext(js.slice(start, end + 1), sb, { filename: 'nameWatch' });
+    const tick = async () => {
+      timers.pop()();
+      await new Promise(r => setImmediate(r));
+    };
+    sb.nameWatch('');
+    served = { name: 'Alex' };
+    await tick();
+    ok(
+      field.value === 'Alex' && sb.st.name === 'Alex' && msg.textContent === 'Saved',
+      'a name saved on the phone shows in the field of the TV screen'
+    );
+    typing = true;
+    field.value = 'Ale';
+    served = { name: 'Alex B' };
+    await tick();
+    ok(field.value === 'Ale' && sb.st.name === 'Alex B', 'what is being typed on the TV is not overwritten');
+    typing = false;
+    served = { name: '' };
+    await tick();
+    ok(field.value === '' && sb.st.name === undefined, 'a name cleared on the phone empties the field');
+    const n = timers.length;
+    sb.view = 'main';
+    await tick();
+    ok(timers.length === n - 1, 'the screen stops asking when it is closed');
+  }
 });

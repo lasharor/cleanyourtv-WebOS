@@ -24,6 +24,8 @@ var INFO = {
   'Language':
     'The language of CleanYourTV\u2019s screens: the launcher, this app and the Inputs list. Automatic follows the TV\u2019s menu language. The percentage says how much of a language is translated; the rest stays English. Translations are files in the repository that anyone can add to.',
   'Automatic': 'Follows the TV\u2019s menu language. English when CleanYourTV has no translation for it.',
+  'Your name':
+    'The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.',
   'Wallpapers':
     'Your own photos behind Home: uploaded from a phone, or synced from Immich albums. Switch them on in the launcher: Customise > Wallpapers.',
   'App icons':

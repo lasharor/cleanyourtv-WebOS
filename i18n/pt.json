@@ -666,5 +666,12 @@
  "Your firmware is not in the compatibility list and LG’s Home looks different. This tries it anyway; a failed start restarts the TV with LG’s Home.": "Seu firmware não consta na lista de compatibilidade e o Início da LG parece diferente. Isso tentará de qualquer forma; se a inicialização falhar, a TV reinicia com o Início da LG.",
  "Your M3U playlist and its XMLTV guide. Choose it to set up: a QR code opens a page on your phone where you enter the playlist address and the 6-digit code shown here.": "Sua lista de reprodução M3U e o guia XMLTV. Escolha para configurar: um código QR abre uma página no seu celular onde você digita o endereço da lista e o código de 6 dígitos mostrado aqui.",
  "Your own photos behind Home: uploaded from a phone, or synced from Immich albums. Switch them on in the launcher: Customise > Wallpapers.": "Suas próprias fotos como plano de fundo do Início: enviadas do celular ou sincronizadas de álbuns do Immich. Ative-as no inicializador: Personalizar > Papéis de Parede.",
- "Your playlist": "Sua lista de reprodução"
+ "Your playlist": "Sua lista de reprodução",
+ "Your name": "O seu nome",
+ "Not set": "Não configurado",
+ "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Aparece na saudação da Home, por exemplo “Boa noite, Sam”. Deixe em branco para não mostrar nome.",
+ "the greeting on Home": "a saudação na Home",
+ "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "O nome na saudação da Home (“Boa noite, Sam”). Mostra um código QR: leia-o com um telemóvel na mesma Wi-Fi e escreva lá o nome; na TV não se escreve nada. Em branco: saudação sem nome.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Digite o seu nome e toque em <b>Salvar</b>. A Home vai cumprimentá-lo com ele.</li>",
+ "Or press OK and type it here": "Ou pressione OK e digite aqui"
 }

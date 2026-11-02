@@ -726,5 +726,12 @@
   "Maghrib": "المغرب",
   "Isha": "العشاء",
   "in %s h": "بعد %s س",
-  "in %s min": "بعد %s د"
+  "in %s min": "بعد %s د",
+ "Your name": "اسمك",
+ "Not set": "غير مضبوط",
+ "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "يظهر في التحية على الشاشة الرئيسية، مثل «مساء الخير يا Sam». اتركه فارغًا لعدم عرض اسم.",
+ "the greeting on Home": "التحية على الشاشة الرئيسية",
+ "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "الاسم في التحية على الشاشة الرئيسية («مساء الخير يا Sam»). يعرض رمز QR: امسحه بهاتف على نفس شبكة Wi-Fi واكتب الاسم هناك؛ لا يُكتب شيء على التلفاز. إذا تركته فارغًا فالتحية بدون اسم.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>اكتب اسمك ثم اضغط <b>حفظ</b>. ستحييك الشاشة الرئيسية به.</li>",
+ "Or press OK and type it here": "أو اضغط OK واكتبه هنا"
 }

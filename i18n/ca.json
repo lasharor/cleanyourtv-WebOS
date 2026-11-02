@@ -698,5 +698,12 @@
     "Dial": "Dial",
     "Circular dial on the right": "Dial circular a la dreta",
     "System default (LG webOS)": "Predeterminat del sistema (LG webOS)",
-    "Stock TV volume bar": "Barra de volum original del televisor"
+    "Stock TV volume bar": "Barra de volum original del televisor",
+    "Your name": "El teu nom",
+    "Not set": "No configurat",
+    "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Es mostra a la salutació d’Inici, per exemple «Bon vespre, Sam». Deixa-ho buit per no mostrar cap nom.",
+    "the greeting on Home": "la salutació a Inici",
+    "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "El nom a la salutació d’Inici («Bon vespre, Sam»). Mostra un codi QR: escaneja’l amb un mòbil a la mateixa Wi-Fi i escriu-hi el nom; al televisor no s’escriu res. Buit: salutació sense nom.",
+    "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Escriu el teu nom i toca <b>Desa</b>. Inici et saludarà amb aquest nom.</li>",
+    "Or press OK and type it here": "O prem OK i escriu-ho aquí"
 }

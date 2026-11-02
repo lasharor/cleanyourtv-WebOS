@@ -1,7 +1,21 @@
 // Cards (cards.js): the phone page opens with a code, lists the theme's slots and the card types with their options, saves the cards
 // (checked for shape) where the launcher reads them, and the launcher page draws the greeting and a text card.
-const http = require('http');
-const { ok, call, sleep, serve, req, memoryConfig, run } = require('./lib');
+const fs = require('fs'),
+  http = require('http'),
+  path = require('path'),
+  vm = require('vm');
+const { root, ok, call, sleep, serve, req, memoryConfig, run } = require('./lib');
+
+// the source of one top-level function of a launcher script, from "function name(" to its closing brace
+function source(js, name) {
+  const start = js.indexOf('function ' + name + '(');
+  let depth = 0;
+  for (let i = js.indexOf('{', start); start >= 0 && i < js.length; i++) {
+    if (js[i] === '{') depth++;
+    else if (js[i] === '}' && --depth === 0) return js.slice(start, i + 1);
+  }
+  return '';
+}
 
 function phone(method, p, body, code) {
   return new Promise((resolve, reject) => {
@@ -75,7 +89,9 @@ run(async () => {
     p.j.slots.length === 3 &&
       p.j.slots[0].name === 'Boven de klok' &&
       p.j.slots[2].name === 'odd-one' &&
-      p.j.cards.greeting.name === 'Sam' &&
+      p.j.cards.greeting.name === undefined &&
+      p.j.name === 'Sam' &&
+      p.j.types.some(t => t.type === 'greeting' && t.fields.some(f => f.key === 'name' && f.kind === 'yourname')) &&
       p.j.types.some(t => t.type === 'template' && t.fields.some(f => f.key === 'text')),
     'the state lists the slots (named in the language), the saved cards and the card types with their options'
   );
@@ -91,6 +107,83 @@ run(async () => {
   );
   await phone('POST', '/api/save', { cards: {} }, code);
   ok(config.get().cards === undefined, 'saving no cards removes them');
+  // "Your name" in the Home greeting: typed on the same page, kept as config.name
+  p = await phone('GET', '/');
+  // Save reads every section.sl as a card slot (it needs the card type select), so the name box must not be one
+  ok(
+    /id=yname/.test(p.text) && /<section class="nm hide"/.test(p.text) && !/<section class=sl>/.test(p.text),
+    'the page has a field for your name, which is not mistaken for a card place'
+  );
+  ok(
+    config.get().name === 'Sam',
+    'a name typed on a Greeting card before there was Your name became the name (the state above shows the card without one)'
+  );
+  p = await phone('POST', '/api/save', { cards: {}, name: '  Alex  ' }, code);
+  ok(p.j.ok && p.j.name === 'Alex' && config.get().name === 'Alex', 'the name is saved, trimmed');
+  p = await phone('GET', '/api/state', undefined, code);
+  ok(p.j.name === 'Alex', 'the state gives the name back to the page');
+  p = await phone('POST', '/api/save', { cards: {} }, code);
+  ok(p.j.ok && p.j.name === undefined && config.get().name === 'Alex', 'saving only cards (the JSON editor) leaves the name alone');
+  p = await phone('POST', '/api/save', { cards: {}, name: '<img src=x onerror=alert(1)>\u202e\u0000 ' + 'x'.repeat(100) }, code);
+  ok(
+    !/[<>\u202e\u0000]/.test(config.get().name) && Array.from(config.get().name).length <= 30 && p.j.name === config.get().name,
+    'markup, direction marks and control characters are removed from the name, and it is cut at 30 characters'
+  );
+  p = await phone('POST', '/api/save', { cards: {}, name: 'עדן' }, code);
+  ok(config.get().name === 'עדן', 'a Hebrew name is kept as typed');
+  p = await phone('POST', '/api/save', { cards: {}, name: 42 }, code);
+  ok(config.get().name === 'עדן', 'a name that is not text changes nothing');
+  p = await phone('POST', '/api/save', { cards: {}, name: '' }, code);
+  ok(p.j.name === '' && config.get().name === undefined, 'an empty name clears it');
+  // a greeting card written as JSON with a name: adopted when there is no name, dropped when there is one
+  await phone('POST', '/api/save', { cards: {}, name: '' }, code);
+  p = await phone('POST', '/api/save', { cards: { greeting: { type: 'greeting', name: 'Noa', line: 'date' } } }, code);
+  ok(
+    config.get().name === 'Noa' && p.j.cards.greeting.name === undefined && p.j.cards.greeting.line === 'date',
+    'a name in a Greeting card (JSON editor) becomes Your name when there is none; the card keeps its other options'
+  );
+  p = await phone('POST', '/api/save', { cards: { greeting: { type: 'greeting', name: 'Other' } } }, code);
+  ok(
+    config.get().name === 'Noa' && config.get().cards.greeting.name === undefined,
+    'with a name set, a name in a Greeting card is dropped'
+  );
+  await phone('POST', '/api/save', { cards: {}, name: '' }, code);
+  // the same setting typed on the TV with its keyboard (the manager app's Your name screen): the service's own route
+  r = await call(cards, '/api/cards/name', 'POST', { name: '  Alex <b> ' });
+  ok(
+    r.j.ok && r.j.name === 'Alex b' && config.get().name === 'Alex b',
+    'a name typed on the TV is saved, cleaned like the one from the phone'
+  );
+  r = await call(cards, '/api/cards/name', 'POST', { name: 5 });
+  ok(r.j.error && config.get().name === 'Alex b', 'a name that is not text is refused');
+  r = await call(cards, '/api/cards/name', 'POST', { name: '' });
+  ok(r.j.ok && r.j.name === '' && config.get().name === undefined, 'an empty name typed on the TV clears it');
+  // the launcher draws it: greetText() as the launcher has it, with the texts of en.json
+  {
+    const js = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'cards.js'), 'utf8');
+    const en = JSON.parse(fs.readFileSync(path.join(root, 'i18n', 'en.json'), 'utf8'));
+    const sb = { cfg: {}, t: s => en[s] || s };
+    vm.createContext(sb);
+    vm.runInContext(source(js, 'greetText'), sb, { filename: 'greetText' });
+    const at = h => {
+      sb.Date = class extends Date {
+        getHours() {
+          return h;
+        }
+      };
+      return vm.runInContext('greetText()', sb);
+    };
+    ok(at(9) === 'Good morning' && at(14) === 'Good afternoon' && at(20) === 'Good evening', 'without a name the greeting is what it was');
+    sb.cfg.name = 'Alex';
+    ok(
+      at(9) === 'Good morning, \u2068Alex\u2069' && at(20) === 'Good evening, \u2068Alex\u2069',
+      'with a name set the greeting says it, between direction isolates so a right-to-left name keeps its order'
+    );
+    sb.cfg.name = '$& $1 עדן';
+    ok(at(20) === 'Good evening, \u2068$& $1 עדן\u2069', 'a name is put in as it is, even with $ in it');
+    delete sb.cfg.name;
+    ok(at(20) === 'Good evening', 'clearing the name takes it out of the greeting');
+  }
   // the manager's Cards screen: the places and a card type for one of them
   r = await call(cards, '/api/cards/status', 'POST', {});
   ok(r.j.slots.length === 3 && r.j.types.some(t => t.type === 'ha-camera'), 'the manager gets the places and the card types');
@@ -239,5 +332,21 @@ run(async () => {
   await sleep(50);
   p = await phone('GET', '/').catch(() => ({ code: 0 }));
   ok(p.code === 0, 'the page is closed after stop');
+  // the manager's Your name screen: the QR code opens the page with only the name
+  r = await call(cards, '/api/cards/pair', 'POST', { name: true });
+  ok(
+    r.j.qr.indexOf(':8792/?name=1#' + r.j.code) > 0 && r.j.code !== code,
+    'the Your name screen gets a QR code for the page with just the name'
+  );
+  p = await phone('GET', '/');
+  ok(p.code === 200 && /NAMEONLY/.test(p.text), 'the page is the same one; it reads ?name=1 to show only the name');
+  p = await phone('POST', '/api/save', { name: 'Dana' }, r.j.code);
+  ok(
+    p.j.ok && p.j.name === 'Dana' && p.j.cards === undefined && config.get().name === 'Dana',
+    'saving only the name leaves the cards alone'
+  );
+  await phone('POST', '/api/save', { name: '' }, r.j.code);
+  await call(cards, '/api/cards/pair', 'POST', { stop: true });
+  await sleep(50);
   om.server.close();
 });

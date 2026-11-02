@@ -233,6 +233,24 @@ body {
   color: var(--ink);
   font-weight: 600;
 }
+/* Your name, typed with the TV's keyboard (OK focuses it, OK again saves) */
+#nameinput {
+  display: none;
+  position: absolute;
+  left: 96px;
+  top: 540px;
+  width: 760px;
+  height: 76px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 38px;
+  outline: 0;
+  padding: 0 32px;
+  font: inherit;
+  font-size: 34px;
+  background: var(--ink);
+  color: #0b0c10;
+}
 #sharemsg {
   position: absolute;
   left: 96px;
@@ -296,6 +314,7 @@ body {
 }
 [dir="rtl"] #share h2,
 [dir="rtl"] #share ol,
+[dir="rtl"] #nameinput,
 [dir="rtl"] #sharemsg,
 [dir="rtl"] #shareurl,
 [dir="rtl"] #shareclose {

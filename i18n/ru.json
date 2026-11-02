@@ -705,5 +705,12 @@
  "Dial": "Круговой индикатор",
  "Circular dial on the right": "Круговой индикатор справа",
  "System default (LG webOS)": "Системный по умолчанию (LG webOS)",
- "Stock TV volume bar": "Стандартная панель громкости телевизора"
+ "Stock TV volume bar": "Стандартная панель громкости телевизора",
+ "Your name": "Ваше имя",
+ "Not set": "Не задано",
+ "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Показывается в приветствии на главном экране, например «Добрый вечер, Sam». Оставьте пустым, чтобы имя не показывалось.",
+ "the greeting on Home": "приветствие на главном экране",
+ "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "Имя в приветствии на главном экране («Добрый вечер, Sam»). Показывает QR-код: отсканируйте его телефоном в той же сети Wi-Fi и введите имя там; на телевизоре ничего не вводится. Пусто: приветствие без имени.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Введите своё имя и нажмите <b>Сохранить</b>. Главный экран будет приветствовать вас по имени.</li>",
+ "Or press OK and type it here": "Или нажмите OK и введите здесь"
 }

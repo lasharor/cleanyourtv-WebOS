@@ -750,5 +750,12 @@
  "System": "System",
  "Look": "Aussehen",
  "Top": "Oben",
- "Top & cards": "Oben & Karten"
+ "Top & cards": "Oben & Karten",
+ "Your name": "Dein Name",
+ "Not set": "Nicht eingerichtet",
+ "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Erscheint in der Begrüßung auf Home, z. B. „Guten Abend, Sam“. Leer lassen, um keinen Namen zu zeigen.",
+ "the greeting on Home": "die Begrüßung auf Home",
+ "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "Der Name in der Begrüßung auf Home („Guten Abend, Sam“). Zeigt einen QR-Code: Scanne ihn mit einem Telefon im selben WLAN und tippe den Namen dort ein; am Fernseher wird nichts getippt. Leer lassen: Begrüßung ohne Namen.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Gib deinen Namen ein und tippe auf <b>Speichern</b>. Home begrüßt dich damit.</li>",
+ "Or press OK and type it here": "Oder OK drücken und hier eintippen"
 }

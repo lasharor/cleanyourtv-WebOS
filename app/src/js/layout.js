@@ -316,6 +316,7 @@ function load() {
       if (liveOn()) apps.push({ id: '__live', title: t('Live TV') });
       store();
       rebuild();
+      tick(); /* the greeting with a name just set on the phone, not at the next quarter minute */
       WALL.sync();
       if (!perfReady) {
         perfReady = true;

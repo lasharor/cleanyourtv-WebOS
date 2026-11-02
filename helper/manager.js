@@ -5,7 +5,8 @@ const fs = require('fs');
 const P = require('./paths'),
   web = require('./web'),
   exec = require('./exec'),
-  debloat = require('./debloat');
+  debloat = require('./debloat'),
+  { cleanName } = require('./config');
 
 // the TV comes back to its last app after a restart; that must not be one of ours
 function fixLastApp() {
@@ -60,7 +61,8 @@ function create(ctx) {
       const standin = fs.existsSync(P.STANDIN) ? fs.readFileSync(P.STANDIN, 'utf8').trim() : '';
       ours = mounts.includes(' ' + P.HOME_APP + ' ') || (!!standin && mounts.includes(' ' + standin + ' '));
     } catch (_) {}
-    return Object.assign(updates.status(), {
+    const name = config.get().name; // "Your name" for the Home greeting; left out when none is set
+    return Object.assign(updates.status(), name ? { name } : {}, {
       options: opts,
       picker: Object.assign({}, config.get().picker || {}, { mode: inputkey().mode(), released: !!opts.inputKey && !inputkey().on() }),
       voice: voice ? (v => ({ installed: v.installed, enabled: v.enabled, ha: v.ha.configured }))(voice.status()) : null,
@@ -88,6 +90,12 @@ function create(ctx) {
       if (typeof o.lang === 'string' && /^([a-z]{2})?$/.test(o.lang)) {
         if (o.lang) c.lang = o.lang;
         else delete c.lang;
+      }
+      // "Your name" for the Home greeting; '' clears it
+      if (typeof o.name === 'string') {
+        const n = cleanName(o.name);
+        if (n) c.name = n;
+        else delete c.name;
       }
       if (typeof o.pickerPrewarm === 'boolean')
         c.picker = Object.assign(

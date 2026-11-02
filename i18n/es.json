@@ -706,5 +706,12 @@
  "System": "Sistema",
  "Look": "Aspecto",
  "Top": "Arriba",
- "Top & cards": "Arriba y tarjetas"
+ "Top & cards": "Arriba y tarjetas",
+ "Your name": "Tu nombre",
+ "Not set": "Sin configurar",
+ "Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.": "Aparece en el saludo de Home, por ejemplo «Buenas noches, Sam». Déjalo vacío para no mostrar nombre.",
+ "the greeting on Home": "el saludo en Home",
+ "The name in the greeting on Home (“Good evening, Sam”). Shows a QR code: scan it with a phone on the same Wi-Fi and type the name there; nothing is typed on the TV. Empty keeps the greeting without a name.": "El nombre en el saludo de Home («Buenas noches, Sam»). Muestra un código QR: escanéalo con un móvil en la misma Wi-Fi y escribe allí el nombre; en la TV no se escribe nada. Vacío: saludo sin nombre.",
+ "<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Type your name, then tap <b>Save</b>. Home greets you by it.</li>": "<li>Escribe tu nombre y toca <b>Guardar</b>. Home te saludará con él.</li>",
+ "Or press OK and type it here": "O pulsa OK y escríbelo aquí"
 }

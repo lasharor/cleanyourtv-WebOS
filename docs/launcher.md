@@ -73,6 +73,12 @@ tuner) and is offered only when the TV has that app and **Show LG's own Live TV*
 - **show app name**: shows or hides the large name of the focused app. When hidden in the plain layout (`below` mode, dock near the top), the dock moves up to the name's position. The dock stays where it is in `push` and `overlay` grid modes and when the dock is at the bottom;
 - **mark running apps** (a green dot on their tiles, or none);
 - the **clock** format (automatic, 12 or 24 hour);
+- **Your name** (optional): the greeting on Home then reads "Good evening, Sam" instead of "Good evening". The TV has no keyboard, so the row
+  opens the [manager app](manager.md), which shows a QR code: scan it with a phone on the same Wi-Fi, type the name and tap **Save**.
+  Or type it on the TV: press OK on the screen, type with the TV's keyboard in the field, and press OK again to save.
+  Clear the field and save to take the name out again. The name is at most 30 characters of plain text (no markup, no control or
+  direction characters); Hebrew and Arabic names are shown in their own direction inside the greeting. It is shown in the greeting above
+  the clock of themes that have one, in the Greeting card, and in `{{greeting}}` of a Text card. The Greeting card's **Name** box on the phone page is this same setting, not a second one;
 - the **theme** (see [Themes](themes.md)) and the **accent colour**; the theme list shows each theme's screenshot;
 - **Wallpapers**: your own photos behind Home, and how often they change (see [Wallpapers](wallpapers.md));
 - **More settings...**, which opens the [manager app](manager.md) for everything the TV and the service do.
@@ -91,7 +97,7 @@ same place.
 
 | Card | What it shows |
 |---|---|
-| Greeting | Good morning, afternoon or evening, with your name if you set one, and the date or the weather on a second line where there is room. |
+| Greeting | Good morning, afternoon or evening, with your name (**Your name** in **Customise**; the card's **Name** box on the phone page sets the same name), and the date or the weather on a second line where there is room. |
 | Weather | The temperature and the sky now at a place you search for on the phone page, from Open-Meteo (free, no account), with the next three days if you like; °C or °F. The TV asks at most every 30 minutes and keeps the last answer for when the internet is away. |
 | Home Assistant entity | One entity with an icon, its state (On, Off, 8.4 °C) and its name. Select it with the remote (it joins the row of top buttons) and press OK to switch a light, switch, fan or automation, or to run a scene or script. Locks, alarms and covers are never switched from the TV. |
 | Home Assistant entities | A list of entities, one per line on the phone page, with an optional title. |
@@ -105,8 +111,8 @@ picked from the entities Home Assistant has (a weather entity and a temperature 
 first the kind, such as lights or sensors, then the entity). It saves the same settings as the phone page. Its first row, **Connection**, says whether Home Assistant is linked and opens the manager app's Home Assistant screen with the code for the phone page.
 
 Names, texts and the other options are typed on your phone: **Cards** > **Set up from your phone** in the manager app shows a QR
-code. The page shows a form for each place, and **Edit as JSON** shows all cards at once, for example
-`{"greeting": {"type": "greeting", "name": "Sam"}}`. It stays open while you use it, at most an hour, and needs the code shown on
+code. Your name (the same setting as **Customise** > **Your name**, shown in every greeting) is the **Name** box of the Greeting card, and is there only while a place shows a Greeting card. (**Your name** in the manager app opens the same page with just that one box, so a theme without cards can have a name too.) The page shows a form for each place, and **Edit as JSON** shows all cards at once, for example
+`{"greeting": {"type": "greeting", "line": "date"}}`. A `name` in a Greeting card is taken as **Your name** when there is none yet, and the card keeps no name of its own. It stays open while you use it, at most an hour, and needs the code shown on
 the TV. The Home Assistant cards use the address and the long-lived access token set in the manager app under **More** >
 **Home Assistant** > **Set up from your phone**, the same ones [Voice](voice.md) uses. Without them a Home Assistant card says that
 Home Assistant is not set up; the TV asks Home Assistant for the states every 30 seconds while Home is shown. The phone page
@@ -196,6 +202,7 @@ Settings are stored on the TV in `/media/developer/cleanyourtv/config.json`:
 | `sort` | `usage` or `alpha`. |
 | `clock` | `auto`, `12` or `24`. |
 | `runDots` | `true` shows a green dot on open apps (off by default). |
+| `name` | "Your name" for the greeting on Home (up to 30 characters); absent when none is set. Set from the phone page, not by the launcher. |
 
 See [`config.example.json`](https://github.com/lasharor/cleanyourtv-WebOS/blob/main/config.example.json). Change settings in
 the launcher; the file is read and written by the service.

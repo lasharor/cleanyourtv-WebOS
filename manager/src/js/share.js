@@ -54,7 +54,25 @@ function pollShare(n) {
     }, 1000);
   });
 }
+/* Your name typed with the TV's keyboard (the field on the Your name screen): saved at once, then the screen closes */
+function saveTypedName() {
+  api('/api/cards/name', { name: $('nameinput').value }).then(
+    function (r) {
+      if (r && r.error) {
+        $('sharemsg').textContent = tr(r.error);
+        return;
+      }
+      closeShare();
+    },
+    function () {
+      $('sharemsg').textContent = tr('The service did not answer.');
+    }
+  );
+}
 function closeShare() {
+  clearTimeout(nameT);
+  $('nameinput').style.display = 'none';
+  $('nameinput').blur();
   $('share').style.display = 'none';
   if (shareMode === 'notify') {
     pop();
@@ -74,6 +92,17 @@ function closeShare() {
   if (shareMode === 'icons') {
     api('/api/icons/pair', { stop: true }).catch(function () {});
     pop();
+    return;
+  }
+  if (shareMode === 'name') {
+    api('/api/cards/pair', { stop: true }).catch(function () {});
+    pop();
+    load(); /* the name in the list */
+    /* opened from the launcher's Customise > Your name: back to Home, which greets you by it */
+    if (nameFromHome) {
+      nameFromHome = false;
+      api('/api/launch', { id: 'com.webos.app.home' }).catch(function () {});
+    }
     return;
   }
   if (shareMode === 'wall') {

@@ -7,7 +7,8 @@
 const http = require('http');
 const web = require('./web'),
   i18n = require('./i18n'),
-  nc = require('./netcompat');
+  nc = require('./netcompat'),
+  { cleanName } = require('./config');
 const SLOT_ID = /^[a-z][a-z0-9-]{0,19}$/,
   TYPE = /^[a-z][a-z0-9-]{0,30}$/,
   MAX_SLOTS = 12;
@@ -53,7 +54,8 @@ const TYPES = [
     name: 'Greeting',
     about: 'Good morning, good afternoon or good evening by the time of day, with a name and a second line: the date or the weather.',
     fields: [
-      { key: 'name', kind: 'text', label: 'Name (optional)' },
+      // the same setting as "Your name" (config.name), shown here too: it is not an option of the card
+      { key: 'name', kind: 'yourname', label: 'Name (optional)' },
       {
         key: 'line',
         kind: 'choice',
@@ -203,6 +205,7 @@ function create(ctx) {
     return {
       slots: slots().map(sl => ({ id: sl.id, name: T(SLOT_NAMES[sl.id] || sl.id), card: sl.card })),
       cards: config.get().cards || {},
+      name: config.get().name || '',
       ha: ha.ready(),
       types: /** @type {any[]} */ (TYPES).concat(packTypes()).map(ty => ({
         type: ty.type,
@@ -226,24 +229,49 @@ function create(ctx) {
     });
     return { ok: true };
   }
+  // A name typed on a Greeting card (before there was "Your name") becomes the name when there is none yet, and the cards keep no name:
+  // the greeting shows config.name only, so the card's Name box and "Your name" are one setting.
+  function adoptCardName() {
+    const cards = config.get().cards || {},
+      ids = Object.keys(cards).filter(id => cards[id] && cards[id].type === 'greeting' && 'name' in cards[id]);
+    if (!ids.length) return;
+    config.update('name (from a greeting card)', conf => {
+      const first = ids.map(id => cleanName(conf.cards[id].name)).filter(Boolean)[0];
+      if (first && !conf.name) conf.name = first;
+      ids.forEach(id => delete conf.cards[id].name);
+    });
+  }
+  adoptCardName();
   function save(cards) {
     const c = sanitize(cards) || {};
     config.update('cards (phone)', conf => {
       if (Object.keys(c).length) conf.cards = c;
       else delete conf.cards;
     });
-    return c;
+    adoptCardName();
+    return config.get().cards || {};
+  }
+
+  // "Your name" in the Home greeting (config.name), typed on the phone page; empty clears it
+  function saveName(v) {
+    const n = cleanName(v);
+    config.update('name (phone)', conf => {
+      if (n) conf.name = n;
+      else delete conf.name;
+    });
+    return n;
   }
 
   // ---- the phone page: LAN, short-lived, the code shown on the TV in every request (header x-code) ----
   let pair = null;
-  function startPair() {
+  // nameOnly: the QR code of the manager's Your name screen opens the page with just the name (/?name=1)
+  function startPair(nameOnly) {
     stopPair();
     const code = String(nc.randomInt(100000, 1000000));
     let bad = 0;
     const srv = http.createServer((req, res) => phone(req, res, code, () => ++bad));
     pair = { code, srv, url: 'http://' + web.lanIp() + ':' + PAIR_PORT, until: Date.now() + PAIR_MS, timer: setTimeout(stopPair, PAIR_MS) };
-    const out = { url: pair.url, code, qr: pair.url + '/#' + code, seconds: PAIR_MS / 1000 };
+    const out = { url: pair.url, code, qr: pair.url + (nameOnly ? '/?name=1' : '/') + '#' + code, seconds: PAIR_MS / 1000 };
     return new Promise(resolve => {
       srv.on('error', e => {
         stopPair();
@@ -285,7 +313,14 @@ function create(ctx) {
     }
     touch();
     if (u === '/api/state') return json(state(lang));
-    if (u === '/api/save' && req.method === 'POST') return json({ ok: true, cards: save((await web.body(req, 65536)).cards) });
+    if (u === '/api/save' && req.method === 'POST') {
+      const b = await web.body(req, 65536),
+        out = { ok: true };
+      // the JSON editor sends only the cards, the form sends the name with them
+      if (typeof b.name === 'string') out.name = saveName(b.name);
+      if (b.cards !== undefined) out.cards = save(b.cards);
+      return json(out);
+    }
     if (u === '/api/entities') {
       try {
         return json({ entities: await ha.entities() });
@@ -316,10 +351,13 @@ function create(ctx) {
     }
     if (req.method !== 'POST') return web.notFound(res);
     const b = await body(req);
-    if (u === '/api/cards/pair') return web.json(res, b.stop ? (stopPair(), {}) : await startPair());
+    if (u === '/api/cards/pair') return web.json(res, b.stop ? (stopPair(), {}) : await startPair(!!b.name));
     // the manager's Cards screen: the theme's places with their cards, and a card type picked for one of them
     if (u === '/api/cards/status') return web.json(res, state(i18n.lang(req, config.get().lang)));
     if (u === '/api/cards/set') return web.json(res, setType(String(b.slot || ''), String(b.type || '')));
+    // "Your name", typed on the TV with its keyboard (the manager app's Your name screen); '' clears it
+    if (u === '/api/cards/name')
+      return web.json(res, typeof b.name === 'string' ? { ok: true, name: saveName(b.name) } : { error: 'no name' });
     // the weather card: {lat, lon, unit} -> the weather there (Open-Meteo, at most every 30 minutes)
     if (u === '/api/cards/weather') return web.json(res, await weather.get(b.lat, b.lon, b.unit));
     // Home Assistant cards: {ids} -> their states (kept 20 s); {id} -> switched (lights, switches, fans, scenes, scripts)
@@ -355,11 +393,16 @@ function draw(){var box=$('slots');box.innerHTML='';$('sum').textContent=S.slots
   var f=el('div',{'class':'f'});sec.appendChild(f);fields(f,c);sel.onchange=function(){var o=S.cards[sl.id]&&S.cards[sl.id].type===sel.value?S.cards[sl.id]:{type:sel.value};fields(f,o)};box.appendChild(sec)});
  $('raw').value=JSON.stringify(S.cards,null,2)}
 function fields(f,c){f.innerHTML='';var ty=typeOf(c.type);if(!ty)return;ty.fields.forEach(function(fd){var l=el('label',{},fd.label),i;
+  if(fd.kind==='yourname'){var yi=el('input',{'class':'yn',type:'text',maxlength:30,autocomplete:'off',dir:'auto'});yi.value=$('yname').value;yi.oninput=function(){$('yname').value=yi.value;syncYn(yi)};f.appendChild(l);f.appendChild(yi);return}
   if(fd.kind==='choice'){i=el('select',{'data-k':fd.key});fd.choices.forEach(function(ch){i.appendChild(el('option',{value:ch[0]},ch[1]))})}
   else if(fd.kind==='long'){i=el('textarea',{'data-k':fd.key,rows:4})}else if(fd.kind==='place'){f.appendChild(l);place(f,c);return}else if(fd.kind==='entities'){i=el('textarea',{'data-k':fd.key,rows:5,list:'ents',autocapitalize:'off',spellcheck:'false'})}else if(fd.kind==='entity'){i=el('input',{'data-k':fd.key,type:'text',list:fd.only==='camera'?'cams':fd.only==='weather'?'wxs':fd.only==='sensor'?'sens':'ents',autocomplete:'off',autocapitalize:'off'})}else i=el('input',{'data-k':fd.key,type:'text',autocomplete:'off'});
   if(fd.default)i.setAttribute('placeholder',fd.default);i.value=c[fd.key]===undefined?'':String(c[fd.key]);f.appendChild(l);f.appendChild(i)});
  if(ty.ha&&!S.ha)f.insertBefore(el('p',{'class':'m e'},t('Home Assistant is not set up yet: set its address and token in the manager app, More > Home Assistant.')),f.firstChild);
  if(c.type==='template')f.appendChild(el('p',{'class':'h'},t('Use {{greeting}}, {{time}}, {{date}} and {{weekday}} for what changes, and {{weather.temp}} and {{weather.text}} when a weather card is on Home; **bold**, *italic* and a line starting with # for a heading.')))}
+/* "Your name" and the Name box of a Greeting card are one setting: typing in one fills the other */
+function syncYn(src){[].forEach.call(document.querySelectorAll('.yn'),function(x){if(x!==src)x.value=$('yname').value})}
+/* the page of the Your name screen (/?name=1) has only the name; the Cards page has it only in the Greeting card's Name box */
+var NAMEONLY=/[?&]name=1/.test(location.search);
 /* a place for the weather: searched by name (Open-Meteo, through the TV), its coordinates kept in two hidden fields */
 function place(f,c){var i=el('input',{'data-k':'place',type:'search',autocomplete:'off',placeholder:t('City or town')}),la=el('input',{'data-k':'lat','data-n':'1',type:'hidden'}),lo=el('input',{'data-k':'lon','data-n':'1',type:'hidden'}),
   b=el('button',{type:'button'},t('Search')),r=el('div',{'class':'pl'});i.value=c.place||'';la.value=c.lat===undefined?'':c.lat;lo.value=c.lon===undefined?'':c.lon;
@@ -371,10 +414,11 @@ function fromForms(){var out={};[].forEach.call(document.querySelectorAll('secti
   if(!typeOf(ty)&&old.type===ty)c=old;[].forEach.call(sec.querySelectorAll('.f [data-k]'),function(i){if(i.value!=='')c[i.getAttribute('data-k')]=i.getAttribute('data-n')?+i.value:i.value});
   var sl=null;S.slots.forEach(function(x){if(x.id===id)sl=x});if(ty==='none'&&!(sl&&sl.card))return;out[id]=c});
  for(var k in S.cards)if(!(k in out)&&!S.slots.some(function(x){return x.id===k}))out[k]=S.cards[k];return out}
-function save(cards){msg(t('Saving…'));api('save',{cards:cards}).then(function(r){if(r.error)return msg(t(r.error),1);S.cards=r.cards||{};draw();msg(t('Saved. Open Home on the TV to see it.'))},function(e){msg(e.error,1)})}
+function save(cards){msg(t('Saving…'));var b={};if(NAMEONLY||$('yname').value!==(S.name||''))b.name=$('yname').value;if(!NAMEONLY)b.cards=cards;api('save',b).then(function(r){if(r.error)return msg(t(r.error),1);if(r.cards)S.cards=r.cards;if(typeof r.name==='string'){S.name=r.name;$('yname').value=r.name}draw();msg(t('Saved. Open Home on the TV to see it.'))},function(e){msg(e.error,1)})}
 /* the entities of Home Assistant, offered while typing an entity id */
 function ents(){if(!S.ha)return;api('entities').then(function(j){var a=$('ents'),b=$('cams'),w=$('wxs'),n=$('sens');a.innerHTML=b.innerHTML=w.innerHTML=n.innerHTML='';(j.entities||[]).forEach(function(e){var o=el('option',{value:e.id},e.name);a.appendChild(o);if(/^camera\\./.test(e.id))b.appendChild(o.cloneNode(true));if(/^weather\\./.test(e.id))w.appendChild(o.cloneNode(true));if(/^sensor\\./.test(e.id))n.appendChild(o.cloneNode(true))})})}
-function state(){return api('state').then(function(s){S=s;$('login').className='hide';$('main').className='';draw();ents()})}
+function state(){return api('state').then(function(s){S=s;$('yname').value=S.name||'';if(NAMEONLY){$('nmbox').className='nm';$('slots').className='hide';$('jsonbox').className='hide';document.title=t('Your name');$('ttl').textContent=t('Your name')}$('login').className='hide';$('main').className='';draw();ents()})}
+$('yname').oninput=function(){syncYn(null)};
 $('save').onclick=function(){save(fromForms())};
 $('rs').onclick=function(){var c;try{c=JSON.parse($('raw').value||'{}')}catch(e){return msg(t('This is not valid JSON.'),1)}save(c)};
 $('go').onclick=function(){code=$('code').value.trim();state().catch(function(){})};
@@ -388,12 +432,12 @@ function phonePage(lang) {
 h1{font-size:26px;margin:4px 0 4px}h2{font-size:20px;margin:0 0 10px}p{color:#aaa;margin:6px 0}.m{padding:12px 14px;border-radius:12px;background:#1d2a1f;margin:12px 0}.m.e{background:#3a1717}
 button,input,select,textarea{font:inherit;display:block;width:100%;padding:14px;border-radius:12px;border:1px solid #333;background:#1a1b21;color:#eee;margin:8px 0}
 button{text-align:center}button.p{background:#f5f6f8;color:#111;font-weight:600;border:0}textarea{resize:vertical}label{display:block;color:#aaa;margin:12px 0 0;font-size:15px}
-.sl{padding:16px;border-radius:14px;background:#15161b;margin:14px 0}.h{font-size:14px}.hide{display:none}details{margin:28px 0}summary{color:#aaa}
+.sl,.nm{padding:16px;border-radius:14px;background:#15161b;margin:14px 0}.h{font-size:14px}.hide{display:none}details{margin:28px 0}summary{color:#aaa}
 .pl .po{text-align:left;margin:6px 0}#raw{font:13px ui-monospace,Menlo,monospace;min-height:220px}[dir=rtl] body{text-align:right}</style>
-<h1>${T('Cards')}</h1><p id=sum>${T('Connecting to the TV…')}</p>
+<h1 id=ttl>${T('Cards')}</h1><p id=sum>${T('Connecting to the TV…')}</p>
 <div id=login class=hide><p>${T('Enter the code shown on the TV.')}</p><input id=code inputmode=numeric autocomplete=one-time-code><button class=p id=go>${T('Continue')}</button></div>
-<datalist id=ents></datalist><datalist id=cams></datalist><datalist id=wxs></datalist><datalist id=sens></datalist><div id=main class=hide><div id=msg></div><div id=slots></div><button class=p id=save>${T('Save')}</button>
-<details><summary>${T('Edit as JSON')}</summary><p class=h>${T('All cards at once, by slot: {"greeting": {"type": "greeting", "name": "Sam"}}. A type the TV does not know yet leaves its slot empty.')}</p>
+<datalist id=ents></datalist><datalist id=cams></datalist><datalist id=wxs></datalist><datalist id=sens></datalist><div id=main class=hide><div id=msg></div><section class="nm hide" id=nmbox><h2>${T('Your name')}</h2><p class=h>${T('Shown in the greeting on Home, for example “Good evening, Sam”. Leave it empty for no name.')}</p><input id=yname maxlength=30 autocomplete=off dir=auto></section><div id=slots></div><button class=p id=save>${T('Save')}</button>
+<details id=jsonbox><summary>${T('Edit as JSON')}</summary><p class=h>${T('All cards at once, by slot: {"greeting": {"type": "greeting", "name": "Sam"}}. A type the TV does not know yet leaves its slot empty.')}</p>
 <textarea id=raw spellcheck=false autocapitalize=off></textarea><button id=rs>${T('Save JSON')}</button></details></div>
 ` +
     i18n.script(lang, PHONE_JS) +
