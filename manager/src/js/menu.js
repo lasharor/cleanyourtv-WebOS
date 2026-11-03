@@ -687,10 +687,10 @@ function build() {
       sub: 'LG starts these in the background so they open faster, and checks again every 5 minutes · off frees memory · set again at every boot',
       fn: function () {},
     });
-    if (!pr || !pr.available)
-      rows.push({ label: 'Not available', sub: (pr && pr.error) || 'this TV has no preload manager', fn: function () {} });
+    if (!preSet || !preSet.available)
+      rows.push({ label: 'Not available', sub: (preSet && preSet.error) || 'this TV has no preload manager', fn: function () {} });
     else
-      pr.apps.forEach(function (a) {
+      preSet.apps.forEach(function (a) {
         var fixed = preloadFixed(a);
         rows.push({
           label: preloadName(a.id),
@@ -704,7 +704,7 @@ function build() {
               (a.saved ? ' · changed by you' : ''),
           fn: function () {
             if (fixed) return banner(fixed, 'err');
-            prApp = a.id;
+            preApp = a.id;
             push('preloadapp');
           },
         });
@@ -714,7 +714,7 @@ function build() {
     return;
   }
   if (view === 'preloadapp') {
-    var pa = preloadApp(prApp);
+    var pa = preloadApp(preApp);
     if (!pa) {
       pop();
       return;
@@ -722,13 +722,13 @@ function build() {
     /* only the modes this TV itself uses for some app (now, or when it started) and this app's own: criu or full are not offered where
        LG uses neither, since the row steps through them one by one and a TV without that kernel support could be left with a mode it cannot run */
     var seen = {};
-    (pr.apps || []).forEach(function (x) {
+    (preSet.apps || []).forEach(function (x) {
       seen[x.mode] = true;
       if (x.base) seen[x.base.mode] = true;
     });
     seen[pa.mode] = true;
     var states = ['off'].concat(
-      pr.modes.filter(function (m) {
+      preSet.modes.filter(function (m) {
         return seen[m];
       })
     );
@@ -751,7 +751,7 @@ function build() {
       label: 'How often',
       sub: pa.type + ' · periodic: again at every check · oneshot: once',
       fn: function () {
-        preloadSet(pa.id, { type: pr.types[(pr.types.indexOf(pa.type) + 1) % pr.types.length] });
+        preloadSet(pa.id, { type: preSet.types[(preSet.types.indexOf(pa.type) + 1) % preSet.types.length] });
       },
     });
     rows.push({
@@ -1800,8 +1800,8 @@ var DEBLOAT = [
   { id: 'suggestions', label: 'Suggestions and nudges', what: 'contentminer, nudge, sportsalarm' },
 ];
 /* Experimental: preloaded apps (helper/preload.js). The TV's policy per app: off, or how much of it is started (mode), and how often (type). */
-var pr = null,
-  prApp = '';
+var preSet = null,
+  preApp = '';
 var PRELOAD_NAMES = {
   'youtube.leanback.v4': 'YouTube',
   netflix: 'Netflix',
@@ -1823,7 +1823,7 @@ function preloadName(id) {
   return PRELOAD_NAMES[id] || id;
 }
 function preloadApp(id) {
-  var l = (pr && pr.apps) || [];
+  var l = (preSet && preSet.apps) || [];
   for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i];
   return null;
 }
@@ -1837,7 +1837,7 @@ function preloadFixed(a) {
 function preloadLoad(stay) {
   api('/api/preload').then(
     function (r) {
-      pr = r;
+      preSet = r;
       if (stay === true) {
         build();
         draw();
@@ -1853,7 +1853,7 @@ function preloadSet(id, change) {
   for (var k in change) body[k] = change[k];
   api('/api/preload', body, 20000).then(
     function (r) {
-      pr = r;
+      preSet = r;
       if (r.error) banner(r.error, 'err');
       build();
       draw();
