@@ -1,4 +1,4 @@
-// The phone page where Spotify is connected for the Now playing card (nowplaying.js): a short-lived server on the LAN, port 8795, that
+// The phone page where Spotify is connected for the Now playing card (nowplaying.js): a short-lived server on the LAN, port 8797, that
 // needs the code shown on the TV in every request (header x-code), like the other phone pages (Wallpapers 8791, Cards 8792, Android box
 // 8793, App icons 8794). It stays open ten minutes, and up to an hour while it is used. Plain script for iOS Safari and Android Chrome, in
 // the phone's language (i18n.js). It is not encrypted: the Client ID and the pasted address travel over the Wi-Fi.
@@ -7,7 +7,7 @@ const http = require('http');
 const web = require('./web'),
   i18n = require('./i18n'),
   nc = require('./netcompat');
-const PORT = 8795,
+const PORT = 8797,
   MS = 10 * 60 * 1000;
 
 function create(ctx) {

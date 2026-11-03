@@ -8,7 +8,7 @@ const fs = require('fs'),
   path = require('path');
 const { root, helper, ok, run } = require('./lib');
 
-// every .js under helper/, the bundled add-ons included (helper/addons-bundled/<id>/service.js)
+// every .js under helper/, the bundled add-ons included (helper/addons-bundled/<id>/service.js), and the catalog add-ons (addons/)
 function walk(dir, out) {
   for (const n of fs.readdirSync(dir)) {
     const f = path.join(dir, n);
@@ -24,7 +24,7 @@ const SHAPES = [/\bconst\s+(PAIR_PORT|PORT)\s*=\s*(\d{4,5})/g, /\bconst\s+(DEFAU
 
 run(async () => {
   const claims = [];
-  for (const f of walk(helper, [])) {
+  for (const f of walk(helper, []).concat(walk(path.join(root, 'addons'), []))) {
     const text = fs.readFileSync(f, 'utf8');
     for (const re of SHAPES) {
       re.lastIndex = 0;

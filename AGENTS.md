@@ -30,7 +30,7 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 | Picture notifications | `notify/app/`, `helper/notify.js`, `helper/notifyapi.js` |
 | Voice (Moonshine, OpenRouter, Home Assistant) | `helper/voice.js` (microphone, recogniser), `helper/answers.js` (Assist, OpenRouter, your server), `voice/` |
 | Themes | `helper/themeschema.js` (the schema), `helper/theme.js` (downloads), `themes/` (read from GitHub), `docs/themes.md` |
-| Wallpapers | `helper/wallpapers.js` (library, phone page, Immich sync), `app/src/js/wall.js` (rotation on Home), `docs/wallpapers.md` |
+| Wallpapers | `helper/wallpapers.js` (uploads, phone page, the photo sources add-ons provide), `app/src/js/wall.js` (rotation on Home), `docs/wallpapers.md`; Immich is the catalog add-on `addons/catalog/immich` |
 | The report people attach to issues | `helper/sharelog.js` (`node sharelog.js --print` prints it) |
 | Node 8 compatibility helpers, diagnostics | `helper/netcompat.js`, `helper/diag.js` |
 | Build and checks | `ipk/build.py`, `tools/build-pages.js`, `tools/check.sh`, the tests in `tools/test/` |

@@ -16,7 +16,9 @@ local network on request, and an optional notification endpoint is off by defaul
 | 8793 | Android box page | Ten minutes while its QR screen is open in the manager app: a 6-digit code shown on the TV; see [Android box](android-box.md) |
 | 8792 | Cards page | The same, for the options of the cards on Home; see [Cards](launcher.md#cards) |
 | 8794 | App icons page | The same, for choosing a picture for an app; see [Your own icon](launcher.md#your-own-icon) |
-| 8795 | Spotify now playing page | The same, to connect Spotify; see [Spotify now playing](launcher.md#spotify-now-playing) |
+| 8795 | Immich page | The same, for the Immich add-on (address, API key, albums); see [Wallpapers](wallpapers.md#immich-add-on) |
+| 8796 | Unsplash page | The same, for the Unsplash add-on (Access Key, search words); see [Wallpapers](wallpapers.md#unsplash-add-on) |
+| 8797 | Spotify now playing page | The same, to connect Spotify; see [Spotify now playing](launcher.md#spotify-now-playing) |
 
 Every page takes a port of its own, and each one is listed here. `tools/test/ports.test.js` reads the numbers out of the code and
 fails on a duplicate — two pages that claim one port are not a merge conflict, they are a race: the second `listen` fails and which
@@ -62,7 +64,7 @@ Waking a speaker (the output button, only when you choose a speaker that Spotify
 
 Optional, and only with a Spotify now playing card. You bring your own Spotify app: the service uses its **Client ID** (not a secret) and
 the sign-in code flow with PKCE, so no client secret is ever needed or stored. The sign-in happens on its own phone page (port
-8795, opened from the manager app, ten minutes to an hour, plain HTTP like the other phone pages: the address you paste back and the Client ID are visible on
+8797, opened from the manager app, ten minutes to an hour, plain HTTP like the other phone pages: the address you paste back and the Client ID are visible on
 your Wi-Fi while you type them). The service then asks `accounts.spotify.com` for the tokens and `api.spotify.com` for what plays,
 over HTTPS, and fetches the cover from `*.scdn.co`. The scopes are `user-read-currently-playing` and `user-read-playback-state`
 (what plays) and `user-modify-playback-state` (the card's buttons: play, pause, next, previous, and the seek that puts a song back where it was when the cover opens the Spotify app; the output button lists the

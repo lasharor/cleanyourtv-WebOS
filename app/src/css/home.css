@@ -654,6 +654,22 @@ body {
 body.wpon {
   background-image: none;
 }
+/* the credit a photo source asks for (Unsplash: the photographer), small, in the bottom right corner */
+#wpc {
+  position: absolute;
+  right: 40px;
+  bottom: 24px;
+  max-width: 900px;
+  padding: 6px 14px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: none;
+}
 /* cards: small widgets in the theme's slots (app/src/js/cards.js); placed like the clock, from the slot's edges */
 #cards {
   position: absolute;

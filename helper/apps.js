@@ -432,7 +432,8 @@ function create(ctx) {
     delete c.voice;
     delete c.notifyApi;
     delete c.theme;
-    delete c.wallpapers; // holds the Immich key; the launcher gets only a stamp that changes with the set of photos
+    delete c.wallpapers; // the launcher gets only a stamp that changes with the set of photos
+    delete c.addons; // the settings of add-ons: the address and key of a photo source, for example
     delete c.androidBox; // the box's address stays with the service
     delete c.spotify; // the Client ID and the Spotify tokens
     const theme = ctx.feature('theme'),

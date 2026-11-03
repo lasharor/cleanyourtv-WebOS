@@ -13,7 +13,7 @@ const SECRET1 = 'ACCESS-SECRET-one',
 
 function phone(method, p, body, code, port) {
   return new Promise((resolve, reject) => {
-    const r = http.request({ host: '127.0.0.1', port: port || 8795, path: p, method, headers: { 'x-code': code || '' } }, res => {
+    const r = http.request({ host: '127.0.0.1', port: port || 8797, path: p, method, headers: { 'x-code': code || '' } }, res => {
       const b = [];
       res.on('data', c => b.push(c));
       res.on('end', () => {
@@ -679,7 +679,7 @@ run(async () => {
   else {
     const code = r.j.code;
     ok(
-      /:8795/.test(r.j.url || '') && /^[0-9]{6}$/.test(code || '') && /#/.test(r.j.qr || ''),
+      /:8797/.test(r.j.url || '') && /^[0-9]{6}$/.test(code || '') && /#/.test(r.j.qr || ''),
       'the settings page opens a phone page with a code and a QR address'
     );
     await sleep(100);
