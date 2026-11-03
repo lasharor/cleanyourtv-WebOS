@@ -32,7 +32,6 @@ function create(ctx) {
   const { config } = ctx;
   const updates = require('./updates').create(ctx);
   const inputhook = ctx.inputhook || require('./inputhook');
-  const preload = require('./preload').create(ctx);
   // the Input key part may be missing (failed to load): fall back to plain rules
   const inputkey = () =>
     ctx.feature('inputkey') || {
@@ -111,7 +110,7 @@ function create(ctx) {
       ctx.audio.syncStockVolumeOSD(next.volumeTheme);
     }
     if (next.closePreloaded && next.closePreloaded.length && String(next.closePreloaded) !== String(cur.closePreloaded))
-      preload.apply().catch(() => {});
+      ((ctx.feature('preload') || {}).apply || (() => Promise.resolve()))(true).catch(() => {});
     ensureHook();
     return next;
   }
@@ -224,7 +223,6 @@ function create(ctx) {
     paths: ['/api/frontend-ok', '/api/undo'],
     handle,
     start: () => {
-      preload.start();
       return setInterval(updates.watchPackage, 120000);
     },
     check: updates.check,

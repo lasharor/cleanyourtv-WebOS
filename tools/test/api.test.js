@@ -292,6 +292,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       'apps',
       'running',
       'zram',
+      'preload',
       'fstrim',
       'addons',
     ];
