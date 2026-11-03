@@ -50,7 +50,7 @@ LG's preload manager (`webos-preload-manager`) starts some apps in the backgroun
 browser, Home, the inputs. It looks again every 5 minutes, so an app you close comes back. On a TV with little memory that can cost
 more than it saves.
 
-In the manager app, **Experimental > Preloaded apps** lists every app in the TV's preload policy with what it costs in memory.
+In the manager app, **Experimental > Preloaded apps** lists every app in the TV's preload policy with the free memory LG wants before it preloads it (the `requiredMemory` the preload manager reports, in MB as far as I know; it is not a measured size of the app).
 Select an app to change:
 
 - **State**: *off* (never preloaded) or how much of the app LG starts: *partial*, *semi-full*, *full*, *criu* (restored from a

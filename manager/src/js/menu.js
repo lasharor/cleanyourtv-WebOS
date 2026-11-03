@@ -611,7 +611,12 @@ function build() {
           label: preloadName(a.id),
           sub: fixed
             ? fixed
-            : preloadState(a) + (a.enabled ? ' · ' + a.type : '') + ' · ' + a.memory + ' MB' + (a.saved ? ' · changed by you' : ''),
+            : preloadState(a) +
+              (a.enabled ? ' · ' + a.type : '') +
+              ' · ' +
+              a.memory +
+              ' MB free needed' +
+              (a.saved ? ' · changed by you' : ''),
           fn: function () {
             if (fixed) return banner(fixed, 'err');
             prApp = a.id;
@@ -630,7 +635,11 @@ function build() {
       return;
     }
     var states = ['off'].concat(pr.modes);
-    rows.push({ label: preloadName(pa.id), sub: pa.id + ' · needs about ' + pa.memory + ' MB while preloaded', fn: function () {} });
+    rows.push({
+      label: preloadName(pa.id),
+      sub: pa.id + ' · LG preloads it only while ' + pa.memory + ' MB of memory is free (LG’s own figure)',
+      fn: function () {},
+    });
     rows.push({
       label: 'State',
       sub:
