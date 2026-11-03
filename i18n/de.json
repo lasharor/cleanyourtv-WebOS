@@ -816,5 +816,7 @@
  "Key remapping is off": "Tasten belegen ist aus",
  "Off. Switch it on to remap buttons.": "Aus. Schalte es ein, um Tasten umzubelegen.",
  "Up to 12 buttons can be used": "Bis zu 12 Tasten sind möglich",
- "Nothing was pressed.": "Es wurde nichts gedrückt."
+ "Nothing was pressed.": "Es wurde nichts gedrückt.",
+ "Remove every remapped button?": "Alle umbelegten Tasten entfernen?",
+ "No, keep them": "Nein, behalten"
 }

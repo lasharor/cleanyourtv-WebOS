@@ -8,18 +8,21 @@
 //   POST /api/remap/fire         {code} runs the key's action; scripts/remapkey.sh calls it when the hook reports the key
 // The feature is off until the manager switches it on (config.json: remapOn). While it is off nothing runs: no binds in the hook, the hook is
 // not injected for it, a button press does nothing. The saved keys are kept, so switching it on again brings them back.
-// The keys are kept in config.json (remap: {"<code>": {type, id, label}}). An action is one of: app (id: the TV's app id), input (id: the
+// The keys are kept in config.json (remap: {"<code>": {type, id, label, key}}; key is LG's name of the button, KEY_AMAZON, found when it was
+// learned (keynames.js) and only used to show "Prime Video"). An action is one of: app (id: the TV's app id), input (id: the
 // input's app id, com.webos.app.hdmiN), live (Live TV in the launcher), home (the Home screen), picker (the Inputs list).
-// Nothing is changed on the TV's disk: the binds live in the hook's keybinds.json, which only works while the hook is in LG's input
-// service, so a reboot without the boot scripts gives every key back to LG.
+// Nothing under /usr, /etc or the firmware changes: the binds live in the hook's keybinds.json and the buttons in config.json. The binds
+// only work while the hook is in LG's input service, so a reboot without the boot scripts gives every key back to LG.
 const fs = require('fs');
 const P = require('./paths'),
   web = require('./web'),
-  exec = require('./exec');
+  exec = require('./exec'),
+  keynames = require('./keynames');
 
 const TYPES = ['app', 'input', 'live', 'home', 'picker'];
 const NEEDS_ID = { app: /^[\w.\-]{1,100}$/, input: /^[\w.\-]{1,100}$/ };
 const CODE = /^\d{1,4}$/;
+const norm = c => String(parseInt(c, 10)); // "0103" and "103" are the same button
 const MAX_KEYS = 12;
 const HOME = 'com.webos.app.home';
 const REPEAT_MS = 700; // a held button repeats: one press runs the action once
@@ -32,6 +35,7 @@ function clean(e) {
     if (typeof e.id !== 'string' || !NEEDS_ID[e.type].test(e.id)) return null;
     out.id = e.id;
   }
+  if (typeof e.key === 'string' && keynames.NAME.test(e.key)) out.key = e.key; // LG's name of the button (KEY_AMAZON), only to show it
   if (typeof e.label === 'string' && e.label.replace(/[\u0000-\u001f]/g, ' ').trim())
     out.label = e.label
       .replace(/[\u0000-\u001f]/g, ' ')
@@ -45,7 +49,6 @@ function create(ctx) {
   const inputhook = ctx.inputhook || require('./inputhook');
   const feature = n => (ctx.feature ? ctx.feature(n) : null);
   const last = {}; // code -> when it last ran
-  let fired = null; // what the last key press did, for the manager and Share log
 
   const table = () => {
     const r = config.get().remap,
@@ -58,12 +61,24 @@ function create(ctx) {
     return out;
   };
   const codes = () => Object.keys(table());
+  // the keys as the manager shows them: with the button's name ("Prime Video") when LG's name for it is known
+  const shown = () => {
+    const t = table(),
+      out = {};
+    for (const c of Object.keys(t)) {
+      const n = keynames.label(t[c].key || keynames.CODES[c]);
+      out[c] = n ? Object.assign({ name: n }, t[c]) : t[c];
+    }
+    return out;
+  };
   const enabled = () => config.get().remapOn === true;
   const active = () => (enabled() ? codes() : []); // the keys the hook gets binds for
-  // the keys that already do something of ours
+  // the keys that already do something of ours (the Input key only while it is taken over: off, the button is LG's again)
   const taken = () => {
     const k = config.keys(),
-      t = [String(k.input || '241')];
+      ik = feature('inputkey'),
+      t = [];
+    if (!ik || !ik.on || ik.on()) t.push(String(k.input || '241'));
     for (const n of ['home', 'voice', 'guide']) if (k[n]) t.push(String(k[n]));
     return t;
   };
@@ -77,11 +92,13 @@ function create(ctx) {
     if (!fs.existsSync(P.STANDIN)) return;
     try {
       const up = fs.readFileSync(P.PROC + '/uptime', 'utf8').split(' ')[0];
-      fs.writeFileSync('/tmp/cleanyourtv-home-params', up + ' ' + JSON.stringify(params));
+      fs.writeFileSync(P.HOME_PARAMS, up + ' ' + JSON.stringify(params));
     } catch (_) {}
   }
   async function launch(id, params) {
-    const box = feature('androidbox'); // an app set up to open on an Android box switches the input instead
+    // an app set up to open on an Android box switches the input instead; the box is a bundled add-on, as /api/launch (apps.js) reaches it
+    const addons = feature('addons'),
+      box = addons && addons.module && addons.module('androidbox');
     if (box && box.handles(id)) {
       const moved = await box.open(id);
       if (moved) return moved;
@@ -105,11 +122,12 @@ function create(ctx) {
   }
   async function fire(code) {
     if (!enabled()) return { error: 'off' };
-    const e = table()[code];
+    const c = norm(code),
+      e = table()[c];
     if (!e) return { error: 'no action for this key' };
     const now = Date.now();
-    if (last[code] && now - last[code] < REPEAT_MS) return { returnValue: true, repeat: true };
-    last[code] = now;
+    if (last[c] && now - last[c] < REPEAT_MS) return { returnValue: true, repeat: true };
+    last[c] = now;
     let r;
     try {
       r = await run(e);
@@ -117,10 +135,9 @@ function create(ctx) {
       r = { error: x.message };
     }
     const good = !!r && r.returnValue !== false && !r.error;
-    fired = { code, type: e.type, id: e.id || '', ok: good, at: now };
     if (!good)
       console.error(
-        'remap: key ' + code + ' (' + e.type + (e.id ? ' ' + e.id : '') + ') failed: ' + ((r && (r.error || r.errorText)) || 'no answer')
+        'remap: key ' + c + ' (' + e.type + (e.id ? ' ' + e.id : '') + ') failed: ' + ((r && (r.error || r.errorText)) || 'no answer')
       );
     return good ? { returnValue: true } : { returnValue: false, error: (r && (r.error || r.errorText)) || 'no answer' };
   }
@@ -141,8 +158,9 @@ function create(ctx) {
       sync();
       return { returnValue: true };
     }
-    const code = String(b.code || '');
-    if (!CODE.test(code)) return { error: 'bad code' };
+    const raw = String(b.code || '');
+    if (!CODE.test(raw)) return { error: 'bad code' };
+    const code = norm(raw); // "0103" is saved as "103", which is what the hook reports
     if (b.remove === true) {
       config.update('manager', c => {
         if (c.remap) delete c.remap[code];
@@ -152,6 +170,9 @@ function create(ctx) {
     }
     const e = clean(b);
     if (!e) return { error: 'bad action' };
+    const old = table()[code]; // changing what a button does keeps the name found when it was learned
+    if (!e.key && old && old.key) e.key = old.key;
+    if (!e.key && keynames.CODES[code]) e.key = keynames.CODES[code];
     if (!enabled()) return { error: 'off' };
     if (taken().indexOf(code) >= 0) return { error: 'taken' };
     if (!table()[code] && codes().length >= MAX_KEYS) return { error: 'too many keys' };
@@ -164,18 +185,22 @@ function create(ctx) {
   }
 
   // learning: the next button press that is not an arrow, OK or Back; a code that is already in use is reported, not taken
+  let named = { code: '', key: '' }; // LG's name for the button just learned; found once, while the system log still has the press
   function learnState() {
     const l = inputhook.learnState();
     if (l.state !== 'got' || l.name !== 'remap') return l;
-    if (taken().indexOf(String(l.code)) >= 0) return Object.assign({}, l, { state: 'taken' });
-    return Object.assign({}, l, { existing: table()[l.code] || null });
+    const code = String(l.code);
+    if (named.code !== code || !named.key) named = { code, key: keynames.nameFor(code) };
+    const nm = { key: named.key, button: keynames.label(named.key) };
+    if (taken().indexOf(code) >= 0) return Object.assign({}, l, nm, { state: 'taken' });
+    return Object.assign({}, l, nm, { existing: shown()[code] || null });
   }
 
   async function handle(req, res, u, body) {
     const json = (o, c) => web.json(res, o, c);
     if (u === '/api/remap/learn-state') return json(learnState());
     if (u === '/api/remap' && req.method !== 'POST')
-      return json({ enabled: enabled(), keys: table(), types: TYPES, max: MAX_KEYS, hook: inputhook.hookInfo().attached, last: fired });
+      return json({ enabled: enabled(), keys: shown(), types: TYPES, max: MAX_KEYS, hook: inputhook.hookInfo().attached });
     if (req.method !== 'POST') return json({ error: 'POST expected' }, 405);
     const b = (await body(req)) || {};
     if (u === '/api/remap/learn') {
@@ -185,10 +210,10 @@ function create(ctx) {
     }
     if (u === '/api/remap/fire') {
       const code = String(b.code || '');
-      return json(CODE.test(code) ? await fire(code) : { error: 'bad code' });
+      return json(CODE.test(code) ? await fire(norm(code)) : { error: 'bad code' });
     }
     const r = set(b);
-    return json(r.error ? r : Object.assign({ keys: table() }, r), r.error ? 400 : 200);
+    return json(r.error ? r : Object.assign({ keys: shown() }, r), r.error ? 400 : 200);
   }
 
   function start() {

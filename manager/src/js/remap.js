@@ -2,7 +2,14 @@
    The button's code is learned from the TV, never assumed (helper/remap.js). */
 var rm = null,
   rmCode = '',
+  rmKey = '' /* LG's name of the button just learned, KEY_AMAZON */,
+  rmBtn = '' /* the same as text, "Prime Video" */,
   rmList = [];
+/* "Prime Video button", or "Button 1038" when the name is not known */
+function rmButton(code, e) {
+  var n = e ? e.name : code === rmCode ? rmBtn : '';
+  return n ? n + ' button' : 'Button ' + code;
+}
 function rmDescribe(e) {
   if (e.type === 'app') return 'Opens ' + (e.label || e.id);
   if (e.type === 'input') return 'Switches to ' + (e.label || e.id);
@@ -48,7 +55,7 @@ function rmBack() {
   openRemap();
 }
 function rmSave(entry) {
-  var body = { code: rmCode, type: entry.type, id: entry.id, label: entry.label };
+  var body = { code: rmCode, type: entry.type, id: entry.id, label: entry.label, key: rmKey };
   api('/api/remap', body).then(
     function (r) {
       if (r.error) {
@@ -107,6 +114,8 @@ function rmLearn() {
             if (view !== 'remaplearn') return;
             if (l.state === 'got') {
               rmCode = String(l.code);
+              rmKey = l.key || '';
+              rmBtn = l.button || '';
               view = 'remapact'; /* Back from here returns to the list */
               idx = 0;
               build();
@@ -117,10 +126,15 @@ function rmLearn() {
               kText = 'That button is already the Input, Guide, voice or Home key. Press another button, or clear that key first.';
               build();
               draw();
+              /* the code was not taken over: learn again so that another button can be pressed without going back */
+              api('/api/remap/learn', {}).then(poll, function () {
+                banner('The service did not answer', 'err');
+              });
               return;
             }
             if (l.state === 'unsupported') {
-              kText = 'CleanYourTV could not attach to the remote keys on this TV, so buttons cannot be learned.\nUse Share log to report this.';
+              kText =
+                'CleanYourTV could not attach to the remote keys on this TV, so buttons cannot be learned.\nUse Share log to report this.';
               build();
               draw();
               return;
@@ -167,40 +181,44 @@ function rmRows() {
       codes = Object.keys(keys),
       on = !!(rm && rm.enabled);
     rows.push({ label: 'Key remapping', sub: onoff(on), fn: rmToggle });
-    if (!on) {
-      rows.push({ sep: true });
-      rows.push({ label: 'Back', fn: pop });
-      return;
-    }
     rows.push({ sep: true });
+    /* the saved buttons stay listed while the feature is off (they are kept), but only while it is on can one be changed */
     codes.forEach(function (c) {
       rows.push({
-        label: 'Button ' + c,
-        sub: rmDescribe(keys[c]),
-        fn: function () {
-          rmCode = c;
-          push('remapkey');
-        },
+        label: rmDescribe(keys[c]),
+        sub: rmButton(c, keys[c]),
+        dim: !on,
+        fn: on
+          ? function () {
+              rmCode = c;
+              rmKey = '';
+              rmBtn = keys[c].name || '';
+              push('remapkey');
+            }
+          : function () {},
       });
     });
     if (!codes.length) rows.push({ label: 'No buttons yet', sub: 'every button is still LG\u2019s', fn: function () {} });
-    rows.push({ sep: true });
-    rows.push({
-      label: 'Add a button',
-      sub: rm && rm.hook === false ? 'not available on this firmware' : 'press it, then choose what it does',
-      dim: !!rm && rm.hook === false,
-      fn: function () {
-        if (!rm || rm.hook !== false) rmLearn();
-      },
-    });
-    rows.push({
-      label: 'Give every button back to LG',
-      dim: !codes.length,
-      fn: function () {
-        if (codes.length) rmClear();
-      },
-    });
+    if (on)
+      rows.push({
+        label: 'Add a button',
+        sub: rm.hook === false ? 'not available on this firmware' : 'press it, then choose what it does',
+        dim: rm.hook === false,
+        fn: function () {
+          if (rm.hook !== false) rmLearn();
+        },
+      });
+    if (codes.length)
+      rows.push({
+        label: 'Give every button back to LG',
+        fn: function () {
+          push('remapclear');
+        },
+      });
     rows.push({ label: 'Back', fn: pop });
+  } else if (view === 'remapclear') {
+    rows.push({ label: 'Give every button back to LG', fn: rmClear });
+    rows.push({ label: 'No, keep them', fn: pop });
   } else if (view === 'remapkey') {
     rows.push({
       label: 'Change what it does',
@@ -270,7 +288,8 @@ function rmRows() {
 }
 function rmSub() {
   if (view === 'remaplearn') return kText;
-  if (view === 'remapact' || view === 'remapkey') return 'Button ' + rmCode;
+  if (view === 'remapclear') return 'Remove every remapped button?';
+  if (view === 'remapact' || view === 'remapkey') return rmButton(rmCode);
   if (view === 'remapapps') return 'Open which app?';
   if (view === 'remapinputs') return 'Switch to which input?';
   if (view === 'remap' && !(rm && rm.enabled)) return 'Off. Switch it on to remap buttons.';

@@ -813,5 +813,7 @@
  "Key remapping is off": "Toetsen toewijzen staat uit",
  "Off. Switch it on to remap buttons.": "Uit. Zet het aan om knoppen toe te wijzen.",
  "Up to 12 buttons can be used": "Maximaal 12 knoppen kunnen worden gebruikt",
- "Nothing was pressed.": "Er is niets ingedrukt."
+ "Nothing was pressed.": "Er is niets ingedrukt.",
+ "Remove every remapped button?": "Alle toegewezen knoppen verwijderen?",
+ "No, keep them": "Nee, behouden"
 }

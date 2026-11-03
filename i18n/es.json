@@ -772,5 +772,7 @@
  "Key remapping is off": "Reasignar botones está desactivado",
  "Off. Switch it on to remap buttons.": "Desactivado. Actívalo para reasignar botones.",
  "Up to 12 buttons can be used": "Se pueden usar hasta 12 botones",
- "Nothing was pressed.": "No se pulsó nada."
+ "Nothing was pressed.": "No se pulsó nada.",
+ "Remove every remapped button?": "¿Quitar todos los botones reasignados?",
+ "No, keep them": "No, mantenerlos"
 }

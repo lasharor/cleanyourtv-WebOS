@@ -38,17 +38,18 @@ run(async () => {
     return { returnValue: true };
   };
   let ensured = 0;
-  const boxApps = {};
+  const boxApps = {},
+    box = { handles: id => !!boxApps[id], open: async id => ({ returnValue: true, box: id }) };
   const f = mod.create({
     config: conf,
     luna,
     inputhook: hook,
-    feature: n =>
-      n === 'inputkey'
-        ? { ensure: () => (ensured++, hook.ensure(true, '241')) }
-        : n === 'androidbox'
-          ? { handles: id => !!boxApps[id], open: async id => ({ returnValue: true, box: id }) }
-          : null,
+    /* the shape the service gives: the Input key module, and the add-ons loader (the Android box is a bundled add-on, not a feature) */
+    feature: n => {
+      if (n === 'inputkey') return { ensure: () => (ensured++, hook.ensure(true, '241')), on: () => true };
+      if (n === 'addons') return { module: id => (id === 'androidbox' ? box : null) };
+      return null;
+    },
   });
   f.start();
   let r = await call(f, '/api/remap');
@@ -61,7 +62,10 @@ run(async () => {
   r = await call(f, '/api/remap/learn', 'POST', {});
   ok(r.code === 400 && r.j.error === 'off', 'a button cannot be learned while the feature is off');
   r = await call(f, '/api/remap', 'POST', { enabled: true });
-  ok(r.code === 200 && conf.get().remapOn === true && (await call(f, '/api/remap')).j.enabled === true, 'switching it on is kept in config.json');
+  ok(
+    r.code === 200 && conf.get().remapOn === true && (await call(f, '/api/remap')).j.enabled === true,
+    'switching it on is kept in config.json'
+  );
 
   r = await call(f, '/api/remap', 'POST', { code: '403', type: 'app', id: 'netflix', label: 'Netflix' });
   ok(r.code === 200 && r.j.keys['403'].id === 'netflix', 'a key is saved');
@@ -88,6 +92,15 @@ run(async () => {
   r = await call(f, '/api/remap', 'POST', { code: '777', type: 'home' });
   ok(r.code === 400 && r.j.error === 'taken', 'a learned Home key cannot be remapped');
   ok(!binds()['777'], 'and gets no bind');
+  // the Input key handed back to LG is no longer ours, so its code can be used
+  const off = mod.create({
+    config: memoryConfig({ remapOn: true, options: { inputKey: false }, remap: {} }),
+    luna,
+    inputhook: hook,
+    feature: n => (n === 'inputkey' ? { ensure: () => {}, on: () => false } : null),
+  });
+  r = await call(off, '/api/remap', 'POST', { code: '241', type: 'home' });
+  ok(r.code === 200 && r.j.keys['241'] && r.j.keys['241'].type === 'home', 'with the Input key off, its code can be remapped');
 
   // ---- running the actions ----
   const act = async (code, entry) => {
@@ -109,6 +122,19 @@ run(async () => {
   );
   r = await act('406', { type: 'home' });
   ok(r.returnValue && launched[0] === 'launch {"id":"com.webos.app.home","params":{}}', 'the Home key goes to Home');
+  // where LG's Home is the native program (scripts/home-standin.sh), the launcher takes its parameters from this file, not from the launch
+  const P = req('paths');
+  fs.writeFileSync(path.join(P.PROC, 'uptime'), '123.45 100.00\n');
+  P.STANDIN = path.join(process.env.CYTV_DIR, 'home-standin');
+  fs.writeFileSync(P.STANDIN, '/usr/bin/standin');
+  r = await act('408', { type: 'live' });
+  ok(
+    r.returnValue && fs.readFileSync(P.HOME_PARAMS, 'utf8') === '123.45 {"live":true}',
+    'on the stand-in Home, Live TV writes the parameters scripts/home-standin.sh passes on'
+  );
+  // a code typed with a leading zero is the same button the hook reports ("103", not "0103")
+  r = await call(f, '/api/remap', 'POST', { code: '0700', type: 'home' });
+  ok(r.code === 200 && conf.get().remap['700'] && !conf.get().remap['0700'], 'a zero-padded code is saved as the hook reports it');
   boxApps.plex = true;
   r = await act('407', { type: 'app', id: 'plex' });
   ok(r.returnValue && launched.length === 0, 'an app set up to open on an Android box goes to the box, not to the TV');
@@ -124,7 +150,10 @@ run(async () => {
   r = (await call(bad, '/api/remap/fire', 'POST', { code: '9' })).j;
   ok(r.returnValue === false && /no such app/.test(r.error), 'an app that cannot start is reported');
   r = (await call(f, '/api/remap')).j;
-  ok(r.last && r.last.code === '407', 'the manager can see what the last key did');
+  ok(
+    r.types.length === 5 && r.max === 12 && r.hook === false,
+    'the manager gets the actions, the 12 limit and whether the hook is attached'
+  );
 
   // ---- limits ----
   for (let i = 0; i < 20; i++) await call(f, '/api/remap', 'POST', { code: String(500 + i), type: 'home' });
@@ -136,7 +165,10 @@ run(async () => {
   // ---- off again: the keys are kept, their binds and actions are not ----
   await call(f, '/api/remap', 'POST', { code: '403', type: 'app', id: 'netflix', label: 'Netflix' });
   r = await call(f, '/api/remap', 'POST', { enabled: false });
-  ok(r.code === 200 && conf.get().remapOn === undefined && Object.keys(conf.get().remap).length === 12, 'switching it off keeps the saved keys');
+  ok(
+    r.code === 200 && conf.get().remapOn === undefined && Object.keys(conf.get().remap).length === 12,
+    'switching it off keeps the saved keys'
+  );
   ok(!Object.keys(binds()).some(k => /remapkey/.test(binds()[k].command)), 'but every remap bind leaves the hook');
   ok(binds()['241'] && binds()['241'].command.indexOf('inputkey.sh') > 0, 'the Input key bind stays');
   launched.length = 0;
@@ -173,4 +205,68 @@ run(async () => {
   r = await call(f, '/api/remap/learn-state');
   ok(r.j.state === 'got' && r.j.code === '403' && r.j.existing === null, 'the next button that is not an arrow, OK or Back is learned');
   ok(!conf.get().keys['403'] && conf.get().keys.input === '', 'a learned remap button is not saved as the Input, Home, voice or Guide key');
+
+  // ---- the name of a button ----
+  const kn = req('keynames');
+  const line = (t, name) =>
+    t.toISOString().replace('Z', '123Z') +
+    ' [1.0] user.info lginput2 [] lginput2 NL_BUTTON_CLICK {"remote_type":"LGE MR23","button_type":"' +
+    name +
+    '"} \n';
+  ok(kn.label('KEY_NETFLIX') === 'Netflix' && kn.label('KEY_AMAZON') === 'Prime Video', 'a known key name has its own text');
+  ok(kn.label('KEY_SENIORTV_HELP') === 'Seniortv help' && kn.label('KEY_5') === '5', 'any other key name is spelled out from the name');
+  ok(
+    kn.label('netflix') === '' && kn.label('KEY_x; reboot') === '' && kn.label(null) === '',
+    'something that is not a key name gives no text'
+  );
+  const t0 = new Date(),
+    old = new Date(t0.getTime() - 60000);
+  ok(kn.fromLog(line(t0, 'KEY_AMAZON'), t0.getTime(), 6000) === 'KEY_AMAZON', 'the newest button click in the log names the button');
+  ok(kn.fromLog(line(old, 'KEY_AMAZON'), t0.getTime(), 6000) === '', 'a click from a minute ago is not the button that was just pressed');
+  ok(kn.fromLog(line(old, 'KEY_RED') + line(t0, 'KEY_AMAZON'), t0.getTime(), 6000) === 'KEY_AMAZON', 'older clicks are passed over');
+  ok(
+    kn.fromLog(line(t0, 'KEY_AMAZON') + line(t0, 'KEY_OK'), t0.getTime(), 6000) === '',
+    'an OK or arrow press after the button is not taken for it'
+  );
+  ok(kn.fromLog('garbage\n', t0.getTime(), 6000) === '' && kn.fromLog('', t0.getTime(), 6000) === '', 'a log without clicks names nothing');
+  fs.writeFileSync(process.env.CYTV_SYSLOG, line(new Date(), 'KEY_DISNEY'));
+  await call(f, '/api/remap/learn', 'POST', {});
+  await sleep(1300);
+  fs.appendFileSync(process.env.CYTV_HOOK_LOG, 'keyid=8, state=1 uinput_code=555\n');
+  r = await call(f, '/api/remap/learn-state');
+  ok(
+    r.j.state === 'got' && r.j.code === '555' && r.j.key === 'KEY_DISNEY' && r.j.button === 'Disney+',
+    'a learned button comes with its name from the system log'
+  );
+  r = await call(f, '/api/remap', 'POST', { code: '555', type: 'home', key: r.j.key });
+  ok(
+    r.code === 200 && r.j.keys['555'].key === 'KEY_DISNEY' && r.j.keys['555'].name === 'Disney+',
+    'the name is saved with the button and shown'
+  );
+  r = await call(f, '/api/remap', 'POST', { code: '555', type: 'picker' });
+  ok(r.j.keys['555'].type === 'picker' && r.j.keys['555'].name === 'Disney+', 'changing what a button does keeps its name');
+  r = await call(f, '/api/remap', 'POST', { code: '556', type: 'home', key: 'KEY_X; reboot' });
+  ok(
+    r.code === 200 && r.j.keys['556'].key === undefined && r.j.keys['556'].name === undefined,
+    'a name that is not a key name is not saved'
+  );
+  await call(f, '/api/remap', 'POST', { code: '556', remove: true });
+  fs.writeFileSync(process.env.CYTV_SYSLOG, '');
+  await call(f, '/api/remap/learn', 'POST', {});
+  await sleep(1300);
+  fs.appendFileSync(process.env.CYTV_HOOK_LOG, 'keyid=76, state=1 uinput_code=1038\n');
+  r = await call(f, '/api/remap/learn-state');
+  ok(
+    r.j.code === '1038' && r.j.key === 'KEY_AMAZON' && r.j.button === 'Prime Video',
+    'a button seen on a real TV is named even when the log has nothing'
+  );
+  await call(f, '/api/remap', 'POST', { code: '555', remove: true });
+
+  // the Input key module hands its code to the hook even while it is off: that code must not keep a remap off the keybinds
+  off.start();
+  hook.ensure(false, '241');
+  ok(
+    binds()['241'] && binds()['241'].command === CMD('241'),
+    'with the Input key off, the hook binds its code for the remap, not for the Inputs list'
+  );
 });

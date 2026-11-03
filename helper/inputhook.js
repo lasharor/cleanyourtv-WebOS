@@ -16,11 +16,12 @@ const D = P.D,
 const PRIMARY = 'lginput2',
   FALLBACK = ['RELEASE', 'micomservice', 'tvservice', 'testapp'];
 const TARGETS = [PRIMARY].concat(FALLBACK);
+// 241: the Input button on the remote this was written with; learned in the setup
 const DEFAULT_KEY = '241',
   COMMAND = 'sh ' + D + '/inputkey.sh',
   VOICE_COMMAND = 'sh ' + D + '/voicekey.sh',
   GUIDE_COMMAND = 'sh ' + D + '/guidekey.sh',
-  REMAP_COMMAND = 'sh ' + D + '/remapkey.sh '; // + the code: one bind per remapped key (remap.js). 241: the Input button on the remote this was written with; learned in the setup
+  REMAP_COMMAND = 'sh ' + D + '/remapkey.sh '; // + the code: one bind per remapped key (remap.js)
 
 function procs() {
   const out = [];
@@ -64,8 +65,9 @@ function writeBinds(on, key, vkey, gkey, rkeys) {
   if (on) b[key] = { action: 'exec', command: COMMAND };
   if (vkey) b[vkey] = { action: 'exec', command: VOICE_COMMAND };
   if (gkey) b[gkey] = { action: 'exec', command: GUIDE_COMMAND };
-  // a remapped key never takes over a key that already does something of ours
-  for (const k of rkeys) if (k !== key && k !== vkey && k !== gkey) b[k] = { action: 'exec', command: REMAP_COMMAND + k };
+  // a remapped key never takes over a key that already does something of ours. `key` arrives even while the Input key is off (its module
+  // always passes the code it would use), so it is only in the way when it is really bound (`on`)
+  for (const k of rkeys) if (!(on && k === key) && k !== vkey && k !== gkey) b[k] = { action: 'exec', command: REMAP_COMMAND + k };
   if (JSON.stringify(b) === before) return;
   nc.mkdirp(CFGDIR);
   fs.writeFileSync(BINDS + '.tmp', JSON.stringify(b));

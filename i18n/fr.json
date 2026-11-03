@@ -772,5 +772,7 @@
  "Key remapping is off": "Réaffectation des touches désactivée",
  "Off. Switch it on to remap buttons.": "Désactivé. Activez-la pour réaffecter des touches.",
  "Up to 12 buttons can be used": "Jusqu’à 12 touches sont possibles",
- "Nothing was pressed.": "Rien n’a été appuyé."
+ "Nothing was pressed.": "Rien n’a été appuyé.",
+ "Remove every remapped button?": "Retirer toutes les touches remappées ?",
+ "No, keep them": "Non, les garder"
 }

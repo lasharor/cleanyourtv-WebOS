@@ -854,5 +854,7 @@
  "Key remapping is off": "Key remapping is off",
  "Off. Switch it on to remap buttons.": "Off. Switch it on to remap buttons.",
  "Up to 12 buttons can be used": "Up to 12 buttons can be used",
- "Nothing was pressed.": "Nothing was pressed."
+ "Nothing was pressed.": "Nothing was pressed.",
+ "Remove every remapped button?": "Remove every remapped button?",
+ "No, keep them": "No, keep them"
 }
