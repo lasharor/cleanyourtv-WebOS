@@ -216,7 +216,7 @@ function openPrApp() {
   $('qrbox').style.visibility = 'hidden';
   $('share').querySelector('h2').textContent = tr('Install the app (Android)');
   $('share').querySelector('ol').innerHTML = tr(
-    '<li><b>Android only.</b> Scan the code with the phone camera.</li><li>Open the download and install it — <b>TV Remote</b> (let the browser install apps).</li><li>The TV then shows the pairing code: scan it and the app is ready.</li>'
+    '<li><b>Part 1 of 2.</b> Scan this code with the camera of an Android phone.</li><li>Open the download and install <b>TV Remote</b> (let the browser install apps).</li><li><b>Part 2</b> comes next: this screen then shows the pairing code.</li>'
   );
   $('sharemsg').textContent = tr('Preparing…');
   prWatchApp(true);
@@ -243,18 +243,18 @@ function prWatchApp(first) {
         prApp = true;
         prSeen = 0;
         qrShown = '';
-        $('share').querySelector('h2').textContent = tr('Phone remote');
+        $('share').querySelector('h2').textContent = tr('Part 2: pair the app');
         $('share').querySelector('ol').innerHTML = tr(
-          '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Open the app: it is paired already and stays so.</li>'
+          '<li>Keep the phone on the <b>same Wi-Fi</b> as the TV.</li><li><b>Scan</b> the code with the phone camera, then tap Pair this device.</li><li>Or open TV Remote, tap Find my TV, and <b>type</b> the code below.</li>'
         );
-        $('sharemsg').textContent = tr('The app is on the phone: pair it now.');
-        banner(tr('The app is on the phone: pair it now.'), 'ok');
+        $('sharemsg').textContent = tr('The app is on the phone. Pair it once, by scanning or typing the code.');
+        banner(tr('The app is on the phone. Pair it once, by scanning or typing the code.'), 'ok');
         prWatch(true);
         return;
       }
       showQr(a.qr || a.url);
       $('shareurl').textContent = a.qr || a.url; // with the code in it, so it can also be typed
-      if (first) $('sharemsg').textContent = tr('The phone downloads the app from the TV. This screen moves on to pairing by itself.');
+      if (first) $('sharemsg').textContent = tr('The phone downloads the app from the TV, then this screen moves on to part 2 by itself.');
       setTimeout(prWatchApp, 2000);
     },
     function () {

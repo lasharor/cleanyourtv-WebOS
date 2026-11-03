@@ -1081,6 +1081,27 @@ run(async () => {
     'only the pairing screen that follows the app download shows the cytv code; the ordinary one shows the page address'
   );
   ok(/if \(a\.downloads > prDl\)/.test(mgr), 'and a download from before that screen opened does not count');
+  // the install screen and the pairing screen after the download read as two parts of one flow, and the second names both ways to pair
+  const en = JSON.parse(fs.readFileSync(path.join(root, 'i18n', 'en.json'), 'utf8'));
+  const partA = mgr.slice(mgr.indexOf("tr('Install the app (Android)')"), mgr.indexOf('prWatchApp(true)'));
+  const partB = mgr.slice(
+    mgr.indexOf("tr('Part 2: pair the app')"),
+    mgr.indexOf('prWatch(true);', mgr.indexOf("tr('Part 2: pair the app')"))
+  );
+  ok(
+    /Part 1 of 2/.test(partA) && /Part 2<\/b> comes next/.test(partA),
+    'the install screen says it is part 1 of 2 and that part 2 comes next'
+  );
+  ok(
+    /<b>Scan<\/b>/.test(partB) && /Pair this device/.test(partB) && /Find my TV/.test(partB) && /<b>type<\/b> the code/.test(partB),
+    'the pairing screen after the download offers both ways: scan the code, or open the app and type it'
+  );
+  ok(!/paired already/.test(mgr), 'and it no longer claims the app is paired before the user has paired it');
+  const strings = [...mgr.matchAll(/tr\(\s*'((?:[^'\\]|\\.)*)'/g)].map(m => m[1]);
+  ok(
+    strings.filter(s => /Part 2|part 2|Part 1/.test(s)).every(s => s in en),
+    'every new string of the two screens is in the English list'
+  );
   // a right-to-left language must not mirror the remote
   const he = req('phoneremotepage').phonePage('ar');
   ok(
