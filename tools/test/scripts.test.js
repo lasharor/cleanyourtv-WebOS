@@ -375,5 +375,13 @@ run(async () => {
       r1.status === 0 && /^tag=v1\.0\.1$/m.test(fs.readFileSync(outFile, 'utf8')),
       'release.sh: without it the same change is released (dry run: v1.0.1)'
     );
+    // RELEASE-NOTES.md is the notes, after the line with the versions, in place of the commit subjects
+    fs.writeFileSync(path.join(rd, 'RELEASE-NOTES.md'), '## New\n\n- **A thing.** By @someone.\n');
+    r1 = run1();
+    ok(
+      /^Service 1\.0\.1, launcher 1\.0\.0\.\n\n## New\n\n- \*\*A thing\.\*\* By @someone\.$/m.test(r1.stderr) &&
+        !/a change in the package/.test(r1.stderr),
+      'release.sh: RELEASE-NOTES.md is the release notes, not the commit subjects: ' + r1.stderr.trim().split('\n').slice(-3).join(' | ')
+    );
   }
 });
