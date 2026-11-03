@@ -152,4 +152,12 @@ function script(code, js) {
   );
 }
 
-module.exports = { lang, tr, script, load };
+// the language Home is shown in, as the launcher says with each request of a card of an add-on: the service cannot read the TV's
+// language itself, so while the Language setting follows the TV, add-ons (env.lang()) translate into this one
+let screenLang = '';
+function screen(code) {
+  if (typeof code === 'string' && /^[a-z]{2}$/.test(code)) screenLang = code;
+  return screenLang;
+}
+
+module.exports = { lang, tr, script, load, screen };

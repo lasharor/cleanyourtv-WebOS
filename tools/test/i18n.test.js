@@ -66,6 +66,10 @@ run(async () => {
 
   // the service's phone pages: the phone's language first, then the one chosen in the manager, then English
   const I = require(path.join(root, 'helper', 'i18n.js'));
+  ok(
+    I.screen() === '' && I.screen('nl') === 'nl' && I.screen('x1') === 'nl' && I.screen() === 'nl',
+    'the language Home is shown in is kept (two letters only), for the add-ons while the Language setting follows the TV'
+  );
   const req = al => ({ headers: al === undefined ? {} : { 'accept-language': al } });
   ok(
     I.lang(req('nl-NL,nl;q=0.9,en;q=0.8'), '') === 'nl' &&

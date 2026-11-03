@@ -380,6 +380,7 @@ function create(ctx) {
     // the manager's Cards screen: the theme's places with their cards, and a card type picked for one of them
     if (u === '/api/cards/status') return web.json(res, state(i18n.lang(req, config.get().lang)));
     // a card of an add-on: {slot} -> its data; {slot, name, arg} -> an action of one of its buttons
+    if (u === '/api/cards/feed' || u === '/api/cards/action') i18n.screen(b.lang);
     if (u === '/api/cards/feed') return web.json(res, await addonFeed(b.slot));
     if (u === '/api/cards/action') return web.json(res, await addonAction(b.slot, String(b.name || ''), b.arg));
     if (u === '/api/cards/set') return web.json(res, setType(String(b.slot || ''), String(b.type || '')));

@@ -241,7 +241,7 @@ var SCENES = (function () {
     if (frost) frost.style.backgroundImage = g ? 'linear-gradient(rgba(16,14,26,0.34),rgba(16,14,26,0.46)),' + g : '';
     for (var i = 0; i < els2.length; i++) {
       var el = els2[i];
-      if (!/\bcard-(weather|ha-)/.test(el.className)) continue;
+      if (!/\bcard-(weather|ha-|frame\b)/.test(el.className)) continue;
       if (!g) {
         el.style.backgroundImage = '';
         el.style.backgroundSize = '';

@@ -667,6 +667,17 @@ function cardButtons(el, list) {
     };
     ok.push({ name: n.name, label: el._pk.actions[i].label, x: q(n.x), y: q(n.y), w: q(n.w), h: q(n.h) });
   });
+  /* the page says percent of its frame; the frame can sit inside the card's margins (glass cards), so the targets are moved there */
+  var f = el._f,
+    cw = el.offsetWidth,
+    ch = el.offsetHeight;
+  if (f && cw && ch && f.offsetWidth && (f.offsetLeft || f.offsetTop || f.offsetWidth !== cw || f.offsetHeight !== ch))
+    ok.forEach(function (b) {
+      b.x = ((f.offsetLeft + (b.x * f.offsetWidth) / 100) / cw) * 100;
+      b.y = ((f.offsetTop + (b.y * f.offsetHeight) / 100) / ch) * 100;
+      b.w = ((b.w * f.offsetWidth) / 100 / cw) * 100;
+      b.h = ((b.h * f.offsetHeight) / 100 / ch) * 100;
+    });
   var key = JSON.stringify(ok);
   if (el._bk === key) return;
   el._bk = key;
@@ -688,7 +699,7 @@ function cardButtons(el, list) {
 /* OK on a button: the add-on gets the action, then the card is asked for its data again (the answer to a button shows within seconds) */
 function cardBtnAct(d) {
   var el = d._btn.card;
-  api('/api/cards/action', { slot: el._slot, name: d._btn.name }).then(
+  api('/api/cards/action', { slot: el._slot, name: d._btn.name, lang: LANG }).then(
     function (r) {
       if (r && r.error) toast(t(r.error), true);
       [400, 1500, 3500].forEach(function (ms) {
@@ -707,7 +718,7 @@ function cardFeed(el) {
   if (!el._pk || !el.parentNode || el._busy) return;
   el._busy = true;
   el._feedAt = Date.now();
-  api('/api/cards/feed', { slot: el._slot }).then(
+  api('/api/cards/feed', { slot: el._slot, lang: LANG }).then(
     function (r) {
       el._busy = false;
       el._data = r && typeof r === 'object' ? r : { error: 'no answer' };
@@ -732,6 +743,8 @@ function cardFrame(id, pk) {
   return {
     draw: function (el, o) {
       el._pk = pk;
+      /* a card with its own page: the glass style (cards.style) gives it the frosted panel too, its page inside the margins */
+      if (!/\bcard-frame\b/.test(el.className)) el.className += ' card-frame';
       if (!el._f) {
         var f = document.createElement('iframe');
         f.setAttribute('sandbox', 'allow-scripts');
