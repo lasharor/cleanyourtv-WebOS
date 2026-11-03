@@ -30,6 +30,23 @@
       }
     },
     {
+      "id": "immich",
+      "name": "Immich",
+      "version": "1.0.0",
+      "description": "Photos from your Immich albums as the Home wallpaper, synced to the TV.",
+      "about": "",
+      "preview": "",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "files": {
+        "addon.json": "b16b363150bbe9dc1ba3b6fc7a98073f8ed11c11996507691d33ce75a67b00c9",
+        "phone.js": "7f64427c617e10baac60e6c711b7a86ad74929f39409f2b603f7526fb85f3a3d",
+        "service.js": "ccb1bb3d0094f93cb1d4f52ca847f5ff59cd790470183e0616cf373933b8b349"
+      }
+    },
+    {
       "id": "sysinfo",
       "name": "TV status",
       "version": "1.0.0",
@@ -42,6 +59,23 @@
         "addon.json": "02cb4add590dfa7ee9d950123d59752a44cf7e1c1613cf1b36e9f5c891a133b0",
         "index.html": "cbc683b2bf5aab30023e05284f12a1652a422b7c7dbec2efe4bbcb375756aca6",
         "service.js": "724692ff559fafed1d4f3318d83101af7988700c281b496492c46405385c5903"
+      }
+    },
+    {
+      "id": "unsplash",
+      "name": "Unsplash",
+      "version": "1.0.0",
+      "description": "A new landscape photo from Unsplash behind Home now and then, with your own free Access Key. Nothing is saved on the TV.",
+      "about": "",
+      "preview": "",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "files": {
+        "addon.json": "29c29a4faaac4a9434080f1405a9e6f187341f9253ca623df6f7ed185743e616",
+        "phone.js": "d9f96764f349e821469a600bb1bf338057e4af1230f5367d939b05ede7d60a5e",
+        "service.js": "feac5e89cddac3b6b9b5d6bb9b90606d237e71b12dde1ed6e83aca939e781fc3"
       }
     }
   ]

@@ -28,7 +28,7 @@
 | `notify.js`, `notifyapi.js` | One feature each. |
 | `addons.js`, `addons-bundled/` | Add-ons: loads the folders that have an `addon.json` (those that ship in `addons-bundled/`, Live TV among them, and those installed from the catalog), isolates the ones that fail, serves their pages and installs from the catalog (`docs/development/addons.md`). |
 | `zram.js` | Compressed memory: switches the kernel's zram swap on with the size in `options.zram` at every start of the service, and on or off from the launcher (`/api/zram`). |
-| `wallpapers.js` | Wallpapers: the photo library (uploads and Immich, apart on disk, with an index), the phone page on port 8791 and the Immich sync. |
+| `wallpapers.js` | Wallpapers: the photo library (uploads, with an index, and the photo sources that add-ons provide), the phone page on port 8791 and the Immich sync. |
 | `addons-bundled/androidbox/` (`service.js`, `adbclient.js`, `page.js`) | The bundled add-on androidbox (answers `/api/androidbox`): Apps that open on an Android box: the settings and the launch hook, our own ADB client (packets, key, sign-in, one shell command; no `adb` program), and the phone page on port 8793. |
 | `cardcatalog.js` | Downloadable cards: reads `cards/index.json` from GitHub, installs a card (a `card.json` without code) into `cardpacks/<id>/` only when every file matches its hash, removes it, serves its picture; the cards feature lists the installed ones as card types `x-<id>` and `/api/apps` hands them to the launcher (`docs/development/cards.md`). |
 | `cards.js`, `weather.js` | Cards: the shape check of the cards the launcher saves, the phone page on port 8792 where their options are typed, and the weather card's Open-Meteo requests (kept 30 minutes). |

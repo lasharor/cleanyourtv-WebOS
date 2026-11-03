@@ -25,20 +25,20 @@ var INFO = {
     'The language of CleanYourTV\u2019s screens: the launcher, this app and the Inputs list. Automatic follows the TV\u2019s menu language. The percentage says how much of a language is translated; the rest stays English. Translations are files in the repository that anyone can add to.',
   'Automatic': 'Follows the TV\u2019s menu language. English when CleanYourTV has no translation for it.',
   'Wallpapers':
-    'Your own photos behind Home: uploaded from a phone, or synced from Immich albums. Switch them on in the launcher: Customise > Wallpapers.',
+    'Your own photos behind Home: uploaded from a phone, or from a photo source you installed in Add-ons (Immich, Unsplash). Switch them on in the launcher: Customise > Wallpapers.',
   'App icons':
     'A picture of your own for an app, chosen on a phone: shows a QR code. The app keeps it when it updates. On Home, hold OK on an app for Change icon and Reset icon.',
   'Manage from your phone':
-    'Shows a QR code. On the phone page you upload photos (they are made the right size on the phone), delete uploads, connect Immich, choose albums and hide single photos.',
+    'Shows a QR code. On the phone page you upload photos (they are made the right size on the phone) and delete uploads.',
   'Local uploads': 'Photos uploaded from a phone, kept on the TV. At most 100.',
-  'Immich':
-    'Photos from the Immich albums you chose, downloaded to the TV every six hours (and with Sync now), so Home never waits for Immich. At most 300.',
+  'Immich is an add-on now':
+    'Immich moved out of CleanYourTV\u2019s core: install the Immich add-on in Add-ons and it takes over your saved address, key, albums and photos once. Until then they stay on the TV, unused.',
+  'Remove old Immich data':
+    'Deletes the Immich photos and the saved address and key that an earlier version kept. Use it when you do not want the Immich add-on.',
   'Total': 'Every photo Wallpapers can show, and the space they use on the TV (at most 150 MB).',
-  'Sync now': 'Downloads new and changed photos from the chosen albums now and removes the ones that left them.',
   'Picture size':
     '4K (the default) keeps photos at 3840 pixels, the size the TV draws Home at, so they look sharp; Full HD at 1920 fits about four times as many photos in 150 MB. It applies to new uploads and to the next Immich sync.',
-  'Remove all uploads': 'Deletes every uploaded photo from the TV. Immich photos stay.',
-  'Disconnect Immich': 'Forgets the address and the key and deletes the Immich photos from the TV. Uploads stay.',
+  'Remove all uploads': 'Deletes every uploaded photo from the TV. Photos from other sources stay.',
   'Reset Home customisation':
     'Puts the dock, the top buttons, hidden apps, the app order and the clock back to the defaults. The theme stays.',
   'Yes, reset Home': 'The launcher\u2019s own settings go back to the defaults. Apps, the theme and everything in this app stay.',

@@ -1,13 +1,12 @@
-// Wallpapers: your own photos as the launcher's background, from two sources kept apart on disk:
+// Wallpapers: your own photos as the launcher's background:
 //   D/wallpapers/upload/<random>.jpg   photos uploaded from a phone (the phone page scales them before sending)
-//   D/wallpapers/immich/<asset id>.jpg photos from chosen Immich albums, downloaded by a sync and kept, so showing one never needs Immich
-// D/wallpapers/index.json says what each file is (source, size, Immich checksum); only files listed there are ever deleted.
 // More photos come from add-ons that provide "wallpapers" (Immich, Unsplash, ...; docs/development/addons.md): see "photo sources" below.
-// The settings are the wallpapers section of config.json: {size: '4k'|'hd' (4K is the default: Home is drawn at the panel's 3840 x 2160), immich: {url, key, albums: [ids], hidden: [asset ids]}}.
-// The Immich key never leaves the service: status() shows its last four characters only, and it is not logged.
-// API (loopback, our apps): GET /api/wallpapers/status, GET /api/wallpapers/list, GET /api/wallpapers/photo/<u|i>/<id>,
-// POST /api/wallpapers/set {size}, POST /api/wallpapers/pair, POST /api/wallpapers/sync, POST /api/wallpapers/remove-uploads,
-// POST /api/wallpapers/disconnect. The phone page (POST pair) is a short-lived server on the LAN, port 8791, that needs the code shown
+// D/wallpapers/index.json says what each upload is; only files listed there are ever deleted. (D/wallpapers/immich/ is what an earlier
+// version synced from Immich, kept until the Immich add-on takes it over or you remove it.)
+// The settings are the wallpapers section of config.json: {size: '4k'|'hd' (4K is the default: Home is drawn at the panel's 3840 x 2160)}.
+// API (loopback, our apps): GET /api/wallpapers/status, GET /api/wallpapers/list, GET /api/wallpapers/photo/u/<id>,
+// POST /api/wallpapers/set {size}, POST /api/wallpapers/pair, POST /api/wallpapers/remove-uploads,
+// POST /api/wallpapers/disconnect (removes the old Immich data of an earlier version). The phone page (POST pair) is a short-lived server on the LAN, port 8791, that needs the code shown
 // on the TV; its API is under /api/ on that port.
 const fs = require('fs'),
   http = require('http'),
@@ -16,19 +15,16 @@ const fs = require('fs'),
 const P = require('./paths'),
   web = require('./web'),
   i18n = require('./i18n'),
-  fetch = require('./fetch'),
   nc = require('./netcompat');
 
 const DIR = P.D + '/wallpapers',
   UP = DIR + '/upload',
   IM = DIR + '/immich',
   INDEX = DIR + '/index.json';
-const LIMITS = { uploads: 100, immich: 300, bytes: 150 * 1024 * 1024, file: 12 * 1024 * 1024 };
+const LIMITS = { uploads: 100, bytes: 150 * 1024 * 1024, file: 12 * 1024 * 1024 };
 const PAIR_PORT = 8791, // after the Share-log page's range (8768-8790)
-  PAIR_MS = 15 * 60 * 1000,
-  SYNC_MS = 6 * 3600 * 1000;
-const ID = /^[a-f0-9]{16}$/,
-  ASSET = /^[0-9a-f-]{36}$/i;
+  PAIR_MS = 15 * 60 * 1000;
+const ID = /^[a-f0-9]{16}$/;
 
 // what a file is, from its first bytes: only JPEG, PNG and WebP are kept
 function imageType(b) {
@@ -68,13 +64,7 @@ function create(ctx) {
     fs.writeFileSync(INDEX + '.tmp', JSON.stringify(idx()));
     fs.renameSync(INDEX + '.tmp', INDEX);
   }
-  const immichList = () => {
-    const i = idx().immich,
-      hid = icfg().hidden;
-    return Object.keys(i).filter(id => hid.indexOf(id) < 0);
-  };
-  const usedBytes = () =>
-    idx().upload.reduce((n, u) => n + (u.bytes || 0), 0) + Object.keys(idx().immich).reduce((n, k) => n + (idx().immich[k].bytes || 0), 0);
+  const usedBytes = () => idx().upload.reduce((n, u) => n + (u.bytes || 0), 0);
   // your photos are for root only, as the settings are
   const mkdir = d => {
     nc.mkdirp(d);
@@ -118,185 +108,28 @@ function create(ctx) {
     saveIdx();
   }
 
-  // ---- Immich (https://immich.app/docs/api): the key goes in the x-api-key header ----
-  const base = u =>
-    String(u || '')
-      .trim()
-      .replace(/\/+$/, '')
-      .replace(/\/api$/, '');
-  function immich(pathname, ic, opts) {
-    const c = ic || icfg();
-    return fetch
-      .read(
-        base(c.url) + '/api' + pathname,
-        Object.assign(
-          { headers: { 'x-api-key': c.key, Accept: 'application/json' }, idleMs: 20000, maxBytes: 16 << 20, anyStatus: true },
-          opts || {}
-        )
-      )
-      .then(r => {
-        if (r.status === 401 || r.status === 403) throw new Error('Immich refused the API key (needs album.read and asset.read/view)');
-        if (r.status !== 200) throw new Error('Immich answered ' + r.status);
-        return JSON.parse(r.body.toString('utf8'));
-      });
-  }
-  // every album the key can read: own and shared with you
-  async function albums(ic) {
-    const own = await immich('/albums', ic),
-      shared = await immich('/albums?shared=true', ic).catch(() => []);
-    const seen = {};
-    return own
-      .concat(shared)
-      .filter(a => a && a.id && !seen[a.id] && (seen[a.id] = 1))
-      .map(a => ({ id: a.id, name: String(a.albumName || 'Album').slice(0, 80), count: a.assetCount || 0 }));
-  }
-  async function connect(url, key) {
-    const c = { url: base(url), key: key || icfg().key };
-    if (!/^https?:\/\/[^/]+/i.test(c.url)) return { error: 'the address must start with http:// or https://' };
-    if (!c.key) return { error: 'enter the API key' };
+  // ---- Immich of earlier versions ----
+  // Immich is an add-on now (addons/catalog/immich). A TV that had it keeps the settings (config.json: wallpapers.immich) and the photos
+  // (wallpapers/immich/) until the add-on is installed, which takes them over once (adoptLegacy); "Remove old Immich data" deletes them.
+  const legacyOn = () => {
+    const c = icfg();
+    return !!(c.url && c.key) || Object.keys(idx().immich).length > 0;
+  };
+  let adopting = false;
+  async function adoptLegacy() {
+    if (adopting || !legacyOn()) return;
+    const s = sources().filter(x => x.id === 'immich' && typeof x.mod.wallpapers.adopt === 'function')[0];
+    if (!s) return;
+    adopting = true;
     try {
-      const list = await albums(c);
-      setCfg(w => {
-        const old = Object.assign({ albums: [], hidden: [] }, w.immich || {});
-        w.immich = { url: c.url, key: c.key, albums: old.url === c.url ? old.albums : [], hidden: old.url === c.url ? old.hidden : [] };
-      });
-      return { ok: true, albums: list };
+      const r = await s.mod.wallpapers.adopt({ settings: icfg(), photos: idx().immich, dir: IM });
+      if (r && r.ok) removeLegacy();
     } catch (e) {
-      return { error: 'could not reach Immich: ' + String(e.message || e) };
+      console.error('wallpapers: the Immich add-on could not take over the old settings: ' + ((e && e.message) || e));
     }
+    adopting = false;
   }
-
-  // ---- the sync: new or changed photos are downloaded, photos no longer wanted are deleted (only files the index lists) ----
-  let syncing = null,
-    again = false;
-  // one sync at a time; a request during a sync (new albums chosen, Sync now) runs it once more afterwards, within the same promise
-  function sync() {
-    if (syncing) {
-      again = true;
-      return syncing;
-    }
-    syncing = (async () => {
-      do {
-        again = false;
-        await doSync().catch(() => {});
-      } while (again);
-      syncing = null;
-    })();
-    return syncing;
-  }
-  async function download(id, mime, size) {
-    const ic = icfg(),
-      tmp = path.join(IM, id + '.tmp'),
-      hdrs = { 'x-api-key': ic.key };
-    const tries =
-      size === '4k'
-        ? ['/assets/' + id + '/thumbnail?size=fullsize'].concat(
-            /^image\/(jpeg|png|webp)$/.test(mime || '') ? ['/assets/' + id + '/original'] : [],
-            ['/assets/' + id + '/thumbnail?size=preview']
-          )
-        : ['/assets/' + id + '/thumbnail?size=preview'];
-    let last = null;
-    for (const t of tries) {
-      try {
-        const r = await fetch.read(base(ic.url) + '/api' + t, { headers: hdrs, idleMs: 30000, maxBytes: LIMITS.file, anyStatus: true });
-        if (r.status !== 200) throw new Error('Immich answered ' + r.status);
-        const type = imageType(r.body);
-        if (!type) throw new Error('not a picture the TV can show');
-        fs.writeFileSync(tmp, r.body, { mode: 0o600 });
-        const file = id + '.' + type;
-        fs.renameSync(tmp, path.join(IM, file));
-        return { file, bytes: r.body.length };
-      } catch (e) {
-        last = e;
-      }
-    }
-    unlink(tmp);
-    throw last || new Error('download failed');
-  }
-  // an album's photos. Up to Immich 1.x the album itself lists them; newer servers (2.x, 3.x) leave them out, so they are searched by
-  // album (POST /api/search/metadata), a page at a time
-  async function albumAssets(id) {
-    const al = await immich('/albums/' + encodeURIComponent(id) + '?withoutAssets=false');
-    if (Array.isArray(al.assets)) return al.assets;
-    let out = [],
-      page = 1;
-    for (let n = 0; page && n < 20; n++) {
-      const r = await immich('/search/metadata', null, {
-        method: 'POST',
-        headers: { 'x-api-key': icfg().key, Accept: 'application/json', 'content-type': 'application/json' },
-        body: JSON.stringify({ albumIds: [id], type: 'IMAGE', size: 250, page }),
-      });
-      const items = (r.assets && r.assets.items) || [];
-      out = out.concat(items);
-      page = r.assets && r.assets.nextPage ? +r.assets.nextPage : 0;
-      if (out.length >= LIMITS.immich * 2) break;
-    }
-    return out;
-  }
-  async function doSync() {
-    const ic = icfg(),
-      st = idx().sync;
-    if (!ic.url || !ic.key) return;
-    st.state = 'syncing';
-    st.error = '';
-    st.done = 0;
-    try {
-      mkdir(IM);
-      // the albums' photos, newest first, without videos or trashed ones (hidden ones stay on the TV, so they can be shown again)
-      const want = [],
-        seen = {};
-      for (const a of ic.albums) {
-        for (const x of await albumAssets(a))
-          if (x && ASSET.test(x.id) && x.type === 'IMAGE' && !x.isTrashed && x.visibility !== 'hidden' && !seen[x.id]) {
-            seen[x.id] = 1;
-            want.push({ id: x.id, sum: x.checksum || '', mime: x.originalMimeType || '', at: Date.parse(x.fileCreatedAt || '') || 0 });
-          }
-      }
-      want.sort((a, b) => b.at - a.at);
-      if (!want.length && ic.albums.length) st.error = 'the chosen albums have no photos the TV can show';
-      const keep = want.slice(0, LIMITS.immich),
-        keepIds = {};
-      keep.forEach(w => (keepIds[w.id] = 1));
-      // first the ones no longer wanted, so their space is free for the new ones
-      const cur = idx().immich;
-      for (const id of Object.keys(cur))
-        if (!keepIds[id]) {
-          unlink(path.join(IM, cur[id].file));
-          delete cur[id];
-        }
-      saveIdx();
-      const size = cfg().size === 'hd' ? 'hd' : '4k';
-      let full = false,
-        failed = 0;
-      for (const w of keep) {
-        const have = cur[w.id];
-        if (have && have.sum === w.sum && have.size === size && fs.existsSync(path.join(IM, have.file))) continue;
-        if (usedBytes() > LIMITS.bytes - 2 * 1024 * 1024) {
-          full = true;
-          break;
-        }
-        try {
-          const d = await download(w.id, w.mime, size);
-          if (have && have.file !== d.file) unlink(path.join(IM, have.file));
-          cur[w.id] = { file: d.file, bytes: d.bytes, sum: w.sum, size };
-          st.done++;
-          if (st.done % 10 === 0) saveIdx();
-        } catch (e) {
-          failed++;
-          if (failed >= 5 && !st.done) throw e; // Immich is down or the key lost a permission: stop, keep what is there
-        }
-      }
-      st.ok = Date.now();
-      if (full) st.error = 'Wallpapers is full (150 MB): not every photo was downloaded';
-      else if (failed) st.error = failed + ' photos could not be downloaded';
-    } catch (e) {
-      st.error = String(e.message || e);
-    }
-    st.state = 'idle';
-    st.at = Date.now();
-    saveIdx();
-  }
-  function disconnect() {
+  function removeLegacy() {
     for (const id of Object.keys(idx().immich)) unlink(path.join(IM, idx().immich[id].file));
     idx().immich = {};
     idx().sync = { state: 'idle', at: 0, error: '', ok: 0 };
@@ -313,6 +146,7 @@ function create(ctx) {
   //   file(id)         the absolute path of that photo (a JPEG, PNG or WebP), or ''
   //   live: true       it also offers one photo at a time that is not kept on the TV: Home asks next() each time it shows that entry
   //   next()           (live) -> {url, credit}: an https address of the picture and the text Home shows in a corner (the photographer)
+  //   push()           (live, optional) -> {url, credit} or null: a photo for Home to show now, once (Home asks every few seconds)
   //   status()         -> {summary, error}: one line for the manager (photos, last sync, what went wrong)
   //   settings(o)      -> {url, code, qr, seconds}: starts a short-lived page on the LAN for its settings (o.stop: close it)
   // The photos are listed as s/<add-on>/<id> and a live source as l/<add-on>. A source that throws offers nothing and is logged once.
@@ -364,18 +198,34 @@ function create(ctx) {
     fs.createReadStream(f).pipe(res);
   }
   // a live photo: the address goes into a CSS url() on Home, so only a plain https address is passed on
+  const livePhoto = r => {
+    if (typeof r.url !== 'string' || !/^https:\/\/[^\s"'()\\]{4,600}$/.test(r.url))
+      return { error: 'the source gave no usable picture address' };
+    return { url: r.url, credit: line(r.credit, 120) };
+  };
   async function liveNext(addon) {
     const s = srcOf(addon);
     if (!s || s.mod.wallpapers.live !== true || typeof s.mod.wallpapers.next !== 'function') return { error: 'not a live source' };
     try {
       const r = (await s.mod.wallpapers.next()) || {};
-      if (r.error) return { error: line(r.error, 160) };
-      if (typeof r.url !== 'string' || !/^https:\/\/[^\s"'()\\]{4,600}$/.test(r.url))
-        return { error: 'the source gave no usable picture address' };
-      return { url: r.url, credit: line(r.credit, 120) };
+      return r.error ? { error: line(r.error, 160) } : livePhoto(r);
     } catch (e) {
       return { error: line((e && e.message) || e, 160) };
     }
+  }
+  // a photo a live source wants Home to show now (Unsplash: the one "Test key and save" fetched), handed out once; Home asks every few
+  // seconds while a live entry is in its list
+  function pushNow() {
+    for (const s of sources()) {
+      const w = s.mod.wallpapers;
+      if (w.live !== true || typeof w.push !== 'function') continue;
+      const r = guard(s, () => w.push(), null);
+      if (r && !r.error) {
+        const p = livePhoto(r);
+        if (p.url) return { id: 'l/' + s.id, url: p.url, credit: p.credit };
+      }
+    }
+    return { id: '', url: '', credit: '' };
   }
   async function srcSettings(addon, stop) {
     const s = srcOf(addon);
@@ -407,9 +257,7 @@ function create(ctx) {
 
   // ---- what the TV shows ----
   function list() {
-    let out = idx()
-      .upload.map(u => 'u/' + u.id)
-      .concat(immichList().map(id => 'i/' + id));
+    let out = idx().upload.map(u => 'u/' + u.id);
     for (const s of sources()) {
       out = out.concat(srcPhotos(s).map(id => 's/' + s.id + '/' + id));
       if (s.mod.wallpapers.live === true) out.push('l/' + s.id);
@@ -422,24 +270,9 @@ function create(ctx) {
     return l.length + ':' + crypto.createHash('md5').update(l.join(',')).digest('hex').slice(0, 8);
   };
   function status() {
-    const ic = icfg(),
-      s = idx().sync;
     const out = {
       size: cfg().size === 'hd' ? 'hd' : '4k',
       uploads: idx().upload.length,
-      immich: {
-        configured: !!(ic.url && ic.key),
-        url: ic.url,
-        keyHint: ic.key ? '…' + ic.key.slice(-4) : '',
-        albums: ic.albums.length,
-        photos: immichList().length,
-        hidden: ic.hidden.length,
-        state: s.state,
-        lastSync: s.ok || 0,
-        tried: s.at || 0,
-        error: s.error || '',
-        done: s.done || 0,
-      },
       total: list().length,
       bytes: usedBytes(),
       limits: LIMITS,
@@ -448,6 +281,8 @@ function create(ctx) {
     // only when an add-on provides photos, so the reply is the same without any
     const src = sourceStatus();
     if (src.length) out.sources = src;
+    // only a TV that had Immich before it became an add-on
+    if (legacyOn()) out.legacyImmich = { photos: Object.keys(idx().immich).length, configured: !!(icfg().url && icfg().key) };
     return out;
   }
   function photoFile(src, id) {
@@ -455,7 +290,6 @@ function create(ctx) {
       const u = idx().upload.filter(x => x.id === id)[0];
       return u ? path.join(UP, u.file) : '';
     }
-    if (src === 'i' && ASSET.test(id) && idx().immich[id]) return path.join(IM, idx().immich[id].file);
     return '';
   }
   function sendPhoto(res, src, id, cache) {
@@ -530,7 +364,7 @@ function create(ctx) {
     touch();
     try {
       if (u === '/api/state') return json(Object.assign(status(), { pair: null, uploadsList: idx().upload.map(x => x.id) }));
-      let m = /^\/api\/photo\/([ui])\/([0-9a-f-]{16,36})$/i.exec(u);
+      let m = /^\/api\/photo\/(u)\/([0-9a-f-]{16,36})$/i.exec(u);
       if (m && req.method === 'GET') return sendPhoto(res, m[1], m[2], 'private, max-age=3600');
       if (req.method !== 'POST') return json({ error: 'not found' }, 404);
       if (u === '/api/upload') {
@@ -539,42 +373,6 @@ function create(ctx) {
       }
       const b = await web.body(req, 16384);
       if (u === '/api/upload/delete') return json({ ok: removeUpload(String(b.id || '')) });
-      if (u === '/api/immich/connect') return json(await connect(String(b.url || ''), String(b.key || '')));
-      if (u === '/api/immich/albums') {
-        if (Array.isArray(b.ids)) {
-          const ids = b.ids.filter(x => typeof x === 'string' && ASSET.test(x)).slice(0, 50);
-          setCfg(w => {
-            w.immich = Object.assign({}, w.immich, { albums: ids });
-          });
-          sync();
-          return json({ ok: true });
-        }
-        const sel = icfg().albums;
-        return json({ albums: (await albums()).map(a => Object.assign(a, { on: sel.indexOf(a.id) >= 0 })) });
-      }
-      if (u === '/api/immich/sync') {
-        sync();
-        return json({ ok: true });
-      }
-      if (u === '/api/immich/photos') {
-        const hid = icfg().hidden;
-        return json({ photos: Object.keys(idx().immich).map(id => ({ id, hidden: hid.indexOf(id) >= 0 })) });
-      }
-      if (u === '/api/immich/hide') {
-        const id = String(b.id || '');
-        if (!ASSET.test(id)) return json({ error: 'bad id' }, 400);
-        setCfg(w => {
-          const ic = Object.assign({ hidden: [] }, w.immich);
-          ic.hidden = ic.hidden.filter(x => x !== id);
-          if (b.hidden) ic.hidden.push(id);
-          w.immich = ic;
-        });
-        return json({ ok: true });
-      }
-      if (u === '/api/immich/disconnect') {
-        disconnect();
-        return json({ ok: true });
-      }
       return json({ error: 'not found' }, 404);
     } catch (e) {
       return json({ error: String(e.message || e) }, 400);
@@ -584,12 +382,13 @@ function create(ctx) {
   // ---- the service's API ----
   async function handle(req, res, u, body) {
     const json = (o, c) => web.json(res, o, c);
-    const m = /^\/api\/wallpapers\/photo\/([ui])\/([0-9a-f-]{16,36})$/i.exec(u);
+    const m = /^\/api\/wallpapers\/photo\/(u)\/([0-9a-f-]{16,36})$/i.exec(u);
     if (m) return sendPhoto(res, m[1], m[2]);
     const ms = /^\/api\/wallpapers\/photo\/s\/([a-z][a-z0-9-]{1,31})\/([\w.-]{1,64})$/.exec(u);
     if (ms) return sendSrcPhoto(res, ms[1], ms[2]);
     const ml = /^\/api\/wallpapers\/live\/([a-z][a-z0-9-]{1,31})$/.exec(u);
     if (ml) return json(await liveNext(ml[1]));
+    if (u === '/api/wallpapers/push') return json(pushNow());
     if (u === '/api/wallpapers/status') return json(status());
     if (u === '/api/wallpapers/list') return json({ photos: list(), stamp: stamp() });
     if (req.method !== 'POST') return web.notFound(res);
@@ -607,36 +406,21 @@ function create(ctx) {
       return json(r, r.error ? 400 : 200);
     }
     if (u === '/api/wallpapers/pair') return json(b.stop ? (stopPair(), {}) : await startPair());
-    if (u === '/api/wallpapers/sync') {
-      sync();
-      return json(status());
-    }
     if (u === '/api/wallpapers/remove-uploads') {
       removeUploads();
       return json(status());
     }
     if (u === '/api/wallpapers/disconnect') {
-      disconnect();
+      removeLegacy();
       return json(status());
     }
     return web.notFound(res);
   }
 
-  // the automatic sync: every six hours; shortly after a start only when the last one is more than a day old
-  function start() {
-    if (idx().sync.state === 'syncing') idx().sync.state = 'idle'; // a sync the last run did not finish
-    const t = setInterval(() => sync(), SYNC_MS);
-    if (t.unref) t.unref();
-    if (Date.now() - (idx().sync.ok || 0) > 24 * 3600 * 1000) {
-      const t2 = setTimeout(() => sync(), 15 * 60 * 1000);
-      if (t2.unref) t2.unref();
-    }
-  }
-
-  return { name: 'wallpapers', prefix: '/api/wallpapers/', handle, start, status, stamp, sync, addUpload, list, phone };
+  return { name: 'wallpapers', prefix: '/api/wallpapers/', handle, status, stamp, adoptLegacy, addUpload, list, phone };
 }
 
-// the phone page: two actions, Upload photos and Configure Immich. Plain script for iOS Safari and Android Chrome; photos are scaled in
+// the phone page: Upload photos. Plain script for iOS Safari and Android Chrome; photos are scaled in
 // the browser (to 3840 or 1920 pixels on the long side) before they are sent, which also turns an iPhone's HEIC into JPEG. It is in the
 // phone's language: the fixed text is translated here, the script's own texts by t() with the translations it uses (i18n.js).
 const PHONE_JS = `var code='',S={},MAX=3840,$=function(i){return document.getElementById(i)};
@@ -649,11 +433,8 @@ function msg(t,e){$('msg').innerHTML=t?'<p class="m'+(e?' e':'')+'"></p>':'';if(
 function showLogin(t){$('login').className='';$('main').className='hide';$('sum').textContent=t||''}
 function ago(x){if(!x)return t('never');var m=Math.round((Date.now()-x)/60000);return m<1?t('just now'):m<60?fm('%d min ago',m):m<1440?fm('%d h ago',Math.round(m/60)):fm('%d days ago',Math.round(m/1440))}
 function state(){return api('state').then(function(s){S=s;MAX=s.size==='hd'?1920:3840;$('login').className='hide';$('main').className='';
- $('sum').textContent=fm('Local uploads: %d · Immich: %d · Total: %d photos (%d of 150 MB)',s.uploads,s.immich.photos,s.total,Math.round(s.bytes/1048576));
- $('un').textContent=fm('%d of %d',s.uploads,s.limits.uploads);var g='';(s.uploadsList||[]).forEach(function(id){g+='<div class=ph><img loading=lazy src="" data-s="u/'+id+'"><button data-d="'+id+'">×</button></div>'});$('ug').innerHTML=g;thumbs($('ug'));
- var i=s.immich;$('iu').value=$('iu').value||i.url;$('ik').placeholder=i.keyHint?fm('API key (saved: %s; leave empty to keep)',i.keyHint):t('API key');
- $('ist').innerHTML='';var p=document.createElement('p');p.textContent=i.configured?(i.state==='syncing'?fm('Syncing… %d new',i.done):fm('Last sync: %s',ago(i.lastSync))+' · '+fm('%d photos from %d albums',i.photos,i.albums))+(i.error?' · '+t(i.error):''):t('Not connected.');$('ist').appendChild(p);
- $('isy').className=$('idc').className=i.configured?'':'hide';if(i.state==='syncing')setTimeout(state,3000)})}
+ $('sum').textContent=fm('Local uploads: %d · Total: %d photos (%d of 150 MB)',s.uploads,s.total,Math.round(s.bytes/1048576));
+ $('un').textContent=fm('%d of %d',s.uploads,s.limits.uploads);var g='';(s.uploadsList||[]).forEach(function(id){g+='<div class=ph><img loading=lazy src="" data-s="u/'+id+'"><button data-d="'+id+'">×</button></div>'});$('ug').innerHTML=g;thumbs($('ug'))})}
 function thumbs(el){[].forEach.call(el.querySelectorAll('img[data-s]'),function(im){var x=new XMLHttpRequest();x.open('GET','/api/photo/'+im.getAttribute('data-s'));x.setRequestHeader('x-code',code);x.responseType='blob';
  x.onload=function(){if(x.status===200)im.src=URL.createObjectURL(x.response)};x.send()})}
 /* scale in the browser: the long side to MAX pixels, JPEG; a file the browser cannot draw is sent as it is when it is small enough */
@@ -669,16 +450,6 @@ function upload(files){var list=[].slice.call(files),n=0,okN=0,errs=[];$('prog')
    x.onerror=function(){errs.push(t('The TV did not answer.'));n++;next()};x.send(b)})})()}
 $('f').onchange=function(){if(this.files.length)upload(this.files);this.value=''};
 $('ug').onclick=function(e){var d=e.target.getAttribute('data-d');if(d)api('upload/delete',{id:d}).then(state)};
-$('tu').onclick=function(){$('tu').className='on';$('ti').className='';$('up').className='';$('im').className='hide'};
-$('ti').onclick=function(){$('ti').className='on';$('tu').className='';$('im').className='';$('up').className='hide';if(S.immich&&S.immich.configured){loadAlbums();loadPhotos()}};
-function loadAlbums(){api('immich/albums',{}).then(function(r){if(r.error)return msg(t(r.error),1);var h='';(r.albums||[]).forEach(function(a){h+='<label class=al><input type=checkbox value="'+a.id+'"'+(a.on?' checked':'')+'><span></span><small>'+a.count+'</small></label>'});
- $('al').innerHTML=h;var sp=$('al').querySelectorAll('span');(r.albums||[]).forEach(function(a,i){sp[i].textContent=a.name});$('albox').className=''},function(e){msg(e.error||t('Could not read the albums'),1)})}
-function loadPhotos(){api('immich/photos',{}).then(function(r){var ps=r.photos||[];$('iphb').className=ps.length?'':'hide';var g='';ps.forEach(function(p){g+='<div class="ph'+(p.hidden?' off':'')+'" data-h="'+p.id+'"><img loading=lazy src="" data-s="i/'+p.id+'"></div>'});$('ipg').innerHTML=g;thumbs($('ipg'))})}
-$('ipg').onclick=function(e){var t=e.target.closest('[data-h]');if(!t)return;var off=!/off/.test(t.className);api('immich/hide',{id:t.getAttribute('data-h'),hidden:off}).then(function(){t.className='ph'+(off?' off':'');state()})};
-$('ic').onclick=function(){msg(t('Connecting…'));api('immich/connect',{url:$('iu').value,key:$('ik').value}).then(function(r){if(r.error)return msg(t(r.error),1);$('ik').value='';msg(t('Connected to Immich.'));state().then(loadAlbums)})};
-$('as').onclick=function(){var ids=[].map.call($('al').querySelectorAll('input:checked'),function(i){return i.value});api('immich/albums',{ids:ids}).then(function(){msg(t('Albums saved. Syncing…'));setTimeout(state,1500);setTimeout(loadPhotos,8000)})};
-$('isy').onclick=function(){api('immich/sync',{}).then(function(){msg(t('Syncing…'));setTimeout(state,1500)})};
-$('idc').onclick=function(){if(confirm(t('Disconnect Immich? Its photos are removed from the TV.')))api('immich/disconnect',{}).then(function(){$('albox').className='hide';$('iphb').className='hide';msg(t('Immich disconnected.'));state()})};
 $('go').onclick=function(){code=$('code').value.trim();state().catch(function(){})};
 code=(location.hash||'').slice(1);if(/^\\d{6}$/.test(code))state().catch(function(){});else showLogin();
 `;
@@ -698,19 +469,11 @@ button.p,label.b{background:#f5f6f8;color:#111;font-weight:600;border:0}input{te
 <h1>Wallpapers</h1><p id=sum>${T('Connecting to the TV…')}</p>
 <div id=login class=hide><p>${T('Enter the code shown on the TV.')}</p><input id=code inputmode=numeric autocomplete=one-time-code><button class=p id=go>${T('Continue')}</button></div>
 <div id=main class=hide>
-<div class=tabs><button id=tu class=on>${T('Upload photos')}</button><button id=ti>${T('Configure Immich')}</button></div>
 <div id=msg></div>
 <section id=up><label class=b for=f>${T('Choose photos')}</label><input id=f type=file accept="image/*" multiple class=hide>
 <div id=prog class=hide><div class=bar><i id=pb></i></div><p id=pt></p></div>
 <h2>${T('Uploaded')} <small id=un></small></h2><div class=grid id=ug></div></section>
-<section id=im class=hide>
-<p>${T('Use an API key from Immich (Account settings > API keys) with album.read and asset.read/view permissions.')}</p>
-<input id=iu type=url placeholder="https://immich.example.com" autocomplete=off><input id=ik type=password placeholder="${T('API key')}" autocomplete=off>
-<button class=p id=ic>${T('Test connection and save')}</button>
-<div id=albox class=hide><h2>${T('Albums')}</h2><div id=al></div><button class=p id=as>${T('Save albums and sync')}</button></div>
-<div id=ist></div>
-<div id=iphb class=hide><h2>${T('Synced photos')} <small>${T('tap to hide or show one')}</small></h2><div class=grid id=ipg></div></div>
-<button id=isy>${T('Sync now')}</button><button id=idc>${T('Disconnect Immich')}</button></section></div>
+</div>
 ` +
     i18n.script(lang, PHONE_JS) +
     '<script>' +
