@@ -601,53 +601,99 @@ async function handle(req, res, u, body) {
     res.end(JSON.stringify(o));
   };
   const q = new URL(req.url, 'http://x').searchParams;
-  if (u === '/api/live/status')
-    return json({
-      configured: !!settings.playlistUrl,
-      channels: playlist ? playlist.channels.length : 0,
-      epg: epg ? epg.count : 0,
-      state: status.state,
-      error: status.error,
-      pairing: pair ? { url: pair.url, code: pair.code } : null,
-    });
+  if (u === '/api/live/status') {
+    const src = sources(),
+      st = {
+        configured: !!settings.playlistUrl || src.length > 0,
+        channels: playlist ? playlist.channels.length : 0,
+        epg: epg ? epg.count : 0,
+        state: status.state,
+        error: status.error,
+        pairing: pair ? { url: pair.url, code: pair.code } : null,
+      };
+    // only where an add-on brings channels of its own (the LG tuner): [{id, label}]
+    if (src.length) st.sources = src.map(p => ({ id: p.id, label: sourceLabel(p) }));
+    return json(st);
+  }
   if (u === '/api/live/channels') {
     if (settings.playlistUrl && (!playlist || playlist.v !== 2)) refresh(false);
     // [number, id, name, group, logo, url, key, country, language, quality, flags, categories, other streams as [url, quality]]
-    return json(
-      playlist
-        ? {
-            groups: playlist.groups,
-            channels: playlist.channels.map(c => [
-              c.num,
-              guideId(c),
-              c.name,
-              c.group,
-              c.logo,
-              c.url,
-              c.key || '',
-              c.cc || '',
-              c.lang || '',
-              c.q || '',
-              c.fl || 0,
-              c.cats || [],
-              (c.alt || []).map(a => [a.url, a.q || '']),
-            ]),
-          }
-        : { groups: [], channels: [] }
-    );
+    const rows = playlist
+      ? playlist.channels.map(c => [
+          c.num,
+          guideId(c),
+          c.name,
+          c.group,
+          c.logo,
+          c.url,
+          c.key || '',
+          c.cc || '',
+          c.lang || '',
+          c.q || '',
+          c.fl || 0,
+          c.cats || [],
+          (c.alt || []).map(a => [a.url, a.q || '']),
+        ])
+      : [];
+    const groups = playlist ? playlist.groups.slice() : [];
+    // the channels add-ons bring (the LG tuner): after the playlist's, numbered on from them, with no stream: choosing one opens it
+    // in the add-on's own way (FL_SOURCE; the page calls /api/live/open)
+    for (const p of sources()) {
+      const g = sourceLabel(p);
+      let list = [];
+      try {
+        list = await within(p.mod.livetv.channels(), 20000);
+      } catch (e) {
+        console.error('live: the channels of ' + p.id + ': ' + String((e && e.message) || e).slice(0, 120));
+      }
+      for (const c of Array.isArray(list) ? list.slice(0, 2000) : []) {
+        if (!c || !SOURCE_ID.test(String(c.id)) || !c.name) continue;
+        if (groups.indexOf(g) < 0) groups.push(g);
+        const id = p.id + ':' + c.id;
+        rows.push([rows.length + 1, id, String(c.name).slice(0, 80), g, '', '', id, '', '', '', FL_SOURCE, [g], []]);
+      }
+    }
+    return json({ groups, channels: rows });
   }
   if (u === '/api/live/epg') {
     const out = {},
-      now = Math.floor(Date.now() / 1000);
-    for (const id of (q.get('ids') || '').split(',').filter(Boolean).slice(0, 60)) {
-      const list = epg && epg.byId[id];
-      if (!list) continue;
+      now = Math.floor(Date.now() / 1000),
+      full = !!q.get('full');
+    // the guide of one channel as the page wants it: now and next, or (full) the next eight programmes
+    const shape = list => {
       const i = list.findIndex(p => p[1] > now);
-      if (i < 0) continue;
-      if (q.get('full')) out[id] = { list: list.slice(i, i + 8) };
-      else out[id] = { now: list[i][0] <= now ? list[i] : null, next: list[list[i][0] <= now ? i + 1 : i] || null };
+      if (i < 0) return null;
+      if (full) return { list: list.slice(i, i + 8) };
+      return { now: list[i][0] <= now ? list[i] : null, next: list[list[i][0] <= now ? i + 1 : i] || null };
+    };
+    for (const id of (q.get('ids') || '').split(',').filter(Boolean).slice(0, 60)) {
+      const sp = sourceOf(id);
+      let list = null;
+      if (sp) {
+        try {
+          const l = await within(sp.p.mod.livetv.epg(sp.id, full), 20000);
+          list = Array.isArray(l) ? l.filter(x => Array.isArray(x) && x[0] > 0 && x[1] > 0) : null;
+        } catch (_) {}
+      } else list = epg && epg.byId[id];
+      const r = list && shape(list);
+      if (r) out[id] = r;
     }
     return json(out);
+  }
+  // choosing a channel an add-on brought (the LG tuner): the add-on opens it (LG's Live TV on that channel)
+  if (u === '/api/live/open' && req.method === 'POST') {
+    const b = await body(req),
+      sp = sourceOf(String(b.id || ''));
+    if (!sp) return json({ error: 'no such channel' }, 404);
+    if (typeof sp.p.mod.livetv.open !== 'function') return json({ error: 'this channel cannot be opened' }, 400);
+    try {
+      const r = await within(sp.p.mod.livetv.open(sp.id), 20000);
+      return r && r.returnValue !== false && !r.error
+        ? json({ returnValue: true })
+        : json({ error: String((r && r.error) || 'could not open the channel').slice(0, 120) });
+    } catch (e) {
+      return json({ error: String((e && e.message) || e).slice(0, 120) });
+    }
   }
   if (u === '/api/live/state' && req.method === 'GET') {
     pruneState();
@@ -695,6 +741,44 @@ async function handle(req, res, u, body) {
   res.end();
 }
 
+// ---- channels that add-ons bring (provides "livetv": the LG tuner): module.livetv = {label, channels(), epg(id, full), open(id)} ----
+// channels() -> [{id, name}] (id: letters, digits, . _ -), epg(id, full) -> [[start, end, title, description], ...] by start (seconds since
+// 1970), open(id) -> {returnValue: true} | {error}. The page knows them by the flag FL_SOURCE and the id <add-on>:<id>.
+const FL_SOURCE = 8,
+  SOURCE_ID = /^[\w.-]{1,64}$/;
+let svc = null;
+function sources() {
+  const ad = svc && svc.feature && svc.feature('addons');
+  return ad && typeof ad.providers === 'function'
+    ? ad
+        .providers('livetv')
+        .filter(p => p.mod && p.mod.livetv && typeof p.mod.livetv.channels === 'function' && typeof p.mod.livetv.epg === 'function')
+    : [];
+}
+const sourceLabel = p => String((p.mod.livetv && p.mod.livetv.label) || p.name || p.id).slice(0, 40);
+// "<add-on>:<channel>" -> {p: the provider, id: the channel}, or null
+function sourceOf(id) {
+  const i = String(id).indexOf(':');
+  if (i < 1) return null;
+  const p = sources().filter(x => x.id === id.slice(0, i))[0];
+  return p && SOURCE_ID.test(id.slice(i + 1)) ? { p, id: id.slice(i + 1) } : null;
+}
+// a call into an add-on that always ends
+const within = (promise, ms) =>
+  new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('no answer')), ms);
+    Promise.resolve(promise).then(
+      r => {
+        clearTimeout(t);
+        resolve(r);
+      },
+      e => {
+        clearTimeout(t);
+        reject(e);
+      }
+    );
+  });
+
 // the id the page asks the guide with: the playlist's own, or the guide channel found by name
 const guideId = c => (epg && epg.byId && epg.byId[c.id] ? c.id : (epg && epg.map && epg.map[c.key]) || c.id);
 
@@ -705,6 +789,9 @@ function start() {
 }
 
 // the add-on's ctx is not needed: this part keeps its own state (it was a part of the service before add-ons, and still answers /api/live/)
-const create = (/** @type {any} */ _ctx) => ({ handle, start });
+const create = (/** @type {any} */ ctx) => {
+  svc = ctx; // for the channels add-ons bring
+  return { handle, start };
+};
 
 module.exports = { create, handle, parseM3U, parseEpg, probe, derivedEpgUrl, nameKey };

@@ -26,12 +26,14 @@ const P = require('./paths'),
 const { imageType } = require('./wallpapers');
 
 const KINDS = ['page', 'service'];
-const PERMISSIONS = ['net.fetch', 'config.own', 'notify', 'key.guide'];
+// luna: calls to LG's own services, only the ones the manifest lists ("luna": [{uri, as}]); see addonCtx
+const PERMISSIONS = ['net.fetch', 'config.own', 'notify', 'key.guide', 'luna'];
 // keys a page keeps for itself; every other key (the number and colour buttons, Back) switches pages or goes back to Home
 const CLAIMS = ['digits', 'colors', 'back'];
 // what an add-on can provide to a part of the service (wallpapers: photo sources, see helper/wallpapers.js; cards: cards for Home with
-// their own page, data and actions, see helper/cardcatalog.js)
-const PROVIDES = ['wallpapers', 'cards'];
+// their own page, data and actions, see helper/cardcatalog.js; livetv: channels and guide data for the Live TV guide, see
+// helper/addons-bundled/iptv/service.js)
+const PROVIDES = ['wallpapers', 'cards', 'livetv'];
 // where the user may put the page strip ('' leaves it to the theme)
 const POSITIONS = ['', 'top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
 const ID = /^[a-z][a-z0-9-]{1,31}$/;
@@ -81,6 +83,22 @@ function check(m, serviceVersion) {
     r => /^\/api\/[a-z][a-z0-9-]*\/?$/.test(r) && !/^\/api\/addons\/?$/.test(r)
   );
   const t = m.tile && typeof m.tile === 'object' ? m.tile : null;
+  // the calls to LG's services this add-on may make (permission "luna"): [{uri: 'luna://<service>/<method or prefix>', as: <app id to call as>}]
+  const luna = [];
+  if (m.luna !== undefined || perms.indexOf('luna') >= 0) {
+    if (perms.indexOf('luna') < 0) return { error: 'luna needs the permission luna' };
+    if (!Array.isArray(m.luna) || !m.luna.length || m.luna.length > 8) return { error: 'luna is a list of 1 to 8 calls' };
+    for (const l of m.luna) {
+      if (
+        !l ||
+        typeof l.uri !== 'string' ||
+        !/^luna:\/\/[a-z][\w.-]{2,80}\/[\w/.-]{0,60}$/.test(l.uri) ||
+        (l.as !== undefined && !/^[\w.-]{3,80}$/.test(String(l.as)))
+      )
+        return { error: 'a luna call is {uri: "luna://service/method", as: "app id"}' };
+      luna.push({ uri: l.uri, as: l.as === undefined ? '' : String(l.as) });
+    }
+  }
   // cards for Home (provides "cards"): each is checked as a card.json is, with a poll interval and the actions of its buttons
   const cards = [];
   if (m.cards !== undefined) {
@@ -102,6 +120,7 @@ function check(m, serviceVersion) {
       about: typeof m.about === 'string' ? m.about.slice(0, 600) : '',
       entry: { service: entry.service, page: entry.page },
       permissions: perms,
+      luna,
       routes,
       provides: (Array.isArray(m.provides) ? m.provides : []).filter((c, i, a) => PROVIDES.indexOf(c) >= 0 && a.indexOf(c) === i),
       cards,
@@ -226,6 +245,15 @@ function create(ctx) {
     };
     if (a.bundled) return Object.assign({}, ctx, c); // a bundled add-on is part of the package: it gets the service's own ctx too
     if (perms.indexOf('net.fetch') >= 0) c.fetch = fetch;
+    // LG's services, only the calls the manifest lists (a prefix of the uri), and as the app it names: nothing else of the TV
+    if (perms.indexOf('luna') >= 0 && ctx.luna) {
+      const allowed = a.manifest.luna;
+      c.luna = (uri, payload, o) => {
+        const e = allowed.filter(x => String(uri).indexOf(x.uri) === 0)[0];
+        if (!e) return Promise.resolve({ returnValue: false, errorText: 'this add-on may not call ' + String(uri).slice(0, 80) });
+        return ctx.luna(uri, payload, Object.assign({ wait: Math.min(+(o && o.wait) || 5000, 20000) }, e.as ? { appId: e.as } : {}));
+      };
+    }
     if (perms.indexOf('notify') >= 0 && ctx.feature('notify')) c.notify = body => ctx.feature('notify').show(body);
     return c;
   }
