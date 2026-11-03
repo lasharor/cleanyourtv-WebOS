@@ -773,13 +773,12 @@ function cardFeed(el) {
   );
 }
 setInterval(function () {
-  /* webOS can report Home as hidden while it is on screen: a card is then asked less often instead of never, so what it shows does not go
-     stale (the first answer of a card that has none is not held back) */
+  /* asked at the card's own pace also while webOS calls Home hidden: it reports that wrongly on some TVs while Home is on screen, and a
+     card that is not asked then shows a stale song (the answer is a small local request) */
   var els = $('cards') ? $('cards').children : [];
   for (var i = 0; i < els.length; i++) {
     var pk = els[i]._pk;
-    if (pk && pk.poll && Date.now() - (els[i]._feedAt || 0) >= (document.hidden && els[i]._data ? Math.max(pk.poll, 30) : pk.poll) * 1000)
-      cardFeed(els[i]);
+    if (pk && pk.poll && Date.now() - (els[i]._feedAt || 0) >= pk.poll * 1000) cardFeed(els[i]);
   }
 }, 1000);
 /* every card of an add-on asked again (after a button: the same add-on may fill several places, and all of them show the new state) */
