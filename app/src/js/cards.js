@@ -697,7 +697,8 @@ function cardButtons(el, list) {
   el._btns = ok.map(function (b) {
     var d = document.createElement('div');
     d.className = 'card-btn' + (b.look ? ' card-btn-' + b.look : '');
-    d.style.cssText = (b.r ? 'border-radius:' + b.r + 'px;' : '') + 'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%';
+    d.style.cssText =
+      (b.r ? 'border-radius:' + b.r + 'px;' : '') + 'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%';
     d._o = { action: 'cardbtn', label: b.label, fixed: true };
     d._btn = { card: el, name: b.name };
     hit(d);

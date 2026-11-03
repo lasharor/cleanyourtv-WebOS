@@ -475,10 +475,16 @@ run(async () => {
   launched.length = 0;
   ok((await svc.cards.action('nowplaying', {}, 'open')).ok === true, 'the cover opens the Spotify app');
   ok(
-    launched.length === 1 && launched[0].id === 'spotify-beehive' && launched[0].uri.indexOf('applicationManager/launch') > 0 && launched[0].p.contentTarget === 'spotify:track:abc',
+    launched.length === 1 &&
+      launched[0].id === 'spotify-beehive' &&
+      launched[0].uri.indexOf('applicationManager/launch') > 0 &&
+      launched[0].p.contentTarget === 'spotify:track:abc',
     'on the song that plays: ' + JSON.stringify(launched)
   );
-  ok((await svc.cards.action('nowplaying', {}, 'pick', 'tv')).ok === true && launched.length === 2, 'the This TV row does what the cover does');
+  ok(
+    (await svc.cards.action('nowplaying', {}, 'pick', 'tv')).ok === true && launched.length === 2,
+    'the This TV row does what the cover does'
+  );
   seen.devices = [{ id: 'tv-device-000000001', name: 'Living room TV', type: 'TV', is_active: false }];
   seen.xfer.length = 0;
   await svc.cards.action('nowplaying', {}, 'pick', 'tv-device-000000001');
@@ -499,7 +505,10 @@ run(async () => {
     env: { lang: () => '', wallpaperSize: () => '4k' },
     settings,
   });
-  ok((await noLaunch.cards.action('nowplaying', {}, 'open')).error, 'without the permission to start apps the cover says so instead of failing');
+  ok(
+    (await noLaunch.cards.action('nowplaying', {}, 'open')).error,
+    'without the permission to start apps the cover says so instead of failing'
+  );
   const manifest = JSON.parse(require('fs').readFileSync(path.join(addonDir, 'addon.json'), 'utf8'));
   ok(
     manifest.permissions.indexOf('luna') >= 0 &&
@@ -545,12 +554,16 @@ run(async () => {
   const man = JSON.parse(fs.readFileSync(path.join(addonDir, 'addon.json'), 'utf8'));
   const chk = req('addons').check(man, '1.6.16');
   ok(
-    chk.manifest && chk.manifest.provides.join() === 'cards' && chk.manifest.permissions.join() === 'net.fetch,luna' && chk.manifest.luna.length === 1,
+    chk.manifest &&
+      chk.manifest.provides.join() === 'cards' &&
+      chk.manifest.permissions.join() === 'net.fetch,luna' &&
+      chk.manifest.luna.length === 1,
     'the manifest is accepted and asks for the network and one luna call'
   );
   ok(req('addons').check(man, '1.6.15').error, 'it needs the service that has cards for add-ons');
   ok(
-    chk.manifest.cards[0].id === 'nowplaying' && chk.manifest.cards[0].actions.map(x => x.name).join() === 'prev,toggle,next,output,open,pick',
+    chk.manifest.cards[0].id === 'nowplaying' &&
+      chk.manifest.cards[0].actions.map(x => x.name).join() === 'prev,toggle,next,output,open,pick',
     'one card with the buttons, the cover and the output menu'
   );
   const page = fs.readFileSync(path.join(addonDir, 'cards', 'nowplaying', 'card.js'), 'utf8');

@@ -86,14 +86,28 @@ function create(ctx) {
     return r && (r.error || r.returnValue === false) ? { error: T(r.error || 'Spotify did not open.') } : { ok: true };
   }
   // the picture of a device in the output menu, by the kind Spotify gives it
-  const icon = type => (/^(TV|CastVideo|STB|GameConsole)$/.test(type) ? 'devtv' : type === 'Computer' ? 'devcomputer' : /^(Smartphone|Tablet)$/.test(type) ? 'devphone' : 'devspeaker');
+  const icon = type =>
+    /^(TV|CastVideo|STB|GameConsole)$/.test(type)
+      ? 'devtv'
+      : type === 'Computer'
+        ? 'devcomputer'
+        : /^(Smartphone|Tablet)$/.test(type)
+          ? 'devphone'
+          : 'devspeaker';
   // the output button: the devices of the account, as a menu the launcher shows; a choice comes back as the action "pick"
   async function outputMenu() {
     const l = await np.devices();
     if (l.error) return { error: T(l.error) };
-    const items = l.devices.map(d => ({ id: d.id, label: d.name || d.type, sub: d.active ? T('Playing here') : d.type, icon: icon(d.type), active: d.active }));
+    const items = l.devices.map(d => ({
+      id: d.id,
+      label: d.name || d.type,
+      sub: d.active ? T('Playing here') : d.type,
+      icon: icon(d.type),
+      active: d.active,
+    }));
     // this TV's Spotify app is listed only while it is open: otherwise a row that does what the cover does
-    if (!l.devices.some(d => d.type === 'TV')) items.push({ id: 'tv', label: T('This TV'), sub: T('Opens Spotify'), icon: 'devtv', active: false });
+    if (!l.devices.some(d => d.type === 'TV'))
+      items.push({ id: 'tv', label: T('This TV'), sub: T('Opens Spotify'), icon: 'devtv', active: false });
     return { menu: { title: T('Play on'), action: 'pick', items } };
   }
   async function pick(id) {
@@ -117,7 +131,10 @@ function create(ctx) {
     const r = await np.control(what);
     if (r.error) return { error: T(r.error) };
     const now = Date.now();
-    want = what === 'play' || what === 'pause' ? { playing: what === 'play', until: now + 6000, at: now } : { playing: true, until: now + 6000, at: now, title: n.title };
+    want =
+      what === 'play' || what === 'pause'
+        ? { playing: what === 'play', until: now + 6000, at: now }
+        : { playing: true, until: now + 6000, at: now, title: n.title };
     return { ok: true };
   }
 

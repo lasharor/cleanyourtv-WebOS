@@ -153,7 +153,15 @@ function tell() {
     out = [],
     add = function (n, e, look, radius) {
       var r = e.getBoundingClientRect();
-      out.push({ name: n, x: (r.left / W) * 100, y: (r.top / H) * 100, w: (r.width / W) * 100, h: (r.height / H) * 100, r: radius, look: look });
+      out.push({
+        name: n,
+        x: (r.left / W) * 100,
+        y: (r.top / H) * 100,
+        w: (r.width / W) * 100,
+        h: (r.height / H) * 100,
+        r: radius,
+        look: look,
+      });
     };
   if (built && D && D.title) {
     add('open', built.art, 'ring', 10);

@@ -85,11 +85,11 @@
         "addon.json": "a056ead7d1e80ad1c0926944cb282647d9cc41b0702c4ffacf1cff0698cf85b8",
         "cards/nowplaying/card.css": "dda495fdc8ff99886284a7eadf3893b237e24c0ea497da048a21a56847665843",
         "cards/nowplaying/card.html": "d58e43f0b0e52be39c5abd1e6875ccb08de280372486e56ed85543938f96b557",
-        "cards/nowplaying/card.js": "32f66b8d194aea41fea8773226a059380200971cd9be514e07a1b1d6d11210aa",
+        "cards/nowplaying/card.js": "340919481bbcdd0123d2d541b3cc6a321464cddb77f51206bf78fc7cfc04b845",
         "cards/nowplaying/preview.jpg": "b4ec2f53f497cc06bac9967277cb28250a289a0d578b5a9bf469fe2c71319a82",
         "nowplaying.js": "308680ae425826b6f2e8127fe0bc6738a0965338bf592c366d83582fc9669e8f",
         "phone.js": "58b836bba61f34958b0864b94a968eee4799ce24e69ab2abd76cca55801feac9",
-        "service.js": "bf876c6594c884dd78c0b2dc8679bb80c785d4f6d875a61d6173d7e7ce02aa5a",
+        "service.js": "d5651087ade94a12a28c85572b5a90865b85c110fec0ea1349f6d5f554f79432",
         "spotifyconnect.js": "0b586d4f90645ad319d3c7247a4910668169da56f828e2dc7eb0f1b48599aa06"
       }
     },
