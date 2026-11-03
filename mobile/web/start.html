@@ -7,52 +7,64 @@
 <style>
 html,body{direction:ltr}*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font:16px -apple-system,system-ui,sans-serif;background:#101116;color:#f4f5f7;margin:0}
-#wrap{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;justify-content:center;max-width:430px;margin:0 auto;padding:26px 20px 26px}#wrap>*{position:relative}
-#wrap .glow{position:absolute;left:-80px;top:-120px;width:360px;height:360px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,138,91,.2),transparent)}
-h1{font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.02em;margin:6px 0 6px}h1+p{font-size:16px;margin:0}
-p{color:#a3a8b8;line-height:1.5;margin:8px 0}small{color:#7b8092;font-size:13px;line-height:1.5}
-label{display:block;font-size:14px;font-weight:600;color:#a3a8b8;margin:6px 0 8px}
+#wrap{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;max-width:430px;margin:0 auto;padding:72px 20px 24px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}#wrap>*{position:relative}
+#wrap .glow{position:absolute;left:-100px;top:-140px;width:320px;height:320px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,138,91,.14),transparent)}
+.view{display:flex;flex-direction:column;flex:1}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.02em;color:#7b8092;margin:0 0 8px;min-height:20px}
+h1{font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.02em;margin:0 0 8px}
+.sub{font-size:16px;line-height:1.5;color:#a3a8b8;margin:0 0 24px}
+label{display:block;font-size:14px;font-weight:600;color:#a3a8b8;margin:0 0 8px}
 .hide{display:none!important}
-button,input{font:inherit;color:#f4f5f7;background:#1a1c23;border:1px solid #2e3140;border-radius:18px}
+button,input{font:inherit;color:#f4f5f7;border-radius:16px}
 button{display:block;width:100%;font-weight:700;touch-action:manipulation}
-input{width:100%;height:56px;padding:0 16px;font-size:17px;margin:0 0 10px}
-.big{height:96px;border:0;background:#ff8a5b;color:#1b1008;font-size:21px;font-weight:800;margin:0 0 16px;box-shadow:0 12px 30px rgba(255,138,91,.3)}
-.pri{height:58px;border:0;background:#ff8a5b;color:#1b1008;font-size:18px;font-weight:800;margin-top:14px}
-.lnk{height:44px;color:#ff8a5b}
-.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:60;width:calc(100% - 32px);max-width:398px;margin:0;padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.45;text-align:left;pointer-events:none;opacity:0;transform:translate(-50%,-24px);transition:transform .25s ease,opacity .25s ease;box-shadow:0 12px 30px rgba(0,0,0,.45);background:#1a1c23;border:1px solid #2e3140;color:#dde0ea}.toast.ok{background:#1b2420;border-color:#2c4a3a;color:#bfe9cf}.toast.warn{background:#241f16;border-color:#5a4a2b;color:#f0d9a8}.toast.on{opacity:1;transform:translate(-50%,0)}@media (prefers-reduced-motion:reduce){.toast{transition:none}}
-.box{background:#1a1c23;border:1px solid #2e3140;border-radius:20px;padding:16px 16px 4px;margin:22px 0 0}
-.step{display:flex;align-items:flex-start;color:#dde0ea;font-size:15px;line-height:1.45;margin:0 0 12px}
-.step i{flex:none;width:26px;height:26px;border-radius:50%;background:#232631;color:#ff8a5b;font:700 13px system-ui;font-style:normal;display:flex;align-items:center;justify-content:center;margin-right:12px}
+input{width:100%;height:56px;padding:0 16px;font-size:17px;margin:0 0 8px;background:#14161c;border:1.5px solid #646b82;outline:0}input::placeholder{color:#8a8fa0;opacity:1}input:focus{border-color:#ff8a5b;box-shadow:0 0 0 3px rgba(255,138,91,.2)}
+.pri{height:58px;border:0;border-radius:18px;background:#ff8a5b;color:#1b1008;font-size:18px;font-weight:800;box-shadow:0 10px 24px rgba(255,138,91,.25)}.pri:active{transform:scale(.98)}.pri:disabled{opacity:.55}
+.lnk{height:48px;margin:0 0 8px;border:0;background:transparent;color:#ff9d74;font-size:15px;font-weight:600}.lnk.mute{color:#a3a8b8;margin:8px 0 0}
+.actions{margin-top:auto;padding-top:24px}
+.note{font-size:14px;line-height:1.5;color:#a3a8b8;text-align:center;margin:0 0 8px}
+.card{background:#14161c;border:1px solid #23262f;border-radius:20px;padding:16px;margin:0 0 24px}.card ol{list-style:none;margin:0;padding:0}
+.card li{display:flex;align-items:flex-start;color:#dde0ea;font-size:15px;line-height:1.5}.card li+li{margin-top:16px}.card b{color:#fff}
+.card i{flex:none;width:28px;height:28px;border-radius:50%;background:rgba(255,138,91,.14);color:#ff8a5b;font:800 14px/28px system-ui;font-style:normal;text-align:center;margin-right:12px}
+.pill{align-self:flex-start;margin:0 0 24px;padding:8px 14px;border-radius:999px;background:#14161c;border:1.5px solid #646b82;font-size:15px;font-weight:700;color:#fff}.pill span{color:#a3a8b8;font-weight:500}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:60;width:calc(100% - 32px);max-width:398px;margin:0;padding:12px 16px 12px 14px;border-radius:16px;font-size:14px;line-height:1.45;text-align:left;pointer-events:none;opacity:0;transform:translate(-50%,-24px);transition:transform .25s ease,opacity .25s ease;box-shadow:0 12px 30px rgba(0,0,0,.45);background:#1b1d25;border:1px solid #2e3140;border-left:4px solid #8a8fa0;color:#dde0ea}.toast.ok{background:#12231b;border-left-color:#30a46c;color:#bfe9cf}.toast.warn{background:#2a2412;border-left-color:#f5c451;color:#ffe9a8}.toast.on{opacity:1;transform:translate(-50%,0)}@media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
 <div id=toast class=toast role=status aria-live=polite></div>
 <div id=wrap>
 <div class=glow></div>
-<h1>Pair a device</h1>
-<p>Use this phone as a remote for your TV. You only do this once.</p>
 
-
-<div id=known class=hide style="margin-top:22px">
-  <button class=big id=wake>Turn on the TV</button>
-  <button class=lnk id=again>Try again</button>
-  <button class=lnk id=change>Another TV</button>
-</div>
-
-<div id=setup class=hide>
-  <div class=box>
-    <p class=step><i>1</i><span>On the TV, in the manager app: <b>Features</b> &gt; <b>Phone remote</b> &gt; <b>Pair a phone</b>.</span></p>
-    <p class=step><i>2</i><span>Type the address it shows; the TV's own page then asks for the code.</span></p>
+<div id=known class="view hide">
+  <p class=eyebrow>&nbsp;</p>
+  <h1>Can&#8217;t reach your TV</h1>
+  <p class=sub>Check that the TV is on and on this Wi-Fi, then try again.</p>
+  <p class=pill><span>TV &middot; </span><b id=tvn>TV</b></p>
+  <div class=actions>
+    <button class=pri id=again>Check again</button>
+    <button class="lnk mute" id=change>Use a different TV</button>
   </div>
-  <label for=addr style="margin-top:16px">Address of the TV</label>
-  <input id=addr inputmode=numeric autocapitalize=off autocorrect=off spellcheck=false placeholder="192.168.1.50">
-  <button class=lnk id=find>Find the TV on this network</button>
-  <button class=pri id=go>Continue</button>
 </div>
 
-<p><small>Or scan the code on the TV with the camera: the app opens itself on the TV's page with the code filled in; choose a name for the phone and tap Pair.</small></p>
+<div id=setup class="view hide">
+  <p class=eyebrow>Step 1 of 2</p>
+  <h1>Find your TV</h1>
+  <p class=sub>Use this phone as a remote for your TV. You only do this once.</p>
+  <div class=card><ol>
+    <li><i>1</i><span>On the TV, open the manager app: <b>Features &gt; Phone remote &gt; Pair a phone</b>. It shows a QR code and a code.</span></li>
+    <li><i>2</i><span>Tap <b>Find my TV</b> below, or type the TV address.</span></li>
+  </ol></div>
+  <div id=typed class=hide>
+    <label for=addr>TV address</label>
+    <input id=addr inputmode=numeric autocapitalize=off autocorrect=off spellcheck=false placeholder="192.168.1.50">
+  </div>
+  <div class=actions>
+    <p class=note>Or scan the QR code on the TV with the camera.</p>
+    <button class=lnk id=mode>Type the address instead</button>
+    <button class=pri id=go>Find my TV</button>
+  </div>
+</div>
 </div>
 
 <script>
-var A=window.CYTV_APP||null,host='';
+var A=window.CYTV_APP||null,host='',typing=false,searching=false;
 function $(i){return document.getElementById(i)}
 function call(n,d){try{return A&&typeof A[n]==='function'?A[n]():d}catch(e){return d}}
 /* "192.168.1.50", "http://192.168.1.50:8794/" -> "192.168.1.50:8794"; '' unless it is a literal address on the local network (10.x, 172.16-31.x,
@@ -73,13 +85,23 @@ function clean(v){
   var priv=o[0]===10||(o[0]===172&&o[1]>=16&&o[1]<=31)||(o[0]===192&&o[1]===168)||(o[0]===169&&o[1]===254);
   return priv?o.join('.')+':'+port:'';
 }
-/* every message is a toast that slides in at the top over the page and goes away by itself: ok (green) 3 s, info 3.5 s, warn (amber) 7 s; it never takes room in the page */
+/* every message is a toast that slides in at the top over the page and goes away by itself: ok (green) 3 s, info 3.5 s, warn (amber) 10 s (a warning
+   says what to do next, so it stays long enough to read and act on); it never takes room in the page, and a warning is read out as an alert */
 var toastT=0;
-function toast(s,k,ms){var e=$('toast');clearTimeout(toastT);e.textContent=s;e.className='toast '+(k||'info');void e.offsetWidth;e.className='toast '+(k||'info')+' on';toastT=setTimeout(function(){e.className='toast '+(k||'info')},ms||(k==='warn'?7000:3500))}
+function toast(s,k,ms){var e=$('toast');clearTimeout(toastT);e.textContent=s;e.setAttribute('role',k==='warn'?'alert':'status');e.className='toast '+(k||'info');void e.offsetWidth;e.className='toast '+(k||'info')+' on';toastT=setTimeout(function(){e.className='toast '+(k||'info')},ms||(k==='warn'?10000:3500))}
+function hideToast(){clearTimeout(toastT);$('toast').className='toast'}
 function show(which){
-  $('known').className=which==='known'?'':'hide';
-  $('setup').className=which==='setup'?'':'hide';
+  $('known').className=which==='known'?'view':'view hide';
+  $('setup').className=which==='setup'?'view':'view hide';
 }
+/* the one big button looks for the TV; typing the address instead is one tap away, also while it looks, and back again */
+function paint(){
+  $('typed').className=typing?'':'hide';
+  $('mode').textContent=typing?'Find the TV instead':'Type the address instead';
+  $('go').textContent=searching?'Looking…':typing?'Continue':'Find my TV';
+  $('go').disabled=searching;
+}
+function setTyping(on){typing=on;searching=false;paint();if(on)$('addr').focus()}
 /* straight on to the TV's own page, which asks for the code: nothing on this page changes while it loads (a swap to "Turn on the TV" there looked like a flicker) */
 function openTv(v){
   try{if(A&&A.setAddr)A.setAddr(v)}catch(e){}
@@ -88,36 +110,36 @@ function openTv(v){
 }
 function setHost(v){
   host=v;
-  if(host){$('addr').value=v.split(':')[0];show('known')}else show('setup');
+  if(host){var n=call('name','');$('tvn').textContent=n||host.split(':')[0];$('addr').value=v.split(':')[0];show('known')}else{show('setup');setTyping(false)}
 }
 $('go').onclick=function(){
-  var v=clean($('addr').value);
-  if(!v){toast('That is not an address on your local network. Type the address of the TV, like 192.168.1.50.','warn');return}
-  openTv(v);
+  if(typing){
+    var v=clean($('addr').value);
+    if(!v){toast('That does not look like a TV address. It is four numbers like 192.168.1.50, shown on the TV.','warn');return}
+    openTv(v);
+    return;
+  }
+  if(!A||!A.discover){toast('Type the address shown on the TV.','warn');setTyping(true);return}
+  searching=true;paint();toast('Looking for the TV…','info');
+  try{A.discover()}catch(e){searching=false;paint();toast('Type the address shown on the TV.','warn');setTyping(true)}
 };
+$('mode').onclick=function(){if(searching)hideToast();setTyping(!typing)};
 $('addr').onkeydown=function(e){if(e.keyCode===13)$('go').onclick()};
-$('find').onclick=function(){
-  if(!A||!A.discover){toast('Type the address shown on the TV.','warn');return}
-  toast('Looking for the TV…','info');$('find').disabled=true;
-  try{A.discover()}catch(e){$('find').disabled=false;toast('Type the address shown on the TV.','warn')}
-};
-$('wake').onclick=function(){
-  if(!call('wake',false)){toast('The address is lost: type it again.','warn');show('setup');return}
-  $('wake').textContent='Waking the TV…';
-};
 $('again').onclick=function(){if(host)location.replace('http://'+host+'/')};
-$('change').onclick=function(){setHost('');$('addr').focus()};
+$('change').onclick=function(){setHost('');setTyping(true)};
+/* the answers of the search: one that comes after the search was dropped (Type the address instead) is ignored */
 window.cytvFound=function(h){
+  if(!searching)return;
   var v=clean(h);
-  if(!v){$('find').disabled=false;toast('The address found is not on your local network, so it was ignored. Type the address of the TV, like 192.168.1.50.','warn');return}
+  searching=false;paint();
+  if(!v){toast('The TV found is not on your home network, so it was ignored. Type its address instead.','warn');setTyping(true);return}
   openTv(v);
 };
-window.cytvNotFound=function(){$('find').disabled=false;toast('No TV answered. Is the phone remote on, and the TV on this Wi-Fi?','warn')};
-window.cytvOff=function(m){$('wake').textContent='Turn on the TV';toast(m||'The TV did not answer.','warn')};
+window.cytvNotFound=function(){if(!searching)return;searching=false;paint();toast('Could not find the TV. Check it is on and on the same Wi-Fi as this phone, then try again, or type its address.','warn')};
+window.cytvOff=function(m){toast(m||'The TV did not answer.','warn')};
 var by=call('bye','');
-if(by)toast(by==='removed'?'Logged out. This phone was removed from the TV’s list.':'Logged out on this phone. The TV could not be reached, so it may still list this phone: remove it in the manager app, Features > Phone remote > Paired phones.',by==='removed'?'ok':'warn',by==='removed'?3000:7000);
+if(by)toast(by==='removed'?'Logged out. This phone was removed from the TV’s list.':'Logged out on this phone. The TV could not be reached, so it may still list this phone: remove it in the manager app, Features > Phone remote > Paired phones.',by==='removed'?'ok':'warn',by==='removed'?3000:10000);
 host=clean(call('getAddr',''));
-show(host?'known':'setup');
-if(host)$('addr').value=host.split(':')[0];
+if(host)setHost(host);else{show('setup');paint()}
 </script>
 </html>

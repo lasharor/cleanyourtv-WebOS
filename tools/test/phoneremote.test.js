@@ -914,18 +914,18 @@ run(async () => {
   ok(
     !/class=logo/.test(pg) &&
       !/class=grow/.test(pg) &&
-      /#pairbox\{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:26px/.test(
-        pg
-      ),
-    'the pairing screen has no icon at the top and no spacer pushing the button down, and it is centered in the window'
+      /#pairbox\{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;padding:72px 20px 24px;/.test(pg) &&
+      /#pairbox \.actions\{margin-top:auto/.test(pg),
+    'the pairing screen has no icon at the top and no spacer: the title sits on a fixed line, 72px from the top, and the actions are at the bottom of the window'
   );
   {
     const start = fs.readFileSync(path.join(__dirname, '..', '..', 'mobile', 'web', 'start.html'), 'utf8');
     ok(
       !/class=logo/.test(start) &&
         /<div class=glow><\/div>/.test(start) &&
-        /#wrap\{[^}]*min-height:100vh;[^}]*justify-content:center/.test(start),
-      "the app's start page looks like the pairing screen: no icon, the glow in the corner, centered in the window"
+        /#wrap\{[^}]*min-height:100vh;[^}]*padding:72px 20px 24px/.test(start) &&
+        /\.actions\{margin-top:auto/.test(start),
+      "the app's start page looks like the pairing screen: no icon, the glow in the corner, the title on the same fixed line and the actions at the bottom"
     );
   }
   // a page refreshed from an address that still has the QR code in it must not unseat the phone that is already paired
@@ -1038,9 +1038,11 @@ run(async () => {
   );
   ok(
     !/pmsg/.test(require('../../helper/phoneremotepage').PHONE_JS.replace(/apmsg/g, '')) &&
-      /else pnote\(j\.error\|\|t\('Wrong code\.'\),'warn',7000\)/.test(require('../../helper/phoneremotepage').PHONE_JS) &&
-      /x\.onerror=function\(\)\{pnote\(t\('The TV did not answer\./.test(require('../../helper/phoneremotepage').PHONE_JS) &&
-      /function showPair\(s,k\)\{[^}]*if\(s\)pnote\(s,k\|\|'warn',7000\)\}/.test(require('../../helper/phoneremotepage').PHONE_JS),
+      /else pnote\(j\.error\|\|t\('Wrong code\.'\),'warn',10000\)/.test(require('../../helper/phoneremotepage').PHONE_JS) &&
+      /x\.onerror=function\(\)\{pnote\(t\('The TV did not answer\. Check the phone is on the same Wi-Fi as the TV\.'\),'warn',10000\)/.test(
+        require('../../helper/phoneremotepage').PHONE_JS
+      ) &&
+      /function showPair\(s,k\)\{[^}]*if\(s\)pnote\(s,k\|\|'warn',10000\)\}/.test(require('../../helper/phoneremotepage').PHONE_JS),
     'the pairing screen shows its errors (wrong code, the TV did not answer, removed on the TV) as the timed note at the top, not as a line in the page'
   );
   {

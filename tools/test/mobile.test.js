@@ -113,8 +113,12 @@ run(async () => {
   // ---- the camera app does the scanning: the TV's code is a cytv:// link that opens the app with the address and the code ----
   const startPage = read('mobile/web/start.html');
   ok(
-    /id=addr/.test(startPage) && /id=go/.test(startPage) && /id=find/.test(startPage) && /id=wake/.test(startPage),
-    "the app asks for the address only (and can find it, or turn the TV on): the code is typed on the TV's own pairing page"
+    /id=addr/.test(startPage) &&
+      /id=go/.test(startPage) &&
+      /id=mode/.test(startPage) &&
+      /id=again/.test(startPage) &&
+      !/id=wake/.test(startPage),
+    "the app asks for the address only (finding it is the main button, typing it is one tap away): the code is typed on the TV's own pairing page, and turning the TV on is the off screen's job"
   );
   ok(
     !/id=code/.test(startPage) && !/cytvPair/.test(startPage),
@@ -359,56 +363,125 @@ run(async () => {
         require('../../helper/phoneremotepage').PHONE_JS +
         require('fs').readFileSync(path.join(root, 'helper', 'phoneremotepage.js'), 'utf8');
       ok(
-        /#pairbox #pname\{[^}]*border-radius:18px;border:1px solid #2e3140;font-weight:400/.test(pg) &&
+        /#pairbox #pname\{[^}]*height:56px;[^}]*border-radius:16px;background:#14161c;border:1\.5px solid #646b82;font-weight:400/.test(
+          pg
+        ) &&
           /#pairbox \.pri\{[^}]*height:58px;border-radius:18px/.test(pg) &&
-          /input\{width:100%;height:56px;padding:0 16px;font-size:17px/.test(page) &&
-          /\.pri\{height:58px;border:0;background:#ff8a5b/.test(page) &&
-          /#pairbox\{[^}]*padding:26px 20px 26px/.test(pg) &&
-          /#wrap\{[^}]*padding:26px 20px 26px/.test(page),
-        'the pairing screen on the TV has the start page’s field, button and page padding'
+          /input\{width:100%;height:56px;padding:0 16px;font-size:17px;margin:0 0 8px;background:#14161c;border:1\.5px solid #646b82/.test(
+            page
+          ) &&
+          /\.pri\{height:58px;border:0;border-radius:18px;background:#ff8a5b/.test(page) &&
+          /#pairbox\{[^}]*padding:72px 20px 24px/.test(pg) &&
+          /#wrap\{[^}]*padding:72px 20px 24px/.test(page) &&
+          /#wrap\{[^}]*padding:72px 20px 24px/.test(offPage),
+        'the pairing screen on the TV has the start page’s field, button and page padding, and the three screens put the title on the same line'
+      );
+      // one set of rules: the same card, the same message bar and the same step label on every setup screen
+      const same = s => [
+        /\.card\{background:#14161c;border:1px solid #23262f;border-radius:20px;padding:16px/.test(s) ||
+          /\.steps\{margin:0 0 24px;padding:16px;border-radius:20px;background:#14161c;border:1px solid #23262f/.test(s),
+        /rgba\(255,138,91,\.14\)/.test(s),
+        /border-left:4px solid #8a8fa0/.test(s),
+        /\.eyebrow\{font-size:13px;font-weight:600;letter-spacing:\.02em;color:#7b8092/.test(s),
+        /left:-100px;top:-140px;width:320px;height:320px/.test(s),
+      ];
+      ok(
+        same(page).slice(2).every(Boolean) && same(offPage).slice(2).every(Boolean) && same(pg).every(Boolean) && same(page).every(Boolean),
+        'the card, the step circles, the message bar, the step label and the glow are the same rules on the start page, the off page and the pairing page'
+      );
+      ok(
+        /id=eb data-app=/.test(pg) && /if\(window\.CYTV_APP\)\{var eb=\$\('eb'\)[^}]*\$\('steps'\)\.className='hide'\}/.test(pg),
+        'in the app the pairing screen is step 2 of 2 and does not repeat the steps; in a browser it is the first screen and keeps one short card'
       );
     }
     // the start page's script against a stand-in page: each message becomes the toast, with its tone and its time
     const box = {};
-    const el = id => box[id] || (box[id] = { id, className: '', textContent: '', value: '', style: {}, focus() {} });
+    const el = id =>
+      box[id] ||
+      (box[id] = {
+        id,
+        className: '',
+        textContent: '',
+        value: '',
+        style: {},
+        focus() {},
+        setAttribute(k, v) {
+          this[k] = v;
+        },
+      });
     const timers = [];
+    const opened = [];
     const sb = {
       document: { getElementById: el },
-      location: { replace() {} },
+      location: { replace: u => opened.push(u) },
       setTimeout: (f, ms) => timers.push({ f, ms }) && timers.length,
       clearTimeout() {},
+      setInterval() {},
     };
     sb.window = sb;
-    sb.window.CYTV_APP = { discover() {}, wake: () => false, getAddr: () => '', bye: () => '' };
+    sb.window.CYTV_APP = { discover() {}, wake: () => false, getAddr: () => '', bye: () => '', setAddr() {} };
     vm.runInNewContext(page.slice(page.indexOf('<script>') + 8, page.lastIndexOf('</script>')), sb);
     const shown = () => ({ t: box.toast.textContent, c: box.toast.className, ms: (timers[timers.length - 1] || {}).ms });
+    ok(
+      box.go.textContent === 'Find my TV' && box.mode.textContent === 'Type the address instead' && box.typed.className === 'hide',
+      'the first screen opens with Find my TV as the button and the address field out of the way'
+    );
+    box.mode.onclick();
+    ok(
+      box.go.textContent === 'Continue' && box.mode.textContent === 'Find the TV instead' && box.typed.className === '',
+      'Type the address instead shows the field, Continue, and the way back to Find the TV'
+    );
     el('addr').value = 'banana';
     box.go.onclick();
     ok(
-      /not an address/.test(shown().t) && shown().c === 'toast warn on' && shown().ms === 7000,
-      'a bad address is a warning toast for 7 seconds'
+      /does not look like a TV address/.test(shown().t) &&
+        shown().c === 'toast warn on' &&
+        shown().ms === 10000 &&
+        box.toast.role === 'alert',
+      'a bad address is a warning toast for 10 seconds, read out as an alert'
     );
-    box.find.onclick();
+    box.mode.onclick();
+    box.go.onclick();
     ok(
-      shown().t === 'Looking for the TV…' && shown().c === 'toast info on' && shown().ms === 3500 && box.find.disabled === true,
-      'searching is a short plain toast'
+      shown().t === 'Looking for the TV…' &&
+        shown().c === 'toast info on' &&
+        shown().ms === 3500 &&
+        box.go.disabled === true &&
+        box.go.textContent === 'Looking…' &&
+        box.toast.role === 'status',
+      'searching is a short plain toast, and the button says Looking…'
     );
     sb.cytvNotFound();
     ok(
-      /No TV answered/.test(shown().t) && shown().c === 'toast warn on' && box.find.disabled === false,
+      /Could not find the TV/.test(shown().t) &&
+        shown().c === 'toast warn on' &&
+        box.go.disabled === false &&
+        box.go.textContent === 'Find my TV',
       'no TV found is a warning toast, and the button works again'
     );
+    box.go.onclick();
     sb.cytvFound('8.8.8.8');
-    ok(/not on your local network/.test(shown().t) && shown().c === 'toast warn on', 'an address that is not local is a warning toast');
-    sb.cytvOff('The TV did not wake up.');
     ok(
-      shown().t === 'The TV did not wake up.' && shown().c === 'toast warn on' && box.wake.textContent === 'Turn on the TV',
-      'a failed wake is a warning toast and the button says Turn on the TV again'
+      /not on your home network/.test(shown().t) && shown().c === 'toast warn on' && box.typed.className === '' && opened.length === 0,
+      'an address that is not local is a warning toast, and the field is open to type the address'
     );
-    box.wake.onclick();
-    ok(/address is lost/.test(shown().t) && shown().c === 'toast warn on', 'turning on with no saved address is a warning toast');
+    box.mode.onclick();
+    box.go.onclick();
+    box.mode.onclick();
+    ok(
+      box.toast.className === 'toast' && box.typed.className === '' && box.go.disabled === false && box.go.textContent === 'Continue',
+      'Type the address instead, while it looks, stops the search: the message goes and the field is open'
+    );
+    sb.cytvFound('192.168.1.50');
+    sb.cytvNotFound();
+    ok(opened.length === 0 && box.toast.className === 'toast', 'and an answer that comes after that is ignored');
+    sb.cytvOff('The TV did not answer.');
+    ok(shown().t === 'The TV did not answer.' && shown().c === 'toast warn on', 'a message from the app is a warning toast');
     timers[timers.length - 1].f();
     ok(box.toast.className === 'toast warn', 'and the toast goes away when its time is up');
+    el('addr').value = '192.168.1.50';
+    box.go.onclick();
+    ok(opened.length === 1 && opened[0] === 'http://192.168.1.50:8794/', 'a good address goes straight to the TV page');
     const sb2 = Object.assign({}, sb, { document: { getElementById: el } });
     sb2.window = sb2;
     sb2.window.CYTV_APP = { discover() {}, wake: () => false, getAddr: () => '', bye: () => 'removed' };
@@ -417,6 +490,47 @@ run(async () => {
       /Logged out\. This phone was removed/.test(shown().t) && shown().c === 'toast ok on' && shown().ms === 3000,
       'after logging out it says so for 3 seconds'
     );
+    {
+      // the "TV is off" page: the wake button, with its messages
+      const box3 = {};
+      const el3 = id =>
+        box3[id] ||
+        (box3[id] = {
+          id,
+          className: '',
+          textContent: '',
+          style: {},
+          setAttribute(k, v) {
+            this[k] = v;
+          },
+        });
+      const t3 = [];
+      const sb3 = {
+        document: { getElementById: el3 },
+        setTimeout: (f, ms) => t3.push({ f, ms }) && t3.length,
+        clearTimeout() {},
+        setInterval() {},
+      };
+      sb3.window = sb3;
+      sb3.window.CYTV_APP = { wake: () => false, name: () => 'Living room TV' };
+      vm.runInNewContext(offPage.slice(offPage.indexOf('<script>') + 8, offPage.lastIndexOf('</script>')), sb3);
+      ok(box3.tv.textContent === 'Living room TV' && box3.name.className === 'pill', 'the off page names the TV in a pill');
+      box3.on.onclick();
+      ok(
+        /Pair this phone with the TV first/.test(box3.toast.textContent) &&
+          box3.toast.className === 'toast warn on' &&
+          t3[t3.length - 1].ms === 10000,
+        'turning on with nothing paired is a warning toast for 10 seconds that says what to do'
+      );
+      sb3.window.CYTV_APP.wake = () => true;
+      box3.on.onclick();
+      ok(box3.on.textContent === 'Waking the TV…' && box3.on.disabled === true, 'the button says Waking the TV… while it waits');
+      sb3.cytvOff('The TV did not wake up.');
+      ok(
+        box3.toast.textContent === 'The TV did not wake up.' && box3.on.textContent === 'Turn on the TV' && box3.on.disabled === false,
+        'a failed wake is a warning toast and the button says Turn on the TV again'
+      );
+    }
     ok(
       /Features > Phone remote > Paired phones/.test(page),
       'and when the TV could not be told, the toast names the screen where the phone can still be removed'
