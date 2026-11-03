@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -35,8 +36,9 @@ import java.net.URL;
  *  - open at all while the TV is off: the last page the TV served is kept on the phone and shown instead, so the remote (and its
  *    On/Off button, which then wakes the TV) is there even with the TV in standby. The bundled pages only appear when nothing was
  *    ever loaded (assets/start.html for the address, assets/off.html as the last resort).
- * The bridge, the whole API between the page and the phone: getAddr/setAddr, getMac/setMac (the TV's page hands the address over when it
- * connects), wake(), discover(), deviceName() (the first guess for the name the phone pairs with). A QR code read by the phone's own camera app opens the app on the TV's page (cytv://add?host=…&code=…).
+ * The bridge, the whole API between the page and the phone: getAddr, setAddr (only the bundled start page may set the address), getMac/setMac
+ * (the TV's page hands its MAC over when it connects), wake(), discover(), deviceName() (the first guess for the name the phone pairs with).
+ * A QR code read by the phone's own camera app opens the app on the TV's page (cytv://add?host=…&code=…).
  */
 public class MainActivity extends Activity {
 
@@ -53,6 +55,7 @@ public class MainActivity extends Activity {
     private int failures; // loads of the TV's page that failed in a row (main thread only)
     private long lastAttempt; // when the last of them was tried
     private boolean loadFailed; // an error was seen: the onPageFinished that follows it is not a success (it is only cleared there)
+    private volatile String pageUrl; // the page now showing or loading, kept by the main thread so the bridge (its own thread) never asks the WebView
     private volatile boolean servedSaved; // the page now loading is the copy kept on the phone, not the TV's own
     private final Runnable retry = new Runnable() {
         public void run() {
@@ -263,6 +266,35 @@ public class MainActivity extends Activity {
         });
     }
 
+    /** the stored TV as a URI: Addr.clean always keeps the port, so this is "http://host:port/" */
+    private Uri tvUri() {
+        String addr = store.addr();
+        return addr.length() == 0 ? null : Uri.parse("http://" + addr + "/");
+    }
+
+    /** the port a URL really uses: a URL that names none goes to 80 */
+    private static int port(Uri u) {
+        int p = u.getPort();
+        return p < 0 ? 80 : p;
+    }
+
+    /** Is this URL the TV's own page? The answer comes from the parsed URI, never from the text: "http://<tv>:8798@evil.example/" begins
+     *  with the TV's address, but its host is evil.example, and whatever the WebView loads has the CYTV_APP bridge. So it must be http, the
+     *  host must be the stored TV's, and the effective port must be the same (80 when the URL names none). Any thread. */
+    private boolean isTv(String url) {
+        if (url == null) return false;
+        Uri u;
+        try {
+            u = Uri.parse(url);
+        } catch (Exception e) {
+            return false;
+        }
+        Uri t = tvUri();
+        if (u == null || t == null || !"http".equalsIgnoreCase(u.getScheme())) return false;
+        String host = u.getHost(), tv = t.getHost();
+        return host != null && tv != null && tv.equalsIgnoreCase(host) && port(u) == port(t);
+    }
+
     private class Client extends WebViewClient {
 
         /** the TV's own page, from the phone, when the TV does not answer: the remote draws itself and its power button wakes the TV */
@@ -283,15 +315,19 @@ public class MainActivity extends Activity {
         @Override
         public boolean shouldOverrideUrlLoading(WebView v, String url) {
             if (url == null) return false;
-            if (url.startsWith(START) || url.startsWith(OFF)) return false;
-            String base = store.addr().length() > 0 ? "http://" + store.addr() : "";
-            if (base.length() > 0 && url.startsWith(base)) return false;
+            if (url.startsWith(START) || url.startsWith(OFF)) return false; // the bundled assets: the only file:// pages allowed
+            if (isTv(url)) return false; // the TV itself, compared as a URI: a prefix that only looks like it is not
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
             } catch (Exception e) {
                 // nothing can take it
             }
             return true;
+        }
+
+        @Override
+        public void onPageStarted(WebView v, String url, Bitmap favicon) {
+            pageUrl = url;
         }
 
         // API 23 and newer
@@ -320,17 +356,19 @@ public class MainActivity extends Activity {
 
         @Override
         public void onPageFinished(WebView v, String url) {
-            if (url != null && url.startsWith("http://" + store.addr() + "/")) {
+            pageUrl = url;
+            boolean tv = isTv(url); // the parsed URI, the same rule as shouldOverrideUrlLoading: a page that only looks like the TV's is not
+            if (tv) {
                 if (loadFailed) loadFailed = false; // an error page also ends in onPageFinished: not a success
                 else if (servedSaved) servedSaved = false; // the saved copy, not the TV: keep the backoff
                 else {
                     failures = 0; // the TV's own page loaded: the next failure starts again at once
                     cancelRetry();
                 }
+                savePage(); // so the remote can be shown with the TV off
             }
             // the TV's page is up and a code came with the QR code: pair now, so the remote is ready without typing anything
-            if (url != null && url.startsWith("http://" + store.addr() + "/")) savePage(); // so the remote can be shown with the TV off
-            if (pending.length() != 6 || url == null || !url.startsWith("http://" + store.addr())) return;
+            if (!tv || pending.length() != 6) return;
             String code = pending;
             pending = "";
             js("window.cytvPair&&cytvPair('" + code + "');");
@@ -362,8 +400,12 @@ public class MainActivity extends Activity {
             return store.addr();
         }
 
+        /** Only the bundled start page sets the address (it fills in what was typed or found, then opens the TV). Every page the WebView
+         *  shows has the bridge, so a TV page (or any page that got in) must not be able to point the app at another machine. */
         @JavascriptInterface
         public void setAddr(String a) {
+            String url = pageUrl;
+            if (url == null || !url.startsWith("file:///android_asset/")) return;
             store.setAddr(a);
         }
 
@@ -483,8 +525,8 @@ public class MainActivity extends Activity {
         public void pair(String code) {
             final String c = String.valueOf(code == null ? "" : code).replaceAll("[^0-9]", "");
             if (c.length() != 6) return;
-            String url = web.getUrl();
-            if (url != null && url.startsWith("http://" + store.addr())) js("window.cytvPair&&cytvPair('" + c + "');");
+            String url = pageUrl;
+            if (isTv(url)) js("window.cytvPair&&cytvPair('" + c + "');");
             else pending = c;
         }
 

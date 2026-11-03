@@ -309,6 +309,13 @@ function create(ctx) {
       a.status = 'failed';
       a.error = String((e && e.message) || e).slice(0, 200);
       console.error('addon ' + a.id + ' failed to start: ' + ((e && e.stack) || e));
+      // a live switch never stops a failed add-on, so whatever start() set up (a listener, a timer) is stopped here
+      try {
+        if (typeof a.mod.stop === 'function') a.mod.stop();
+      } catch (e2) {
+        console.error('addon ' + a.id + ' failed to stop after a failed start: ' + ((e2 && e2.stack) || e2));
+      }
+      a.mod = null;
     }
   }
 
@@ -843,15 +850,33 @@ function create(ctx) {
         if (b.enabled && a.status === 'off') {
           a.status = 'ready';
           activate(a);
+          // a live add-on is switched off by stop(): one without it would keep running while the manager says off and its routes 404
+          if (a.status === 'running' && typeof a.mod.stop !== 'function') {
+            a.mod = null;
+            a.status = 'failed';
+            a.error = 'a live add-on needs a stop() so it can be switched off; this one has none';
+            console.error('addon ' + a.id + ': ' + a.error);
+            return web.json(res, { error: a.error, restartNeeded: true });
+          }
           startOne(a);
         } else if (!b.enabled && a.mod) {
+          if (typeof a.mod.stop !== 'function') {
+            // only reachable when a live add-on started at boot: it cannot be stopped without stopping the service
+            a.error = 'the add-on has no stop(); restart the service to switch it off';
+            console.error('addon ' + a.id + ': ' + a.error);
+            return web.json(res, { error: a.error, restartNeeded: true });
+          }
           try {
-            if (typeof a.mod.stop === 'function') a.mod.stop();
+            a.mod.stop();
           } catch (e) {
+            // it may still be bound: keep it running and say so, so the switch can be tried again instead of a second listener (EADDRINUSE)
+            a.error = 'the add-on did not stop: ' + String((e && e.message) || e).slice(0, 160);
             console.error('addon ' + a.id + ' failed to stop: ' + ((e && e.stack) || e));
+            return web.json(res, { error: a.error });
           }
           a.mod = null;
           a.status = 'off';
+          a.error = '';
         }
         return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: a.status === 'failed' });
       }
@@ -889,6 +914,12 @@ function create(ctx) {
     return a && a.status === 'running' && a.mod ? a.mod : null;
   };
 
+  // the loader's record of an add-on whatever its status, the module included (the tests check what it holds; module(id) is for a running one)
+  const state = id => {
+    const a = find(id);
+    return a ? { id: a.id, dir: a.dir, bundled: a.bundled, enabled: a.enabled, status: a.status, error: a.error, mod: a.mod } : null;
+  };
+
   // the running, switched-on add-ons that provide something ("provides" in their manifest): [{id, name, mod}]
   const providers = what =>
     list
@@ -909,6 +940,7 @@ function create(ctx) {
     match,
     pageMay,
     module,
+    state,
     providers,
     cardsOf,
     handle,

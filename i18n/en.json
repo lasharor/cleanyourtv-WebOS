@@ -15,6 +15,14 @@
  "%d of %d on": "%d of %d on",
  "%d of %d photos uploaded.": "%d of %d photos uploaded.",
  "%d of 150 MB": "%d of 150 MB",
+ "%d phone": {
+  "one": "%d phone",
+  "other": "%d phone"
+ },
+ "%d phones": {
+  "one": "%d phone",
+  "other": "%d phones"
+ },
  "%d photos": {
   "one": "%d photo",
   "other": "%d photos"
@@ -69,6 +77,17 @@
  "address and access token": "address and access token",
  "address, token, example": "address, token, example",
  "Ads": "Ads",
+ "after %d day": {
+  "one": "after %d day",
+  "other": "after %d day"
+ },
+ "after %d days": {
+  "one": "after %d day",
+  "other": "after %d days"
+ },
+ "after 1 month": "after 1 month",
+ "after 1 week": "after 1 week",
+ "after 2 weeks": "after 2 weeks",
  "Agent: %s": "Agent: %s",
  "AI chat (OpenRouter)": "AI chat (OpenRouter)",
  "Albums": "Albums",
@@ -76,6 +95,7 @@
  "All": "All",
  "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. A type the TV does not know yet leaves its slot empty.": "All cards at once, by slot: {\"greeting\": {\"type\": \"greeting\", \"name\": \"Sam\"}}. A type the TV does not know yet leaves its slot empty.",
  "All channels": "All channels",
+ "allowed": "allowed",
  "An app...": "An app...",
  "and enter this code:": "and enter this code:",
  "Answer with the AI": "Answer with the AI",
@@ -111,6 +131,7 @@
  "Choose entities from your phone": "Choose entities from your phone",
  "choose from the list or type any OpenRouter model name": "choose from the list or type any OpenRouter model name",
  "Choose how Home looks. The change shows the next time you open Home.": "Choose how Home looks. The change shows the next time you open Home.",
+ "Choose it to block or remove it.": "Choose it to block or remove it.",
  "Choose photos": "Choose photos",
  "Choose the Home Assistant agent": "Choose the Home Assistant agent",
  "Choose the model that answers": "Choose the model that answers",
@@ -286,6 +307,8 @@
  "Last heard: “%s”": "Last heard: “%s”",
  "Last sync: %s": "Last sync: %s",
  "Last try: %s": "Last try: %s",
+ "Last used %s": "Last used %s",
+ "last used %s": "last used %s",
  "Later": "Later",
  "Latest release %s": "Latest release %s",
  "Launcher": "Launcher",
@@ -352,6 +375,7 @@
  "No guide data": "No guide data",
  "No hidden apps. To hide one, hold OK on it on Home and choose Hide app.": "No hidden apps. To hide one, hold OK on it on Home and choose Hide app.",
  "no key set": "no key set",
+ "no phones paired": "no phones paired",
  "no photos yet": "no photos yet",
  "no release published yet": "no release published yet",
  "No release yet": "No release yet",
@@ -1122,6 +1146,8 @@
  "Paired": "Paired",
  "Pair a phone": "Pair a phone",
  "Paired phones": "Paired phones",
+ "paired": "paired",
+ "paired %s": "paired %s",
  "Remove all phones": "Remove all phones",
  "Block this phone": "Block this phone",
  "Allow this phone": "Allow this phone",

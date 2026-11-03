@@ -36,7 +36,9 @@ class Discover {
                 } catch (java.net.SocketTimeoutException te) {
                     continue;
                 }
-                String host = host(new String(buf, 0, p.getLength(), "UTF-8"));
+                String reply = new String(buf, 0, p.getLength(), "UTF-8");
+                if (!isTv(reply)) continue; // some other machine answered the search: not the TV, whatever its LOCATION claims
+                String host = host(reply);
                 if (host.length() > 0) return host;
             }
         } catch (Exception e) {
@@ -45,6 +47,17 @@ class Discover {
             if (s != null) s.close();
         }
         return "";
+    }
+
+    /** Is this reply the TV's own? The search asks for webos-second-screen, and LG's TV repeats that in its ST (and in its USN) header. A
+     *  reply without it in either header is another machine answering for the TV, and its LOCATION is not the TV's address: ignored. */
+    static boolean isTv(String reply) {
+        String[] lines = String.valueOf(reply).split("\r?\n");
+        for (String line : lines) {
+            String u = line.trim().toUpperCase();
+            if ((u.startsWith("ST:") || u.startsWith("USN:")) && u.indexOf("WEBOS-SECOND-SCREEN") >= 0) return true;
+        }
+        return false;
     }
 
     /** the host of the LOCATION line of an SSDP reply: "LOCATION: http://10.0.0.5:3000/x" -> "10.0.0.5" */

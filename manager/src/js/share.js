@@ -94,13 +94,7 @@ function closeShare() {
     if (view === 'addonrepos') loadAddons();
     return;
   }
-  if (shareMode === 'remote') {
-    api('/api/phoneremote/pair', { stop: true }).catch(function () {});
-    pop();
-    prRefresh();
-    return;
-  }
-  if (shareMode === 'app') {
+  if (shareMode === 'remote' || shareMode === 'app') {
     api('/api/phoneremote/pair', { stop: true }).catch(function () {});
     pop();
     prRefresh();

@@ -127,13 +127,18 @@ $('mode').onclick=function(){if(searching)hideToast();setTyping(!typing)};
 $('addr').onkeydown=function(e){if(e.keyCode===13)$('go').onclick()};
 $('again').onclick=function(){if(host)location.replace('http://'+host+'/')};
 $('change').onclick=function(){setHost('');setTyping(true)};
-/* the answers of the search: one that comes after the search was dropped (Type the address instead) is ignored */
+/* the answers of the search: one that comes after the search was dropped (Type the address instead) is ignored. A TV that answered is only
+   filled into the address field, never opened: any machine on the network can answer the search, so the tap on Continue is the confirmation
+   that this is the person's own TV. */
 window.cytvFound=function(h){
   if(!searching)return;
   var v=clean(h);
   searching=false;paint();
   if(!v){toast('The TV found is not on your home network, so it was ignored. Type its address instead.','warn');setTyping(true);return}
-  openTv(v);
+  var hp=v.split(':')[0];
+  $('addr').value=hp;
+  setTyping(true);
+  toast('Found the TV at '+hp+'. Tap Continue to open it.','ok');
 };
 window.cytvNotFound=function(){if(!searching)return;searching=false;paint();toast('Could not find the TV. Check it is on and on the same Wi-Fi as this phone, then try again, or type its address.','warn')};
 window.cytvOff=function(m){toast(m||'The TV did not answer.','warn')};

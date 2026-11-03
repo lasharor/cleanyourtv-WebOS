@@ -1,4 +1,5 @@
 /* Phone remote: a page on a paired phone that works as the TV's remote (the phoneremote add-on). On/off, pairing by QR code, the paired phones */
+/* "1 phone" / "2 phones": the caller passes it through tr(), which matches "%d phone" and "%d phones" */
 function prCount(n) {
   return n + (n === 1 ? ' phone' : ' phones');
 }
@@ -23,7 +24,8 @@ function prRefresh() {
   if (view === 'phoneremote') openPhoneRemote();
 }
 /* The phone screens follow the TV: a phone that logs out, connects or is removed elsewhere shows at once, with no need to leave and open them again. */
-var prLiveBusy = false,
+var prListenShown = '',
+  prLiveBusy = false,
   prLiveTimer = 0;
 function prIsPhoneView() {
   return view === 'phoneremote' || view === 'phones' || view === 'prphone' || view === 'prexpire';
@@ -47,6 +49,11 @@ function prLiveTick() {
     function (r) {
       prLiveBusy = false;
       if (!r || r.error || !prIsPhoneView()) return;
+      /* the port 8798 could not be opened: say why once (not on every poll, which would hide other messages), and still follow the list */
+      if (r.listenError !== prListenShown) {
+        prListenShown = r.listenError || '';
+        if (prListenShown) banner(tr(prListenShown), 'err');
+      }
       if (prLiveKey(r) === prLiveKey(pr)) return; /* nothing changed: leave the screen alone (no redraw, no flicker) */
       pr = r;
       if (view === 'prphone') {
@@ -79,6 +86,7 @@ function prCall(path, b, msg) {
       }
       pr = r;
       if (msg) banner(msg, 'ok');
+      if (r.listenError) banner(tr(r.listenError), 'err'); /* the change applied: the port could not be opened, so say that too */
       if (view !== 'phoneremote') pop();
       else {
         build();
@@ -91,42 +99,54 @@ function prCall(path, b, msg) {
     }
   );
 }
-/* " · paired 2 Nov": when the phone was paired, for the lists of phones */
+/* " · paired 2 Nov": when the phone was paired, for the lists of phones (" · " is the pages' joiner: each side is translated on its own) */
 function prPaired(p) {
-  return p && p.created ? ' \u00B7 paired ' + new Date(p.created).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '';
+  return p && p.created
+    ? ' \u00B7 ' + tr('paired ' + new Date(p.created).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }))
+    : '';
 }
 /* the setting "Remove unused phones" in words: 14 -> "after 2 weeks", 0 -> "never" */
 function prExpireLabel(d) {
   d = d === undefined ? 14 : d;
   return d === 0
-    ? 'never'
+    ? tr('never')
     : d === 30
-      ? 'after 1 month'
+      ? tr('after 1 month')
       : d === 14
-        ? 'after 2 weeks'
+        ? tr('after 2 weeks')
         : d === 7
-          ? 'after 1 week'
-          : 'after ' + d + (d === 1 ? ' day' : ' days');
+          ? tr('after 1 week')
+          : tr('after ' + d + (d === 1 ? ' day' : ' days'));
 }
 function prAgo(t) {
   var m = Math.round((Date.now() - t) / 60000);
   return !t
-    ? 'never'
+    ? tr('never')
     : m < 1
-      ? 'just now'
+      ? tr('just now')
       : m < 60
-        ? m + ' min ago'
+        ? tr(m + ' min ago')
         : m < 1440
-          ? Math.round(m / 60) + ' h ago'
-          : Math.round(m / 1440) + ' days ago';
+          ? tr(Math.round(m / 60) + ' h ago')
+          : tr(Math.round(m / 1440) + ' days ago');
 }
 /* the QR screen: the pairing window is open while it is on screen (it is asked for again every few seconds and closed when leaving) */
 function openPrPair() {
   if (!pr || !pr.enabled) {
-    api('/api/phoneremote', { enabled: true }).then(function (r) {
-      pr = r;
-      openPrPair();
-    });
+    api('/api/phoneremote', { enabled: true }).then(
+      function (r) {
+        /* go on only when the remote really is on: a reply without "enabled" would post again for ever */
+        if (r && r.enabled) {
+          pr = r;
+          openPrPair();
+          return;
+        }
+        banner((r && r.error) || 'The service did not answer', 'err');
+      },
+      function () {
+        banner('The service did not answer', 'err');
+      }
+    );
     return;
   }
   shareMode = 'remote';
@@ -158,6 +178,7 @@ function prWatch(first) {
       if (view !== 'share' || shareMode !== 'remote') return;
       if (r.error) {
         $('sharemsg').textContent = tr(r.error);
+        setTimeout(prWatch, 2000); /* the screen is still open: ask again instead of stopping here */
         return;
       }
       pr = r;
@@ -182,10 +203,13 @@ function prWatch(first) {
             ? tr('Scan it with the camera: the app opens with the code filled in.')
             : tr('The code works once. The page is not encrypted: what you type travels over your Wi-Fi.');
       } else $('sharemsg').textContent = tr('The pairing window closed. Press Back and open it again.');
+      /* the port 8798 could not be opened (another program has it): say why, and still follow the window and show the code */
+      if (r.listenError) $('sharemsg').textContent = tr(r.listenError);
       setTimeout(prWatch, 2000);
     },
     function () {
       $('sharemsg').textContent = tr('The service did not answer.');
+      setTimeout(prWatch, 2000); /* a request that never arrived is tried again too */
     }
   );
 }
@@ -200,10 +224,20 @@ function appHost(url) {
 }
 function openPrApp() {
   if (!pr || !pr.enabled) {
-    api('/api/phoneremote', { enabled: true }).then(function (r) {
-      pr = r;
-      openPrApp();
-    });
+    api('/api/phoneremote', { enabled: true }).then(
+      function (r) {
+        /* go on only when the remote really is on: a reply without "enabled" would post again for ever */
+        if (r && r.enabled) {
+          pr = r;
+          openPrApp();
+          return;
+        }
+        banner((r && r.error) || 'The service did not answer', 'err');
+      },
+      function () {
+        banner('The service did not answer', 'err');
+      }
+    );
     return;
   }
   shareMode = 'app';
@@ -228,6 +262,7 @@ function prWatchApp(first) {
       if (view !== 'share' || shareMode !== 'app') return;
       if (r.error) {
         $('sharemsg').textContent = tr(r.error);
+        setTimeout(prWatchApp, 2000); /* the screen is still open: ask again instead of stopping here */
         return;
       }
       pr = r;
@@ -255,10 +290,13 @@ function prWatchApp(first) {
       showQr(a.qr || a.url);
       $('shareurl').textContent = a.qr || a.url; // with the code in it, so it can also be typed
       if (first) $('sharemsg').textContent = tr('The phone downloads the app from the TV, then this screen moves on to part 2 by itself.');
+      /* the port 8798 could not be opened (another program has it): say why, and still follow the download */
+      if (r.listenError) $('sharemsg').textContent = tr(r.listenError);
       setTimeout(prWatchApp, 2000);
     },
     function () {
       $('sharemsg').textContent = tr('The service did not answer.');
+      setTimeout(prWatchApp, 2000); /* a request that never arrived is tried again too */
     }
   );
 }

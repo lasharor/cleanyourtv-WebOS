@@ -10,12 +10,36 @@ const os = require('os'),
 const { ok, root, run } = require('./lib');
 
 const read = f => fs.readFileSync(path.join(root, f), 'utf8');
+// Node 8.12 (what check.sh runs the tests with) has no fs.rmSync: a folder is removed here by hand, children first
+const rmrf = d => {
+  let names;
+  try {
+    names = fs.readdirSync(d);
+  } catch (e) {
+    return; // already gone
+  }
+  names.forEach(n => {
+    const p = path.join(d, n);
+    try {
+      if (fs.lstatSync(p).isDirectory()) rmrf(p);
+      else fs.unlinkSync(p);
+    } catch (e) {
+      // a file that cannot be removed leaves the folder behind, which is harmless
+    }
+  });
+  try {
+    fs.rmdirSync(d);
+  } catch (e) {
+    // the same
+  }
+};
 const page = read('mobile/web/start.html');
 const javaDir = 'mobile/android/java/com/cleanyourtv/phone/';
 const java = ['MainActivity.java', 'Store.java', 'Wake.java', 'Discover.java', 'Reach.java', 'Addr.java', 'Backoff.java']
   .map(f => read(javaDir + f))
   .join('\n');
 const bridge = read(javaDir + 'MainActivity.java');
+const discover = read(javaDir + 'Discover.java');
 
 run(async () => {
   // ---- the start page ----
@@ -179,6 +203,35 @@ run(async () => {
     'the name the TV reported is kept, so that screen can say which TV it is'
   );
 
+  // ---- which page may stay in the WebView: the TV by its parsed URI, never by a prefix of its text ----
+  // "http://<tv>:8798@evil.example/" begins with the TV's address, but its host is evil.example and it would load with the bridge attached
+  ok(
+    /private boolean isTv\(String url\)/.test(bridge) &&
+      /Uri\.parse\(url\)/.test(bridge) &&
+      /"http"\.equalsIgnoreCase\(u\.getScheme\(\)\)/.test(bridge) &&
+      /tv\.equalsIgnoreCase\(host\)/.test(bridge) &&
+      /port\(u\) == port\(t\)/.test(bridge) &&
+      /return p < 0 \? 80 : p;/.test(bridge),
+    'the TV’s own page is recognised from the parsed URI: http scheme, the stored host, and the same port (80 when the URL names none)'
+  );
+  ok(
+    /if \(url\.startsWith\(START\) \|\| url\.startsWith\(OFF\)\) return false;/.test(bridge) &&
+      /if \(isTv\(url\)\) return false;/.test(bridge) &&
+      !/startsWith\("http:\/\/" \+ store\.addr\(\)/.test(bridge),
+    'every load decision is that URI test (shouldOverrideUrlLoading, onPageFinished, pair): no “the URL begins with the TV’s address”, which http://<tv>:8798@evil.example/ passes'
+  );
+  ok(
+    /android:launchMode="singleTop"/.test(man) && /protected void onNewIntent\(Intent i\)/.test(bridge),
+    'the activity is singleTop, so a cytv:// link that arrives while the app is open reaches onNewIntent instead of opening a second window'
+  );
+  // only the bundled start page sets the address: any page the WebView loads has the bridge, and a TV page must not repoint the app
+  ok(
+    /public void setAddr\(String a\) \{\s+String url = pageUrl;\s+if \(url == null \|\| !url\.startsWith\("file:\/\/\/android_asset\/"\)\) return;\s+store\.setAddr\(a\);/.test(
+      bridge
+    ) && /A\.setAddr\(v\)/.test(page),
+    'setAddr is ignored unless the page is a bundled asset page (the start page fills the address in before it opens the TV)'
+  );
+
   // ---- a cytv:// link is browsable, so any web page can send one: only private IPv4 addresses are ever stored, and a new TV needs a yes ----
   const good = [
     '192.168.1.50',
@@ -271,11 +324,7 @@ run(async () => {
       out[all.length] === 'B 0 1000 2000 4000 8000 10000 10000 10000 10000',
       'the retry delay: at once, 1 s, 2 s, 4 s, 8 s, then never more than 10 s'
     );
-    try {
-      fs.rmSync(dir, { recursive: true, force: true });
-    } catch (e) {
-      // a temp folder left behind is harmless
-    }
+    rmrf(dir);
   } else console.log('  (javac not found: Addr and Backoff were checked as text only)');
 
   const storeSrc = read(javaDir + 'Store.java');
@@ -288,7 +337,16 @@ run(async () => {
     'Store.clean is the one rule, and it is the private-address one'
   );
   ok(/if \(v\.length\(\) > 0\) p\.edit\(\)\.putString\("addr"/.test(storeSrc), 'an address that is refused is never stored');
-  ok(/Addr\.clean\(v\)/.test(read(javaDir + 'Discover.java')), 'an address found by the search goes through the same rule');
+  ok(/Addr\.clean\(v\)/.test(discover), 'an address found by the search goes through the same rule');
+  // any machine can answer an SSDP search: only a reply that itself says webos-second-screen is the TV, whatever its LOCATION claims
+  ok(
+    /static boolean isTv\(String reply\)/.test(discover) &&
+      /u\.startsWith\("ST:"\) \|\| u\.startsWith\("USN:"\)/.test(discover) &&
+      /u\.indexOf\("WEBOS-SECOND-SCREEN"\) >= 0/.test(discover) &&
+      /\.toUpperCase\(\)/.test(discover) &&
+      /if \(!isTv\(reply\)\) continue;/.test(discover),
+    'a discovered TV counts only when its own ST or USN header says webos-second-screen (any case): an impostor answering the search is ignored'
+  );
   const link = bridge.slice(bridge.indexOf('private boolean link('), bridge.indexOf('private void start()'));
   ok(
     /new AlertDialog\.Builder\(this\)/.test(link) &&
@@ -467,6 +525,18 @@ run(async () => {
     );
     box.mode.onclick();
     box.go.onclick();
+    sb.cytvFound('192.168.1.50:8798');
+    ok(
+      el('addr').value === '192.168.1.50' &&
+        box.typed.className === '' &&
+        box.go.textContent === 'Continue' &&
+        shown().t === 'Found the TV at 192.168.1.50. Tap Continue to open it.' &&
+        shown().c === 'toast ok on' &&
+        opened.length === 0,
+      'a TV the search found is only filled into the address field, with a toast asking for the tap on Continue: another machine answering the search never opens itself'
+    );
+    box.mode.onclick();
+    box.go.onclick();
     box.mode.onclick();
     ok(
       box.toast.className === 'toast' && box.typed.className === '' && box.go.disabled === false && box.go.textContent === 'Continue',
@@ -551,8 +621,30 @@ run(async () => {
   );
   ok(/call\('bye'/.test(page) && /removed from the TV/.test(page), 'and the start page tells the user how the log out went');
   ok(
-    /function openTv\(/.test(page) && !/opening/.test(page) && !/setHost\(v\);\s*location\.replace/.test(page),
-    'after "Find the TV" or Continue the start page goes straight to the TV page, changing nothing while it loads, and does not flash the "Turn on the TV" panel'
+    /function openTv\(/.test(page) &&
+      !/opening/.test(page) &&
+      !/setHost\(v\);\s*location\.replace/.test(page) &&
+      !/openTv/.test(page.slice(page.indexOf('window.cytvFound'), page.indexOf('window.cytvNotFound'))),
+    'the tap on Continue (a typed address, or one the search found and filled in) goes straight to the TV page, changing nothing while it loads, and a found address is never opened without that tap'
   );
   ok(/aapt2/.test(build) && /d8/.test(build) && /apksigner/.test(build), 'it uses the SDK tools it names');
+  // the README must say where the package really puts the APK (build.py copies all of helper/) and which SSDP reply counts as the TV
+  const readme = read('mobile/README.md');
+  ok(
+    /service\/helper\/addons-bundled\/phoneremote\/tv-remote\.apk/.test(readme) && /webos-second-screen/.test(readme),
+    'the README names the path the APK ships at in the package, and the webos-second-screen rule for a discovered TV'
+  );
+  // the committed app and the hash a reviewer reads in the README move together
+  const sha = require('crypto')
+    .createHash('sha256')
+    .update(fs.readFileSync(path.join(root, 'helper/addons-bundled/phoneremote/tv-remote.apk')))
+    .digest('hex');
+  ok(
+    readme.indexOf('tv-remote.apk SHA-256  ' + sha) >= 0,
+    'the README states the SHA-256 of the committed app (rebuild: put the one the build prints)'
+  );
+  ok(
+    /\$BuildTools = '34\.0\.0'/.test(build) && /\$Platform = 'android-34'/.test(build),
+    'the build pins the build-tools and the platform instead of taking the newest installed'
+  );
 });

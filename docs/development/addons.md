@@ -54,7 +54,9 @@ What is done, and what is not:
   only installed from the catalog, where every file is pinned by hash and reviewed. The service must run on Node.js 8.12.
 - `routes`, `enabledOption` and `live` are for bundled add-ons only. A bundled service add-on with `"live": true` is started and stopped by its switch in
   the manager at once, with no restart of the service: it is not created while it is off, `start()` runs when it is switched on and `stop()` when it is
-  switched off (so it must have one). The phone remote is one.
+  switched off. `stop()` is required, and it is checked when the add-on is switched on: one without it is refused (it shows as failed, with the reason
+  in the manager, and is not started), because the listener it started could not be stopped again. A `stop()` that throws leaves the add-on running,
+  with the error shown in the manager, so that switching it off again retries instead of a second listener on the same port. The phone remote is one.
 
 ## The Android box (the androidbox add-on)
 

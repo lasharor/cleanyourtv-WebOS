@@ -34,16 +34,30 @@ function post(port, path, body, origin) {
     r.end(JSON.stringify(body));
   });
 }
-function get(port, path) {
+// ms: give up after this long, so a request the service never answers fails the check instead of stopping the test for ever
+function get(port, path, ms) {
   return new Promise((resolve, reject) => {
-    http
-      .get({ host: '127.0.0.1', port, path }, res => {
-        let t = '';
-        res.on('data', d => (t += d));
-        res.on('end', () => resolve({ code: res.statusCode, text: t, headers: res.headers }));
-      })
-      .on('error', reject);
+    const r = http.get({ host: '127.0.0.1', port, path }, res => {
+      let t = '';
+      res.on('data', d => (t += d));
+      res.on('end', () => resolve({ code: res.statusCode, text: t, headers: res.headers }));
+    });
+    r.on('error', reject);
+    r.setTimeout(ms || 15000, () => {
+      reject(new Error('no answer in ' + (ms || 15000) + ' ms'));
+      r.destroy();
+    });
   });
+}
+// a phone-remote instance with the phone remote switched on and a phone paired through its LAN listener: the token the other doors need
+async function lanPair(PR, config, opts) {
+  const pr = PR.create({ config }, opts);
+  pr.start();
+  await call(pr, '/api/phoneremote', 'POST', { enabled: true });
+  const s = await call(pr, '/api/phoneremote/pair', 'POST', {});
+  const port = s.j.port;
+  const r = await post(port, '/api/pair', { code: s.j.pairing.code, name: 'test' });
+  return { pr, port, token: r.j && r.j.token };
 }
 // a phone: a WebSocket with the messages it got
 async function phone(port, token) {
@@ -141,6 +155,10 @@ run(async () => {
   pr.start();
   let r = await call(pr, '/api/phoneremote');
   ok(r.j.enabled === false && !r.j.listening && r.j.phones.length === 0, 'the phone remote is off at first and nothing listens');
+  ok(
+    typeof r.j.listenError === 'string' && r.j.listenError === '' && !('error' in r.j),
+    "the listener's own failure has its own key in the status (listenError, empty when it listened), apart from a failed request (error)"
+  );
   r = await call(pr, '/api/phoneremote/pair', 'POST', {});
   ok(r.code === 400 && /on first/.test(r.j.error), 'the pairing window needs the phone remote to be switched on');
 
@@ -198,6 +216,18 @@ run(async () => {
     'and a page opened without one starts empty'
   );
   ok(!page.text.includes(code), 'the page does not contain the code');
+  // no other site may lay this page in a frame and put invisible keys over it: both headers say so, on the page and on every reply
+  ok(
+    page.headers['x-frame-options'] === 'DENY' && page.headers['content-security-policy'] === "frame-ancestors 'none'",
+    'the phone page says it may not be put in a frame (x-frame-options and a frame-ancestors policy)'
+  );
+  const noToken = await get(port, '/api/apps');
+  ok(
+    noToken.code === 403 &&
+      noToken.headers['x-frame-options'] === 'DENY' &&
+      noToken.headers['content-security-policy'] === "frame-ancestors 'none'",
+    'and so does a JSON reply (the refusal without a token)'
+  );
 
   // ---- nothing before pairing ----
   let p = await phone(port, undefined);
@@ -701,6 +731,206 @@ run(async () => {
   pr2.stop();
   pr.stop();
 
+  // ---- the logos: one channel list for many of them, a size cap, redirects, and the hour-long image cache ----
+  {
+    const hit = { channels: 0, ok: 0, big: 0, bigSent: 0, bigClosed: 0 };
+    const PNG1 = 'PNGDATA-1',
+      PNG2 = 'PNGDATA-2';
+    let logoApi = '';
+    const logoServer = http.createServer((req, res) => {
+      const u = req.url.split('?')[0];
+      const sendImg = body => res.writeHead(200, { 'content-type': 'image/png' }).end(body);
+      if (u === '/api/live/channels') {
+        hit.channels++;
+        return res.writeHead(200, { 'content-type': 'application/json' }).end(
+          JSON.stringify({
+            // the playlist's addresses stay here: the phone only ever asks for /api/logo/<num>
+            channels: [
+              [7, 'c7', 'Seven', 'News', logoApi + '/img/ok.png', 'https://example/s?key=secret', 'k'],
+              [8, 'c8', 'Eight', 'News', logoApi + '/img/moved', 'https://example/s?key=secret', 'k'],
+              [9, 'c9', 'Nine', 'News', logoApi + '/img/big', 'https://example/s?key=secret', 'k'],
+              [10, 'c10', 'Ten', 'News', logoApi + '/img/hop0', 'https://example/s?key=secret', 'k'],
+              [11, 'c11', 'Eleven', 'News', logoApi + '/img/hop1', 'https://example/s?key=secret', 'k'],
+              [12, 'c12', 'Twelve', 'News', logoApi + '/img/two', 'https://example/s?key=secret', 'k'],
+            ],
+          })
+        );
+      }
+      if (u === '/img/ok.png') {
+        hit.ok++;
+        return sendImg(PNG1);
+      }
+      if (u === '/img/two') return sendImg(PNG2);
+      if (u === '/img/moved') {
+        // a provider that moved its file: a relative Location, which must be resolved against the address that answered
+        res.writeHead(302, { location: '/img/ok.png' });
+        return res.end();
+      }
+      if (u.indexOf('/img/hop') === 0) {
+        const n = parseInt(u.slice('/img/hop'.length), 10);
+        res.writeHead(302, { location: n >= 3 ? '/img/ok.png' : '/img/hop' + (n + 1) });
+        return res.end();
+      }
+      if (u === '/img/big') {
+        hit.big++;
+        res.writeHead(200, { 'content-type': 'image/png' });
+        const chunk = Buffer.alloc(128 * 1024, 7); // five times anything a logo should be
+        let left = 40,
+          gone = false;
+        const t = setInterval(() => {
+          if (left-- <= 0) {
+            clearInterval(t);
+            return res.end();
+          }
+          hit.bigSent += chunk.length;
+          res.write(chunk);
+        }, 20);
+        const away = () => {
+          if (gone) return; // "close" and "aborted" both say the reader left: count it once
+          gone = true;
+          clearInterval(t);
+          hit.bigClosed++;
+        };
+        res.on('close', away);
+        res.on('error', away);
+        req.on('aborted', away); // Node 8's server response is not always the first to hear it
+        return;
+      }
+      res.writeHead(404).end('no');
+    });
+    await new Promise(r => logoServer.listen(0, '127.0.0.1', r));
+    logoApi = 'http://127.0.0.1:' + logoServer.address().port;
+    const lp = await lanPair(PR, memoryConfig({}), {
+      port: 0,
+      host: '127.0.0.1',
+      keys: fakeKeys(),
+      api: logoApi,
+      luna: fakeLuna,
+    });
+    const ltok = '/api/logo/',
+      tok = encodeURIComponent(lp.token);
+    let lg = await get(lp.port, ltok + '7?t=' + tok);
+    ok(
+      lg.code === 200 && lg.text === PNG1 && /image\/png/.test(lg.headers['content-type'] || ''),
+      "a channel's logo comes through, fetched by the TV from the playlist's own address"
+    );
+    lg = await get(lp.port, ltok + '7?t=' + tok);
+    ok(
+      lg.code === 200 && lg.text === PNG1 && hit.ok === 1,
+      'the image is kept for an hour: the second request is answered without asking the provider again'
+    );
+    lg = await get(lp.port, ltok + '8?t=' + tok);
+    ok(lg.code === 200 && lg.text === PNG1, 'a 302 with a relative Location is followed to the image');
+    const bigAt = Date.now();
+    lg = await get(lp.port, ltok + '9?t=' + tok);
+    const bigMs = Date.now() - bigAt;
+    for (let i = 0; i < 40 && !hit.bigClosed; i++) await sleep(25); // the provider's socket closes a moment after the cap
+    ok(
+      lg.code === 404 && bigMs < 2000 && hit.bigClosed > 0 && hit.bigSent < 2 * 1024 * 1024,
+      'a logo body over 512 KB is refused (404) and the download is cut off at the cap, not read to the end (' +
+        lg.code +
+        ', ' +
+        (Date.now() - bigAt) +
+        ' ms, closed ' +
+        hit.bigClosed +
+        ', sent ' +
+        hit.bigSent +
+        ')'
+    );
+    lg = await get(lp.port, ltok + '10?t=' + tok);
+    ok(lg.code === 404, 'a chain of four redirects is refused');
+    lg = await get(lp.port, ltok + '11?t=' + tok);
+    ok(lg.code === 200 && lg.text === PNG1, 'three redirects are followed, which is the limit');
+    lg = await get(lp.port, ltok + '12?t=' + tok);
+    ok(
+      lg.code === 200 && lg.text === PNG2 && hit.channels === 1,
+      'six different logos share one /api/live/channels fetch (the list is kept for 30 seconds), so a page of cards is one download'
+    );
+    lp.pr.stop();
+    logoServer.close();
+  }
+
+  // ---- a launcher request that answers and then stalls must still end: the apiTimeout option ----
+  {
+    const sockets = new Set();
+    const stall = http.createServer((req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.write('{"apps":['); // headers and a part of the body, and then nothing: the answer never ends
+    });
+    stall.on('connection', s => {
+      sockets.add(s);
+      s.on('close', () => sockets.delete(s));
+    });
+    await new Promise(r => stall.listen(0, '127.0.0.1', r));
+    const stallApi = 'http://127.0.0.1:' + stall.address().port;
+    const sp = await lanPair(PR, memoryConfig({}), {
+      port: 0,
+      host: '127.0.0.1',
+      keys: fakeKeys(),
+      api: stallApi,
+      luna: fakeLuna,
+      apiTimeout: 300,
+    });
+    const at = Date.now();
+    const sr = await get(sp.port, '/api/apps?t=' + encodeURIComponent(sp.token), 8000);
+    const ms = Date.now() - at;
+    ok(
+      sr.code === 200 && sr.text === '{"apps":[]}' && ms < 3000,
+      'a launcher response that starts and never ends still answers the phone within the limit (' + ms + ' ms, not for ever)'
+    );
+    sp.pr.stop();
+    sockets.forEach(s => s.destroy());
+    stall.close();
+  }
+
+  // ---- a port that is taken: the status says so under listenError, apart from a request that failed ----
+  {
+    const busy = http.createServer((req, res) => res.end('busy'));
+    await new Promise(r => busy.listen(0, '127.0.0.1', r));
+    const busyPort = busy.address().port;
+    const bp = PR.create({ config: memoryConfig({}) }, { port: busyPort, host: '127.0.0.1', keys: fakeKeys(), luna: fakeLuna });
+    bp.start();
+    await call(bp, '/api/phoneremote', 'POST', { enabled: true });
+    await call(bp, '/api/phoneremote/pair', 'POST', {}); // the window is what opens (and here fails to open) the port
+    let bs = await call(bp, '/api/phoneremote');
+    for (let i = 0; i < 40 && !bs.j.listenError; i++) {
+      await sleep(50);
+      bs = await call(bp, '/api/phoneremote');
+    }
+    ok(
+      bs.j.listening === false &&
+        typeof bs.j.listenError === 'string' &&
+        /could not listen/.test(bs.j.listenError) &&
+        bs.j.listenError.indexOf(String(busyPort)) >= 0 &&
+        !('error' in bs.j),
+      'a port that is already taken says why in listenError (with the port) and listening is false, so the manager can show a busy port'
+    );
+    bp.stop();
+    busy.close();
+  }
+
+  // ---- the pairing rate limit: five tries a minute, and pruning the list must not give a sixth ----
+  {
+    const rl = PR.create({ config: memoryConfig({}) }, { port: 0, host: '127.0.0.1', keys: fakeKeys(), luna: fakeLuna });
+    rl.start();
+    await call(rl, '/api/phoneremote', 'POST', { enabled: true });
+    const win = await call(rl, '/api/phoneremote/pair', 'POST', {});
+    const rport = win.j.port;
+    const wrong = win.j.pairing.code === '111111' ? '222222' : '111111';
+    const codes = [];
+    for (let i = 0; i < 6; i++) codes.push((await post(rport, '/api/pair', { code: wrong, name: 'x' })).code);
+    ok(
+      codes.slice(0, 5).every(c => c === 403) && codes[5] === 429,
+      'five pairing tries a minute from one address, and the try list being pruned does not start it again (' + codes.join(',') + ')'
+    );
+    const rightCode = (await call(rl, '/api/phoneremote')).j.pairing.code;
+    ok(
+      (await post(rport, '/api/pair', { code: rightCode, name: 'x' })).code === 429,
+      'and the right code is refused while the address is limited'
+    );
+    rl.stop();
+  }
+
   // ---- the page ----
   const pg = require('../../helper/addons-bundled/phoneremote/page').phonePage('en');
   ok(
@@ -899,16 +1129,56 @@ run(async () => {
     /send\(\{t:'logout'\}\)/.test(pg) &&
       /m\.t==='bye'/.test(pg) &&
       /leaving/.test(pg) &&
-      /function wipe\(\)\{store\(''\);tok='';/.test(pg) &&
+      /function wipe\(\)\{pendClear\(\);store\(''\);tok='';/.test(pg) &&
       /\^cytv/.test(pg) &&
       /\$\('code'\)\.value='';\$\('pname'\)\.value=guess\(\);cells\(\)/.test(pg) &&
       /CYTV_APP\.forget\(w\?'removed':'left'\)/.test(pg) &&
       /pnote\(w\?t\('Logged out\. This phone was removed/.test(pg),
     "log out tells the TV, waits for its bye (3 s at most), deletes every cytv key the page kept, tells the app, and ends on the pairing screen with a toast (3 s) saying what happened to the TV's list"
   );
+  // a touch the browser takes away (a call, a system gesture) is not a finger lift: the pad must not stay lit with its arrow timer running
+  ok(
+    /pad\.addEventListener\('touchcancel',function\(\)\{down=0;most=0;pad\.className='pad';stop\(\)\}\)/.test(pg) &&
+      /function stop\(\)\{if\(tk\)\{clearInterval\(tk\);tk=null\}ax=ay=px=py=sc=0\}/.test(pg),
+    'a cancelled touch clears the pad highlight and stops the arrow-key timer, so nothing keeps pressing after the finger is gone'
+  );
+  // a second finger lifting first must not make the rest of the gesture jump: the base moves to the finger that stays
+  ok(
+    /pad\.addEventListener\('touchend',function\(e\)\{e\.preventDefault\(\);if\(e\.touches\.length\)\{x0=e\.touches\[0\]\.clientX;y0=e\.touches\[0\]\.clientY;return\}/.test(
+      pg
+    ),
+    'when one of two fingers lifts the other gets a fresh base, so the cursor does not jump by the distance already moved'
+  );
+  // a second tap while the first pairing request is in flight would post the same code twice, and the second 403 would land on the remote screen
+  ok(
+    /var pairing=false;/.test(pg) &&
+      /function pair\(\)\{if\(pairing\)return;pairing=true;/.test(pg) &&
+      /x\.onload=function\(\)\{pairing=false;/.test(pg) &&
+      /x\.onerror=x\.ontimeout=function\(\)\{pairing=false;pnote\(/.test(pg) &&
+      /x\.timeout=15000;/.test(pg),
+    'the pairing request has an in-flight guard, which both answers clear again (a double tap pairs once)'
+  );
+  // the ring of a power press waited on its timers: logging out ends them too, or it comes back on the pairing screen
+  ok(
+    /function pendClear\(\)\{/.test(pg) && /function wipe\(\)\{pendClear\(\);store\(''\);tok='';/.test(pg),
+    'logging out clears a waiting power press with the rest, so its ring cannot reappear on the pairing screen'
+  );
+  // webOS 5's Chromium does not know clamp(): an invalid value would leave the pad with no height at all
+  ok(
+    pg.indexOf('clamp(') < 0 && /\.pad\{[^}]*height:calc\(100vh - 380px\);min-height:300px;max-height:432px;/.test(pg),
+    'the pad height is a plain calc with a min-height and a max-height, not clamp(), which the old Chromium throws away'
+  );
+  ok(
+    (pg.match(/var [^;\n]*padMv/g) || []).length === 1,
+    'padMv is declared once: a second declaration reset the tap-to-change-channel state'
+  );
+  ok(
+    /\.replace\('%s',function\(\)\{return \$\('tvname'\)\.textContent\}\)/.test(pg),
+    'the log-out question fills the TV name in with a function, so a name containing $ is not read as a replacement pattern'
+  );
   // the touchpad fills the room between the header and the tab bar: no dead strip above the bottom buttons
   ok(
-    /\.pad\{position:relative;margin:18px auto 0;width:calc\(100% - 40px\);max-width:390px;height:clamp\(300px,calc\(100vh - 380px\),432px\)/.test(
+    /\.pad\{position:relative;margin:18px auto 0;width:calc\(100% - 40px\);max-width:390px;height:calc\(100vh - 380px\);min-height:300px;max-height:432px;/.test(
       pg
     ) &&
       /class=padhint id=padhint/.test(pg) &&
@@ -1052,7 +1322,7 @@ run(async () => {
       /else pnote\(j\.error\|\|t\('That code is not right\. Check the 6 digits on the TV screen\.'\),'warn',10000\)/.test(
         require('../../helper/addons-bundled/phoneremote/page').PHONE_JS
       ) &&
-      /x\.onerror=function\(\)\{pnote\(t\('The TV did not answer\. Check the phone is on the same Wi-Fi as the TV\.'\),'warn',10000\)/.test(
+      /x\.onerror=x\.ontimeout=function\(\)\{pairing=false;pnote\(t\('The TV did not answer\. Check the phone is on the same Wi-Fi as the TV\.'\),'warn',10000\)/.test(
         require('../../helper/addons-bundled/phoneremote/page').PHONE_JS
       ) &&
       /function showPair\(s,k\)\{[^}]*if\(s\)pnote\(s,k\|\|'warn',10000\)\}/.test(
@@ -1067,7 +1337,7 @@ run(async () => {
       cnt(0) === '0 phones' &&
         cnt(1) === '1 phone' &&
         cnt(2) === '2 phones' &&
-        /prCount\(pr\.phones\.length\) \+ ' paired'/.test(menu) &&
+        /tr\(prCount\(pr\.phones\.length\)\) \+ ' ' \+ tr\('paired'\)/.test(menu) &&
         !/length \+ ' phones'/.test(menu),
       'the phone counts say "1 phone paired" on the Features row and "1 phone" in the list, never "1 phones"'
     );
@@ -1110,7 +1380,13 @@ run(async () => {
     'the pairing screen after the download offers both ways: scan the code, or open the app and type it'
   );
   ok(!/paired already/.test(mgr), 'and it no longer claims the app is paired before the user has paired it');
-  const strings = [...mgr.matchAll(/tr\(\s*'((?:[^'\\]|\\.)*)'/g)].map(m => m[1]);
+  // the literals the two screens pass to tr(): the same list String.matchAll gives, but with exec (Node 8.12 has no matchAll)
+  const strings = [];
+  {
+    const re = /tr\(\s*'((?:[^'\\]|\\.)*)'/g;
+    let m;
+    while ((m = re.exec(mgr))) strings.push(m[1]);
+  }
   ok(
     strings.filter(s => /Part 2|part 2|Part 1/.test(s)).every(s => s in en),
     'every new string of the two screens is in the English list'
@@ -1147,4 +1423,103 @@ run(async () => {
     /html,body\{direction:ltr\}/.test(he) && /documentElement\.dir='ltr'/.test(he) && !/\[dir=rtl\]/.test(he),
     'the remote stays left to right in a right-to-left language'
   );
+
+  // ---- the manager's phone screens: the busy port, the retries, and the English they build ----
+  {
+    ok(
+      (mgr.match(/if \(r\.listenError\)/g) || []).length >= 3 &&
+        /if \(r\.listenError\) banner\(tr\(r\.listenError\), 'err'\)/.test(mgr) &&
+        /if \(r\.listenError !== prListenShown\) \{/.test(mgr) /* the poll says it once, not every 2.5 seconds */ &&
+        /if \(r\.listenError\) \$\('sharemsg'\)\.textContent = tr\(r\.listenError\)/.test(mgr) &&
+        (mgr.match(/if \(r\.error\)/g) || []).length >= 3,
+      'every phone screen reads listenError (a port that could not be opened) and still treats a failed request (r.error) as a failure'
+    );
+    // a screen that is still open keeps asking after a failed poll; before, the first refusal stopped it until it was reopened
+    ok(
+      /if \(r\.error\) \{\s*\$\('sharemsg'\)\.textContent = tr\(r\.error\);\s*setTimeout\(prWatch, 2000\);[^\n]*\n\s*return;/.test(mgr) &&
+        /if \(r\.error\) \{\s*\$\('sharemsg'\)\.textContent = tr\(r\.error\);\s*setTimeout\(prWatchApp, 2000\);[^\n]*\n\s*return;/.test(
+          mgr
+        ),
+      'a refused pairing poll asks again in two seconds instead of leaving the QR screen frozen'
+    );
+    ok(
+      /function \(\) \{\s*\$\('sharemsg'\)\.textContent = tr\('The service did not answer\.'\);\s*setTimeout\(prWatch, 2000\);/.test(mgr) &&
+        /function \(\) \{\s*\$\('sharemsg'\)\.textContent = tr\('The service did not answer\.'\);\s*setTimeout\(prWatchApp, 2000\);/.test(
+          mgr
+        ),
+      'and a request that never arrived is tried again too'
+    );
+    // switching the remote on from a QR screen used to recurse whether or not the reply said it was on, which never ended if it was not
+    ok(
+      (mgr.match(/if \(r && r\.enabled\)/g) || []).length === 2 &&
+        /if \(r && r\.enabled\) \{\s*pr = r;\s*openPrPair\(\);/.test(mgr) &&
+        /if \(r && r\.enabled\) \{\s*pr = r;\s*openPrApp\(\);/.test(mgr) &&
+        /banner\(\(r && r\.error\) \|\| 'The service did not answer', 'err'\)/.test(mgr),
+      'opening a QR screen goes on only when the reply says the phone remote is on, and says why when it is not (no endless retry)'
+    );
+    ok(
+      /pr = null;/.test(stat) &&
+        /function \(\) \{\s*\/\* a stopped add-on answers 404[^*]*\*\/\s*if \(\+\+prMiss < 2\) return;\s*pr = null;/.test(stat),
+      'a phone remote that stops answering clears the state on the second rejected poll in a row (one missed poll keeps the row), so its Features row goes with it'
+    );
+    const share = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'share.js'), 'utf8');
+    const closeShare = share.slice(share.indexOf('function closeShare()'));
+    ok(
+      /shareMode === 'remote' \|\| shareMode === 'app'/.test(closeShare) &&
+        (closeShare.match(/api\('\/api\/phoneremote\/pair', \{ stop: true \}\)/g) || []).length === 1 &&
+        !/if \(shareMode === 'remote'\)/.test(closeShare),
+      'closing either phone pairing screen stops the window in one and the same branch (the app screen used to leave it open)'
+    );
+    ok(
+      /if \(r\.error\) \{[\s\S]{0,400}?banner\(r\.error, 'err'\);\s*loadAddons\(\);\s*return;\s*\}/.test(scr) &&
+        /if \(after && !r\.restartNeeded\) after\(\);/.test(scr),
+      'an add-on change that failed shows the real status again and does not run "after", as if it had worked'
+    );
+    // the English the phone screens build at run time: every literal, and a literal that is only the start of a composed string needs a template
+    const NEW_KEYS = [
+      '%d phone',
+      '%d phones',
+      'after %d day',
+      'after %d days',
+      'after 1 month',
+      'after 1 week',
+      'after 2 weeks',
+      'allowed',
+      'Choose it to block or remove it.',
+      'Last used %s',
+      'last used %s',
+      'no phones paired',
+      'paired',
+      'paired %s',
+    ];
+    const absent = NEW_KEYS.filter(k => !(k in en));
+    ok(
+      NEW_KEYS.length === 14 && absent.length === 0,
+      'the fourteen keys the phone screens now build are in the English list' +
+        (absent.length ? ' (missing: ' + absent.join(', ') + ')' : '')
+    );
+    // the Features row translates the count and the word after it apart ("2 phones" + " paired"): a template has to match the whole
+    // string, so "%d phones" can never match "2 phones paired" — see menu.js's Features row
+    // only the phone screens of the manager: the four phone views, their Features row, and remote.js (all of it is the phone remote)
+    const phoneSource = [
+      mgr,
+      menu.slice(menu.indexOf("if (view === 'phoneremote') {"), menu.indexOf("if (view === 'wallpapers') {")),
+      menu.slice(menu.indexOf('/* the phone remote is an add-on:'), menu.indexOf("rows.push({ label: 'Home Assistant'")),
+    ].join('\n');
+    const enKeys = Object.keys(en);
+    const literals = [];
+    {
+      const re = /(^|[^\w$])tr\(\s*'((?:[^'\\]|\\.)*)'/g;
+      let m;
+      while ((m = re.exec(phoneSource))) literals.push({ key: m[2], composed: /^\s*\+/.test(phoneSource.slice(re.lastIndex)) });
+    }
+    const unlisted = literals
+      .filter(k => (k.composed ? !enKeys.some(x => x.indexOf(k.key) === 0 && /%[sd]/.test(x.slice(k.key.length))) : !(k.key in en)))
+      .map(k => k.key);
+    ok(
+      literals.length > 20 && unlisted.length === 0,
+      'every English string the phone screens translate (the composed ones too) has its key in en.json' +
+        (unlisted.length ? ' (missing: ' + unlisted.join(' | ') + ')' : '')
+    );
+  }
 });

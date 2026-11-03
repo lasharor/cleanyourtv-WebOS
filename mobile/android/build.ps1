@@ -5,7 +5,10 @@
 # The app is a shell around the TV's own phone remote page: see mobile/README.md.
 param(
   [string]$Sdk = '',
-  [string]$JavaHome = ''
+  [string]$JavaHome = '',
+  # the SDK parts the shipped app is built with: the same ones every time, not "the newest installed" (platform 34 is the app's target SDK)
+  [string]$BuildTools = '34.0.0',
+  [string]$Platform = 'android-34'
 )
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -19,10 +22,10 @@ $apk = Join-Path $appDir 'tv-remote.apk'
 if (-not $Sdk) { $Sdk = $env:ANDROID_HOME; if (-not $Sdk) { $Sdk = $env:ANDROID_SDK_ROOT } }
 if (-not $Sdk) { $Sdk = Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
 if (-not (Test-Path $Sdk)) { throw "Android SDK not found: pass -Sdk <path> or set ANDROID_HOME" }
-$bt = Get-ChildItem (Join-Path $Sdk 'build-tools') -Directory | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
-$plat = Get-ChildItem (Join-Path $Sdk 'platforms') -Directory | Sort-Object Name -Descending | Select-Object -First 1
-if (-not $bt) { throw "no build-tools in $Sdk" }
-if (-not $plat) { throw "no platforms in $Sdk" }
+$bt = Get-Item (Join-Path $Sdk "build-tools\$BuildTools") -ErrorAction SilentlyContinue
+$plat = Get-Item (Join-Path $Sdk "platforms\$Platform") -ErrorAction SilentlyContinue
+if (-not $bt) { throw "build-tools $BuildTools not found in $Sdk (install it with the SDK manager, or pass -BuildTools)" }
+if (-not $plat) { throw "platform $Platform not found in $Sdk (install it with the SDK manager, or pass -Platform)" }
 $androidJar = Join-Path $plat.FullName 'android.jar'
 $aapt2 = Join-Path $bt.FullName 'aapt2.exe'
 $zipalign = Join-Path $bt.FullName 'zipalign.exe'
@@ -110,5 +113,8 @@ if ($LASTEXITCODE -ne 0) { throw 'the package did not verify' }
 $verify | Select-Object -First 3 | Write-Host
 
 $size = [math]::Round((Get-Item $apk).Length / 1KB)
+$sha = (Get-FileHash $apk -Algorithm SHA256).Hash.ToLower()
 Write-Host ''
 Write-Host "APK  $apk  ($size KB)" -ForegroundColor Green
+Write-Host "SHA-256  $sha"
+Write-Host 'Put that SHA-256 in mobile/README.md (the test compares it with the file).'

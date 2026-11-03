@@ -1,6 +1,7 @@
 // The page a paired phone opens for the phone remote (service.js): pairing with the code shown on the TV, then buttons, a touchpad and
 // text entry. The page keeps a WebSocket to the TV open while it is on screen: it says who it is with the token it kept in localStorage,
-// checks that the TV still answers (a ping every 15 seconds), and reconnects by itself after a drop, a sleep or a restart of the service.
+// checks that the TV still answers (a ping every five seconds, dropped after four without an answer), and reconnects by itself after a
+// drop, a sleep or a restart of the service.
 // The look follows the redesign: a round pad with a large OK, volume and channel rockers, numbers and colours in a sheet, a tab bar, and a
 // status line under the TV name for every message. Spacing is by sibling margins (no flex gap: Chromium 68), and the page is always left to right.
 const web = require('../../web'),
@@ -106,9 +107,10 @@ function guess(){var n='';try{if(window.CYTV_APP&&window.CYTV_APP.deviceName)n=p
 var pnoteT=0;
 function pnote(s,k,ms){var e=$('pnote');clearTimeout(pnoteT);e.textContent=s;e.setAttribute('role',k==='warn'?'alert':'status');e.className=k||'';void e.offsetWidth;e.className=(k||'')+' on';pnoteT=setTimeout(function(){e.className=k||''},ms||3000)}
 function showPair(s,k){tok='';ready=false;show('pairbox');if(s)pnote(s,k||'warn',10000)}
-function pair(){var x=new XMLHttpRequest();x.open('POST','/api/pair');x.setRequestHeader('content-type','application/json');
- x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(e){}if(j.token){clearTimeout(pnoteT);$('pnote').className='';store(j.token);tok=j.token;blocked=false;delay=1000;tidy();show('remote');connect()}else pnote(j.error||t('That code is not right. Check the 6 digits on the TV screen.'),'warn',10000)};
- x.onerror=function(){pnote(t('The TV did not answer. Check the phone is on the same Wi-Fi as the TV.'),'warn',10000)};
+var pairing=false; /* a second tap while the first pair is in flight would post the same code twice: the second 403 would show over the remote */
+function pair(){if(pairing)return;pairing=true;var x=new XMLHttpRequest();x.open('POST','/api/pair');x.setRequestHeader('content-type','application/json');
+ x.onload=function(){pairing=false;var j={};try{j=JSON.parse(x.responseText)}catch(e){}if(j.token){clearTimeout(pnoteT);$('pnote').className='';store(j.token);tok=j.token;blocked=false;delay=1000;tidy();show('remote');connect()}else pnote(j.error||t('That code is not right. Check the 6 digits on the TV screen.'),'warn',10000)};
+ x.onerror=x.ontimeout=function(){pairing=false;pnote(t('The TV did not answer. Check the phone is on the same Wi-Fi as the TV.'),'warn',10000)};x.timeout=15000;
  x.send(JSON.stringify({code:$('code').value.trim(),name:$('pname').value.trim()}))}
 function ask(){if(!(ws&&ws.readyState===1))return;lastAsk=Date.now();try{ws.send(JSON.stringify({t:'power'}))}catch(e){}}
 function retry(ms){clearTimeout(timer);timer=setTimeout(connect,ms||delay);delay=Math.min(delay*2,10000)}
@@ -139,7 +141,6 @@ function connect(){if(!tok||(ws&&ws.readyState<2))return;clearTimeout(timer);sta
 function drop(){var w=ws;ws=null;ready=false;if(w){w.onclose=null;try{w.close()}catch(e){}}}
 function wake(){if(!tok)return;if(!ws||ws.readyState>1){delay=1000;connect();return}ping();setTimeout(function(){if(tok&&Date.now()-lastRx>4000+(Date.now()-lastPing)){drop();delay=1000;connect()}},3000)}
 function ping(){lastPing=Date.now();if(ws&&ws.readyState===1)ws.send('{"t":"ping"}')}
-var padMv=0;
 var padKeysUntil=0,padMv=0;
 function send(o){if(!ready||!ws||ws.readyState!==1){say(t('Not connected'),'warn',2500);return false}o.n=++n;ws.send(JSON.stringify(o));return true}
 /* the app can ask the phone whether the TV answers at all: a TV that went to standby does not close the socket, it just stops */
@@ -225,7 +226,8 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-k]'),bind);
  pad.addEventListener('touchmove',function(e){e.preventDefault();var p=e.touches[0],dx=p.clientX-x0,dy=p.clientY-y0,now=Date.now(),sp=Math.sqrt(dx*dx+dy*dy)/Math.max(now-tm,8);two=e.touches.length>1;tm=now;if(pr)fg.style.transform='translate('+(p.clientX-pr.left)+'px,'+(p.clientY-pr.top)+'px)';x0=p.clientX;y0=p.clientY;moved+=Math.abs(dx)+Math.abs(dy);
   if(ptr){var g=2.2+Math.min(sp*1.6,3.3);if(two)sc+=dy*1.5;else{px+=dx*g;py+=dy*g}return}
   var k=1+Math.min(sp*1.5,3);if(two)dx=0;ax+=dx*k;ay+=dy*k},{passive:false});
- pad.addEventListener('touchend',function(e){e.preventDefault();if(e.touches.length)return;down=0;pad.className='pad';if(moved<10&&Date.now()-t0<350){if(most>1)step('BACK');else if(ptr)send({t:'click'});else step('ENTER');buzz()}most=0},{passive:false})})();
+ pad.addEventListener('touchend',function(e){e.preventDefault();if(e.touches.length){x0=e.touches[0].clientX;y0=e.touches[0].clientY;return}down=0;pad.className='pad';if(moved<10&&Date.now()-t0<350){if(most>1)step('BACK');else if(ptr)send({t:'click'});else step('ENTER');buzz()}most=0},{passive:false});
+ pad.addEventListener('touchcancel',function(){down=0;most=0;pad.className='pad';stop()})})();
 /* the scroll strip at the right of the pad, as in the phone app of LG: a finger on the black thumb moves it up or down the bar, and the page
    on the TV scrolls by as much as the finger moved, also when the thumb is at the end of the bar. The thumb slides back to the middle when the finger lifts. With
    no pointer (the keys fall back) it presses UP and DOWN, one every 45 ms at most. */
@@ -425,12 +427,12 @@ function thOpen(on){$('ths').className=on?'':'hide';if(!on)return;
  $('thname').textContent=$('tvname').textContent;$('kvas').textContent=me.name||'-';
  $('kvon').textContent=me.created?new Date(me.created).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'-';$('kvad').textContent=location.host}
 function cfmOpen(on){$('cfm').className=on?'dlgw':'hide dlgw';if(!on)return;
- $('cfh').textContent=t('Log out of %s?').replace('%s',$('tvname').textContent);
+ $('cfh').textContent=t('Log out of %s?').replace('%s',function(){return $('tvname').textContent});
  $('cfp').textContent=ready?t('This phone stops controlling the TV. It is also removed from the TV’s list of paired phones, and everything this phone stored about the TV is deleted. To use it again you pair with a new code.')
   :t('The TV cannot be reached right now, so it cannot be told. This phone stops controlling the TV and everything it stored about the TV is deleted, but the TV keeps listing it until you remove it in the manager app. To use it again you pair with a new code.')}
 function lgDraw(a){var rows=[t('Closing the connection'),a[1]==='skip'?t('The TV could not be reached: its list is left as it is'):t('Removing this phone from the TV’s list'),t('Deleting what this phone stored')];
  $('lgl').innerHTML=rows.map(function(r,i){return '<div class="'+a[i]+'"><i>'+(a[i]==='done'?'✓':'')+'</i>'+r+'</div>'}).join('')}
-function wipe(){store('');tok='';try{var k,del=[];for(k=0;k<localStorage.length;k++)if(/^cytv/.test(localStorage.key(k)))del.push(localStorage.key(k));del.forEach(function(x){localStorage.removeItem(x)})}catch(e){}
+function wipe(){pendClear();store('');tok='';try{var k,del=[];for(k=0;k<localStorage.length;k++)if(/^cytv/.test(localStorage.key(k)))del.push(localStorage.key(k));del.forEach(function(x){localStorage.removeItem(x)})}catch(e){}
  me={name:'',seen:0,created:0};mac='';wol=null;appsIn=false;liveIn=false;pwrState='';$('tvname').textContent='TV';$('apgrid').innerHTML='';$('lvgrid').innerHTML='';$('txt').value='';prev='';$('code').value='';$('pname').value=guess();cells();tab('kb')}
 /* when the page's own socket is not open the TV may still answer (on standby with Quick Start+, or a socket that just dropped): a short one of its own tells it */
 function tellTv(cb){var w,done=false;function end(ok){if(done)return;done=true;try{w.close()}catch(e){}cb(ok)}
@@ -525,7 +527,7 @@ button{display:flex;align-items:center;justify-content:center;font-weight:700;fo
    address bar, nothing can end up outside the visible area */
 .tabbar{flex:none;display:flex;border-top:1px solid #2e3140;background:#13141a;padding:0 12px 4px}
 .tab{flex:1;height:60px;border:0;border-radius:0;background:transparent;flex-direction:column;font-size:12px;font-weight:600;color:#a3a8b8}.tab .ic{margin:0 0 4px}.tab.on{background:transparent;color:#ff8a5b}
-.pad{position:relative;margin:18px auto 0;width:calc(100% - 40px);max-width:390px;height:clamp(300px,calc(100vh - 380px),432px);border-radius:28px;border:1px solid #2e3140;background:radial-gradient(circle at 50% 38%,#1c1f2a 0%,#14161d 62%,#111319 100%);overflow:hidden;touch-action:none;transition:border-color .12s,box-shadow .12s}
+.pad{position:relative;margin:18px auto 0;width:calc(100% - 40px);max-width:390px;height:calc(100vh - 380px);min-height:300px;max-height:432px;border-radius:28px;border:1px solid #2e3140;background:radial-gradient(circle at 50% 38%,#1c1f2a 0%,#14161d 62%,#111319 100%);overflow:hidden;touch-action:none;transition:border-color .12s,box-shadow .12s}
 .pad:before{content:'';position:absolute;left:0;right:0;top:0;bottom:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1.5px);background-size:22px 22px;background-position:11px 11px;pointer-events:none}
 .pad.on{border-color:rgba(255,138,91,.5);box-shadow:0 0 0 4px rgba(255,138,91,.08)}
 .pfing{position:absolute;left:-28px;top:-28px;width:56px;height:56px;border-radius:50%;background:rgba(255,138,91,.18);border:1px solid rgba(255,138,91,.4);opacity:0;pointer-events:none;transition:opacity .12s}.pad.on .pfing{opacity:1}
