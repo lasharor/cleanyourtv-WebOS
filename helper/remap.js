@@ -200,7 +200,11 @@ function create(ctx) {
         if (l.state === 'got') {
           resume = true;
           // LG's app starts a moment after the press: come back after it, and again in case it was slow
-          for (const ms of [1200, 4000]) setTimeout(() => luna('luna://com.webos.applicationManager/launch', { id: MANAGER, params: { open: 'remaplearned' } }).catch(() => {}), ms);
+          for (const ms of [1200, 4000])
+            setTimeout(
+              () => luna('luna://com.webos.applicationManager/launch', { id: MANAGER, params: { open: 'remaplearned' } }).catch(() => {}),
+              ms
+            );
         } else if (l.state === 'waiting' && Date.now() - t0 < 50000) tick();
       }, 500);
     })();
