@@ -16,18 +16,17 @@ const http = require('http'),
   path = require('path'),
   crypto = require('crypto');
 const tvname = require('./tvname');
-const web = require('./web'),
-  i18n = require('./i18n'),
-  luna = require('./luna'),
-  nc = require('./netcompat'),
+const web = require('../../web'),
+  i18n = require('../../i18n'),
+  luna = require('../../luna'),
+  nc = require('../../netcompat'),
   ws = require('./ws'),
-  P = require('./paths'),
-  page = require('./phoneremotepage'),
+  page = require('./page'),
   devicename = require('./devicename');
 
-// The app, when this build ships one (the package carries mobile/app/tv-remote.apk and bootstrap.sh copies it next to the service):
-// the manager screen shows a QR code for it and the phone downloads it from here, so no computer is needed to install it.
-const APK = path.join(P.D, 'mobile', 'tv-remote.apk');
+// The app, when this build ships one (it is in this add-on's folder, built from mobile/): the manager screen shows a QR code for it and
+// the phone downloads it from here, so no computer is needed to install it.
+const APK_FILE = path.join(__dirname, 'tv-remote.apk');
 
 const PORT = 8798, // after the Android box page (8793)
   IDLE_MS = 3 * 60 * 1000, // the pairing window closes this long after the manager last asked for it ...
@@ -57,6 +56,7 @@ const cleanName = n =>
 function create(ctx, opts) {
   const o = opts || {};
   const API = String(o.api || 'http://127.0.0.1:8765');
+  const APK = o.apk || APK_FILE; // tests hand in their own file
   const config = ctx.config;
   const keys = o.keys || require('./remotekeys').create(ctx);
   const L = o.luna || luna; // the TV's IPC (tests hand in a fake)
@@ -391,11 +391,25 @@ function create(ctx, opts) {
       const r = await apiRequest('POST', '/api/launch', { id: 'com.webos.app.home', params: { live: true } });
       return { ok: !!r.returnValue, error: r.errorText || '' };
     },
-    live: async m => {
-      // Live TV on a channel: Home is launched with the channel, the same way {live:true} opens it from a card
+    live: async (m, k) => {
+      // Live TV on a channel: Live TV opens as a card opens it ({live:true}), then the channel's number is pressed on the remote's digits,
+      // which is how Live TV itself takes a number. The launcher is not asked for anything new.
       const num = parseInt(m.num, 10);
-      if (!num || num < 1) return { ok: false, error: 'bad channel' };
-      const r = await apiRequest('POST', '/api/launch', { id: 'com.webos.app.home', params: { live: true, channel: num } });
+      if (!num || num < 1 || num > 99999) return { ok: false, error: 'bad channel' };
+      const r = await apiRequest('POST', '/api/launch', { id: 'com.webos.app.home', params: { live: true } });
+      if (r.returnValue) {
+        const digits = String(num).split('');
+        const t = setTimeout(
+          async () => {
+            for (const d of digits) {
+              await k.press(d);
+              await new Promise(res => setTimeout(res, 150));
+            }
+          },
+          o.liveWaitMs === undefined ? 3500 : o.liveWaitMs
+        );
+        if (t.unref) t.unref();
+      }
       return { ok: !!r.returnValue, error: r.errorText || '' };
     },
     launch: async m => {
@@ -433,7 +447,7 @@ function create(ctx, opts) {
     return pwrVal;
   }
 
-  /* the TV's own name for the page's header: LG's "TV Name" (from Apple's HomeKit store, see helper/tvname.js), then the
+  /* the TV's own name for the page's header: LG's "TV Name" (from Apple's HomeKit store, see tvname.js), then the
      model the TV reports, then nothing (the page shows "TV") */
   let nameAt = 0,
     nameVal = '';

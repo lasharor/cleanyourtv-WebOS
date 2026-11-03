@@ -9,7 +9,7 @@ are the TV's own page (`http://<tv>:8798/`), loaded in a WebView. The app adds e
   type the address, `mobile/web/off.html` as the last resort).
 
 That is the whole design: one activity (Java, no libraries, no AndroidX, no Gradle), two small bundled pages, and a short hook in the TV's page
-(`helper/phoneremotepage.js`).
+(`helper/addons-bundled/phoneremote/page.js`).
 
 ## Build
 
@@ -19,7 +19,7 @@ powershell -ExecutionPolicy Bypass -File mobile/android/build.ps1
 
 Needs Java 8+ (`javac`, `keytool`) and the Android SDK (`ANDROID_HOME`, or the usual place on Windows). It uses the SDK's own `aapt2`,
 `javac`, `d8`, `zipalign` and `apksigner` — nothing is downloaded, and Gradle is not used. The result is
-`mobile/app/tv-remote.apk` (about 25 KB, handed to the phone as **TV Remote.apk**), signed with a local key made on the first build and kept in
+`helper/addons-bundled/phoneremote/tv-remote.apk` (about 25 KB, handed to the phone as **TV Remote.apk**), signed with a local key made on the first build and kept in
 `mobile/android/build-keystore/` (so a rebuild installs over the previous app instead of being refused).
 
 `-Sdk <path>` and `-JavaHome <path>` override where it looks.
@@ -31,13 +31,13 @@ phone remote serves it on its own port: **`http://<tv>:8798/app.apk`**. In the m
 shows a QR code for exactly that address: scan it, open the download, install. No computer, no cable, and the phone never leaves the
 network the TV is on.
 
-The APK in `mobile/app/` is a build artifact that is committed on purpose: it is what the QR code points at. Rebuild it and commit it with
+The APK in `helper/addons-bundled/phoneremote/` is a build artifact that is committed on purpose: it is what the QR code points at. Rebuild it and commit it with
 any change to the app, otherwise the TV keeps handing out the old one.
 
 ## Install and set up
 
 1. On the TV, in the manager app: **Features › Phone remote › Install the app (Android)**, and scan the code with the phone's camera. Open the download and install it
-   (allow the browser to install apps). The same file is `mobile/app/tv-remote.apk`, also reachable at `http://<tv>:8798/app.apk`,
+   (allow the browser to install apps). The same file is `helper/addons-bundled/phoneremote/tv-remote.apk`, also reachable at `http://<tv>:8798/app.apk`,
    so a phone without a camera app can just type that address; `adb install` works too.
 2. On the TV: **Features › Phone remote** must be on, with the pairing screen open (it shows the address, e.g. `http://192.168.1.50:8798`, and a
    6-digit code).

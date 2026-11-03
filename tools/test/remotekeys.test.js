@@ -2,7 +2,7 @@
 // address tried again on the loopback, the volume fallback and the text calls. NOT a test of a real TV: whether the TV's pointer socket
 // takes these lines is checked by hand (docs/phone-remote.md).
 const { ok, req, run } = require('./lib');
-const RK = req('remotekeys');
+const RK = require('../../helper/addons-bundled/phoneremote/remotekeys');
 
 run(async () => {
   const calls = [],
@@ -119,7 +119,7 @@ run(async () => {
   const http = require('http'),
     fs = require('fs'),
     paths = req('paths'),
-    ws = req('ws');
+    ws = require('../../helper/addons-bundled/phoneremote/ws');
   const seen = [];
   const srv = http.createServer();
   srv.on('upgrade', (q, socket, head) => {
@@ -160,7 +160,10 @@ run(async () => {
     seen.length > 0 && seen[0].type === 'register' && /CONTROL_MOUSE_AND_KEYBOARD/.test(JSON.stringify(seen[0].payload.manifest)),
     'the first sign-in asks for the pointer permission'
   );
-  ok(fs.existsSync(paths.SSAP_KEY) && fs.readFileSync(paths.SSAP_KEY, 'utf8') === 'KEY1', 'the key the TV gives is kept for the next time');
+  ok(
+    fs.existsSync(paths.D + '/ssap-key') && fs.readFileSync(paths.D + '/ssap-key', 'utf8') === 'KEY1',
+    'the key the TV gives is kept for the next time'
+  );
   ok(
     (e7 + (r7.error || '')).indexOf('Allow the connection') >= 0 || r7.ok || r8.ok,
     'before the TV allows it the call says to allow it on the screen, and once allowed the pointer socket opens'

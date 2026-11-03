@@ -1,4 +1,4 @@
-# Builds the CleanYourTV phone remote app (Android) into mobile/app/tv-remote.apk, with the Android SDK's own tools: no Gradle, no
+# Builds the CleanYourTV phone remote app (Android) into helper/addons-bundled/phoneremote/tv-remote.apk, with the Android SDK's own tools: no Gradle, no
 # libraries, nothing downloaded. Run it from anywhere:
 #   powershell -ExecutionPolicy Bypass -File mobile\android\build.ps1
 # It needs Java 8 or newer (javac, keytool) and the Android SDK (ANDROID_HOME, or the usual place on Windows and macOS).
@@ -11,8 +11,8 @@ $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repo = Split-Path -Parent (Split-Path -Parent $here)
 $out = Join-Path $here 'build'
-# the package the TV serves (mobile/app) and the release ships: one path, so the app that is committed is the app the QR code points at
-$appDir = Join-Path $repo 'mobile\app'
+# the phone remote add-on's folder: the TV serves the app from there and the release ships it, so the app that is committed is the app the QR code points at
+$appDir = Join-Path $repo 'helper\addons-bundled\phoneremote'
 $apk = Join-Path $appDir 'tv-remote.apk'
 
 # ---- the tools ----

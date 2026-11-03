@@ -83,13 +83,14 @@ forgets the TV's address, the network card address and the saved page, and retur
 The page has four tabs: **Remote**, **Touchpad**, **Apps** and **Live**. The last one shows the TV's own app list — the icon and title of
 every app the launcher shows — and a tap opens that app on the TV. The list and the icons come from the launcher's API on the TV (loopback
 only), passed on by the phone remote's own server and only with the paired phone's token; opening an app goes over the phone's connection,
-like a key press.
+like a key press. A channel chosen on the **Live** tab opens Live TV, as a card does, and then presses the channel's number on the TV's digits, which is
+how Live TV takes a number (the launcher is not asked for anything the phone remote needs: it is an [add-on](development/addons.md#the-phone-remote-the-phoneremote-add-on)).
 
 ## Control who has access
 
 The page's top bar shows the TV's own name. On webOS 10 the name the user sets (Settings > General > Devices > TV Name) is not in the
 settings store — it lives in Apple's HomeKit store, `/var/lib/airplay/HomeKitStore/00.00` (eight bytes of header, then the name,
-NUL-terminated), which only root can read; `helper/tvname.js` reads it and never writes to it. When there is no name there, the page shows
+NUL-terminated), which only root can read; `helper/addons-bundled/phoneremote/tvname.js` reads it and never writes to it. When there is no name there, the page shows
 the model the TV reports (`getSystemInfo`), and **TV** only if even that cannot be read.
 
 In the manager app, **Features › Phone remote**:
@@ -209,9 +210,9 @@ Any of these sends the same packet to the TV:
   `type:click`, `type:scroll`). The luna call `getPointerInputSocket` returns a Unix socket on webOS 10 that accepts the lines and ignores
   them, so the service asks the TV's SSAP service (`ws://127.0.0.1:3000`, `ssap://com.webos.service.networkinput/getPointerInputSocket`) instead: it
   gives a `ws://` address that works. That needs a client key, got once with the on-screen prompt and kept in `ssap-key` (mode 600); the
-  service has its own small WebSocket in `helper/ws.js`, as Node.js 8 has none. The page batches moves every 33 ms and, if the pointer
+  service has its own small WebSocket in `helper/addons-bundled/phoneremote/ws.js`, as Node.js 8 has none. The page batches moves every 33 ms and, if the pointer
   socket refuses, plays arrow keys instead for 30 seconds. Text goes through `com.webos.service.ime`
-  (`insertText`, `deleteCharacters`, `sendEnterKey`). The code is `helper/remotekeys.js` behind a small interface, and each key's
+  (`insertText`, `deleteCharacters`, `sendEnterKey`). The code is `helper/addons-bundled/phoneremote/remotekeys.js` behind a small interface, and each key's
   result is logged (`phoneremote: key HOME ok via special`).
 - **Power.** The button in the page's top bar shows the TV's own power state — the remote asks `tvpower` for it when it connects and every five seconds, so **On** means the TV is `Active` or on its `Screen Saver`, not merely that a port answers — and a tap while the remote is connected sends the TV's power key (`POWER`, the standby of the remote's own key, so Quick Start+ and Wake-on-LAN keep working) without opening anything: it turns the TV off, and turns the screen back on from Quick Start+ standby. A **hold** on that button (about half a second) while the TV is on opens the **Power** drawer — the same sheet as the Inputs and the Numbers — with the four things the TV's power service can be told to do, one call to `luna://com.webos.service.tvpower/power/` each: **Screen off** (`turnOffScreen`: the picture goes dark and the TV keeps running, with the network up), **Standby** (`powerOff`, the soft off, which this page wakes again), **Restart** (`reboot`) and **Shut down** (`shutDown`, the hard off, after which only the TV's own remote turns it back on). Each call carries a reason, which is how the TV is told what caused it: `remoteKey` is the remote of the TV, and it refuses any other word with "Invalid reason", so the page sends nothing that the TV would not hear from its own keys. What the TV answers is what the phone shows; a restart and a shut down cannot be taken back, so they want a second tap within four seconds and say so while they wait for it. With the TV not answering the sheet does not open: in the app a tap on the button wakes the TV with a Wake-on-LAN packet, and a browser can only try to connect again, since a page cannot send UDP; see [Turning the TV on](#turning-the-tv-on). The status line says when the TV's own Wake-on-LAN setting (`wolwowlOnOff`) is off: turn it on in **Settings > General > Devices > External Devices > TV On With Mobile**. A full power-off through the service (`/api/power/off`) is not used here: afterwards the TV no longer wakes over the network.
 

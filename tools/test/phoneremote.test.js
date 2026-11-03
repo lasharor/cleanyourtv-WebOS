@@ -1,12 +1,12 @@
-// Phone remote (phoneremote.js, remotekeys.js, phoneremotepage.js): pairing with a one-time code, the token, the rate limit, a phone that
+// Phone remote (the phoneremote add-on: service.js, remotekeys.js, page.js): pairing with a one-time code, the token, the rate limit, a phone that
 // is blocked or revoked, reconnecting after a restart of the service, and the key adapter against a fake luna and a fake pointer socket.
 // Nothing here touches a TV: the keys are a fake, the LAN listener is bound to 127.0.0.1 on a free port.
 const http = require('http'),
   fs = require('fs'),
   path = require('path');
-const { ok, call, req, memoryConfig, run, sleep, tmp, root } = require('./lib');
-const tvname = require('../../helper/tvname');
-const ws = req('ws');
+const { ok, call, memoryConfig, run, sleep, tmp, root } = require('./lib');
+const tvname = require('../../helper/addons-bundled/phoneremote/tvname');
+const ws = require('../../helper/addons-bundled/phoneremote/ws');
 
 function post(port, path, body, origin) {
   return new Promise((resolve, reject) => {
@@ -68,7 +68,7 @@ const fakeLuna = async (uri, params) => {
 const fakeKeys = () => {
   const pressed = [];
   const k = {
-    KEYS: ['UP', 'ENTER', 'HOME', 'VOLUMEUP'],
+    KEYS: ['UP', 'ENTER', 'HOME', 'VOLUMEUP', '1', '2', '7'],
     pressed,
     status: () => ({ backend: 'fake', ok: true, error: '', at: 0 }),
     close() {},
@@ -81,7 +81,7 @@ const fakeKeys = () => {
 
 run(async () => {
   const http = require('http');
-  const PR = req('phoneremote');
+  const PR = require('../../helper/addons-bundled/phoneremote/service');
   const config = memoryConfig({});
   const keys = fakeKeys();
   // the launcher's API that the phone service asks about the TV's apps (loopback in the real thing, an ephemeral port here)
@@ -134,7 +134,9 @@ run(async () => {
   launcher.logo = api + '/logo.png';
   const rev = { name: '' }; // what the stand-in router answers for the phone's address
   const reverse = (a, cb) => cb(rev.name ? null : new Error('ENOTFOUND'), rev.name ? [rev.name] : []);
-  const make = () => PR.create({ config }, { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna, reverse });
+  const APK_PATH = path.join(tmp, 'tv-remote.apk'); // the app: not there until a test puts it there
+  const make = () =>
+    PR.create({ config }, { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna, reverse, apk: APK_PATH, liveWaitMs: 40 });
   let pr = make();
   pr.start();
   let r = await call(pr, '/api/phoneremote');
@@ -165,7 +167,7 @@ run(async () => {
     'the phone page is served, and no cache may keep it (headers and its own meta tags)'
   );
   // the name field: the router's name for the phone is written into the page; a name that is not one is not
-  const dn = require('../../helper/devicename');
+  const dn = require('../../helper/addons-bundled/phoneremote/devicename');
   rev.name = 'Danas-iPhone.lan';
   dn.forget();
   let hp = await get(port, '/');
@@ -285,12 +287,31 @@ run(async () => {
     setupAck && setupAck.ok && launcher.lastLaunch.params && launcher.lastLaunch.params.live && !launcher.lastLaunch.params.channel,
     'Live TV can be opened at its setup screen, for a TV with no playlist yet'
   );
+  keys.pressed.length = 0;
   p.c.send(JSON.stringify({ t: 'live', num: 7, n: 43 }));
   await sleep(300);
   const lvAck = p.msgs.filter(m => m.t === 'ack' && m.n === 43)[0];
   ok(
-    lvAck && lvAck.ok && launcher.lastLaunch && launcher.lastLaunch.params && launcher.lastLaunch.params.channel === 7,
-    'Live TV on a channel is opened by Home, told which channel'
+    lvAck &&
+      lvAck.ok &&
+      launcher.lastLaunch &&
+      launcher.lastLaunch.params &&
+      launcher.lastLaunch.params.live &&
+      !launcher.lastLaunch.params.channel,
+    'Live TV on a channel opens Live TV the way a card does: Home is not told anything new'
+  );
+  ok(
+    keys.pressed.length === 1 && keys.pressed[0][0] === 'key' && keys.pressed[0][1] === '7',
+    'and then the number is pressed on the remote, which is how Live TV takes a channel number'
+  );
+  p.c.send(JSON.stringify({ t: 'live', num: 12, n: 45 }));
+  await sleep(500);
+  ok(
+    keys.pressed
+      .slice(1)
+      .map(x => x[1])
+      .join('') === '12',
+    'a number of two digits is two presses, in order'
   );
   p.c.send(JSON.stringify({ t: 'launch', id: 'com.example.tv', n: 42 }));
   await sleep(250);
@@ -407,9 +428,8 @@ run(async () => {
   );
   r = await get(port2, '/app.apk');
   ok(r.code === 404, 'and then there is no file to download');
-  fs.mkdirSync(path.join(tmp, 'cytv', 'mobile'));
   const apk = Buffer.from('PK\u0003\u0004 this is not really an app');
-  fs.writeFileSync(path.join(tmp, 'cytv', 'mobile', 'tv-remote.apk'), apk);
+  fs.writeFileSync(APK_PATH, apk);
   r = await call(pr, '/api/phoneremote');
   ok(r.j.app.available === true && r.j.app.size === apk.length, 'with the app in the build, the manager is told its size');
   ok(!r.j.app.qr, 'with no pairing window there is no code, so the manager gets no address for its QR code');
@@ -682,7 +702,7 @@ run(async () => {
   pr.stop();
 
   // ---- the page ----
-  const pg = req('phoneremotepage').phonePage('en');
+  const pg = require('../../helper/addons-bundled/phoneremote/page').phonePage('en');
   ok(
     /localStorage/.test(pg) &&
       /new WebSocket/.test(pg) &&
@@ -848,23 +868,14 @@ run(async () => {
     ) && (pg.match(/if\(onNow\(\)\)return goNow\(go\);/g) || []).length === 2,
     'with the screensaver on, Live TV setup and a channel wake the screen before they open'
   );
-  // a channel asked for by the phone reaches the Live TV page: the launcher passes it on (to the frame's address, or as a message when the page is open)
+  // the launcher and the Live TV page are not changed by the phone remote: it is an add-on that uses what Home already offers
   {
     const rd = f => fs.readFileSync(path.join(__dirname, '..', '..', f), 'utf8');
-    const inp = rd('app/src/js/input.js'),
-      lv = rd('app/src/js/live.js'),
-      iptv = rd('helper/addons-bundled/iptv/src/js/live.js'),
-      st = rd('helper/addons-bundled/iptv/src/js/start.js');
     ok(
-      /LIVE\.enter\(!!p\.guide, p\.channel\)/.test(inp) &&
-        /else if \(p\.channel\) LIVE\.tune\(p\.channel\)/.test(inp) &&
-        /tune: function \(num\)[\s\S]*cytv: 'tune'/.test(lv) &&
-        /q\.channel = channel/.test(lv) &&
-        /o\.tune = function/.test(iptv) &&
-        /play\(byNum\[wantNum\] \? wantNum/.test(iptv) &&
-        /d\.cytv === 'tune'/.test(st) &&
-        /if \(Q\.channel\) LIVE\.tune\(Q\.channel\)/.test(st),
-      'a channel from the phone remote is played by the Live TV page (at start, from the address; open, from a message)'
+      !/p\.channel|LIVE\.tune|wantNum/.test(
+        rd('app/src/js/input.js') + rd('app/src/js/live.js') + rd('helper/addons-bundled/iptv/src/js/live.js')
+      ),
+      'the launcher and the Live TV page know nothing of the phone remote'
     );
   }
   // This remote: the TV's name opens the connection sheet, where a phone logs out after a question; the page then forgets everything
@@ -1037,14 +1048,16 @@ run(async () => {
     'Remove unused phones: five choices, and "never" asks first with a warning'
   );
   ok(
-    !/pmsg/.test(require('../../helper/phoneremotepage').PHONE_JS.replace(/apmsg/g, '')) &&
+    !/pmsg/.test(require('../../helper/addons-bundled/phoneremote/page').PHONE_JS.replace(/apmsg/g, '')) &&
       /else pnote\(j\.error\|\|t\('That code is not right\. Check the 6 digits on the TV screen\.'\),'warn',10000\)/.test(
-        require('../../helper/phoneremotepage').PHONE_JS
+        require('../../helper/addons-bundled/phoneremote/page').PHONE_JS
       ) &&
       /x\.onerror=function\(\)\{pnote\(t\('The TV did not answer\. Check the phone is on the same Wi-Fi as the TV\.'\),'warn',10000\)/.test(
-        require('../../helper/phoneremotepage').PHONE_JS
+        require('../../helper/addons-bundled/phoneremote/page').PHONE_JS
       ) &&
-      /function showPair\(s,k\)\{[^}]*if\(s\)pnote\(s,k\|\|'warn',10000\)\}/.test(require('../../helper/phoneremotepage').PHONE_JS),
+      /function showPair\(s,k\)\{[^}]*if\(s\)pnote\(s,k\|\|'warn',10000\)\}/.test(
+        require('../../helper/addons-bundled/phoneremote/page').PHONE_JS
+      ),
     'the pairing screen shows its errors (wrong code, the TV did not answer, removed on the TV) as the timed note at the top, not as a line in the page'
   );
   {
@@ -1103,7 +1116,7 @@ run(async () => {
     'every new string of the two screens is in the English list'
   );
   // a right-to-left language must not mirror the remote
-  const he = req('phoneremotepage').phonePage('ar');
+  const he = require('../../helper/addons-bundled/phoneremote/page').phonePage('ar');
   ok(
     /html,body\{direction:ltr\}/.test(he) && /documentElement\.dir='ltr'/.test(he) && !/\[dir=rtl\]/.test(he),
     'the remote stays left to right in a right-to-left language'

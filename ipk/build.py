@@ -94,10 +94,6 @@ add(data, s + '/licenses/THIRD-PARTY.md', open(P('THIRD-PARTY.md'), 'rb').read()
 add(data, s + '/licenses/LICENSE', open(P('LICENSE'), 'rb').read())
 add(data, s + '/compat.json', open(P('compat.json'), 'rb').read())
 add(data, s + '/config.example.json', open(P('config.example.json'), 'rb').read())
-# the phone remote's Android app, when this checkout has one: the TV serves it (port 8798, /app.apk) and the manager shows a QR code for it
-apk = P('mobile', 'app', 'tv-remote.apk')
-if os.path.isfile(apk):
-    add(data, s + '/mobile/tv-remote.apk', open(apk, 'rb').read())
 add_dir(data, s + '/payload/app', P('app'), skip_dirs=('src',))
 if BUILD:
     add(data, s + '/BUILD', (BUILD + '\n').encode())

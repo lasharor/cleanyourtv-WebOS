@@ -200,7 +200,7 @@ function wantInputs() {
     closeMenus();
     liveGuard = Date.now() + 5000;
     liveBlip = false;
-    LIVE.enter(!!p.guide, p.channel); /* a channel asked for from the phone remote */
+    LIVE.enter(!!p.guide);
   }
 }
 document.addEventListener('webOSRelaunch', function () {
@@ -209,15 +209,6 @@ document.addEventListener('webOSRelaunch', function () {
     p = JSON.parse(webOSSystem.launchParams || '{}');
   } catch (e) {}
   logLine('launcher relaunch ' + JSON.stringify(p).slice(0, 120) + (LIVE.on ? ' (live on)' : ''));
-  /* the phone remote asked for Live TV (and maybe a channel) while Home was already running: open it here, as a start would */
-  if (p && p.live && liveOn()) {
-    closeMenus();
-    liveGuard = Date.now() + 5000;
-    liveBlip = false;
-    if (!LIVE.on) LIVE.enter(!!p.guide, p.channel);
-    else if (p.channel) LIVE.tune(p.channel);
-    return;
-  }
   if (LIVE.on && p && p.guide && liveOn()) {
     LIVE.toggleGuide();
     return;
