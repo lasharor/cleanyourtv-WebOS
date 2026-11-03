@@ -1038,7 +1038,9 @@ run(async () => {
   );
   ok(
     !/pmsg/.test(require('../../helper/phoneremotepage').PHONE_JS.replace(/apmsg/g, '')) &&
-      /else pnote\(j\.error\|\|t\('Wrong code\.'\),'warn',10000\)/.test(require('../../helper/phoneremotepage').PHONE_JS) &&
+      /else pnote\(j\.error\|\|t\('That code is not right\. Check the 6 digits on the TV screen\.'\),'warn',10000\)/.test(
+        require('../../helper/phoneremotepage').PHONE_JS
+      ) &&
       /x\.onerror=function\(\)\{pnote\(t\('The TV did not answer\. Check the phone is on the same Wi-Fi as the TV\.'\),'warn',10000\)/.test(
         require('../../helper/phoneremotepage').PHONE_JS
       ) &&
