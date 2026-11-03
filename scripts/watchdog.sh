@@ -9,6 +9,11 @@
 #     less often (after 10, 20, ... up to 120 seconds), so a service that cannot start does not use the TV all night.
 #   - while our launcher is Home and the service stays unreachable for about a minute, LG's Home comes back until the next reboot
 #     (undo-home.sh temp), as before.
+#   - a black box: every 30 seconds one line in blackbox.log in the service folder (on the TV's storage, so it survives a reset): the
+#     free memory and swap, the load, the app in front and the busiest processes. At the start of a boot the box of the boot before
+#     becomes blackbox.last.log, with the reason the TV gave for that start first (power/getPowerOnReason, such as cpuAbnormal for a
+#     reset). Share log shows both, so what happened just before an unexpected reset can be read afterwards (issue 112). Kept below
+#     64 KB.
 # The whole script is one block that ends in exit: the shell has read all of it before it runs, so an update that copies a new
 # watchdog.sh over this file does not confuse the copy that is running (bootstrap.sh stops it, and the boot script starts the new one).
 # The paths can be pointed elsewhere for the tests (tools/test/scripts.test.js); on the TV none of these variables is set.
@@ -20,6 +25,8 @@
   CRASH=${SLOG%.log}.crash.log
   URL=${CYTV_SERVICE_URL:-http://127.0.0.1:8765/api/foreground}
   EVERY=${CYTV_WATCH_SECS:-10}
+  BB=${CYTV_BLACKBOX:-$L/blackbox.log}
+  BB_EVERY=${CYTV_BLACKBOX_EVERY:-3} # checks between two lines of the black box
   H=/usr/palm/applications/com.webos.app.home
   STANDIN=/tmp/cleanyourtv-home-standin
   up() { cut -d' ' -f1 /proc/uptime 2>/dev/null; }
@@ -32,18 +39,40 @@
     if [ "${n:-0}" -gt 400 ]; then tail -n 400 "$CRASH" >"$CRASH.tmp" && mv "$CRASH.tmp" "$CRASH"; fi
   }
 
+  # one line of the black box; $1: the service's answer about the app in front
+  box() {
+    m=$(sed -n 's/^MemAvailable: *\([0-9]*\).*/\1/p' /proc/meminfo 2>/dev/null)
+    w=$(sed -n 's/^SwapFree: *\([0-9]*\).*/\1/p' /proc/meminfo 2>/dev/null)
+    l=$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null)
+    f=$(echo "$1" | sed -n 's/.*"appId" *: *"\([^"]*\)".*/\1/p')
+    t=$(top -b -n 1 2>/dev/null | sed -n '5,7p' | tr -s ' ' | cut -c1-90 | tr '\n' '|')
+    echo "$(up) mem=${m:-?}k swap=${w:-?}k load=${l:-?} fg=${f:-${2:-?}} top=${t:-?}" >>"$BB" 2>/dev/null
+    if [ "$(wc -c <"$BB" 2>/dev/null)" -gt 65536 ]; then tail -c 32768 "$BB" | sed 1d >"$BB.tmp" && mv "$BB.tmp" "$BB"; fi
+  }
+  # the box of the boot before is kept once, with why the TV started this time (a reset says so)
+  if [ -s "$BB" ]; then
+    why=$(command -v luna-send >/dev/null && luna-send -n 1 -w 3000 -f luna://com.webos.service.tvpower/power/getPowerOnReason '{}' </dev/null 2>/dev/null | sed -n 's/.*"reason" *: *"\([^"]*\)".*/\1/p')
+    { echo "=== the boot before; this boot started because: ${why:-unknown} ==="; cat "$BB"; } >"${BB%.log}.last.log" 2>/dev/null
+    rm -f "$BB"
+  fi
+  echo "$(up) === boot ===" >>"$BB" 2>/dev/null
+  tick=0
+
   bad=0       # checks in a row without an answer (the fallback to LG's Home counts them)
   fallback=0  # 1 once LG's Home has been brought back by this watchdog
   fails=0     # starts in a row that did not bring the service back
   hold=0      # checks to wait before the next start
   while [ -f "$L/helper.js" ]; do
     sleep "$EVERY"
-    if curl -s -m 3 -o /dev/null "$URL"; then
+    tick=$((tick + 1))
+    if ans=$(curl -s -m 3 "$URL"); then
+      [ $((tick % BB_EVERY)) = 0 ] && box "$ans"
       bad=0
       fails=0
       hold=0
       continue
     fi
+    [ $((tick % BB_EVERY)) = 0 ] && box "" "(service not answering)"
     if ! pgrep -f "$L/helper.js" >/dev/null && ! pgrep -f "^[a-z/]*sh [^ ]*[b]ootstrap.sh" >/dev/null; then
       if [ $hold -gt 0 ]; then
         hold=$((hold - 1))

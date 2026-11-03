@@ -69,6 +69,11 @@ card are small and stay single files.
       foreground; when the TV started on an input or another app, it waits until Home is first asked for (the stand-in leaves
       `/tmp/cleanyourtv-home-asked`; a preload does not count) or the app manager reports Home in the foreground without it (a stand-in
       that does not run), so a broken stand-in still brings LG's Home back. `home-method` holding `mount` forces the first way.
+      The way and LG's Home program are kept in `home-takeover` (`standin /usr/bin/com.webos.app.home`). At the next boot, when that
+      file is newer than LG's Home as it came, `tvprofile.js` and `home-method` and the launcher is staged, the stand-in is mounted
+      as the first step, before the service and the five Node.js starts of the steps above, so the Home key opens LG's Home for a
+      shorter time after a boot (issue 125); the rest follows as before. The boot log says `known from an earlier boot` then, and its
+      first line `boot script started` shows when the Homebrew Channel ran the script.
       `bootstrap.sh verify` does the same once: when the launcher does not come up after a stand-in setup (a TV with CRIU never runs
       the stand-in, issues 72 and 84; `criu` in `tvprofile.js` records it but does not decide), it writes `home-method` `mount`, runs the boot
       script again and checks again; the rollback removes the file only if the setup wrote it.
@@ -78,7 +83,11 @@ card are small and stay single files.
    `/tmp/cleanyourtv-helper.crash.log` (the last 400 lines; Share log includes it). A service that stops again at once is started less
    often (after 10, 20 ... up to 120 seconds). If the service stays unreachable for about a minute while our launcher is Home, it
    restores LG's Home until the next reboot. An update stops the watchdog and the boot script starts the one from the new files; it
-   ends by itself when CleanYourTV is uninstalled (`helper.js` gone).
+   ends by itself when CleanYourTV is uninstalled (`helper.js` gone). It also keeps a **black box**: every 30 seconds one line in
+   `blackbox.log` in the service folder (on the TV's storage, so it survives a reset) with the free memory and swap, the load, the
+   app in front and the busiest processes, below 64 KB. At the start of a boot the box of the boot before becomes `blackbox.last.log`,
+   headed by the reason the TV gave for this start (`tvpower/power/getPowerOnReason`, `cpuAbnormal` after a reset), so what happened
+   just before an unexpected reset can be read afterwards (issue 112). Share log includes both.
 
 Nothing is written under `/usr`: the mount disappears at reboot. `DISABLE` in `/media/developer/cleanyourtv` makes the script skip it.
 

@@ -233,6 +233,21 @@ run(async () => {
     'when the stand-in does not bring the launcher up the setup tries the mount way once, keeps it in home-method, and only then rolls back'
   );
   ok(cp.spawnSync('sh', ['-n', path.join(root, 'scripts', 'bootstrap.sh')]).status === 0, 'bootstrap.sh is valid shell');
+  // the fast start on the native Home (issue 125): the stand-in is mounted before the service starts and before any Node.js step,
+  // only from what an earlier boot worked out, and that is written again whenever the slow way runs
+  const bootSh = fs.readFileSync(path.join(root, 'scripts', '10-cleanyourtv-home'), 'utf8');
+  const fastMount = bootSh.indexOf('FAST=1');
+  ok(
+    cp.spawnSync('sh', ['-n', path.join(root, 'scripts', '10-cleanyourtv-home')]).status === 0 &&
+      fastMount > 0 &&
+      fastMount < bootSh.indexOf('nohup node $L/helper.js') &&
+      fastMount < bootSh.indexOf('sh $L/stage-home.sh') &&
+      bootSh.slice(0, fastMount).indexOf('node ') < 0 &&
+      /\$TAKEOVER -nt \$L\/backup\/home-appinfo\.orig\.json/.test(bootSh) &&
+      /\$TAKEOVER -nt \$L\/tvprofile\.js/.test(bootSh) &&
+      /echo "\$method \$EXE" > \$TAKEOVER/.test(bootSh),
+    'the boot script mounts the stand-in first when an earlier boot found the way, before the service and any Node.js step'
+  );
 
   // the watchdog (watchdog.sh): starts a service that has stopped again, keeps the logs of the runs that ended, starts less often a
   // service that stops at once, survives its own file being replaced by an update, and ends when CleanYourTV is gone.
@@ -273,6 +288,7 @@ run(async () => {
   fs.writeFileSync(path.join(W, 'helper.log'), 'the run that ended\n');
   fs.copyFileSync(path.join(root, 'scripts', 'watchdog.sh'), path.join(W, 'watchdog.sh')); // a copy, so the test can replace it
   const killService = dir => cp.spawnSync('pkill', ['-f', dir + '/helper.js']);
+  fs.writeFileSync(path.join(W, 'blackbox.log'), '12.00 mem=1k the boot before\n');
   const wd = watch(W, path.join(W, 'watchdog.sh'));
   await waitFor(() => countStarts(W) >= 1 && /start 1 in a row/.test(text(path.join(W, 'boot.log'))));
   await sleep(2500); // a service that runs is left alone
@@ -281,6 +297,18 @@ run(async () => {
       /watchdog: the service had stopped; starting it again/.test(text(path.join(W, 'boot.log'))) &&
       /the run that ended/.test(text(path.join(W, 'helper.crash.log'))),
     'the watchdog starts a stopped service once, says so in the boot log and keeps the log of the run that ended'
+  );
+  // the black box: the boot before is kept with the reason of this start, and a line every few checks (here every 3 s)
+  await waitFor(() => /mem=\d+k swap=/.test(text(path.join(W, 'blackbox.log'))));
+  const last = text(path.join(W, 'blackbox.last.log')),
+    box = text(path.join(W, 'blackbox.log'));
+  ok(
+    /^=== the boot before; this boot started because: .+ ===\n12\.00 mem=1k the boot before/.test(last) &&
+      /=== boot ===/.test(box) &&
+      /mem=\d+k swap=\d+k load=[\d. ]+ fg=\(service not answering\)/.test(box) &&
+      !/the boot before/.test(box),
+    'the black box keeps the boot before (with why this one started) and writes memory, load and the app in front: ' +
+      box.split('\n').slice(-2)[0]
   );
   // an update copies a new watchdog.sh over the running one: the running copy goes on
   fs.writeFileSync(path.join(W, 'watchdog.sh'), '#!/bin/sh\necho replaced > "$0.was-run"\n');

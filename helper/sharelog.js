@@ -133,6 +133,9 @@ function report() {
   sec('Service log (last 80 lines)', read(P.SERVICE_LOG, 80));
   sec('Service log of runs that ended (restarted by the watchdog)', read('/tmp/cleanyourtv-helper.crash.log', 60));
   sec('Input hook (last 10 lines)', read(P.HOOK_LOG, 10));
+  // the black box of watchdog.sh (on the TV's storage, so it survives a reset): the boot before, with why this boot started, and now
+  sec('Black box of the boot before (blackbox.last.log, last 60 lines)', read(D + '/blackbox.last.log', 60));
+  sec('Black box of this boot (last 20 lines)', read(D + '/blackbox.log', 20));
   return redact(o.join('\n') + '\n').slice(0, 300000);
 }
 
