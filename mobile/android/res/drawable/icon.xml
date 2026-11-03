@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The CleanYourTV launcher's icon (assets/icon.svg), as a vector so no bitmap has to be shipped for every screen density. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="130"
+    android:viewportHeight="130">
+
+    <path
+        android:fillColor="#101218"
+        android:pathData="M0,0h130v130h-130z" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M25,58L65,24L105,58"
+        android:strokeColor="#F5F6F8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="8" />
+
+    <path
+        android:fillColor="#FF6B4A"
+        android:pathData="M43,62h12a8,8 0 0 1 8,8v10a8,8 0 0 1 -8,8h-12a8,8 0 0 1 -8,-8v-10a8,8 0 0 1 8,-8z" />
+
+    <path
+        android:fillColor="#7C6CFF"
+        android:pathData="M75,62h12a8,8 0 0 1 8,8v10a8,8 0 0 1 -8,8h-12a8,8 0 0 1 -8,-8v-10a8,8 0 0 1 8,-8z" />
+
+    <path
+        android:fillColor="#2FD3C0"
+        android:pathData="M43,92h12a8,8 0 0 1 8,8v6a8,8 0 0 1 -8,8h-12a8,8 0 0 1 -8,-8v-6a8,8 0 0 1 8,-8z" />
+
+    <path
+        android:fillColor="#FFC857"
+        android:pathData="M75,92h12a8,8 0 0 1 8,8v6a8,8 0 0 1 -8,8h-12a8,8 0 0 1 -8,-8v-6a8,8 0 0 1 8,-8z" />
+</vector>

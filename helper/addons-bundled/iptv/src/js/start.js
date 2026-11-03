@@ -11,6 +11,7 @@ window.addEventListener('message', function (ev) {
     for (var k in v) if (v[k]) document.documentElement.style.setProperty('--' + k, v[k]);
   } else if (d.cytv === 'guide') LIVE.toggleGuide();
   else if (d.cytv === 'resume') LIVE.resume();
+  else if (d.cytv === 'tune') LIVE.tune(d.num);
   else if (d.cytv === 'key')
     /* a key the launcher got while it had the focus */
     LIVE.key({
@@ -25,4 +26,5 @@ document.addEventListener('keydown', function (e) {
 LIVE.leave = function () {
   tellLauncher('close');
 };
+if (Q.channel) LIVE.tune(Q.channel);
 LIVE.enter(Q.guide === '1');

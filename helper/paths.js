@@ -11,6 +11,7 @@ module.exports = {
   SERVICE_DIR, // the installed package (the manager app's service folder)
   CONF: D + '/config.json',
   USAGE: D + '/usage.json',
+  SSAP_KEY: D + '/ssap-key', // the key the TV's own control service gave this service (remotekeys.js); private, never shown or shared
   TV: D + '/tv.json', // what tvprofile.js found out about this TV
   DISABLE: D + '/DISABLE', // present while LG's Home is chosen
   PICKER_MODE: D + '/picker-mode', // read by scripts/inputkey.sh

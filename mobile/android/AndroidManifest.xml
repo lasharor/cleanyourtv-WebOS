@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TV Remote: the CleanYourTV phone remote as an app. It is a thin shell: the page, the pairing and the remote itself are the TV's own page
+     (http://<tv>:8794/), loaded in the WebView. The app adds exactly two things a browser cannot do: send a Wake-on-LAN packet, and keep
+     working when the TV is off (the start page). No libraries, no AndroidX, nothing but the one drawable. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.cleanyourtv.phone">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:label="TV Remote"
+        android:allowBackup="false"
+        android:icon="@drawable/icon"
+        android:usesCleartextTraffic="true"
+        android:theme="@style/App">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- the QR code on the TV for "connect this app": the phone's camera opens cytv://add?host=192.168.1.50:8794 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="cytv" android:host="add" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

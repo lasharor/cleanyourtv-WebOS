@@ -10,8 +10,14 @@ var LIVE = {
   get on() {
     return PAGER.on && PAGER.id === 'iptv';
   },
-  enter: function (guide) {
-    PAGER.go('iptv', guide ? { guide: 1 } : null);
+  enter: function (guide, channel) {
+    var q = {};
+    if (guide) q.guide = 1;
+    if (channel) q.channel = channel; /* a channel asked for from the phone remote: the page plays it once it has the list */
+    PAGER.go('iptv', guide || channel ? q : null);
+  },
+  tune: function (num) {
+    if (LIVE.on) PAGER.send({ cytv: 'tune', num: num });
   },
   exit: function () {
     if (LIVE.on) PAGER.home();

@@ -23,6 +23,7 @@ nav = [
     { "Wallpapers" = "wallpapers.md" },
     { "Live TV" = "live-tv.md" },
     { "Android box" = "android-box.md" },
+    { "Phone remote" = "phone-remote.md" },
     { "The Input key" = "input-key.md" },
     { "Key remapping" = "key-remap.md" },
     { "Picture notifications" = "notifications.md" },
