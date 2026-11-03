@@ -1,7 +1,7 @@
 /* ---------- the launcher's messages ---------- */
 function tellLauncher(what) {
   try {
-    parent.postMessage({ cytvAddon: what, id: 'iptv' }, '*');
+    parent.postMessage({ cytvAddon: what, id: ADDON }, '*');
   } catch (e) {}
 }
 window.addEventListener('message', function (ev) {

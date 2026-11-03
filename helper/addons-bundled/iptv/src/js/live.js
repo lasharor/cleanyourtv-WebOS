@@ -92,7 +92,7 @@ var LIVE = (function () {
     return S.fav.indexOf(c.key) >= 0;
   }
   function post(b) {
-    api('/api/live/state', b).catch(function () {});
+    api(LIVE_API + '/state', b).catch(function () {});
   }
   function toggleFav(c) {
     if (!c || !c.key) return;
@@ -303,7 +303,7 @@ var LIVE = (function () {
     var head = '<b>' + lesc(c.name) + '</b>',
       tail = '<div class="small">' + t('Press OK to try again.') + '</div>';
     msg(head + '<div>' + t('This channel is not available.') + '</div><div class="small">' + t('Checking why...') + '</div>');
-    api('/api/live/probe?key=' + encodeURIComponent(c.key) + '&i=0').then(
+    api(LIVE_API + '/probe?key=' + encodeURIComponent(c.key) + '&i=0').then(
       function (r) {
         if (g !== gen || !failed) return;
         msg(head + '<div>' + t(WHY[r.reason] || WHY.unknown) + '</div>' + tail);
@@ -314,10 +314,10 @@ var LIVE = (function () {
     );
   }
   /* defer: while zapping (Up/Down) the new channel starts only once the keys have paused, so skipped channels never reach the provider */
-  /* a channel an add-on brought (the LG tuner, flag 8) has no stream: the add-on opens it (LG's Live TV on that channel) and this page
-     steps aside. Nothing else of the page changes: the guide lists it and shows its programmes like any other channel. */
-  function openSource(c) {
-    api('/api/live/open', { id: c.id }).then(
+  /* a channel with no stream address (the LG tuner's) is opened by the add-on that brought it (LG's Live TV on that channel), and this page
+     steps aside. The guide lists it and shows its programmes like any other channel. */
+  function openChannel(c) {
+    api(LIVE_API + '/open', { id: c.id }).then(
       function (r) {
         if (r && r.error) toastL(t(r.error));
         else o.exit();
@@ -327,16 +327,16 @@ var LIVE = (function () {
       }
     );
   }
-  /* the channel to play when the page opens: the last one, or the first that has a stream (the channels of an add-on have none) */
+  /* the channel to play when the page opens: the last one, or the first that has a stream */
   function firstPlayable(pref) {
-    if (byNum[pref] && !(byNum[pref].fl & 8)) return pref;
-    for (var i = 0; i < chans.length; i++) if (!(chans[i].fl & 8)) return chans[i].num;
+    if (byNum[pref] && byNum[pref].url) return pref;
+    for (var i = 0; i < chans.length; i++) if (chans[i].url) return chans[i].num;
     return 0;
   }
   function play(num, quiet, defer) {
     var c = byNum[num];
     if (!c) return;
-    if (c.fl & 8) return openSource(c);
+    if (!c.url) return openChannel(c);
     gen++;
     cur = num;
     try {
@@ -439,7 +439,7 @@ var LIVE = (function () {
       cb && cb();
       return;
     }
-    api('/api/live/epg?ids=' + encodeURIComponent(ids.join(',')))
+    api(LIVE_API + '/epg?ids=' + encodeURIComponent(ids.join(',')))
       .then(function (x) {
         for (var k in x) epgNow[k] = x[k];
         if (byNum[cur] && ids.indexOf(byNum[cur].id) >= 0) fillOsd();
@@ -553,7 +553,7 @@ var LIVE = (function () {
   function drawList(keepWindow) {
     var now = Math.floor(Date.now() / 1000),
       names = tabNames();
-    $('lv-gtitle').textContent = t('Live TV');
+    $('lv-gtitle').textContent = ADDON === 'iptv' ? t('Live TV') : t('TV guide');
     var d = new Date(),
       tabs = '';
     if (L.g > 0)
@@ -679,7 +679,7 @@ var LIVE = (function () {
         });
       var c = L.list[L.ci];
       if (c && c.id && !full[c.id])
-        api('/api/live/epg?full=1&ids=' + encodeURIComponent(c.id))
+        api(LIVE_API + '/epg?full=1&ids=' + encodeURIComponent(c.id))
           .then(function (x) {
             full[c.id] = x[c.id] || { list: [] };
             if (L.open) drawDetail();
@@ -924,7 +924,7 @@ var LIVE = (function () {
     }, 1800);
   }
   function setup() {
-    api('/api/live/pair', {}).then(function (p) {
+    api(LIVE_API + '/pair', {}).then(function (p) {
       msg(
         '<b>' +
           t('Set up Live TV') +
@@ -949,7 +949,7 @@ var LIVE = (function () {
           clearInterval(setupT);
           return;
         }
-        api('/api/live/status').then(function (s) {
+        api(LIVE_API + '/status').then(function (s) {
           if (s.configured) {
             clearInterval(setupT);
             boot();
@@ -982,7 +982,7 @@ var LIVE = (function () {
   }
   function boot() {
     msg('<div>' + t('Loading channels...') + '</div>');
-    api('/api/live/status')
+    api(LIVE_API + '/status')
       .then(function (s) {
         if (!s.configured) {
           setup();
@@ -991,7 +991,7 @@ var LIVE = (function () {
         var tries = 0;
         (function load() {
           if (!o.on) return;
-          api('/api/live/channels').then(function (x) {
+          api(LIVE_API + '/channels').then(function (x) {
             if (!x.channels.length) {
               if (++tries > 40) {
                 msg('<div>' + lesc(s.error || 'No channels') + '</div>');
@@ -1032,7 +1032,7 @@ var LIVE = (function () {
             try {
               last = parseInt(localStorage.getItem('live.last'), 10);
             } catch (e) {}
-            api('/api/live/state')
+            api(LIVE_API + '/state')
               .then(
                 function (st) {
                   S = { fav: st.fav || [], recent: st.recent || [], failed: st.failed || {} };
@@ -1043,7 +1043,7 @@ var LIVE = (function () {
                 layer('lv-msg', false);
                 var first = firstPlayable(last);
                 if (first) play(first);
-                /* only channels of an add-on (no playlist): the guide is all there is to show */
+                /* nothing to play (a guide of channels the add-on opens): the guide is all there is to show */
                 if (guideNext || !first) {
                   guideNext = false;
                   openList();
@@ -1065,7 +1065,7 @@ var LIVE = (function () {
     /* Up and Down zap through the channels that have a stream */
     for (var k = 0; k < n; k++) {
       i = (i + d + n) % n;
-      if (!(chans[i].fl & 8)) {
+      if (chans[i].url) {
         play(chans[i].num, false, 180);
         return;
       }

@@ -60,14 +60,14 @@ button's code; afterwards it opens the Live TV channel guide over whatever is ru
 **Clear** gives LG's guide back. The button is only taken over while Live TV is on and a code is learned. It uses the same hook as
 the [Input key](input-key.md).
 
-### The channels of LG's own tuner
+### A guide for LG's own tuner
 
-The **LG tuner guide** add-on (manager > Add-ons > Get more; for a TV with an antenna or cable) puts the channels of the TV's own tuner in this
-same guide, after the playlist's, in a group called **LG tuner**: with what is on now and next, and the schedule of the channel you select, read
-from the data LG's own guide uses (it is slow to open on some budget TVs). **OK** on one of those channels opens LG's Live TV on it. They have no
-stream here, so Up and Down while watching skip them. Without a playlist the guide shows only the tuner's channels. Nothing is read until you
-open the guide. The idea and the first version of this add-on are from @Tech-Dex (pull request 144, issue 126). How it is built:
-[Add-ons](development/addons.md#providing-something-to-the-service-channels-for-live-tv).
+Live TV is for your own playlist. If you watch the TV's antenna or cable tuner, the **TV guide (LG tuner)** add-on (manager > Add-ons > Get more)
+is a guide for it: a page next to Home, on its own colour button, with the channels of the tuner, what is on now and next, and the schedule of the
+channel you select, read from the data LG's own guide uses (which is slow to open on some budget TVs). **OK** on a channel opens LG's Live TV on
+it. It has the look of the Live TV guide because it is the same code, built a second time; it works on its own, with Live TV (IPTV) switched off
+and with no playlist, and the two do not know of each other. Nothing is read until you open it. The idea and the first version are from
+@Tech-Dex (pull request 144, issue 126). How the code is shared: [Add-ons](development/addons.md).
 
 ## With the pointer
 

@@ -16,6 +16,7 @@ const PAGES = [
   ['app/src', 'app/index.html'],
   ['manager/src', 'manager/app/index.html'],
   ['helper/addons-bundled/iptv/src', 'helper/addons-bundled/iptv/page/index.html'], // Live TV: the page of the iptv add-on
+  ['addons/catalog/tuner/src', 'addons/catalog/tuner/page/index.html'], // the TV guide of the LG tuner add-on: the guide code of Live TV, built again
   ['picker/app/index.html', 'picker/app/index.html'],
 ];
 // the manager shows the service's own messages (update steps, sync errors): it carries the translations of texts in helper/ too
@@ -102,7 +103,9 @@ function build(src) {
       const m = /^@include (\S+)$/.exec(line);
       if (!m) return line;
       const f = path.join(dir, m[1]);
-      if (f.indexOf(dir + path.sep) !== 0 || !fs.existsSync(f)) throw new Error(src + '/index.html includes a missing file: ' + m[1]);
+      // a page may include files of another page's sources (the TV guide of the LG tuner add-on builds from the guide code of Live TV), but
+      // only inside the repository
+      if (f.indexOf(root + path.sep) !== 0 || !fs.existsSync(f)) throw new Error(src + '/index.html includes a missing file: ' + m[1]);
       return fs.readFileSync(f, 'utf8').replace(/\n$/, '');
     })
     .join('\n');

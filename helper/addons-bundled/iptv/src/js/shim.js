@@ -2,6 +2,11 @@
    This page is shown by the launcher in a frame (app/src/js/addons.js, LIVE in live.js there). The launcher tells it what to do with
    messages ({cytv: 'init' | 'enter' | 'guide' | 'resume' | 'key'}); the page tells the launcher to close it ({cytvAddon: 'close'}). */
 var API = '';
+/* This page is built twice from the same files (tools/build-pages.js): as Live TV (the iptv add-on, the playlist: API /api/live) and as the
+   TV guide of another add-on (the LG tuner: its channels have no stream, the add-on opens them; API /api/addons/<id>). The add-on is known
+   by the address the page is served from. */
+var ADDON = (/\/addon\/([\w-]+)\//.exec(location.pathname) || [])[1] || 'iptv';
+var LIVE_API = ADDON === 'iptv' ? '/api/live' : '/api/addons/' + ADDON;
 var Q = {};
 location.search
   .replace(/^\?/, '')
