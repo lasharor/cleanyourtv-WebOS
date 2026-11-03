@@ -71,7 +71,8 @@ function tile(a) {
       paint(d, { c: f, b: hsl2rgb(hashHue(a.id), 0.4, 0.2) });
     }
   }; /* not remembered: a failed load must not pin a made-up colour */
-  i.src = a.id === '__live' ? LIVE_ICON : API + '/icon/' + encodeURIComponent(a.id) + (a.iv ? '?v=' + a.iv : '');
+  /* Live TV shows its own picture once one was chosen for it (App icons) */
+  i.src = a.id === '__live' && !a.iv ? LIVE_ICON : API + '/icon/' + encodeURIComponent(a.id) + (a.iv ? '?v=' + a.iv : '');
   d.appendChild(i);
   if (i.decode) i.decode().catch(function () {});
   return d;

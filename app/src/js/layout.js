@@ -334,7 +334,8 @@ function load() {
       tunerOn = x.tuner === true; // the service found LG's own Live TV (the tuner): Customise can offer a TV button
       useLang(cfg.lang);
       applyTheme(cfg.theme);
-      if (liveOn()) apps.push({ id: '__live', title: t('Live TV') });
+      if (liveOn())
+        apps.push({ id: '__live', title: t('Live TV'), iv: (x.liveIcon && x.liveIcon.iv) || 0, it: x.liveIcon && x.liveIcon.it ? 1 : 0 });
       store();
       rebuild();
       WALL.sync();

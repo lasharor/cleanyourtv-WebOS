@@ -468,7 +468,12 @@ function create(ctx) {
           };
       }
       // the launcher offers Change icon only while the App icons add-on runs
-      if (icons()) reply.icons = true;
+      if (icons()) {
+        reply.icons = true;
+        // the Live TV tile's own picture (it is not an app, so it is not in apps): its version, and Full tile
+        const lv = icons().versions().__live;
+        if (lv) reply.liveIcon = Object.assign({ iv: lv.v }, lv.tile ? { it: 1 } : {});
+      }
       return web.json(res, reply);
     }
     if (u === '/api/apps/stamp') return web.json(res, { stamp: await stampNow() });
