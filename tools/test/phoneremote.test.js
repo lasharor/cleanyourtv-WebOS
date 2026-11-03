@@ -824,12 +824,11 @@ run(async () => {
   ok(
     /<div class=who id=who role=button tabindex=0[^>]*><div class=tvrow><div id=tvname>TV<\/div>/.test(pg) &&
       /id=thsheet class=drawer/.test(pg) &&
-      /id=kvseen/.test(pg) &&
       /id=kvas/.test(pg) &&
       /id=kvon/.test(pg) &&
       /id=kvad/.test(pg) &&
       /id=lgo class=outb/.test(pg),
-    'the TV name is a button that opens the "This remote" sheet: last used, paired as, paired on, the TV address and the log out button'
+    'the TV name is a button that opens the "This remote" sheet: paired as, paired on, the TV address and the log out button'
   );
   ok(
     /\$\('lgo'\)\.onclick=function\(\)\{cfmOpen\(true\)\}/.test(pg) &&
@@ -849,7 +848,6 @@ run(async () => {
       /pnote\(w\?t\('Logged out\. This phone was removed/.test(pg),
     "log out tells the TV, waits for its bye (3 s at most), deletes every cytv key the page kept, tells the app, and ends on the pairing screen with a toast (3 s) saying what happened to the TV's list"
   );
-  ok(/function ago\(x\)/.test(pg) && /min ago/.test(pg) && /days ago/.test(pg), 'the sheet words the last use as "just now", minutes, hours or days ago');
   // the touchpad fills the room between the header and the tab bar: no dead strip above the bottom buttons
   ok(
     /\.pad\{position:relative;margin:18px auto 0;width:calc\(100% - 40px\);max-width:390px;height:clamp\(300px,calc\(100vh - 380px\),432px\)/.test(pg) &&

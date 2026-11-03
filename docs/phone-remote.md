@@ -49,8 +49,8 @@ removed on the TV is told so and goes back to the pairing screen; a blocked one 
 
 ## Logging out of a TV
 
-The TV's name at the top of the remote (web page and app) is a button, with a small arrow. It opens **This remote**: when the phone was last
-used, the name it paired with, the day it was paired and the TV's address. **Log out of this TV** asks first (**Stay paired** or **Log out**) and says what
+The TV's name at the top of the remote (web page and app) is a button, with a small arrow. It opens **This remote**: the name the phone
+paired with, the day it was paired and the TV's address. **Log out of this TV** asks first (**Stay paired** or **Log out**) and says what
 goes: this phone stops controlling the TV, it is removed from the TV's list of paired phones, and everything it stored about the TV is deleted; to use it
 again it pairs with a new code.
 
