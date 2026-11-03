@@ -356,12 +356,15 @@ run(async () => {
     fs.appendFileSync(path.join(rd, 'helper', 'helper.js'), '// changed\n');
     g('commit', '-q', '-am', 'a change in the package');
     fs.writeFileSync(path.join(rd, 'RELEASE-HOLD'), 'trying something\n');
+    cp.spawnSync('mkdir', ['-p', path.join(rd, 'tmp')]);
     const outFile = path.join(rd, 'out.txt');
     const run1 = () =>
       cp.spawnSync('sh', ['tools/release.sh'], {
         cwd: rd,
         encoding: 'utf8',
-        env: Object.assign({}, process.env, { GITHUB_OUTPUT: outFile, CYTV_DRY: '1' }),
+        // RUNNER_TEMP: release.sh writes the release notes there, and in the Release workflow this test runs between the real release.sh and
+        // the publishing, so it must not write into the real one (the notes of 1.6.15 and 1.6.16 were these test notes)
+        env: Object.assign({}, process.env, { GITHUB_OUTPUT: outFile, CYTV_DRY: '1', RUNNER_TEMP: path.join(rd, 'tmp') }),
       });
     let r1 = run1();
     ok(
@@ -382,6 +385,12 @@ run(async () => {
       /^Service 1\.0\.1, launcher 1\.0\.0\.\n\n## New\n\n- \*\*A thing\.\*\* By @someone\.$/m.test(r1.stderr) &&
         !/a change in the package/.test(r1.stderr),
       'release.sh: RELEASE-NOTES.md is the release notes, not the commit subjects: ' + r1.stderr.trim().split('\n').slice(-3).join(' | ')
+    );
+    // and the notes went to the temporary folder of this test, not to the RUNNER_TEMP the test itself runs in
+    ok(
+      fs.existsSync(path.join(rd, 'tmp', 'release-notes.md')) &&
+        /A thing/.test(fs.readFileSync(path.join(rd, 'tmp', 'release-notes.md'), 'utf8')),
+      'release.sh: the notes are written to RUNNER_TEMP, which the test points into its own folder'
     );
   }
 });
