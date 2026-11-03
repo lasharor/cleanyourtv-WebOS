@@ -53,6 +53,7 @@ run(async () => {
     resolved: () => ({
       slots: [
         { id: 'greeting', card: 'greeting' },
+        { id: 'under-clock', card: '' },
         { id: 'side', card: '' },
         { id: 'odd-one', card: '' },
       ],
@@ -72,9 +73,10 @@ run(async () => {
   ok(p.code === 403, 'the API needs the code');
   p = await phone('GET', '/api/state', undefined, code);
   ok(
-    p.j.slots.length === 3 &&
+    p.j.slots.length === 4 &&
       p.j.slots[0].name === 'Boven de klok' &&
-      p.j.slots[2].name === 'odd-one' &&
+      p.j.slots[1].name === 'Onder de klok' &&
+      p.j.slots[3].name === 'odd-one' &&
       p.j.cards.greeting.name === 'Sam' &&
       p.j.types.some(t => t.type === 'template' && t.fields.some(f => f.key === 'text')),
     'the state lists the slots (named in the language), the saved cards and the card types with their options'
@@ -93,7 +95,7 @@ run(async () => {
   ok(config.get().cards === undefined, 'saving no cards removes them');
   // the manager's Cards screen: the places and a card type for one of them
   r = await call(cards, '/api/cards/status', 'POST', {});
-  ok(r.j.slots.length === 3 && r.j.types.some(t => t.type === 'ha-camera'), 'the manager gets the places and the card types');
+  ok(r.j.slots.length === 4 && r.j.types.some(t => t.type === 'ha-camera'), 'the manager gets the places and the card types');
   r = await call(cards, '/api/cards/set', 'POST', { slot: 'side', type: 'ha-camera' });
   ok(r.j.ok && config.get().cards.side.type === 'ha-camera', 'the manager picks a card for a place');
   config.update('test', c => {

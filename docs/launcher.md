@@ -86,7 +86,7 @@ Putting the dock, buttons, hidden apps, order and clock back to the defaults is 
 ## Cards
 
 Cards are set up in the [manager app](manager.md), **Cards**. Themes with places for cards (**Lock Screen**, **Bloom** and **Horizon**)
-also have a **Cards** row in **Customise** that opens it. It lists the places (above the clock, beside the clock, a column on the right,
+also have a **Cards** row in **Customise** that opens it. It lists the places (above the clock, under the clock, beside the clock, a column on the right,
 above the dock); choose one to put a card there or leave it empty. A card you chose stays when you switch to another theme with the
 same place.
 
