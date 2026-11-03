@@ -52,7 +52,9 @@ What is done, and what is not:
   `addons.<id>.settings`, logged as `addon:<id>`) and, with the permission, `fetch` (`net.fetch`) and `notify(body)` (`notify`).
   It has no `exec`, and no `luna` unless the manifest asks for it (the permission `luna`, below). This is a convention, not a sandbox: the code runs in the service, which is why a service add-on is
   only installed from the catalog, where every file is pinned by hash and reviewed. The service must run on Node.js 8.12.
-- `routes` and `enabledOption` are for bundled add-ons only.
+- `routes`, `enabledOption` and `live` are for bundled add-ons only. A bundled service add-on with `"live": true` is started and stopped by its switch in
+  the manager at once, with no restart of the service: it is not created while it is off, `start()` runs when it is switched on and `stop()` when it is
+  switched off (so it must have one). The phone remote is one.
 
 ## The Android box (the androidbox add-on)
 
@@ -296,7 +298,7 @@ left out stays installed and running but has no button.
 | `POST /api/addons/book {order, hidden, strip, position}` | The pages of the launcher's book: ids in order, ids left out, whether the strip shows and where (`''`, `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center`, `bottom-right`). Unknown ids and places are dropped. `{book}` |
 | `POST /api/addons/install {id, repo?, confirm?}` | Downloads each file named in the repository's index, refuses the whole install if one does not match its hash, then moves the folder in. Without `repo`: the repository it was installed from, else the official one, else the only one that has it. A repository other than `official` needs `confirm: true`, else `400 {error, confirm: true, addons: [{repo, id, name, version, kind, can}]}`; an id of the official repository cannot come from another one, and an id that several other repositories have needs `repo`. `{id, version, repo, restartNeeded}` |
 | `POST /api/addons/remove {id}` | Deletes an installed add-on. `restartNeeded` when its service part was loaded. |
-| `POST /api/addons/<id>/enable {enabled}` | Stored in `config.json` (or, for an add-on with `enabledOption`, in that option). A page add-on follows at once, a service add-on at the next start. |
+| `POST /api/addons/<id>/enable {enabled}` | Stored in `config.json` (or, for an add-on with `enabledOption`, in that option). A page add-on follows at once, a service add-on at the next start (a bundled one that is `live`, at once). |
 | `/api/addons/<id>/...` | Answered by the add-on's `service.js`. |
 | `GET /addon/<id>/<file>`, `GET /addon/sdk.js` | The page and the helper script. |
 

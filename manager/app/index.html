@@ -1149,7 +1149,14 @@ function build() {
       label: a1.enabled ? 'Switch off' : 'Switch on',
       sub: a1.enabled ? 'on' : 'off',
       fn: function () {
-        addonDo('/api/addons/' + a1.id + '/enable', { enabled: !a1.enabled }, a1.name + (a1.enabled ? ' off' : ' on'));
+        if (a1.id === 'phoneremote' && a1.enabled) pr = null; /* switched off: its row on Features goes at once */
+        addonDo(
+          '/api/addons/' + a1.id + '/enable',
+          { enabled: !a1.enabled },
+          a1.name + (a1.enabled ? ' off' : ' on'),
+          /* switched on, the phone remote goes straight to its settings: pair a phone, the app */
+          a1.id === 'phoneremote' && !a1.enabled ? openPhoneRemote : null
+        );
       },
     });
     if (!a1.bundled)
@@ -2891,13 +2898,14 @@ function addonSel() {
   for (var i = 0; i < ad.installed.length; i++) if (ad.installed[i].id === ad.sel) return ad.installed[i];
   return null;
 }
-function addonDo(path, body, done) {
+function addonDo(path, body, done, after) {
   banner('Working\u2026', 'work');
   api(path, body).then(
     function (r) {
       if (r.error) return banner(r.error, 'err');
       banner(r.restartNeeded ? done + ' \u00B7 restart the TV to apply it' : done, 'ok');
       loadAddons();
+      if (after && !r.restartNeeded) after();
     },
     function () {
       banner('The service did not answer', 'err');

@@ -9,7 +9,8 @@
 //   POST /api/addons/install {id}          download from the catalog, check every file against its hash, install
 //   POST /api/addons/remove {id}           delete an installed add-on (its data stays)
 //   GET  /api/addons/<id>                  one add-on
-//   POST /api/addons/<id>/enable {enabled} stored in config.json; takes effect at the next start (a page add-on at once)
+//   POST /api/addons/<id>/enable {enabled} stored in config.json; takes effect at the next start (a page add-on at once, and a bundled
+//                                          service add-on whose manifest says "live": true, which has a stop())
 //   ANY  /api/addons/<id>/<path>           answered by the add-on's own service.js (path = what follows the id)
 //   GET  /addon/<id>/<file>                a file of the add-on's page (only while it runs); GET /addon/sdk.js is the helper for pages
 // An add-on of kind "service" is Node code that runs as root in this process; it gets a small ctx (its folders, its settings, fetch,
@@ -127,6 +128,7 @@ function check(m, serviceVersion) {
       cards,
       claims: (Array.isArray(m.claims) ? m.claims : []).filter((c, i, a) => CLAIMS.indexOf(c) >= 0 && a.indexOf(c) === i),
       enabledOption: /^[A-Za-z]{2,24}$/.test(m.enabledOption || '') ? m.enabledOption : '',
+      live: m.live === true, // bundled only: the switch starts and stops the service part at once (the module has stop())
       tile: t
         ? {
             label: String(t.label || m.name).slice(0, 40),
@@ -836,6 +838,22 @@ function create(ctx) {
       if (a.manifest.kind === 'page' && a.status !== 'paused') {
         a.status = b.enabled ? 'running' : 'off';
         return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: false });
+      }
+      if (a.bundled && a.manifest.live && a.manifest.kind === 'service' && a.status !== 'paused' && a.status !== 'failed') {
+        if (b.enabled && a.status === 'off') {
+          a.status = 'ready';
+          activate(a);
+          startOne(a);
+        } else if (!b.enabled && a.mod) {
+          try {
+            if (typeof a.mod.stop === 'function') a.mod.stop();
+          } catch (e) {
+            console.error('addon ' + a.id + ' failed to stop: ' + ((e && e.stack) || e));
+          }
+          a.mod = null;
+          a.status = 'off';
+        }
+        return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: a.status === 'failed' });
       }
       // an add-on switched by an option stays loaded and the launcher reads the option: no restart for it
       return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: changed && !opt });
