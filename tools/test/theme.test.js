@@ -147,6 +147,26 @@ run(async () => {
     'shelf.dockAlign carries the dock width, gap and panel padding to the page'
   );
   ok(plain.shelf === undefined, 'a theme that does not line the name up with the dock has no shelf key');
+  // the weather card with the next days (home.css .card-weather: the temperature 64, the place 6 + 29, the days 16 + 27 + 46 + 27,
+  // about 215 px) fits the row and side slots of every theme, with the glass frame's padding (22 top and bottom) when cards are glass;
+  // a card hides what does not fit, which cut off the days on Couch. A top slot also stays above a bottom dock's panel.
+  const shortSlots = [];
+  for (const id of folders) {
+    let raw;
+    try {
+      raw = JSON.parse(fs.readFileSync(path.join(tdir, id, 'theme.json'), 'utf8'));
+    } catch (e) {
+      continue;
+    }
+    const glass = raw.cards && raw.cards.style === 'glass',
+      dk = raw.dock || {};
+    for (const s of raw.slots || []) {
+      if ((s.id === 'row' || s.id === 'side') && s.h < 220 + (glass ? 44 : 0)) shortSlots.push(id + ' ' + s.id + ' h ' + s.h);
+      if (s.anchor === 'top' && dk.anchor === 'bottom' && s.y + s.h > 1080 - dk.y - dk.h - (dk.panelPad || 0))
+        shortSlots.push(id + ' ' + s.id + ' under the dock');
+    }
+  }
+  ok(shortSlots.length === 0, 'the weather card with the next days fits the row and side slots of every theme ' + shortSlots.join(', '));
   // slots for cards: checked and clamped, placed like the clock, kept by a theme that extends it, and only in replies of themes with slots
   const slotted = themeMod.normalize(
     {

@@ -316,7 +316,7 @@ list in `theme.json`:
 |---|---|---|
 | `id` | lower-case letters, digits and `-` | The name of the place. Use `greeting` (above the clock), `clock-side` (beside the clock), `side` (a column on the right) or `row` (above the dock) where they fit: the card a user chose stays when they switch to another theme with the same slot, and these four have a name in every language. |
 | `anchor`, `align`, `x`, `y` | as for the clock | Where the slot's box is, counted from that side of the 1920 x 1080 screen; `x` is not used when centred. |
-| `w`, `h` | px | The size of the box. |
+| `w`, `h` | px | The size of the box. A card hides what does not fit, so make `row` and `side` at least 220 px tall for the weather card with the next days (264 px with `cards.style` glass, whose frame adds padding); a slot anchored at the top ends above a bottom dock's panel. The tests check both for the themes in this repository. |
 | `card` | a card type, for example `greeting` | What the slot shows until the user chooses something else. Without it the slot starts empty. |
 | `grid` | `keep` or `hide` | `keep` leaves the card on screen while the app grid is open; by default it fades out then. |
 
