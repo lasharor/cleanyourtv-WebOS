@@ -969,5 +969,6 @@
  "Waking speakers: off. Disconnect and sign in again to change it.": "Waking speakers: off. Disconnect and sign in again to change it.",
  "Progress bar": "Progress bar",
  "Shown": "Shown",
- "Hidden": "Hidden"
+ "Hidden": "Hidden",
+ "%s (in the background)": "%s (in the background)"
 }

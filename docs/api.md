@@ -14,7 +14,7 @@ you can call it from a shell on the TV (for example over SSH).
 | `POST /api/launch` `{id, params}` | Launch an app |
 | `POST /api/power/off` | Switch the TV off completely (`tvpower/power/shutDown`: a cold start next time, no Wake-on-LAN), unlike the remote's standby |
 | `GET /api/inputs` | The inputs: the HDMI ports and their state, and LG's own Live TV (the tuner, `{appId, tuner: true}`) while its app is installed and the manager's **Show LG's own Live TV** is on |
-| `GET /api/running`, `POST /api/running/close` `{id}` or `{all: true}` | The running apps the launcher can close, and closing them (only listed apps; never Home or CleanYourTV's own apps) |
+| `GET /api/running`, `POST /api/running/close` `{id}` or `{all: true}` | The running apps the launcher can close, and closing them (only listed apps; never Home, the picker or notify app; the manager is listed). Background services of installed apps that run are listed with `background: true` and the app's title; closing one stops its process (never the Homebrew Channel's or CleanYourTV's) |
 | `POST /api/notify` | Picture notification (on the network: `POST :8767/notify` with the token) |
 | `GET /api/voice/status`, `POST /api/voice/install`, `/uninstall`, `/set`, `/listen`, `/ask`, `/forget`, `/ha-test`, `/ha-agents`; `/pair` `{only?: "ha"}` | Optional voice function and AI chat |
 | `GET /api/theme/list`, `POST /api/theme/set`, `/revert` | Themes for the home screen; see [Themes](themes.md) |

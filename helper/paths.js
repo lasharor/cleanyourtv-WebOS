@@ -36,6 +36,7 @@ module.exports = {
   SYSLOG: env.CYTV_SYSLOG || '/var/log/messages', // LG's system log: a line per remote button press, with the button's name (keynames.js)
   LASTAPP: '/var/luna/preferences/bootd_last_foreground_app_id.json',
   PROC: env.CYTV_PROC || '/proc',
+  APP_PACKAGES: ['/media/cryptofs/apps/usr/palm/packages', '/media/developer/apps/usr/palm/packages'], // installed apps' packageinfo.json (running.js)
   ZRAM: env.CYTV_ZRAM || '/sys/block/zram0', // the zram device's settings and counters (zram.js)
   SYSBLOCK: env.CYTV_SYSBLOCK || '/sys/block', // the block devices, for the eMMC's discard support (fstrim.js)
   HOME_APP: '/usr/palm/applications/com.webos.app.home',
