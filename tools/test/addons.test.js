@@ -141,6 +141,21 @@ run(async () => {
     r.code === 200 && !by('old').enabled,
     'switched off by its option, it stays loaded (the launcher reads the option) and shows as not enabled'
   );
+  // the same option changed on another screen (the manager's Live TV > Show Live TV): the add-on follows it at once
+  cfg.update('manager', c => {
+    c.options = Object.assign({}, c.options, { tuner: true });
+  });
+  r = await call(a, '/api/addons/old');
+  ok(r.j.enabled === true, 'an option switched on elsewhere shows the add-on as on, without a restart');
+  r = await call(a, '/api/addons/old/enable', 'POST', { enabled: false });
+  const r7 = await call(a, '/api/addons/old/enable', 'POST', { enabled: true });
+  ok(
+    r.j.restartNeeded === false &&
+      r7.j.restartNeeded === false &&
+      cfg.options().tuner === true &&
+      (await call(a, '/api/addons/old')).j.enabled,
+    'switching it with its own switch needs no restart either (it stays loaded) and is saved'
+  );
   ok(
     !a.list().filter(x => x.id === 'old')[0].page && a.match('/api/addons') && a.match('/addon/x/y') && !a.match('/api/live/x'),
     'match: the add-on paths only'
