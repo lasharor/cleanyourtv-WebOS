@@ -1,56 +1,62 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<html lang=en>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name=referrer content=no-referrer>
 <title>TV Remote</title>
 <style>
-html,body{margin:0;height:100%;background:#101218;color:#f4f5f7;font:16px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-body{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;justify-content:center;padding:28px 22px}
-.logo{width:60px;height:60px;border-radius:18px;background:#1a1c23;border:1px solid #2e3140;display:flex;align-items:center;justify-content:center;margin:0 0 18px}
-.logo svg{width:30px;height:30px;stroke:#ff8a5b;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-h1{font-size:30px;line-height:1.15;margin:0 0 10px}
-p{color:#a3a8b8;margin:0 0 22px}
-.hide{display:none}
-.big{width:100%;height:76px;border:0;border-radius:22px;background:#ff8a5b;color:#1b1008;font:800 20px ui-sans-serif,system-ui,sans-serif;box-shadow:0 0 34px rgba(255,138,91,.28)}
-.big:active{transform:scale(.985)}
-.lnk{width:100%;height:56px;margin-top:12px;border-radius:18px;background:#1a1c23;border:1px solid #2e3140;color:#ff8a5b;font:700 16px ui-sans-serif,system-ui,sans-serif}
-.small{margin-top:20px;color:#7d8296;font-size:13px;text-align:center}
-#msg{color:#f0a0a0;font-size:14px;min-height:20px;margin:14px 0 0}
+html,body{direction:ltr}*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font:16px -apple-system,system-ui,sans-serif;background:#101116;color:#f4f5f7;margin:0}
+#wrap{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;justify-content:center;max-width:430px;margin:0 auto;padding:26px 20px 26px}#wrap>*{position:relative}
+#wrap .glow{position:absolute;left:-80px;top:-120px;width:360px;height:360px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,138,91,.2),transparent)}
+h1{font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.02em;margin:6px 0 6px}h1+p{font-size:16px;margin:0}
+p{color:#a3a8b8;line-height:1.5;margin:8px 0}p b{color:#f4f5f7}small{color:#7b8092;font-size:13px;line-height:1.5}
+label{display:block;font-size:14px;font-weight:600;color:#a3a8b8;margin:6px 0 8px}
+.hide{display:none!important}
+button,input{font:inherit;color:#f4f5f7;background:#1a1c23;border:1px solid #2e3140;border-radius:18px}
+button{display:block;width:100%;font-weight:700;touch-action:manipulation}
+input{width:100%;height:56px;padding:0 16px;font-size:17px;margin:0 0 10px}
+.big{height:96px;border:0;background:#ff8a5b;color:#1b1008;font-size:21px;font-weight:800;margin:0 0 16px;box-shadow:0 12px 30px rgba(255,138,91,.3)}
+.pri{height:58px;border:0;background:#ff8a5b;color:#1b1008;font-size:18px;font-weight:800;margin-top:14px}
+.lnk{height:44px;color:#ff8a5b}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:60;width:calc(100% - 32px);max-width:398px;margin:0;padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.45;text-align:left;pointer-events:none;opacity:0;transform:translate(-50%,-24px);transition:transform .25s ease,opacity .25s ease;box-shadow:0 12px 30px rgba(0,0,0,.45);background:#1a1c23;border:1px solid #2e3140;color:#dde0ea}.toast.ok{background:#1b2420;border-color:#2c4a3a;color:#bfe9cf}.toast.warn{background:#241f16;border-color:#5a4a2b;color:#f0d9a8}.toast.on{opacity:1;transform:translate(-50%,0)}@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+.box{background:#1a1c23;border:1px solid #2e3140;border-radius:20px;padding:16px 16px 4px;margin:22px 0 0}
+.step{display:flex;align-items:flex-start;color:#dde0ea;font-size:15px;line-height:1.45;margin:0 0 12px}
+.step i{flex:none;width:26px;height:26px;border-radius:50%;background:#232631;color:#ff8a5b;font:700 13px system-ui;font-style:normal;display:flex;align-items:center;justify-content:center;margin-right:12px}
 </style>
-</head>
-<body>
-<div class="logo"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+<div id=toast class=toast role=status aria-live=polite></div>
+<div id=wrap>
+<div class=glow></div>
 <h1>The TV is off</h1>
 <p>Turn it on and the remote opens by itself.</p>
-<div id=name class=hide><p>Connected TV: <b id=tv></b></p></div>
-<button class="big" id=on>Turn on the TV</button>
-<button class="lnk" id=retry>Try again</button>
-<p id=msg></p>
-<p class="small" id=change>Another TV</p>
+<p id=name class=hide>Connected TV: <b id=tv></b></p>
+<div style="margin-top:22px">
+  <button class=big id=on>Turn on the TV</button>
+  <button class=lnk id=retry>Try again</button>
+  <button class=lnk id=change>Another TV</button>
+</div>
+</div>
 <script>
-var A = window.CYTV_APP || null;
+var A=window.CYTV_APP||null;
 function $(i){return document.getElementById(i)}
+/* every message is a toast that slides in at the top over the page and goes away by itself; it never takes room in the page (the same as the start page) */
+var toastT=0;
+function toast(s,k,ms){var e=$('toast');clearTimeout(toastT);e.textContent=s;e.className='toast '+(k||'info');void e.offsetWidth;e.className='toast '+(k||'info')+' on';toastT=setTimeout(function(){e.className='toast '+(k||'info')},ms||(k==='warn'?7000:3500))}
 function call(n){
-  try{ return A && typeof A[n] === 'function' ? A[n]() : null }catch(e){ return null }
+  try{return A&&typeof A[n]==='function'?A[n]():null}catch(e){return null}
 }
-$('on').onclick = function(){
-  $('msg').textContent = '';
-  if (!call('wake')) { $('msg').textContent = 'Pair this phone with the TV once.'; return }
-  $('on').textContent = 'Waking the TV…';
-  $('on').disabled = true;
+$('on').onclick=function(){
+  if(!call('wake')){toast('Pair this phone with the TV once.','warn');return}
+  $('on').textContent='Waking the TV…';
+  $('on').disabled=true;
 };
-$('retry').onclick = function(){
-  $('msg').textContent = '';
-  call('open');
-};
-$('change').onclick = function(){ call('start') };
+$('retry').onclick=function(){call('open')};
+$('change').onclick=function(){call('start')};
 /* the TV may be turning on by another means: open the remote as soon as it answers */
-setInterval(function(){ if (call('up')) call('open') }, 3000);
+setInterval(function(){if(call('up'))call('open')},3000);
 /* the native side says when the wake packet got nothing */
-window.cytvOff = function(m){ $('on').textContent = 'Turn on the TV'; $('on').disabled = false; $('msg').textContent = m || '' };
-window.cytvName = function(n){ if (!n) return; $('tv').textContent = n; $('name').className = '' };
-(function(){ var n = call('name'); if (n) { $('tv').textContent = n; $('name').className = ''; } })();
+window.cytvOff=function(m){$('on').textContent='Turn on the TV';$('on').disabled=false;toast(m||'The TV did not answer.','warn')};
+window.cytvName=function(n){if(!n)return;$('tv').textContent=n;$('name').className=''};
+(function(){var n=call('name');if(n){$('tv').textContent=n;$('name').className=''}})();
 </script>
-</body>
 </html>

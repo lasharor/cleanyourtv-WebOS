@@ -75,7 +75,7 @@ again it pairs with a new code.
 Logging out tells the TV (`{"t":"logout"}` on the connection; the TV answers `{"t":"bye"}`) and removes the phone from its list at once. What decides this is whether the
 TV can be reached, not whether its screen is on: a TV on standby that still answers is told. When the page's own connection is closed it opens a short one of
 its own, and waits three seconds at most. If the TV cannot be reached the phone still logs out and a note says the TV still lists it
-(remove it in the manager app, **Features › Phone remote › Paired phones**). The result shows as a note at the top of the pairing screen: three seconds when the TV was told, longer when it was not. On the phone, the page deletes the token and every `cytv` entry it kept, and the Android app
+(remove it in the manager app, **Features › Phone remote › Paired phones**). The result shows as a toast at the top of the pairing screen: three seconds when the TV was told, longer when it was not. On the phone, the page deletes the token and every `cytv` entry it kept, and the Android app
 forgets the TV's address, the network card address and the saved page, and returns to its start page.
 
 ## The apps on the TV

@@ -1036,6 +1036,13 @@ run(async () => {
       /for security/.test(menu),
     'Remove unused phones: five choices, and "never" asks first with a warning'
   );
+  ok(
+    !/pmsg/.test(require('../../helper/phoneremotepage').PHONE_JS.replace(/apmsg/g, '')) &&
+      /else pnote\(j\.error\|\|t\('Wrong code\.'\),'warn',7000\)/.test(require('../../helper/phoneremotepage').PHONE_JS) &&
+      /x\.onerror=function\(\)\{pnote\(t\('The TV did not answer\./.test(require('../../helper/phoneremotepage').PHONE_JS) &&
+      /function showPair\(s,k\)\{[^}]*if\(s\)pnote\(s,k\|\|'warn',7000\)\}/.test(require('../../helper/phoneremotepage').PHONE_JS),
+    'the pairing screen shows its errors (wrong code, the TV did not answer, removed on the TV) as the timed note at the top, not as a line in the page'
+  );
   {
     const rem = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'remote.js'), 'utf8');
     const cnt = new Function(rem.match(/function prCount\([^)]*\) \{[^}]*\}/)[0] + '; return prCount;')();
