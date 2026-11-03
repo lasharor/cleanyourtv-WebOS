@@ -60,3 +60,10 @@ parent.postMessage({ cytvCard: 'ready' }, '*');   // asks for the message above
 the launcher's clock format for `toLocaleTimeString(lang, clock)`, `size` is small, medium or large, `align` and `dir` how the text runs, `ink`, `font`
 and `fs` the colour, typeface and size scale of the text of the theme. The page keeps its own time (`setInterval`), draws on a transparent
 background and fills its frame. Write ES5: it runs on Chromium 68 (webOS 5) too.
+
+## A card from an add-on
+
+When a card needs data that the TV cannot work out alone (the weather, what plays on your Spotify), or buttons for the remote, it comes with an
+[add-on](addons.md#providing-something-to-the-service-cards) instead: the add-on's service asks the internet and the frame stays closed. The page is
+a page card as above; the message it gets has one more key, `m.data` (what the add-on's service said for this card, or `{error}`), and it can send
+`{cytvCard: 'buttons', buttons: [...]}` to make parts of itself targets of the remote.

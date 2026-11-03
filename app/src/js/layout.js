@@ -1,4 +1,24 @@
 /* ---------- layout ---------- */
+var TOPBAR = null;
+/* the top row of the remote again (the buttons of a card of an add-on came or went), without drawing Home anew */
+function refreshTop() {
+  if (!TOPBAR || !rows.length) return;
+  var old = rows[r] && rows[r][c],
+    was = rows[0],
+    top = TOPBAR.concat(cardTargets());
+  if (rows[1] === was) rows[1] = top;
+  rows[0] = top;
+  if (old && old.parentNode) {
+    var p = posOf(old);
+    if (p) {
+      r = p[0];
+      c = p[1];
+    }
+  } else if (r === 0) {
+    c = Math.min(c, top.length - 1);
+    if (rows[0][c]) rows[0][c].classList.add('f');
+  }
+}
 function rebuild(animate) {
   var rects = {};
   if (animate && moving) {
@@ -57,6 +77,7 @@ function rebuild(animate) {
     fit(t, false);
     return t;
   });
+  TOPBAR = tb;
   var top = tb.concat(cardTargets());
   placeShelf(d.length);
   rows = [top, d.length ? d : top];

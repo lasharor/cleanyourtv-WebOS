@@ -101,6 +101,60 @@ Core merges the photos with the uploads: `s/<add-on>/<id>` for a file and `l/<ad
 nothing and is logged once. `GET /api/wallpapers/status` has a `sources` list only when an add-on provides photos. Core still does the
 rotation, the dimming and the Picture size setting; a source only supplies photos.
 
+## Providing something to the service: cards
+
+An add-on with `"provides": ["cards"]` can bring cards for Home. A downloadable card (see [Making a card](cards.md)) is data that the launcher draws; a card
+of an add-on is a card with its own page, as a page card is, plus what a closed frame cannot do alone: it gets **data** from the add-on's service,
+and its **buttons** send the add-on **actions**. The frame stays closed: no network, no access to the launcher or the service, no keys.
+
+`addon.json` lists the cards (at most 4), each checked like a `card.json` with `page` (never `template`), and two more things:
+
+```json
+"provides": ["cards"],
+"cards": [{
+  "id": "nowplaying", "name": "Now playing", "version": "1.0.0", "size": "medium",
+  "page": "card.html",
+  "poll": 6,
+  "actions": [{ "name": "prev", "label": "Previous" }, { "name": "toggle", "label": "Play or pause" }, { "name": "next", "label": "Next" }],
+  "options": [{ "key": "title", "kind": "text", "label": "Title", "default": "Now playing" }]
+}]
+```
+
+- The files of a card are in the add-on's folder, under `cards/<id>/` (`cards/nowplaying/card.html`, its script, a `preview.jpg` of 800 x 450).
+  The service serves them from `/card/<id>/` under the same policy as a downloaded page card.
+- `id`: as a card's: lower-case letters, digits and hyphens, the card type is `x-<id>`. A downloaded card with the same id wins; the id of a card of
+  the launcher itself is refused. The card is offered (in Customise and on the phone page, with its options as the form) only while the add-on runs and
+  is switched on, and goes with it; it is not removed from **Cards**.
+- `poll`: seconds between two requests for data (2 to 3600; 0 or left out: the card has no data). The launcher asks only while Home is on screen, one
+  request at a time, and only for a card that is set for a place.
+- `actions`: what the card's buttons can do (at most 8): a `name` and a `label`, which is what the remote's focus shows and is in the language of
+  the add-on (translate it with the add-on's own words).
+
+The add-on's service answers with `cards` on the object `create()` returns:
+
+```js
+cards: {
+  // data for the card in a place: a plain object (at most 128 KB: a cover goes as a data: address), the options the person chose
+  feed: async (id, opt) => ({ title: opt.title, playing: true }),
+  // a button was pressed: the name is one the card declared; arg is a short text or number the page may give (at most 100 characters)
+  action: async (id, opt, name, arg) => ({ ok: true }),
+}
+```
+
+`opt` is what the person set for that place (defaults filled in; a `place` option also gives `opt.lat` and `opt.lon`); it never comes from the launcher's
+request, so a page cannot ask for another card's data. A call that fails, or does not answer in 15 seconds, gives the launcher `{error}`.
+
+The page gets the answer in the message the launcher already sends (see [Making a card](cards.md)), as `m.data`, and tells the launcher where its
+buttons are:
+
+```js
+parent.postMessage({ cytvCard: 'buttons', buttons: [{ name: 'prev', x: 5, y: 60, w: 25, h: 30 }] }, '*');   // percent of the card
+```
+
+Each button the card declared becomes a target of the remote in the top row of Home (the focus shows its label); OK sends the add-on the action, and the
+card asks for its data again a few times in the seconds after. A name the card did not declare is ignored. Routes: `POST /api/cards/feed {slot}` and
+`POST /api/cards/action {slot, name, arg}` ([API](../api.md)).
+
 ## Pages: Home is page 1 of a book
 
 A page add-on is served at `http://127.0.0.1:8765/addon/<id>/...` while it runs, with a content security policy that lets it load
