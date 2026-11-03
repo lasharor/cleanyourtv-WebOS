@@ -60,6 +60,7 @@ load('cards', () => require('./cards').create(ctx));
 const inputkey = load('inputkey', () => require('./inputkey').create(ctx));
 if (notify) load('notifyapi', () => require('./notifyapi').create(ctx));
 const manager = load('manager', () => require('./manager').create(ctx));
+load('remap', () => require('./remap').create(ctx));
 load('apps', () => require('./apps').create(ctx));
 load('running', () => require('./running').create(ctx));
 load('zram', () => require('./zram').create(ctx));

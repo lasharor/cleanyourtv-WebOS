@@ -13,6 +13,7 @@ on-device voice recognition, and an optional debloat of LG's ads and telemetry.
 - **Live TV.** Plays your M3U playlist with a channel list, a programme guide (XMLTV) and number entry. It does not use LG's
   tuner. [More](live-tv.md).
 - **Input key.** The remote's Input button opens an Inputs list over the running app. [More](input-key.md).
+- **Key remapping (optional).** A remote button (the Netflix or Prime key, a colour key) opens an app, an input, Live TV or Home. Off until you switch it on. [More](key-remap.md).
 - **Picture notifications.** A card with a photo over whatever is on screen, triggered from your network, for example by
   Home Assistant. [More](notifications.md).
 - **Voice (optional).** Speech recognition on the TV (Moonshine), with answers from Home Assistant's Assist, a language model through

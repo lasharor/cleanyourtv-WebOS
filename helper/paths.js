@@ -31,8 +31,9 @@ module.exports = {
   SETUP_LOG: '/media/developer/cytv-setup.log',
   SERVICE_LOG: '/tmp/cleanyourtv-helper.log',
   RUNFILE: env.CYTV_RUNFILE || '/tmp/cytv-run.json',
-  HOOK_CFG: '/home/root/.config/lginputhook',
-  HOOK_LOG: '/tmp/lginput-hook-lginput2.log',
+  HOOK_CFG: env.CYTV_HOOK_CFG || '/home/root/.config/lginputhook',
+  HOOK_LOG: env.CYTV_HOOK_LOG || '/tmp/lginput-hook-lginput2.log',
+  SYSLOG: env.CYTV_SYSLOG || '/var/log/messages', // LG's system log: a line per remote button press, with the button's name (keynames.js)
   LASTAPP: '/var/luna/preferences/bootd_last_foreground_app_id.json',
   PROC: env.CYTV_PROC || '/proc',
   ZRAM: env.CYTV_ZRAM || '/sys/block/zram0', // the zram device's settings and counters (zram.js)
@@ -40,6 +41,7 @@ module.exports = {
   HOME_APP: '/usr/palm/applications/com.webos.app.home',
   FULLHOME_APP: '/usr/palm/applications/com.webos.app.fullhome',
   STANDIN: env.CYTV_STANDIN || '/tmp/cleanyourtv-home-standin', // LG's Home program while scripts/home-standin.sh is mounted over it
+  HOME_PARAMS: env.CYTV_HOME_PARAMS || '/tmp/cleanyourtv-home-params', // what a key script (and remap.js) asks the launcher to open
   // child processes find the system tools first, as in a login shell on the TV
   ENV: Object.assign({}, env, { PATH: '/usr/bin:/usr/sbin:/bin:/sbin:' + (env.PATH || '') }),
 };

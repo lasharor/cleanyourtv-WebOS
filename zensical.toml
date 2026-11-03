@@ -24,6 +24,7 @@ nav = [
     { "Live TV" = "live-tv.md" },
     { "Android box" = "android-box.md" },
     { "The Input key" = "input-key.md" },
+    { "Key remapping" = "key-remap.md" },
     { "Picture notifications" = "notifications.md" },
     { "Voice (optional)" = "voice.md" },
     { "Debloat" = "debloat.md" },

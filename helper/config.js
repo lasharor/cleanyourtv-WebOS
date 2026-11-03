@@ -4,7 +4,7 @@
 //   config.keys()                the learned remote buttons with their defaults
 //   config.update(source, fn)    fn changes a copy, which is then written at once (atomically). The read, the change and the write
 //                                happen in one go, so two parts of the service can never overwrite each other's settings.
-// Every change of an option, a learned key or the Input-key mode is logged with its source ("manager", "launcher", "setup", ...),
+// Every change of an option, a learned key, a remapped key or the Input-key mode is logged with its source ("manager", "launcher", "setup", ...),
 // so a setting that changes by itself shows up in the service log and in Share log.
 const fs = require('fs');
 const P = require('./paths');
@@ -38,6 +38,8 @@ function create(file, opts) {
     options: Object.assign({}, OPTIONS, c.options),
     keys: Object.assign({}, KEYS, c.keys),
     picker: { mode: (c.picker || {}).mode },
+    remap: c.remap && typeof c.remap === 'object' ? c.remap : {},
+    remapOn: { on: c.remapOn === true },
   });
   function report(source, before, after) {
     const a = watched(before),

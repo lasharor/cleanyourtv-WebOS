@@ -47,6 +47,7 @@ and the TV's own services.
 | `tvprofile.test.js` | The per-TV decisions for webOS 5, 6.5, 25 and 26 and an unknown TV, from the service and from the shell. |
 | `scripts.test.js` | The shell scripts parse; an update keeps the options the user chose; the setup asks `tvprofile.js`; the debloat's `/etc/hosts` fallback. |
 | `manager.test.js` | Options, keys and the Input-key modes in the manager API; the settings store and its change log. |
+| `remap.test.js` | Key remapping: a saved button's action and the on/off switch, the hook's binds (removed with the key and with the switch), the Android-box add-on path, the stand-in Home parameters, codes typed with a leading zero, and learning a button. |
 | `updates.test.js` | Update checks against a stand-in for the GitHub API: stable and test channels, builds of one version, a dropped connection. |
 | `fetch.test.js`, `netcompat.test.js`, `diag.test.js` | The HTTP client (redirects, gzip, limits, dropped connections, time limits), the Node 8 compatibility layer, starting programs. |
 | `live.test.js`, `theme.test.js`, `voice.test.js`, `notifyapi.test.js`, `picker.test.js` | One feature each. |
