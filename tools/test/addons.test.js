@@ -175,12 +175,49 @@ run(async () => {
     path.join(ldir, 's.js'),
     'const log = (global.__liveone = global.__liveone || []); exports.create = () => (log.push("create"), { start() { log.push("start"); }, stop() { log.push("stop"); }, handle: (q, r) => { r.writeHead(200); r.end(JSON.stringify({ ok: true })); } });'
   );
+  // a live add-on with no stop(): switching it on is refused before start()
+  const ndir = path.join(tmp, 'bundled', 'nostop');
+  req('netcompat').mkdirp(ndir);
+  fs.writeFileSync(
+    path.join(ndir, 'addon.json'),
+    JSON.stringify({ id: 'nostop', name: 'No stop', version: '1.0.0', kind: 'service', entry: { service: 's.js' }, live: true })
+  );
+  fs.writeFileSync(
+    path.join(ndir, 's.js'),
+    'const log = (global.__nostop = global.__nostop || []); exports.create = () => (log.push("create"), { start() { log.push("start"); }, handle: (q, r) => r.end("{}") });'
+  );
+  // a live add-on whose stop() throws once: it keeps running, and the next switch-off retries
+  const sdir = path.join(tmp, 'bundled', 'badstop');
+  req('netcompat').mkdirp(sdir);
+  fs.writeFileSync(
+    path.join(sdir, 'addon.json'),
+    JSON.stringify({ id: 'badstop', name: 'Bad stop', version: '1.0.0', kind: 'service', entry: { service: 's.js' }, live: true })
+  );
+  fs.writeFileSync(
+    path.join(sdir, 's.js'),
+    'const log = (global.__badstop = global.__badstop || { calls: [], stops: 0 }); exports.create = () => (log.calls.push("create"), { start() { log.calls.push("start"); }, stop() { log.stops += 1; log.calls.push("stop" + log.stops); if (log.stops === 1) throw new Error("still bound"); }, handle: (q, r) => r.end("{}") });'
+  );
+  // an add-on whose start() throws: its stop() is called and the module dropped
+  put(
+    'badstart',
+    svc('badstart'),
+    'const log = (global.__badstart = global.__badstart || []); exports.create = () => ({ start() { log.push("start"); throw new Error("no port"); }, stop() { log.push("stop"); }, handle: (q, r) => r.end("{}") });'
+  );
   cfg.update('test', c => {
-    c.addons = Object.assign({}, c.addons, { liveone: { enabled: false } });
+    c.addons = Object.assign({}, c.addons, { liveone: { enabled: false }, nostop: { enabled: false }, badstop: { enabled: false } });
   });
-  a.load();
+  // a.start() is what the service does at boot: load and start every ready add-on
+  a.start();
   ok(
-    by('liveone').status === 'off' && !by('liveone').mod && (global.__liveone || []).length === 0,
+    a.state('badstart') &&
+      a.state('badstart').status === 'failed' &&
+      /no port/.test(a.state('badstart').error) &&
+      !a.state('badstart').mod &&
+      global.__badstart.join() === 'start,stop',
+    'an add-on whose start() throws calls stop() and drops the module: ' + (global.__badstart || []).join()
+  );
+  ok(
+    by('liveone').status === 'off' && !a.state('liveone').mod && (global.__liveone || []).length === 0,
     'a live add-on that is switched off is not even created'
   );
   r = await call(a, '/api/liveone');
@@ -199,6 +236,50 @@ run(async () => {
   ok(r.code === 404, 'and its API path is gone');
   r = await call(a, '/api/addons/liveone/enable', 'POST', { enabled: true });
   ok(by('liveone').status === 'running' && global.__liveone.join() === 'create,start,stop,create,start', 'on again, it is a new instance');
+
+  // a live add-on with no stop(): switching it on fails and it is not started
+  r = await call(a, '/api/addons/nostop/enable', 'POST', { enabled: true });
+  ok(
+    r.j &&
+      r.j.restartNeeded === true &&
+      /stop\(\)/.test(r.j.error || '') &&
+      a.state('nostop').status === 'failed' &&
+      !a.state('nostop').mod &&
+      a.state('nostop').error === r.j.error &&
+      global.__nostop.join() === 'create',
+    'a live add-on without stop() is refused at switch-on, before start(): ' + JSON.stringify(r.j)
+  );
+  cfg.update('test', c => {
+    c.addons = Object.assign({}, c.addons, { nostop: { enabled: false } });
+  });
+
+  // a live add-on whose stop() throws: it keeps running, with the error in the reply, and a second switch-off retries
+  r = await call(a, '/api/addons/badstop/enable', 'POST', { enabled: true });
+  ok(
+    a.state('badstop').status === 'running' && global.__badstop.calls.join() === 'create,start',
+    'a live add-on whose stop() will throw runs'
+  );
+  r = await call(a, '/api/addons/badstop/enable', 'POST', { enabled: false });
+  ok(
+    r.j &&
+      /did not stop/.test(r.j.error || '') &&
+      !('restartNeeded' in r.j) &&
+      a.state('badstop').status === 'running' &&
+      !!a.state('badstop').mod &&
+      a.state('badstop').error === r.j.error &&
+      global.__badstop.calls.join() === 'create,start,stop1',
+    'a stop() that throws keeps the add-on running, with the error in the reply: ' + JSON.stringify(r.j)
+  );
+  r = await call(a, '/api/addons/badstop/enable', 'POST', { enabled: false });
+  ok(
+    !r.j.error &&
+      r.j.restartNeeded === false &&
+      a.state('badstop').status === 'off' &&
+      !a.state('badstop').mod &&
+      global.__badstop.calls.join() === 'create,start,stop1,stop2',
+    'a second switch-off retries stop() and succeeds'
+  );
+
   r = await call(a, '/api/addons/demo/enable', 'POST', { enabled: false });
   ok(r.j.restartNeeded === true, 'an add-on that does not say live still needs the restart');
   r = await call(a, '/api/addons/demo/enable', 'POST', { enabled: true });

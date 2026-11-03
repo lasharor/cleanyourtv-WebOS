@@ -1,6 +1,7 @@
 // Phone remote: a page on a paired phone that works as a remote control for the TV, over a WebSocket kept open while the phone's browser
 // is awake. Nothing is sent to the TV before the phone has paired.
-//   GET  /api/phoneremote          on/off, the listener, the pairing window, the paired phones, what the last key did
+//   GET  /api/phoneremote          on/off, the listener (listenError says why it cannot bind), the pairing window, the paired phones,
+//                                  what the last key did
 //   POST /api/phoneremote          {enabled} switches the phone remote on or off (off closes the port and every connection)
 //   POST /api/phoneremote/pair     {stop?} opens the pairing window (a 6-digit code, shown on the TV); called again it keeps it open
 //   POST /api/phoneremote/revoke   {id} or {all:true} forgets phones: their token stops working at once
@@ -10,7 +11,9 @@
 // "<id>.<secret>": the phone keeps it, the TV keeps only the SHA-256 of the secret, and it is never logged.
 // The LAN listener (port 8798) runs only while the phone remote is on AND a phone is paired or the pairing window is open. It serves the
 // page, accepts a pairing (the code, five tries a minute per address, the window closes after eight wrong ones) and the WebSocket at /ws,
-// where the first message must be {t:'hello', token}. The keys themselves are remotekeys.js.
+// where the first message must be {t:'hello', token}. The keys themselves are remotekeys.js. The listener's own failure is separate from a
+// request that failed: GET /api/phoneremote reports it as listenError (a port that cannot be bound, say 8798 busy), so the manager can tell
+// the two apart.
 const http = require('http'),
   fs = require('fs'),
   path = require('path'),
@@ -37,7 +40,7 @@ const PORT = 8798, // after the Android box page (8793)
   EXPIRE_DAYS = [1, 3, 7, 14, 30], // "remove phones that are not used": the choices, in days (0 = never)
   EXPIRE_DEFAULT = 14,
   SEEN_MS = 60000, // the phone list shows "seen" to the minute: no more than one write of it a minute
-  QUIET_MS = 60000, // a paired phone pings every 15 seconds; this long without a message and the connection is dropped
+  QUIET_MS = 60000, // the phone's page pings about every 5 seconds; this long without a message and the connection is dropped
   TRIES = 5, // pairing tries per address per minute
   WRONG_MAX = 8, // wrong codes after which the window closes
   RATE = { burst: 60, perSecond: 40 }; // messages a connection may send
@@ -52,7 +55,7 @@ const cleanName = n =>
     .trim()
     .slice(0, 30) || 'Phone';
 
-// opts: {port (0 = any, tests), host, keys (the key adapter, tests)}
+// opts: {port (0 = any, tests), host, keys (the key adapter, tests), apiTimeout (the loopback API call's limit in ms, 5000 by default)}
 function create(ctx, opts) {
   const o = opts || {};
   const API = String(o.api || 'http://127.0.0.1:8765');
@@ -76,7 +79,7 @@ function create(ctx, opts) {
   };
 
   let srv = null,
-    listenError = '',
+    listenError = '', // why the port could not be bound; status() reports it as listenError, apart from a request that failed
     pair = null;
   const clients = new Set();
   const tries = {}; // address -> times of its pairing tries
@@ -114,6 +117,8 @@ function create(ctx, opts) {
     clearTimeout(pair.timer);
     pair = null;
   }
+  // Binding the LAN port can fail on its own (8798 taken by another program): that is not a failed request, so it is kept in listenError
+  // and reported by status() under that very name, for the manager to show as a busy port.
   function listen() {
     const s = http.createServer(onRequest);
     s.maxConnections = MAX_SOCKETS + 8;
@@ -165,6 +170,9 @@ function create(ctx, opts) {
         expires: '0',
         'x-content-type-options': 'nosniff',
         'referrer-policy': 'no-referrer',
+        // the phone page must never be put in a frame: another site could otherwise lay invisible keys over it and press them
+        'x-frame-options': 'DENY',
+        'content-security-policy': "frame-ancestors 'none'",
       });
       res.end(typeof body === 'string' ? body : JSON.stringify(body));
     };
@@ -229,9 +237,11 @@ function create(ctx, opts) {
   // a phone gives the code from the TV's screen and its name; it gets a token
   function tryPair(addr, b, lang) {
     const now = Date.now();
-    const t = (tries[addr] = (tries[addr] || []).filter(x => now - x < 60000));
+    const t = (tries[addr] || []).filter(x => now - x < 60000); // only the last minute counts, so the list cannot grow
+    if (!t.length) delete tries[addr]; // an old entry is pruned, not kept as an empty array
     if (t.length >= TRIES) return { status: 429, body: { error: i18n.tr(lang, 'Too many tries. Wait a minute.') } };
     t.push(now);
+    tries[addr] = t;
     if (!pair)
       return {
         status: 403,
@@ -302,6 +312,10 @@ function create(ctx, opts) {
 
   // Phones that are not connected and were last used (or paired) longer ago than that are removed; one that is connected never is.
   function sweep() {
+    const now = Date.now();
+    Object.keys(tries).forEach(a => {
+      if (!tries[a].some(x => now - x < 60000)) delete tries[a]; // an address that never came back is not kept for ever
+    });
     const days = expireDays();
     if (!days) return;
     const limit = Date.now() - days * 86400000,
@@ -477,6 +491,12 @@ function create(ctx, opts) {
 
   function apiRequest(method, path, body) {
     return new Promise(resolve => {
+      let done = false;
+      const settle = v => {
+        if (done) return;
+        done = true;
+        resolve(v || {});
+      };
       try {
         const payload = body ? JSON.stringify(body) : '';
         const headers = payload ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) } : {};
@@ -485,17 +505,22 @@ function create(ctx, opts) {
           s.on('data', c => (data += c));
           s.on('end', () => {
             try {
-              resolve(JSON.parse(data || '{}'));
+              settle(JSON.parse(data || '{}'));
             } catch (_) {
-              resolve({});
+              settle({});
             }
           });
+          // A response that starts and is then cut off (a timeout destroys the request) emits aborted and then ECONNRESET on the
+          // response, and nothing at all on the request: each of these has to answer, and the guard lets only the first one through.
+          s.on('aborted', () => settle({}));
+          s.on('error', () => settle({}));
         });
-        r.on('error', () => resolve({}));
-        r.setTimeout(5000, () => r.destroy());
+        r.on('error', () => settle({}));
+        r.on('timeout', () => settle({}));
+        r.setTimeout(o.apiTimeout || 5000, () => r.destroy());
         r.end(payload);
       } catch (_) {
-        resolve({});
+        settle({});
       }
     });
   }
@@ -531,13 +556,105 @@ function create(ctx, opts) {
       .filter(c => c.num > 0 && c.name);
   }
 
-  // A channel's logo, fetched by the TV and passed on: the playlist's own addresses (which can carry the provider's key) stay here
+  // the logos already fetched (number -> {at, type, buf}, kept for an hour), so the page does not ask the provider again and again
   const logoCache = {};
+
+  // One channel list serves every logo: when a page of cards draws, it asks for many logos at once, and each one used to download the
+  // whole list again. It is kept for 30 seconds through one shared promise: long enough for the page, short enough to follow an edit.
+  const LIST_MS = 30000;
+  let listAt = 0,
+    listPromise = null;
+  function channelList() {
+    if (listPromise && Date.now() - listAt < LIST_MS) return listPromise;
+    listAt = Date.now();
+    listPromise = apiRequest('GET', '/api/live/channels').then(r => (Array.isArray(r.channels) ? r.channels : []));
+    return listPromise;
+  }
+  // A channel's logo, fetched by the TV and passed on: the playlist's own addresses (which can carry the provider's key) stay here
   async function channelLogo(num) {
-    const r = await apiRequest('GET', '/api/live/channels');
-    const c = (Array.isArray(r.channels) ? r.channels : []).find(x => parseInt(x[0], 10) === num);
+    const channels = await channelList();
+    const c = channels.find(x => parseInt(x[0], 10) === num);
     const url = c && String(c[4] || '');
     return /^https?:\/\//i.test(url) ? url : '';
+  }
+
+  // The logo itself is not trusted: the body is cut off the moment it goes over the cap (not buffered and checked afterwards), the whole
+  // fetch gives up after about four seconds, and up to three redirects are followed (a relative Location is resolved against the address
+  // that answered), because a provider's logo often moves.
+  const LOGO_MAX = 512 * 1024,
+    LOGO_MS = 4000,
+    LOGO_HOPS = 3,
+    LOGO_REDIRECT = { 301: 1, 302: 1, 303: 1, 307: 1, 308: 1 };
+  function fetchLogo(address, hops) {
+    return new Promise(resolve => {
+      let settled = false,
+        following = false, // a redirect was followed: a late error of the redirect's own body must not cancel the new hop
+        req = null;
+      let timer = null;
+      const finish = v => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(v);
+      };
+      const lose = () => {
+        if (!following) finish(null);
+      };
+      const stop = () => {
+        try {
+          if (req) req.destroy();
+        } catch (_) {}
+      };
+      // The timer is not reset per hop: the whole fetch (redirects included) has about four seconds.
+      timer = setTimeout(() => {
+        stop();
+        finish(null);
+      }, LOGO_MS);
+      if (timer.unref) timer.unref();
+      try {
+        const lib = String(address).indexOf('https:') === 0 ? require('https') : http; // most provider logos sit on https
+        req = nc.get(lib, address, {}, r => {
+          if (LOGO_REDIRECT[r.statusCode] && r.headers.location && hops < LOGO_HOPS) {
+            following = true;
+            r.on('error', () => {}); // the redirect's own body is not read: whatever happens to it is not this logo's answer
+            r.on('aborted', () => {});
+            r.resume();
+            let next;
+            try {
+              next = new nc.URL(String(r.headers.location), String(address)).toString();
+            } catch (_) {
+              return finish(null);
+            }
+            if (!/^https?:\/\//i.test(next)) return finish(null); // a redirect must stay on the web (never file: or the like)
+            return fetchLogo(next, hops + 1).then(finish);
+          }
+          if (r.statusCode !== 200) {
+            r.resume();
+            return finish(null);
+          }
+          const chunks = [];
+          let size = 0;
+          r.on('data', c => {
+            size += c.length;
+            if (size > LOGO_MAX) {
+              stop(); // over the cap: drop the connection, keep nothing
+              return finish(null);
+            }
+            chunks.push(c);
+          });
+          r.on('end', () => finish(size ? { buf: Buffer.concat(chunks), type: r.headers['content-type'] || 'image/png' } : null));
+          r.on('aborted', lose);
+          r.on('error', lose);
+        });
+        req.on('error', lose);
+        req.setTimeout(LOGO_MS, () => {
+          stop();
+          lose();
+        });
+      } catch (_) {
+        return finish(null);
+      }
+    });
   }
   function logo(res, num, send) {
     if (!num) return send(404, { error: 'no logo' }, 'application/json');
@@ -546,31 +663,15 @@ function create(ctx, opts) {
       res.writeHead(200, { 'content-type': hit.type, 'cache-control': 'max-age=3600' });
       return res.end(hit.buf);
     }
-    channelLogo(num).then(url => {
-      if (!url) return send(404, { error: 'no logo' }, 'application/json');
-      try {
-        const mod = url.indexOf('https:') === 0 ? require('https') : http; // most provider logos sit on https
-        mod
-          .get(url, r => {
-            if (r.statusCode !== 200) {
-              r.resume();
-              return send(404, { error: 'no logo' }, 'application/json');
-            }
-            const chunks = [];
-            r.on('data', c => chunks.push(c));
-            r.on('end', () => {
-              const buf = Buffer.concat(chunks);
-              const type = r.headers['content-type'] || 'image/png';
-              if (buf.length && buf.length < 512 * 1024) logoCache[num] = { at: Date.now(), type, buf };
-              res.writeHead(200, { 'content-type': type, 'cache-control': 'max-age=3600' });
-              res.end(buf);
-            });
-          })
-          .on('error', () => send(404, { error: 'no logo' }, 'application/json'));
-      } catch (_) {
-        send(404, { error: 'no logo' }, 'application/json');
-      }
-    });
+    channelLogo(num)
+      .then(url => (url ? fetchLogo(url, 0) : null))
+      .then(img => {
+        if (!img || !img.buf.length) return send(404, { error: 'no logo' }, 'application/json');
+        logoCache[num] = { at: Date.now(), type: img.type, buf: img.buf };
+        res.writeHead(200, { 'content-type': img.type, 'cache-control': 'max-age=3600' });
+        res.end(img.buf);
+      })
+      .catch(() => send(404, { error: 'no logo' }, 'application/json'));
   }
 
   function appIcon(res, id, send) {
@@ -695,7 +796,7 @@ function create(ctx, opts) {
       expireDays: expireDays(),
       listening: !!(srv && srv.listening),
       port: port(),
-      error: listenError,
+      listenError: listenError,
       // the app, for the manager's QR code: the phone downloads it from this port, so no computer is needed. downloads/last tell the
       // manager that the phone has taken it, so it can move on to pairing
       app: {

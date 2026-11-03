@@ -1157,7 +1157,7 @@ function build() {
     });
     rows.push({
       label: 'Paired phones',
-      sub: ph.length ? prCount(ph.length) : 'none yet',
+      sub: ph.length ? tr(prCount(ph.length)) : tr('none yet'),
       info: { t: 'Paired phones', d: 'The phones that can control the TV, and when each was last used. Choose one to block or remove it.' },
       fn: function () {
         push('phones');
@@ -1171,15 +1171,18 @@ function build() {
     var lst = (pr && pr.phones) || [];
     rows.push({
       label: 'Paired phones',
-      sub: lst.length ? (lst.length === 1 ? 'one phone' : lst.length + ' in all') : 'none yet',
+      sub: lst.length ? (lst.length === 1 ? 'one phone' : lst.length + ' in all') : tr('none yet'),
       fn: null,
     });
     if (!lst.length) rows.push({ label: 'No phone is paired', sub: 'Pair a phone, and it is listed here', fn: null });
     lst.forEach(function (p) {
       rows.push({
         label: p.name,
-        sub: p.blocked ? 'blocked' : p.online ? 'connected' : prAgo(p.seen),
-        info: { t: p.name, d: 'Last used ' + prAgo(p.seen) + prPaired(p) + '. Choose it to block or remove it.' },
+        sub: p.blocked ? tr('blocked') : p.online ? tr('connected') : prAgo(p.seen),
+        info: {
+          t: p.name,
+          d: tr('Last used ' + prAgo(p.seen)) + prPaired(p) + '. ' + tr('Choose it to block or remove it.'),
+        },
         fn: function () {
           prSel = p;
           push('prphone');
@@ -1203,7 +1206,7 @@ function build() {
     var sp = prSel || {};
     rows.push({
       label: sp.name || 'Phone',
-      sub: (sp.blocked ? 'blocked' : 'allowed') + ' \u00B7 last used ' + prAgo(sp.seen) + prPaired(sp),
+      sub: (sp.blocked ? tr('blocked') : tr('allowed')) + ' \u00B7 ' + tr('last used ' + prAgo(sp.seen)) + prPaired(sp),
       fn: null,
     });
     rows.push({
@@ -1501,7 +1504,8 @@ function build() {
     if (pr)
       rows.push({
         label: 'Phone remote',
-        sub: pr ? (pr.enabled ? prCount(pr.phones.length) + ' paired' : onoff(false)) : '',
+        /* the count and the word after it are translated apart: a template has to match the whole string, and "2 phones paired" matches none */
+        sub: pr.enabled ? (pr.phones.length ? tr(prCount(pr.phones.length)) + ' ' + tr('paired') : tr('no phones paired')) : onoff(false),
         info: {
           t: 'Phone remote',
           d: 'Use a phone as the TV remote over your Wi-Fi. Pair it once with a QR code and a 6-digit code, then use the web page or the Android app. Each phone can be blocked or removed, and unused ones are removed by themselves.',

@@ -22,11 +22,20 @@ Needs Java 8+ (`javac`, `keytool`) and the Android SDK (`ANDROID_HOME`, or the u
 `helper/addons-bundled/phoneremote/tv-remote.apk` (about 25 KB, handed to the phone as **TV Remote.apk**), signed with a local key made on the first build and kept in
 `mobile/android/build-keystore/` (so a rebuild installs over the previous app instead of being refused).
 
+The build uses build-tools `34.0.0` and platform `android-34` (the app's target SDK), not "the newest installed"; `-BuildTools` and `-Platform` change them.
+A package is not byte for byte the same on every machine (zip times, the local signing key), so the build prints the SHA-256 of what it made, and
+the one of the committed app is kept here for review and checked by `tools/test/mobile.test.js`:
+
+```
+tv-remote.apk SHA-256  f3f8e03410a98fbe3a107c44bf755515aa86fdb4d8cc4692a159883c4198b199
+```
+
 `-Sdk <path>` and `-JavaHome <path>` override where it looks.
 
 ## The TV hands the app out
 
-The package ships that APK (`ipk/build.py` puts it in `service/mobile/`, `scripts/bootstrap.sh` copies it next to the service), and the
+The package ships that APK (`ipk/build.py` copies all of `helper/`, so the package has it at
+`service/helper/addons-bundled/phoneremote/tv-remote.apk`, and `scripts/bootstrap.sh` copies `addons-bundled/` next to the service), and the
 phone remote serves it on its own port: **`http://<tv>:8798/app.apk`**. In the manager app, **Features › Phone remote › Install the app (Android)**
 shows a QR code for exactly that address: scan it, open the download, install. No computer, no cable, and the phone never leaves the
 network the TV is on.
@@ -41,7 +50,8 @@ any change to the app, otherwise the TV keeps handing out the old one.
    so a phone without a camera app can just type that address; `adb install` works too.
 2. On the TV: **Features › Phone remote** must be on, with the pairing screen open (it shows the address, e.g. `http://192.168.1.50:8798`, and a
    6-digit code).
-3. Open the app, tap **Find my TV** (or **Type the address instead** and type the TV's address), and the TV's page asks for the 6-digit code it shows. The
+3. Open the app and tap **Find my TV** — the address it finds is only filled into the field, so tap **Continue** to open it — or tap
+   **Type the address instead** and type the TV's address; the TV's page then asks for the 6-digit code it shows. The
    other way round: scan the code on the TV with the **phone's camera** — the app opens itself with the address and the code already in
    place, so nothing has to be typed.
 
@@ -52,7 +62,7 @@ any change to the app, otherwise the TV keeps handing out the old one.
    If a scanned code names a TV other than the one the app already has, the app asks **Connect to `<address>`?** with **Connect** and
    **Cancel**. Nothing is saved and nothing is paired until you tap Connect. A link whose address is not a private IPv4 address is ignored
    with a message.
-4. Done. The page hands the TV's network address to the app over the bridge when it connects, so the app can wake the TV later without any
+4. Done. The TV's page hands the TV's MAC address to the app over the bridge when it connects, so the app can wake the TV later without any
    setup of its own.
 
 The app asks for two permissions and no more: `INTERNET`, and `VIBRATE`, which makes a key press answer with a short tick under the thumb
@@ -81,7 +91,9 @@ Nothing is sent anywhere but the TV. There is no analytics and no account.
   (`mobile/android/res/drawable/icon.xml`).
 - Plain HTTP to the LAN is enabled on purpose (`usesCleartextTraffic`), because that is how the TV serves its page.
 - The app only lets the WebView load the TV's own address and its start page; anything else opens in the browser. That matters because a
-  JavaScript bridge is exposed to whatever the WebView loads.
+  JavaScript bridge is exposed to whatever the WebView loads. Only the bundled start page may set the TV's address (`setAddr`), and a TV
+  found by the search is only used when its own SSDP reply says `webos-second-screen` in `ST:` or `USN:`, so another machine on the network
+  cannot answer the search and get the page (and the bridge) for itself.
 - The TV must have **TV On With Mobile** (Wake-on-LAN) on — the Power sheet says so when the TV reports it off — and the phone must be on
   the same Wi-Fi when you tap Turn on.
 - Switching the TV between cable and Wi-Fi changes its MAC: use the app once with the TV on and it learns the new one.

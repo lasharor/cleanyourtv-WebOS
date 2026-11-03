@@ -13,6 +13,7 @@ var napi = null,
   wp = null,
   ab = null,
   pr = null,
+  prMiss = 0,
   prSel = null,
   prSeen = 0,
   prApp = false, // this pairing screen came from the install flow: its code opens the app, not the browser
