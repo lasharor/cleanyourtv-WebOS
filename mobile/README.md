@@ -27,7 +27,7 @@ Needs Java 8+ (`javac`, `keytool`) and the Android SDK (`ANDROID_HOME`, or the u
 ## The TV hands the app out
 
 The package ships that APK (`ipk/build.py` puts it in `service/mobile/`, `scripts/bootstrap.sh` copies it next to the service), and the
-phone remote serves it on its own port: **`http://<tv>:8794/app.apk`**. In the manager app, **Phone remote › Install the app (Android)**
+phone remote serves it on its own port: **`http://<tv>:8794/app.apk`**. In the manager app, **Features › Phone remote › Install the app (Android)**
 shows a QR code for exactly that address: scan it, open the download, install. No computer, no cable, and the phone never leaves the
 network the TV is on.
 
@@ -36,10 +36,10 @@ any change to the app, otherwise the TV keeps handing out the old one.
 
 ## Install and set up
 
-1. On the TV: **Phone remote › Install the app (Android)**, and scan the code with the phone's camera. Open the download and install it
+1. On the TV, in the manager app: **Features › Phone remote › Install the app (Android)**, and scan the code with the phone's camera. Open the download and install it
    (allow the browser to install apps). The same file is `mobile/app/tv-remote.apk`, also reachable at `http://<tv>:8794/app.apk`,
    so a phone without a camera app can just type that address; `adb install` works too.
-2. On the TV: **Phone remote** must be on, with the pairing screen open (it shows the address, e.g. `http://192.168.1.50:8794`, and a
+2. On the TV: **Features › Phone remote** must be on, with the pairing screen open (it shows the address, e.g. `http://192.168.1.50:8794`, and a
    6-digit code).
 3. Open the app, type the TV's address (or tap **Find the TV on this network**), and the TV's page asks for the 6-digit code it shows. The
    other way round: scan the code on the TV with the **phone's camera** — the app opens itself with the address and the code already in

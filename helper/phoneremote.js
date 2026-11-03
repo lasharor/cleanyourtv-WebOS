@@ -349,7 +349,9 @@ function create(ctx, opts) {
     netinfo().then(n => {
       tvName().then(tv => {
         if (c.conn.closed) return;
-        c.conn.send(JSON.stringify({ t: 'ready', name: p.name, tv, keys: keys.KEYS, mac: n.mac, wol: n.wol, seen: lastUsed, created: p.created }));
+        c.conn.send(
+          JSON.stringify({ t: 'ready', name: p.name, tv, keys: keys.KEYS, mac: n.mac, wol: n.wol, seen: lastUsed, created: p.created })
+        );
       });
     });
   }

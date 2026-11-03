@@ -12,7 +12,9 @@ const { ok, root, run } = require('./lib');
 const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 const page = read('mobile/web/start.html');
 const javaDir = 'mobile/android/java/com/cleanyourtv/phone/';
-const java = ['MainActivity.java', 'Store.java', 'Wake.java', 'Discover.java', 'Reach.java', 'Addr.java', 'Backoff.java'].map(f => read(javaDir + f)).join('\n');
+const java = ['MainActivity.java', 'Store.java', 'Wake.java', 'Discover.java', 'Reach.java', 'Addr.java', 'Backoff.java']
+  .map(f => read(javaDir + f))
+  .join('\n');
 const bridge = read(javaDir + 'MainActivity.java');
 
 run(async () => {
@@ -174,12 +176,50 @@ run(async () => {
   );
 
   // ---- a cytv:// link is browsable, so any web page can send one: only private IPv4 addresses are ever stored, and a new TV needs a yes ----
-  const good = ['192.168.1.50', '192.168.1.50:8794', 'http://192.168.1.50:8794/', '10.0.0.5:9000', '172.16.3.4', '172.31.255.254', '169.254.1.1'];
-  const goodOut = ['192.168.1.50:8794', '192.168.1.50:8794', '192.168.1.50:8794', '10.0.0.5:9000', '172.16.3.4:8794', '172.31.255.254:8794', '169.254.1.1:8794'];
+  const good = [
+    '192.168.1.50',
+    '192.168.1.50:8794',
+    'http://192.168.1.50:8794/',
+    '10.0.0.5:9000',
+    '172.16.3.4',
+    '172.31.255.254',
+    '169.254.1.1',
+  ];
+  const goodOut = [
+    '192.168.1.50:8794',
+    '192.168.1.50:8794',
+    '192.168.1.50:8794',
+    '10.0.0.5:9000',
+    '172.16.3.4:8794',
+    '172.31.255.254:8794',
+    '169.254.1.1:8794',
+  ];
   const badAddr = [
-    'example.com', '8.8.8.8', '192.168.1.256', 'evil.com:8794', '192.168.1.50@evil.com', '', '   ', '::1', '[fe80::1]:8794', 'fe80::1',
-    '172.32.0.1', '172.15.0.1', '192.169.1.1', '11.0.0.1', '192.168.1', '192.168.1.50.5', '192.168.1.50:0', '192.168.1.50:65536',
-    '192.168.1.50:80a', '192.168.1.50/path', 'user:pw@192.168.1.50', 'https://192.168.1.50', '192.168.01.50', '192.168.1.50:', '127.0.0.1'
+    'example.com',
+    '8.8.8.8',
+    '192.168.1.256',
+    'evil.com:8794',
+    '192.168.1.50@evil.com',
+    '',
+    '   ',
+    '::1',
+    '[fe80::1]:8794',
+    'fe80::1',
+    '172.32.0.1',
+    '172.15.0.1',
+    '192.169.1.1',
+    '11.0.0.1',
+    '192.168.1',
+    '192.168.1.50.5',
+    '192.168.1.50:0',
+    '192.168.1.50:65536',
+    '192.168.1.50:80a',
+    '192.168.1.50/path',
+    'user:pw@192.168.1.50',
+    'https://192.168.1.50',
+    '192.168.01.50',
+    '192.168.1.50:',
+    '127.0.0.1',
   ];
   // the page's own copy of the rule (the same answers, before anything is stored or opened)
   const pageClean = (() => {
@@ -223,7 +263,10 @@ run(async () => {
       .split(/\r?\n/);
     good.forEach((g, i) => ok(out[i] === '[' + goodOut[i] + ']', 'Addr.clean (compiled): ' + g + ' -> ' + goodOut[i]));
     badAddr.forEach((b, i) => ok(out[good.length + i] === '[]', 'Addr.clean (compiled) refuses: ' + JSON.stringify(b)));
-    ok(out[all.length] === 'B 0 1000 2000 4000 8000 10000 10000 10000 10000', 'the retry delay: at once, 1 s, 2 s, 4 s, 8 s, then never more than 10 s');
+    ok(
+      out[all.length] === 'B 0 1000 2000 4000 8000 10000 10000 10000 10000',
+      'the retry delay: at once, 1 s, 2 s, 4 s, 8 s, then never more than 10 s'
+    );
     try {
       fs.rmSync(dir, { recursive: true, force: true });
     } catch (e) {
@@ -236,7 +279,10 @@ run(async () => {
     !/import android/.test(read(javaDir + 'Addr.java')) && !/import android/.test(read(javaDir + 'Backoff.java')),
     'the address rules and the backoff use no Android class (they can be tested with javac alone)'
   );
-  ok(/static String clean\(String v\) \{\s+return Addr\.clean\(v\);/.test(storeSrc), 'Store.clean is the one rule, and it is the private-address one');
+  ok(
+    /static String clean\(String v\) \{\s+return Addr\.clean\(v\);/.test(storeSrc),
+    'Store.clean is the one rule, and it is the private-address one'
+  );
   ok(/if \(v\.length\(\) > 0\) p\.edit\(\)\.putString\("addr"/.test(storeSrc), 'an address that is refused is never stored');
   ok(/Addr\.clean\(v\)/.test(read(javaDir + 'Discover.java')), 'an address found by the search goes through the same rule');
   const link = bridge.slice(bridge.indexOf('private boolean link('), bridge.indexOf('private void start()'));
@@ -256,7 +302,10 @@ run(async () => {
     'before the user agrees nothing is saved and no pairing code is kept; Cancel clears the code and leaves the saved address alone'
   );
   ok(/Toast\.makeText/.test(link) && /local network/.test(link), 'a link with a bad address says so');
-  ok(/local network/.test(page) && /like 192\.168\.1\.50/.test(page), 'the start page says a bad address must be the TV on the local network');
+  ok(
+    /local network/.test(page) && /like 192\.168\.1\.50/.test(page),
+    'the start page says a bad address must be the TV on the local network'
+  );
 
   // ---- a failing load is retried with a pause, never in a tight loop ----
   ok(
@@ -285,7 +334,9 @@ run(async () => {
     'the build copies both pages into the package: pairing, and the "TV is off" screen'
   );
   ok(
-    /@JavascriptInterface\s+public\s+void\s+forget\(/.test(bridge) && /@JavascriptInterface\s+public\s+String\s+bye\(/.test(bridge) && /void forget\(/.test(read(javaDir + 'Store.java')),
+    /@JavascriptInterface\s+public\s+void\s+forget\(/.test(bridge) &&
+      /@JavascriptInterface\s+public\s+String\s+bye\(/.test(bridge) &&
+      /void forget\(/.test(read(javaDir + 'Store.java')),
     'logging out: the page can make the app forget the TV (forget) and read how it went (bye)'
   );
   ok(/call\('bye'/.test(page) && /removed from the TV/.test(page), 'and the start page tells the user how the log out went');

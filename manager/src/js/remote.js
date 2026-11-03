@@ -1,4 +1,5 @@
 /* Phone remote: a page on a paired phone that works as the TV's remote (helper/phoneremote.js). On/off, pairing by QR code, the paired phones */
+var qrShown = ''; /* the text the QR code on screen was drawn from */
 function openPhoneRemote() {
   api('/api/phoneremote').then(
     function (r) {
@@ -94,7 +95,15 @@ function prPaired(p) {
 /* the setting "Remove unused phones" in words: 14 -> "after 2 weeks", 0 -> "never" */
 function prExpireLabel(d) {
   d = d === undefined ? 14 : d;
-  return d === 0 ? 'never' : d === 30 ? 'after 1 month' : d === 14 ? 'after 2 weeks' : d === 7 ? 'after 1 week' : 'after ' + d + (d === 1 ? ' day' : ' days');
+  return d === 0
+    ? 'never'
+    : d === 30
+      ? 'after 1 month'
+      : d === 14
+        ? 'after 2 weeks'
+        : d === 7
+          ? 'after 1 week'
+          : 'after ' + d + (d === 1 ? ' day' : ' days');
 }
 function prAgo(t) {
   var m = Math.round((Date.now() - t) / 60000);

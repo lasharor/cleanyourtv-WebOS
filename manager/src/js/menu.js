@@ -1272,7 +1272,11 @@ function build() {
   }
   if (view === 'prphone') {
     var sp = prSel || {};
-    rows.push({ label: sp.name || 'Phone', sub: (sp.blocked ? 'blocked' : 'allowed') + ' \u00B7 last used ' + prAgo(sp.seen) + prPaired(sp), fn: null });
+    rows.push({
+      label: sp.name || 'Phone',
+      sub: (sp.blocked ? 'blocked' : 'allowed') + ' \u00B7 last used ' + prAgo(sp.seen) + prPaired(sp),
+      fn: null,
+    });
     rows.push({
       label: sp.blocked ? 'Allow this phone' : 'Block this phone',
       sub: sp.blocked ? 'it can connect again with the token it has' : 'it stays paired but sends nothing until you allow it',
@@ -1292,7 +1296,7 @@ function build() {
     return;
   }
   if (view === 'prexpire') {
-    var cur = pr && pr.expireDays !== undefined ? pr.expireDays : 14;
+    var expireCur = pr && pr.expireDays !== undefined ? pr.expireDays : 14;
     rows.push({
       label: 'Remove phones that are not used',
       sub: 'for security',
@@ -1311,7 +1315,7 @@ function build() {
     ].forEach(function (o) {
       rows.push({
         label: o[1],
-        sub: cur === o[0] ? 'selected' : o[0] === 14 ? 'default' : '',
+        sub: expireCur === o[0] ? 'selected' : o[0] === 14 ? 'default' : '',
         info: { t: 'After ' + o[1], d: 'A phone not used for ' + o[1] + ' is removed. ' + o[2] },
         fn: function () {
           prCall('/api/phoneremote', { expireDays: o[0] }, 'Saved');
@@ -1321,10 +1325,13 @@ function build() {
     rows.push({ sep: true });
     rows.push({
       label: 'Never remove',
-      sub: cur === 0 ? 'selected' : 'not recommended',
-      info: { t: 'Never remove', d: 'Not recommended: a lost phone keeps the remote for ever, until you remove it by hand in Paired phones. You are asked to confirm.' },
+      sub: expireCur === 0 ? 'selected' : 'not recommended',
+      info: {
+        t: 'Never remove',
+        d: 'Not recommended: a lost phone keeps the remote for ever, until you remove it by hand in Paired phones. You are asked to confirm.',
+      },
       fn: function () {
-        if (cur !== 0) push('confirm-pr-exp-off');
+        if (expireCur !== 0) push('confirm-pr-exp-off');
       },
     });
     rows.push({ sep: true });
