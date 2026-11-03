@@ -264,6 +264,20 @@ function create(ctx) {
         return null;
       }
     }
+    // the picture of a card of an add-on is in the add-on's folder: cards/<id>/preview.jpg
+    const own = fromAddons()[id];
+    if (own) {
+      const e = ctx
+        .feature('addons')
+        .cardsOf()
+        .filter(x => x.addon === own.addon && x.card.id === id)[0];
+      try {
+        const b = e && fs.readFileSync(path.join(e.dir, 'cards', id, 'preview.jpg'));
+        return b && imageType(b) ? b : null;
+      } catch (_) {
+        return null;
+      }
+    }
     const pd = path.join(P.CARDPACKS, '.previews'),
       f = path.join(pd, id + '.img');
     let st = null;

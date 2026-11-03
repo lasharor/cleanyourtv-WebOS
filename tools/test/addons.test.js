@@ -78,7 +78,9 @@ run(async () => {
   );
 
   const cfg = req('config').memory({ addons: { later: { enabled: false } } });
-  const a = addons.create({ config: cfg, version: '1.6.11', feature: () => null });
+  // the service of this tree (the catalog's add-ons ask for the service they need)
+  const SVC = /const VERSION = '([^']+)'/.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'helper', 'helper.js'), 'utf8'))[1];
+  const a = addons.create({ config: cfg, version: SVC, feature: () => null });
   a.start();
   const by = id => a.list().filter(x => x.id === id)[0];
   ok(by('demo').status === 'running' && by('demo').enabled, 'a good add-on runs');
@@ -203,7 +205,7 @@ run(async () => {
   idx.addons.forEach(e => {
     const m = req('addons').check(
       JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'addons', 'catalog', e.id, 'addon.json'), 'utf8')),
-      '1.6.11'
+      /const VERSION = '([^']+)'/.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'helper', 'helper.js'), 'utf8'))[1] // the service of this tree
     );
     ok(m.manifest && m.manifest.version === e.version, 'catalog add-on ' + e.id + ' has a valid manifest');
   });

@@ -724,5 +724,15 @@
     "paused until %s": "en pausa fins a les %s",
     "that does not look like an Unsplash Access Key": "això no sembla una Access Key d'Unsplash",
     "a new photo at most every 3 minutes": "una foto nova com a màxim cada 3 minuts",
-    "paused for the hourly limit": "en pausa pel límit per hora"
+    "paused for the hourly limit": "en pausa pel límit per hora",
+    "Hours": "Hores",
+    "Days": "Dies",
+    "Humidity": "Humitat",
+    "Wind": "Vent",
+    "Rain chance": "Probabilitat de pluja",
+    "UV index": "Índex UV",
+    "Pressure": "Pressió",
+    "Air quality": "Qualitat de l'aire",
+    "Sunrise": "Sortida del sol",
+    "Sunset": "Posta de sol"
 }

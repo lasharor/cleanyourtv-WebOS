@@ -752,5 +752,14 @@
   "paused until %s": "متوقف مؤقتًا حتى %s",
   "that does not look like an Unsplash Access Key": "لا يبدو هذا مفتاح Access Key من Unsplash",
   "a new photo at most every 3 minutes": "صورة جديدة كل 3 دقائق على الأكثر",
-  "paused for the hourly limit": "متوقف مؤقتًا بسبب الحدّ الساعي"
+  "paused for the hourly limit": "متوقف مؤقتًا بسبب الحدّ الساعي",
+  "Hours": "الساعات",
+  "Days": "الأيام",
+  "Humidity": "الرطوبة",
+  "Wind": "الرياح",
+  "Rain chance": "احتمال المطر",
+  "UV index": "مؤشر الأشعة فوق البنفسجية",
+  "Pressure": "الضغط",
+  "Air quality": "جودة الهواء",
+  "Sunset": "الغروب"
 }

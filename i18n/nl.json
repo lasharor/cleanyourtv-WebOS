@@ -773,5 +773,14 @@
  "paused until %s": "gepauzeerd tot %s",
  "that does not look like an Unsplash Access Key": "dit lijkt niet op een Unsplash Access Key",
  "a new photo at most every 3 minutes": "hoogstens elke 3 minuten een nieuwe foto",
- "paused for the hourly limit": "gepauzeerd door het uurlimiet"
+ "paused for the hourly limit": "gepauzeerd door het uurlimiet",
+ "Hours": "Uren",
+ "Days": "Dagen",
+ "Humidity": "Vochtigheid",
+ "Rain chance": "Kans op regen",
+ "UV index": "UV-index",
+ "Pressure": "Luchtdruk",
+ "Air quality": "Luchtkwaliteit",
+ "Sunrise": "Zonsopgang",
+ "Sunset": "Zonsondergang"
 }

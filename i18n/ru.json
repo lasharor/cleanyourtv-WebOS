@@ -731,5 +731,15 @@
  "paused until %s": "приостановлено до %s",
  "that does not look like an Unsplash Access Key": "это не похоже на Access Key от Unsplash",
  "a new photo at most every 3 minutes": "новое фото не чаще раза в 3 минуты",
- "paused for the hourly limit": "приостановлено из-за часового лимита"
+ "paused for the hourly limit": "приостановлено из-за часового лимита",
+ "Hours": "Часы",
+ "Days": "Дни",
+ "Humidity": "Влажность",
+ "Wind": "Ветер",
+ "Rain chance": "Вероятность дождя",
+ "UV index": "УФ-индекс",
+ "Pressure": "Давление",
+ "Air quality": "Качество воздуха",
+ "Sunrise": "Восход",
+ "Sunset": "Закат"
 }

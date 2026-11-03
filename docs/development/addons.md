@@ -218,6 +218,7 @@ left out stays installed and running but has no button.
 | `sysinfo` | Memory, swap, load and uptime of the TV, live, from `/proc`. |
 | `immich` | Photos from your Immich albums as the Home wallpaper, a photo source (see above): the sync, the albums and the phone page (port 8795) moved here from Wallpapers. A TV that had Immich before hands its settings and photos to it once. |
 | `unsplash` | A new random photo from Unsplash as the Home wallpaper, a live photo source (see above): the Access Key, the 3-minute pace, the credit line and the phone page (port 8796). Pictures stay on Unsplash's host; nothing is saved on the TV. |
+| `weather` | The **Weather forecast** card for Home, a card of an add-on (see above): the weather at a city you choose on the phone page, with buttons for the remote (Now, Hours, Days). From Open-Meteo, no key; only the coordinates leave the TV, at most every 30 minutes. |
 
 ## Versions
 
