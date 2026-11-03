@@ -33,6 +33,12 @@ body { color: #fff; font-family: sans-serif; }
 .np-sm .np-n { font-size: 28px; margin-top: 2px; }
 .np-sm .np-a { font-size: 22px; margin-top: 0; }
 .np-sm .np-bar { height: 5px; margin-top: 8px; }
+.np-xs { border-radius: 8px !important; }
+.np-xs .np-art { border-radius: 8px 0 0 8px; }
+.np-xs .np-t { padding: 0 12px; }
+.np-xs .np-s, .np-xs .np-a, .np-xs .np-bar { display: none; }
+.np-xs .np-n { margin-top: 0; line-height: 1.1; }
+[dir=rtl] .np-xs .np-art { border-radius: 0 8px 8px 0; }
 [dir=rtl] .np-bar i { transform-origin: 100% 50%; }
 [dir=rtl] .np-sm { padding: 0 0 0 20px !important; }
 [dir=rtl] .np-sm .np-art { border-radius: 0 14px 14px 0; }

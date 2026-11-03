@@ -100,8 +100,9 @@ function create(ctx) {
     if (l.error) return { error: T(l.error) };
     const items = l.devices.map(d => ({
       id: d.id,
-      label: d.name || d.type,
-      sub: d.active ? T('Playing here') : d.type,
+      // a device that gave no name (or only its id) is shown by its kind
+      label: d.name && d.name !== d.id ? d.name : d.type || 'Speaker',
+      sub: d.active ? T('Playing here') : d.name && d.name !== d.id ? d.type : '',
       icon: icon(d.type),
       active: d.active,
     }));

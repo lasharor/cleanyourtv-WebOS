@@ -12,7 +12,8 @@ var ICON = {
 };
 var BUTTONS = ['prev', 'toggle', 'next', 'output'],
   MAXH = 250 /* the tallest the card gets, and the width of a pill */,
-  MAXW = 720;
+  MAXW = 720,
+  GAP = 28;
 var M = null,
   D = null,
   rcv = 0,
@@ -100,19 +101,54 @@ function cover(box, src) {
 }
 /* the card: the cover, the lines, the bar and the buttons, made once. A place at least 200 high gets the pill (a cover of the height, three
    lines and the buttons); a smaller one the cover at its own height, without buttons. */
+/* the shape of the place: a strip under 80 high (one line), a compact card under 200, else the pill */
+function modeOf() {
+  var H = window.innerHeight || MAXH;
+  return H < 80 ? 'xs' : H < 200 ? 'sm' : 'big';
+}
+/* a pill narrower than its 720 is laid out at 720 and shrunk to fit, so nothing is cut off */
 function build() {
   var card = document.getElementById('card'),
+    W = window.innerWidth || MAXW,
     H = window.innerHeight || MAXH,
-    big = H >= 200,
-    hh = big ? Math.min(H, MAXH) : H;
+    mode = modeOf(),
+    big = mode === 'big',
+    /* a place about as tall as the pill (above the dock) leaves a gap at its foot, so the card does not sit on the dock */
+    room = big && H <= MAXH + 10 ? H - GAP : H,
+    s = big ? Math.min(1, W / MAXW, room / MAXH) : 1,
+    hh = big ? Math.min(room / s, MAXH) : H;
   card.textContent = '';
-  card.className = big ? '' : 'np-sm';
-  card.style.cssText = 'height:' + hh + 'px;width:' + (big ? MAXW : window.innerWidth || MAXW) + 'px';
+  card.className = big ? '' : mode === 'xs' ? 'np-sm np-xs' : 'np-sm';
+  /* the strip is as wide as its cover and text (up to the place): a long text runs to its end and back */
+  card.style.cssText = 'height:' + hh + 'px;' + (mode === 'xs' ? 'width:auto;max-width:' + W + 'px' : 'width:' + (big ? MAXW : W) + 'px');
+  /* the pill sits on the side the place is on (the theme's align), as the card of the launcher did */
+  var al = M && M.align === 'right' ? 'right' : M && M.align === 'center' ? 'center' : '',
+    cw = (big ? MAXW : W) * s,
+    atRight = al === 'right' || (!al && M && M.dir === 'rtl');
+  if (al === 'center') card.style.left = Math.max(0, (W - cw) / 2) + 'px';
+  else if (atRight) card.style.cssText += ';left:auto;right:0';
+  card.style.transformOrigin = (al === 'center' ? 'left' : atRight ? 'right' : 'left') + ' top';
+  if (s < 1) card.style.transform = 'scale(' + s.toFixed(4) + ')';
   var art = el('div', 'np-art'),
     t = el('div', 'np-t'),
     c = el('div', 'np-c'),
-    b = { card: card, big: big, art: art, s: line('np-s'), n: line('np-n'), a: line('np-a'), bar: el('div', 'np-bar'), c: c, btn: {} };
+    b = {
+      card: card,
+      big: big,
+      mode: mode,
+      al: (M && M.align) || '',
+      w: W,
+      h: H,
+      art: art,
+      s: line('np-s'),
+      n: line('np-n'),
+      a: line('np-a'),
+      bar: el('div', 'np-bar'),
+      c: c,
+      btn: {},
+    };
   art.style.width = art.style.height = (big ? hh - 40 : hh) + 'px';
+  if (mode === 'xs') b.n.style.fontSize = Math.max(10, Math.round(H * 0.6)) + 'px';
   b.bar.appendChild(el('i'));
   BUTTONS.forEach(function (n) {
     var d = el('div', 'np-btn');
@@ -143,8 +179,12 @@ function tick() {
   built.bar.firstChild.style.transform = 'scaleX(' + Math.max(0, Math.min(1, f)).toFixed(3) + ')';
   if (built.time._tx !== tx) built.time.textContent = built.time._tx = tx;
   /* a narrow place has no room for the time next to the buttons: it is left out rather than cut in half */
+  var tl = built.time.offsetLeft - built.c.offsetLeft,
+    ob = built.btn.output;
   built.time.style.visibility =
-    built.time.offsetLeft + built.time.offsetWidth > built.c.clientWidth || built.time.offsetLeft < 0 ? 'hidden' : '';
+    built.big && (tl + built.time.offsetWidth > built.c.clientWidth + 1 || tl < ob.offsetLeft + ob.offsetWidth - built.c.offsetLeft)
+      ? 'hidden'
+      : '';
   [built.s, built.n, built.a].forEach(function (b) {
     if (b.clientWidth !== b._fw) fit(b);
   });
@@ -170,7 +210,7 @@ function tell() {
     add('open', built.art, 'ring', 10);
     if (built.big)
       BUTTONS.forEach(function (n) {
-        add(n, built.btn[n], 'fill', 26);
+        add(n, built.btn[n], 'ring', 26);
       });
   }
   var k = JSON.stringify(out);
@@ -194,7 +234,10 @@ function draw() {
     tell();
     return;
   }
-  var b = built && built.big === window.innerHeight >= 200 ? built : build();
+  var b =
+    built && built.mode === modeOf() && built.al === (M.align || '') && built.w === window.innerWidth && built.h === window.innerHeight
+      ? built
+      : build();
   card.style.display = '';
   b.bar.style.display = M.opt && M.opt.bar === 'off' ? 'none' : '';
   var k = D.title + '|' + D.artist + '|' + D.cover + '|' + D.device;
@@ -202,7 +245,7 @@ function draw() {
     key = k;
     cover(b.art, D.cover);
     text(b.s, D.device ? D.playingOn + ' ' + D.device : D.nowPlaying);
-    text(b.n, D.title);
+    text(b.n, b.mode === 'xs' && D.artist ? D.title + ' · ' + D.artist : D.title);
     text(b.a, D.artist);
   }
   icon(b.btn.prev, 'prev');
