@@ -485,7 +485,14 @@ function build() {
       label: a1.enabled ? 'Switch off' : 'Switch on',
       sub: a1.enabled ? 'on' : 'off',
       fn: function () {
-        addonDo('/api/addons/' + a1.id + '/enable', { enabled: !a1.enabled }, a1.name + (a1.enabled ? ' off' : ' on'));
+        if (a1.id === 'phoneremote' && a1.enabled) pr = null; /* switched off: its row on Features goes at once */
+        addonDo(
+          '/api/addons/' + a1.id + '/enable',
+          { enabled: !a1.enabled },
+          a1.name + (a1.enabled ? ' off' : ' on'),
+          /* switched on, the phone remote goes straight to its settings: pair a phone, the app */
+          a1.id === 'phoneremote' && !a1.enabled ? openPhoneRemote : null
+        );
       },
     });
     if (!a1.bundled)

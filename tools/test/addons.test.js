@@ -156,6 +156,56 @@ run(async () => {
       (await call(a, '/api/addons/old')).j.enabled,
     'switching it with its own switch needs no restart either (it stays loaded) and is saved'
   );
+  // a bundled service add-on that says "live": its switch starts and stops the service part at once, with no restart
+  const ldir = path.join(tmp, 'bundled', 'liveone');
+  req('netcompat').mkdirp(ldir);
+  fs.writeFileSync(
+    path.join(ldir, 'addon.json'),
+    JSON.stringify({
+      id: 'liveone',
+      name: 'Live one',
+      version: '1.0.0',
+      kind: 'service',
+      entry: { service: 's.js' },
+      routes: ['/api/liveone'],
+      live: true,
+    })
+  );
+  fs.writeFileSync(
+    path.join(ldir, 's.js'),
+    'const log = (global.__liveone = global.__liveone || []); exports.create = () => (log.push("create"), { start() { log.push("start"); }, stop() { log.push("stop"); }, handle: (q, r) => { r.writeHead(200); r.end(JSON.stringify({ ok: true })); } });'
+  );
+  cfg.update('test', c => {
+    c.addons = Object.assign({}, c.addons, { liveone: { enabled: false } });
+  });
+  a.load();
+  ok(
+    by('liveone').status === 'off' && !by('liveone').mod && (global.__liveone || []).length === 0,
+    'a live add-on that is switched off is not even created'
+  );
+  r = await call(a, '/api/liveone');
+  ok(r.code === 404, 'and its API path answers nothing');
+  r = await call(a, '/api/addons/liveone/enable', 'POST', { enabled: true });
+  ok(r.j.restartNeeded === false && by('liveone').status === 'running', 'switching it on runs it at once, with no restart');
+  ok(global.__liveone.join() === 'create,start', 'it is created and started');
+  r = await call(a, '/api/liveone');
+  ok(r.code === 200 && r.j.ok === true, 'and its API path answers');
+  r = await call(a, '/api/addons/liveone/enable', 'POST', { enabled: false });
+  ok(
+    r.j.restartNeeded === false && by('liveone').status === 'off' && global.__liveone.join() === 'create,start,stop',
+    'switching it off stops it at once'
+  );
+  r = await call(a, '/api/liveone');
+  ok(r.code === 404, 'and its API path is gone');
+  r = await call(a, '/api/addons/liveone/enable', 'POST', { enabled: true });
+  ok(by('liveone').status === 'running' && global.__liveone.join() === 'create,start,stop,create,start', 'on again, it is a new instance');
+  r = await call(a, '/api/addons/demo/enable', 'POST', { enabled: false });
+  ok(r.j.restartNeeded === true, 'an add-on that does not say live still needs the restart');
+  r = await call(a, '/api/addons/demo/enable', 'POST', { enabled: true });
+  cfg.update('test', c => {
+    c.addons = Object.assign({}, c.addons, { liveone: { enabled: false } });
+  });
+  a.load();
   ok(
     !a.list().filter(x => x.id === 'old')[0].page && a.match('/api/addons') && a.match('/addon/x/y') && !a.match('/api/live/x'),
     'match: the add-on paths only'

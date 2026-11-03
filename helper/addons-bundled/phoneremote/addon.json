@@ -9,5 +9,6 @@
     "service": "service.js"
   },
   "permissions": [],
-  "routes": ["/api/phoneremote"]
+  "routes": ["/api/phoneremote"],
+  "live": true
 }

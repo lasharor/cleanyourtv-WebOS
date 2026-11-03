@@ -1131,6 +1131,16 @@ run(async () => {
     ),
     "and the add-on's screen in Add-ons has a Phone remote settings row (while it runs) that opens the same screens"
   );
+  const scr = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'screens.js'), 'utf8');
+  ok(
+    /a1\.id === 'phoneremote' && !a1\.enabled \? openPhoneRemote : null/.test(menu) &&
+      /if \(after && !r\.restartNeeded\) after\(\)/.test(scr),
+    'switching the add-on on opens its settings at once; switched off, its Features row goes at once'
+  );
+  ok(
+    JSON.parse(fs.readFileSync(path.join(root, 'helper', 'addons-bundled', 'phoneremote', 'addon.json'), 'utf8')).live === true,
+    'the add-on is live: its switch starts and stops it with no restart'
+  );
   // a right-to-left language must not mirror the remote
   const he = require('../../helper/addons-bundled/phoneremote/page').phonePage('ar');
   ok(
