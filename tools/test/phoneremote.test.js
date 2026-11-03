@@ -8,6 +8,13 @@ const { ok, call, memoryConfig, run, sleep, tmp, root } = require('./lib');
 const tvname = require('../../helper/addons-bundled/phoneremote/tvname');
 const ws = require('../../helper/addons-bundled/phoneremote/ws');
 
+// Node 8's writeHead returns undefined (it returns the response from Node 11.10): the fake servers below chain .end() after it
+const writeHead = http.ServerResponse.prototype.writeHead;
+http.ServerResponse.prototype.writeHead = function () {
+  writeHead.apply(this, arguments);
+  return this;
+};
+
 function post(port, path, body, origin) {
   return new Promise((resolve, reject) => {
     const r = http.request(

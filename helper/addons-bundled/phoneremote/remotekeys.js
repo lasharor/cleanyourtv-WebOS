@@ -75,7 +75,7 @@ function create(ctx, opts) {
       s.once('error', reject);
       s.once('connect', () => resolve(c));
     });
-  const useSsap = !(opts && opts.connect) || !!(opts && opts.ssap);
+  const useSsap = opts && opts.ssap !== undefined ? !!opts.ssap : !(opts && opts.connect); // tests say ssap: false for a fake luna and a real socket
   let ssapConn = null,
     pairing = null;
   const connect = (opts && opts.connect) || ((a, o) => (a.charAt(0) === '/' ? unix(a) : ws.connect(a, o)));

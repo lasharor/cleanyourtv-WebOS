@@ -121,6 +121,8 @@ run(async () => {
 
   // a server that does not upgrade
   const plain = http.createServer((q, r) => r.end('no'));
+  // Node 8 closes a request that asks to upgrade when nobody listens for it; a server that answers it with a plain 200 says so itself
+  plain.on('upgrade', (q, s) => s.end('HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nno'));
   await new Promise(r => plain.listen(0, '127.0.0.1', r));
   let err = '';
   await ws.connect('ws://127.0.0.1:' + plain.address().port + '/').catch(e => (err = e.message));

@@ -88,7 +88,7 @@ run(async () => {
     const got = [];
     const srv = net.createServer(c => c.on('data', d => got.push(String(d))));
     await new Promise(r => srv.listen(sock, r));
-    const k4 = RK.create({ luna: async () => ({ returnValue: true, socketPath: sock }) });
+    const k4 = RK.create({ luna: async () => ({ returnValue: true, socketPath: sock }) }, { ssap: false });
     r = await k4.press('HOME');
     await new Promise(r2 => setTimeout(r2, 100));
     ok(r.ok && got.join('') === 'type:button\nname:HOME\n\n', 'a Unix socket path from the TV gets the lines as they are');
