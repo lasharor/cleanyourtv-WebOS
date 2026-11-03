@@ -5,9 +5,11 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -34,7 +36,7 @@ import java.net.URL;
  *    On/Off button, which then wakes the TV) is there even with the TV in standby. The bundled pages only appear when nothing was
  *    ever loaded (assets/start.html for the address, assets/off.html as the last resort).
  * The bridge, the whole API between the page and the phone: getAddr/setAddr, getMac/setMac (the TV's page hands the address over when it
- * connects), wake(), discover(). A QR code read by the phone's own camera app opens the app on the TV's page (cytv://add?host=…&code=…).
+ * connects), wake(), discover(), deviceName() (the first guess for the name the phone pairs with). A QR code read by the phone's own camera app opens the app on the TV's page (cytv://add?host=…&code=…).
  */
 public class MainActivity extends Activity {
 
@@ -336,6 +338,24 @@ public class MainActivity extends Activity {
     }
 
     private class Bridge {
+
+        /** The first guess for the name the phone pairs with: the name set in Android settings, else maker and model. */
+        @JavascriptInterface
+        public String deviceName() {
+            String n = null;
+            try {
+                n = Settings.Global.getString(getContentResolver(), "device_name");
+            } catch (Exception e) {
+                // not readable on this version: the model below
+            }
+            if (n == null || n.trim().length() < 2) {
+                String m = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.trim();
+                String d = Build.MODEL == null ? "" : Build.MODEL.trim();
+                if (m.length() > 0) m = m.substring(0, 1).toUpperCase() + m.substring(1);
+                n = d.toLowerCase().startsWith(m.toLowerCase()) ? d : (m + " " + d).trim();
+            }
+            return n.trim();
+        }
 
         @JavascriptInterface
         public String getAddr() {

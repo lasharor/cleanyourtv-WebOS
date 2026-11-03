@@ -132,7 +132,9 @@ run(async () => {
   await new Promise(r => stub.listen(0, '127.0.0.1', r));
   const api = 'http://127.0.0.1:' + stub.address().port;
   launcher.logo = api + '/logo.png';
-  const make = () => PR.create({ config }, { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna });
+  const rev = { name: '' }; // what the stand-in router answers for the phone's address
+  const reverse = (a, cb) => cb(rev.name ? null : new Error('ENOTFOUND'), rev.name ? [rev.name] : []);
+  const make = () => PR.create({ config }, { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna, reverse });
   let pr = make();
   pr.start();
   let r = await call(pr, '/api/phoneremote');
@@ -162,6 +164,25 @@ run(async () => {
       /http-equiv=cache-control content=no-store/.test(page.text),
     'the phone page is served, and no cache may keep it (headers and its own meta tags)'
   );
+  // the name field: the router's name for the phone is written into the page; a name that is not one is not
+  const dn = require('../../helper/devicename');
+  rev.name = 'Danas-iPhone.lan';
+  dn.forget();
+  let hp = await get(port, '/');
+  ok(/var HINT="Danas-iPhone";/.test(hp.text), 'the router’s name for the phone is put in the page, without its domain');
+  rev.name = 'wlan0';
+  dn.forget();
+  hp = await get(port, '/');
+  ok(/var HINT="";/.test(hp.text), 'wlan0 is not a name: the hint stays empty and the page uses what the browser says');
+  rev.name = 'x</script><script>alert(1)</script>';
+  dn.forget();
+  hp = await get(port, '/');
+  ok(
+    !/<script>alert/.test(hp.text) && (hp.text.match(/<\/script>/g) || []).length === 3,
+    'a hostile name from the router cannot break out of the page'
+  );
+  rev.name = '';
+  dn.forget();
   // the QR code carries the code in the address: the server writes it into the page, so the boxes are filled before any script runs
   const withCode = await get(port, '/?code=' + code);
   ok(
@@ -210,6 +231,10 @@ run(async () => {
     'the new phone is listed and the window shows a new code'
   );
   const id = r.j.phones[0].id;
+  r = await post(port, '/api/pair', { code: r.j.pairing.code, name: 'Eden <b>phone</b>' });
+  ok(r.code === 200 && r.j.name === 'Eden bphone/b 2', 'a second phone with the same name gets a number, so the two can be told apart');
+  r = await call(pr, '/api/phoneremote/revoke', 'POST', { id: (await call(pr, '/api/phoneremote')).j.phones[1].id });
+  ok(r.code === 200, 'the second phone is removed again for the rest of the test');
 
   // ---- connected ----
   p = await phone(port, token);

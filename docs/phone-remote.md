@@ -38,6 +38,24 @@ also in an Arabic or Hebrew phone, so the arrows do not swap sides.
 The phone keeps a token in the browser (`localStorage`). It has to be the same address every time, so give the TV a fixed address in
 your router; if the address changes, pair again.
 
+## The name of a device
+
+The pairing page starts with a name in **Name of this device**; it can be changed before pairing, and it is what the manager app lists. The first
+guess, best source first:
+
+1. **The Android app:** the name set in Android settings, or the maker and model (for example `Samsung SM-S918B`).
+2. **The router's name for the phone.** The TV looks up the address the page was opened from (a reverse lookup, from the router's list of
+   devices), so a computer shows its own name. It is used only when it is a name: nothing, an address, a MAC address, `wlan0` and
+   `android-` followed by random characters are thrown away, and the domain after the name (`.lan`) is cut off. Phones that use a private
+   (random) address often give nothing useful here. Only private addresses are looked up, the lookup waits 0.7 seconds at most and is
+   remembered for ten minutes.
+3. **The browser:** `iPhone`, `iPad` (also when it asks for the desktop site), `Android phone`, `Android tablet`, `Chromebook`, or the browser and the
+   system of a computer, such as `Edge on Windows` or `Safari on Mac`.
+4. `Device`.
+
+A name that another paired phone already has gets ` 2`, ` 3` after it. A browser cannot tell a page the name of a computer or the model of a
+phone, so there is nothing more to read there.
+
 ## Staying connected
 
 While the page is open and the phone is awake, it keeps a live connection (a WebSocket) to the TV. It pings the TV every five seconds and

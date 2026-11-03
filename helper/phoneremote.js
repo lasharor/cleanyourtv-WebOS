@@ -22,7 +22,8 @@ const web = require('./web'),
   nc = require('./netcompat'),
   ws = require('./ws'),
   P = require('./paths'),
-  page = require('./phoneremotepage');
+  page = require('./phoneremotepage'),
+  devicename = require('./devicename');
 
 // The app, when this build ships one (the package carries mobile/app/tv-remote.apk and bootstrap.sh copies it next to the service):
 // the manager screen shows a QR code for it and the phone downloads it from here, so no computer is needed to install it.
@@ -171,7 +172,12 @@ function create(ctx, opts) {
     if (req.method === 'GET' && u === '/') {
       // the QR code on the TV carries the pairing code in its address: render it into the page, so it is filled in at once
       const c = /(?:^|&)code=([0-9]{6})(?:&|$)/.exec(String(req.url.split('?')[1] || ''));
-      return send(200, page.phonePage(i18n.lang(req, config.get().lang), c ? c[1] : ''), 'text/html; charset=utf-8');
+      // the router's name for the phone is the first guess for the name field (devicename.js); the page falls back to what the browser says
+      return devicename.routerName(
+        ip(req),
+        hint => send(200, page.phonePage(i18n.lang(req, config.get().lang), c ? c[1] : '', hint), 'text/html; charset=utf-8'),
+        opts && opts.reverse
+      );
     }
     // The apps on the TV, for the phone's Apps tab: the launcher's API listens on loopback only, so the phone's page asks this server,
     // which passes the question on. Both need the phone's own token, so nobody else on the network can list or open the TV's apps.
@@ -235,7 +241,10 @@ function create(ctx, opts) {
       return { status: 409, body: { error: i18n.tr(lang, 'Too many phones are paired. Remove one on the TV.') } };
     const id = crypto.randomBytes(4).toString('hex'),
       secret = crypto.randomBytes(16).toString('hex'),
-      name = cleanName(b.name);
+      name = devicename.unique(
+        cleanName(b.name),
+        cfg().phones.map(p => p.name)
+      );
     save(c => {
       c.phones.push({ id, name, hash: sha(secret).toString('hex'), created: now, seen: now, blocked: false });
     });
