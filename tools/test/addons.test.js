@@ -370,6 +370,35 @@ run(async () => {
   r = await call(a, '/api/addons');
   ok(r.j.book.position === '' && r.j.book.strip === true, 'an empty place leaves it to the theme');
 
+  // what an add-on can provide to a part of the service: only known things, and only running, switched-on add-ons are listed
+  ok(
+    addons.check(Object.assign({}, good, { provides: ['wallpapers', 'x', 'wallpapers'] })).manifest.provides.join() === 'wallpapers' &&
+      addons.check(good).manifest.provides.length === 0,
+    'provides keeps the known things, once each'
+  );
+  put(
+    'src',
+    Object.assign(svc('src'), { provides: ['wallpapers'] }),
+    "exports.create = () => ({ wallpapers: { label: 'Src', list: () => [] }, handle: (q, r) => r.end('{}') });"
+  );
+  put(
+    'srcoff',
+    Object.assign(svc('srcoff'), { provides: ['wallpapers'] }),
+    "exports.create = () => ({ wallpapers: {}, handle: (q, r) => r.end('{}') });"
+  );
+  cfg.update('test', c => {
+    c.addons = Object.assign({}, c.addons, { srcoff: { enabled: false } });
+  });
+  a.load();
+  ok(
+    a
+      .providers('wallpapers')
+      .map(x => x.id)
+      .join() === 'src' && a.providers('wallpapers')[0].mod.wallpapers.label === 'Src',
+    'providers(what) gives the running, switched-on add-ons that provide it, with their module'
+  );
+  ok(a.providers('nothing').length === 0, 'and nothing for what nobody provides');
+
   // the catalog: a stand-in for GitHub
   const files = {
     'addon.json': JSON.stringify({ id: 'hello', name: 'Hello', version: '1.2.0', kind: 'page', entry: { page: 'index.html' } }),

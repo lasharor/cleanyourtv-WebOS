@@ -1,4 +1,4 @@
-/* ---------- Wallpapers: the service's photos (uploads and Immich, GET /api/wallpapers/list) behind Home instead of the theme's
+/* ---------- Wallpapers: the service's photos (uploads and the photo sources of add-ons, GET /api/wallpapers/list) behind Home instead of the theme's
    background. A random photo each time Home opens and every cfg.wall.secs seconds (0: only when Home opens), cross-faded between two
    layers (opacity only). Darkened like a theme's wallpaper. Off, or no photos: the theme as it is. ---------- */
 /* seconds between photos; settings saved before 1.6.10 hold minutes in "every" */
@@ -33,8 +33,29 @@ var WALL = (function () {
       d = th.wallpaper && th.wallpaper.dim != null ? th.wallpaper.dim : 0.4;
     layers()[2].style.background = 'rgba(' + (th.nightRgb || '7, 8, 11') + ',' + d + ')';
   }
-  function show(id) {
-    var url = API + '/api/wallpapers/photo/' + id,
+  /* the line in a corner that a photo source asks for (the photographer of an Unsplash photo); inside #homepage, so it turns with Home */
+  function credit(text) {
+    var c = $('wpc');
+    if (!c) {
+      c = document.createElement('div');
+      c.id = 'wpc';
+      $('homepage').appendChild(c);
+    }
+    c.textContent = text || '';
+    c.style.display = text ? 'block' : 'none';
+  }
+  /* a "live" entry (l/<add-on>): the add-on gives an address on its own server now and then, nothing is kept on the TV */
+  function showLive(id) {
+    api('/api/wallpapers/live/' + id.slice(2)).then(
+      function (x) {
+        if (x && x.url) show(id, x.url, x.credit || '');
+      },
+      function () {}
+    );
+  }
+  function show(id, address, text) {
+    if (id.slice(0, 2) === 'l/' && !address) return showLive(id);
+    var url = address || API + '/api/wallpapers/photo/' + id,
       im = new Image();
     im.onload = function () {
       if (!want()) return;
@@ -47,6 +68,7 @@ var WALL = (function () {
       off.classList.remove('on');
       dim();
       document.body.classList.add('wpon');
+      credit(text);
       cur = id;
     };
     im.src = url;
@@ -65,6 +87,7 @@ var WALL = (function () {
   function off() {
     clearInterval(timer);
     document.body.classList.remove('wpon');
+    credit('');
     if (els) {
       els[0].classList.remove('on');
       els[1].classList.remove('on');

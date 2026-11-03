@@ -217,6 +217,37 @@ function openWallPair() {
     }
   );
 }
+/* a photo source (an add-on that provides wallpapers: Immich, Unsplash, ...) has its own settings page on the phone */
+var wallSrc = '';
+function openSourcePair(id, label) {
+  wallSrc = id;
+  shareMode = 'wallsrc';
+  push('share');
+  $('share').style.display = 'block';
+  $('shareurl').textContent = '';
+  $('qrbox').style.visibility = 'hidden';
+  $('share').querySelector('h2').textContent = label;
+  $('share').querySelector('ol').innerHTML = tr(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li>'
+  );
+  $('sharemsg').textContent = tr('Preparing\u2026');
+  api('/api/wallpapers/source/' + id + '/settings', {}).then(
+    function (r) {
+      if (view !== 'share' || shareMode !== 'wallsrc') return;
+      if (r.error) {
+        $('sharemsg').textContent = tr(r.error);
+        return;
+      }
+      drawQr(r.qr);
+      $('qrbox').style.visibility = 'visible';
+      $('shareurl').textContent = tr(r.url + '   code ' + r.code);
+      $('sharemsg').textContent = tr('The page stays open while you use it. It is not encrypted: what you type travels over your Wi-Fi.');
+    },
+    function () {
+      $('sharemsg').textContent = tr('The service did not answer.');
+    }
+  );
+}
 /* More > App icons, or a tile's Change icon on Home ({open: 'icons', app}): the phone page of the App icons add-on, the app first */
 function openIconPair(app) {
   shareMode = 'icons';

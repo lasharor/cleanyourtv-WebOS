@@ -2,6 +2,7 @@
 //   D/wallpapers/upload/<random>.jpg   photos uploaded from a phone (the phone page scales them before sending)
 //   D/wallpapers/immich/<asset id>.jpg photos from chosen Immich albums, downloaded by a sync and kept, so showing one never needs Immich
 // D/wallpapers/index.json says what each file is (source, size, Immich checksum); only files listed there are ever deleted.
+// More photos come from add-ons that provide "wallpapers" (Immich, Unsplash, ...; docs/development/addons.md): see "photo sources" below.
 // The settings are the wallpapers section of config.json: {size: '4k'|'hd' (4K is the default: Home is drawn at the panel's 3840 x 2160), immich: {url, key, albums: [ids], hidden: [asset ids]}}.
 // The Immich key never leaves the service: status() shows its last four characters only, and it is not logged.
 // API (loopback, our apps): GET /api/wallpapers/status, GET /api/wallpapers/list, GET /api/wallpapers/photo/<u|i>/<id>,
@@ -305,11 +306,115 @@ function create(ctx) {
     });
   }
 
+  // ---- photo sources: add-ons that provide "wallpapers" ----
+  // A source is the object `wallpapers` on the module an add-on returns from create():
+  //   label            the name in the manager
+  //   list()           ids of the photos it has now, each a file it can hand out (letters, digits, - _ .; at most 500)
+  //   file(id)         the absolute path of that photo (a JPEG, PNG or WebP), or ''
+  //   live: true       it also offers one photo at a time that is not kept on the TV: Home asks next() each time it shows that entry
+  //   next()           (live) -> {url, credit}: an https address of the picture and the text Home shows in a corner (the photographer)
+  //   status()         -> {summary, error}: one line for the manager (photos, last sync, what went wrong)
+  //   settings(o)      -> {url, code, qr, seconds}: starts a short-lived page on the LAN for its settings (o.stop: close it)
+  // The photos are listed as s/<add-on>/<id> and a live source as l/<add-on>. A source that throws offers nothing and is logged once.
+  const SRC_PHOTO = /^[\w.-]{1,64}$/,
+    SRC_MAX = 500,
+    warned = {};
+  const sources = () => {
+    const a = ctx.feature && ctx.feature('addons');
+    return a && a.providers ? a.providers('wallpapers').filter(s => s.mod.wallpapers && typeof s.mod.wallpapers === 'object') : [];
+  };
+  const srcOf = id => sources().filter(s => s.id === id)[0];
+  function guard(s, fn, fallback) {
+    try {
+      return fn();
+    } catch (e) {
+      if (!warned[s.id]) {
+        warned[s.id] = 1;
+        console.error('wallpapers: source ' + s.id + ': ' + ((e && e.message) || e));
+      }
+      return fallback;
+    }
+  }
+  const srcPhotos = s => {
+    const l = guard(s, () => s.mod.wallpapers.list(), []);
+    return (Array.isArray(l) ? l : [])
+      .filter((x, i, all) => typeof x === 'string' && SRC_PHOTO.test(x) && all.indexOf(x) === i)
+      .slice(0, SRC_MAX);
+  };
+  const line = (v, n) =>
+    String(v || '')
+      .replace(/[\u0000-\u001f\u007f]/g, ' ')
+      .slice(0, n);
+  const srcFile = (addon, id) => {
+    const s = srcOf(addon);
+    if (!s || !SRC_PHOTO.test(id)) return '';
+    const f = guard(s, () => s.mod.wallpapers.file(id), '');
+    if (typeof f !== 'string' || !path.isAbsolute(f) || !MIME[f.split('.').pop().toLowerCase()]) return '';
+    try {
+      const st = fs.statSync(f);
+      return st.isFile() && st.size <= LIMITS.file * 2 ? f : '';
+    } catch (_) {
+      return '';
+    }
+  };
+  function sendSrcPhoto(res, addon, id) {
+    const f = srcFile(addon, id);
+    if (!f) return web.notFound(res);
+    res.writeHead(200, { 'content-type': MIME[f.split('.').pop().toLowerCase()], 'cache-control': 'max-age=3600' });
+    fs.createReadStream(f).pipe(res);
+  }
+  // a live photo: the address goes into a CSS url() on Home, so only a plain https address is passed on
+  async function liveNext(addon) {
+    const s = srcOf(addon);
+    if (!s || s.mod.wallpapers.live !== true || typeof s.mod.wallpapers.next !== 'function') return { error: 'not a live source' };
+    try {
+      const r = (await s.mod.wallpapers.next()) || {};
+      if (r.error) return { error: line(r.error, 160) };
+      if (typeof r.url !== 'string' || !/^https:\/\/[^\s"'()\\]{4,600}$/.test(r.url))
+        return { error: 'the source gave no usable picture address' };
+      return { url: r.url, credit: line(r.credit, 120) };
+    } catch (e) {
+      return { error: line((e && e.message) || e, 160) };
+    }
+  }
+  async function srcSettings(addon, stop) {
+    const s = srcOf(addon);
+    if (!s || typeof s.mod.wallpapers.settings !== 'function') return { error: 'this source has no settings page' };
+    try {
+      const r = (await s.mod.wallpapers.settings({ stop: !!stop })) || {};
+      if (r.error) return { error: line(r.error, 160) };
+      return stop
+        ? {}
+        : { url: line(r.url, 200), code: line(r.code, 12), qr: line(r.qr, 240), seconds: +r.seconds > 0 ? Math.round(+r.seconds) : 0 };
+    } catch (e) {
+      return { error: line((e && e.message) || e, 160) };
+    }
+  }
+  const sourceStatus = () =>
+    sources().map(s => {
+      const w = s.mod.wallpapers,
+        st = guard(s, () => (typeof w.status === 'function' ? w.status() : {}), {}) || {};
+      return {
+        id: s.id,
+        label: line(w.label || s.name, 40),
+        photos: srcPhotos(s).length,
+        live: w.live === true,
+        summary: line(st.summary, 120),
+        error: line(st.error, 160),
+        settings: typeof w.settings === 'function',
+      };
+    });
+
   // ---- what the TV shows ----
   function list() {
-    return idx()
+    let out = idx()
       .upload.map(u => 'u/' + u.id)
       .concat(immichList().map(id => 'i/' + id));
+    for (const s of sources()) {
+      out = out.concat(srcPhotos(s).map(id => 's/' + s.id + '/' + id));
+      if (s.mod.wallpapers.live === true) out.push('l/' + s.id);
+    }
+    return out;
   }
   // a number that changes whenever the set of photos changes: the launcher reads the list again then
   const stamp = () => {
@@ -319,7 +424,7 @@ function create(ctx) {
   function status() {
     const ic = icfg(),
       s = idx().sync;
-    return {
+    const out = {
       size: cfg().size === 'hd' ? 'hd' : '4k',
       uploads: idx().upload.length,
       immich: {
@@ -340,6 +445,10 @@ function create(ctx) {
       limits: LIMITS,
       pair: pair ? { url: pair.url, code: pair.code, until: pair.until } : null,
     };
+    // only when an add-on provides photos, so the reply is the same without any
+    const src = sourceStatus();
+    if (src.length) out.sources = src;
+    return out;
   }
   function photoFile(src, id) {
     if (src === 'u' && ID.test(id)) {
@@ -477,6 +586,10 @@ function create(ctx) {
     const json = (o, c) => web.json(res, o, c);
     const m = /^\/api\/wallpapers\/photo\/([ui])\/([0-9a-f-]{16,36})$/i.exec(u);
     if (m) return sendPhoto(res, m[1], m[2]);
+    const ms = /^\/api\/wallpapers\/photo\/s\/([a-z][a-z0-9-]{1,31})\/([\w.-]{1,64})$/.exec(u);
+    if (ms) return sendSrcPhoto(res, ms[1], ms[2]);
+    const ml = /^\/api\/wallpapers\/live\/([a-z][a-z0-9-]{1,31})$/.exec(u);
+    if (ml) return json(await liveNext(ml[1]));
     if (u === '/api/wallpapers/status') return json(status());
     if (u === '/api/wallpapers/list') return json({ photos: list(), stamp: stamp() });
     if (req.method !== 'POST') return web.notFound(res);
@@ -487,6 +600,11 @@ function create(ctx) {
           w.size = b.size;
         });
       return json(status());
+    }
+    const mset = /^\/api\/wallpapers\/source\/([a-z][a-z0-9-]{1,31})\/settings$/.exec(u);
+    if (mset) {
+      const r = await srcSettings(mset[1], b.stop === true);
+      return json(r, r.error ? 400 : 200);
     }
     if (u === '/api/wallpapers/pair') return json(b.stop ? (stopPair(), {}) : await startPair());
     if (u === '/api/wallpapers/sync') {

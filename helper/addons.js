@@ -29,6 +29,8 @@ const KINDS = ['page', 'service'];
 const PERMISSIONS = ['net.fetch', 'config.own', 'notify', 'key.guide'];
 // keys a page keeps for itself; every other key (the number and colour buttons, Back) switches pages or goes back to Home
 const CLAIMS = ['digits', 'colors', 'back'];
+// what an add-on can provide to a part of the service (wallpapers: photo sources, see helper/wallpapers.js)
+const PROVIDES = ['wallpapers'];
 // where the user may put the page strip ('' leaves it to the theme)
 const POSITIONS = ['', 'top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
 const ID = /^[a-z][a-z0-9-]{1,31}$/;
@@ -89,6 +91,7 @@ function check(m, serviceVersion) {
       entry: { service: entry.service, page: entry.page },
       permissions: perms,
       routes,
+      provides: (Array.isArray(m.provides) ? m.provides : []).filter((c, i, a) => PROVIDES.indexOf(c) >= 0 && a.indexOf(c) === i),
       claims: (Array.isArray(m.claims) ? m.claims : []).filter((c, i, a) => CLAIMS.indexOf(c) >= 0 && a.indexOf(c) === i),
       enabledOption: /^[A-Za-z]{2,24}$/.test(m.enabledOption || '') ? m.enabledOption : '',
       tile: t
@@ -322,6 +325,7 @@ function create(ctx) {
     bundled: a.bundled,
     tile: a.manifest ? a.manifest.tile : null,
     claims: a.manifest ? a.manifest.claims : [],
+    provides: a.manifest ? a.manifest.provides : [],
     page: a.manifest && a.manifest.entry.page && a.status === 'running' ? '/addon/' + a.id + '/' + a.manifest.entry.page : '',
     bookable: bookable(a),
     inBook: bookable(a) && bookOf().hidden.indexOf(a.id) < 0,
@@ -595,7 +599,13 @@ function create(ctx) {
     return a && a.status === 'running' && a.mod ? a.mod : null;
   };
 
-  return { name: 'addons', prefix: '/api/addons', match, pageMay, module, handle, start, load, list: () => list.map(info) };
+  // the running, switched-on add-ons that provide something ("provides" in their manifest): [{id, name, mod}]
+  const providers = what =>
+    list
+      .filter(a => a.manifest && a.status === 'running' && a.enabled && a.mod && a.manifest.provides.indexOf(what) >= 0)
+      .map(a => ({ id: a.id, name: a.manifest.name, mod: a.mod }));
+
+  return { name: 'addons', prefix: '/api/addons', match, pageMay, module, providers, handle, start, load, list: () => list.map(info) };
 }
 
 module.exports = { create, check, cleanIndex, KINDS, PERMISSIONS };
