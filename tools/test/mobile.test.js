@@ -126,7 +126,7 @@ run(async () => {
   );
   ok(!/id=scan|jsQR\(/.test(startPage), 'and no scanner of its own: the phone camera opens the code');
   ok(
-    /cytvPair/.test(startPage) === false && /cytvPair/.test(read('helper/phoneremotepage.js')),
+    /cytvPair/.test(startPage) === false && /cytvPair/.test(read('helper/addons-bundled/phoneremote/page.js')),
     'the pairing code from the code is used by the TV page, not by the start screen'
   );
   ok(
@@ -360,8 +360,8 @@ run(async () => {
     {
       // the TV's own pairing screen is the third setup screen: its fields and buttons are cut like the start page's
       const pg =
-        require('../../helper/phoneremotepage').PHONE_JS +
-        require('fs').readFileSync(path.join(root, 'helper', 'phoneremotepage.js'), 'utf8');
+        require('../../helper/addons-bundled/phoneremote/page').PHONE_JS +
+        require('fs').readFileSync(path.join(root, 'helper', 'addons-bundled', 'phoneremote', 'page.js'), 'utf8');
       ok(
         /#pairbox #pname\{[^}]*height:56px;[^}]*border-radius:16px;background:#14161c;border:1\.5px solid #646b82;font-weight:400/.test(
           pg

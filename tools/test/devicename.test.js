@@ -1,10 +1,10 @@
-// Device names for the pairing screen (helper/devicename.js and the guess in helper/phoneremotepage.js): the router's name is used only when
+// Device names for the pairing screen (the phoneremote add-on's devicename.js and the guess in its page.js): the router's name is used only when
 // it is a name, a number is added when another phone has the same name, and the page falls back from the app to the router to the browser.
 const fs = require('fs'),
   path = require('path');
 const { ok, root, run } = require('./lib');
-const dn = require(path.join(root, 'helper', 'devicename'));
-const { phonePage } = require(path.join(root, 'helper', 'phoneremotepage'));
+const dn = require(path.join(root, 'helper', 'addons-bundled', 'phoneremote', 'devicename'));
+const { phonePage } = require(path.join(root, 'helper', 'addons-bundled', 'phoneremote', 'page'));
 
 run(async () => {
   // ---- what counts as a name ----

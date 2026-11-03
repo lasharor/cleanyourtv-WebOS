@@ -1,0 +1,13 @@
+{
+  "id": "phoneremote",
+  "name": "Phone remote",
+  "version": "1.0.0",
+  "kind": "service",
+  "description": "Use a paired phone as the TV remote over your Wi-Fi, in a browser or in the Android app.",
+  "about": "Pair a phone once with a QR code and a 6-digit code, then use its browser page or the Android app (which can also turn the TV on from standby). Each phone can be blocked or removed, and unused ones are removed by themselves. Switched on and managed in the manager app: Features > Phone remote.",
+  "entry": {
+    "service": "service.js"
+  },
+  "permissions": [],
+  "routes": ["/api/phoneremote"]
+}

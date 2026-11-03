@@ -1,8 +1,8 @@
 // The WebSocket (ws.js): the handshake of RFC 6455, masked frames, fragments, ping/pong, size limit, close, and the client talking to the server.
 const http = require('http'),
   net = require('net');
-const { ok, req, run, sleep } = require('./lib');
-const ws = req('ws');
+const { ok, run, sleep } = require('./lib');
+const ws = require('../../helper/addons-bundled/phoneremote/ws');
 
 // a masked client frame, built by hand
 function frame(op, payload, opts) {

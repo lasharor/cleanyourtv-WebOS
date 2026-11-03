@@ -8,7 +8,7 @@ const crypto = require('crypto'),
   http = require('http'),
   https = require('https'),
   { EventEmitter } = require('events');
-const nc = require('./netcompat');
+const nc = require('../../netcompat');
 
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const accept = key =>

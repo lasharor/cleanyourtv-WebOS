@@ -1,4 +1,4 @@
-// The keys of the phone remote (phoneremote.js) reach the TV here, behind one small interface so that the way in can change without
+// The keys of the phone remote (service.js) reach the TV here, behind one small interface so that the way in can change without
 // touching the rest:
 //   press(name)        a remote button, one of KEYS (UP, ENTER, VOLUMEUP, ...)
 //   move(dx, dy)       moves the pointer (the touchpad), click(), scroll(dy)
@@ -17,7 +17,8 @@
 const fs = require('fs');
 const net = require('net');
 const ws = require('./ws');
-const paths = require('./paths');
+const paths = require('../../paths');
+const KEY_FILE = paths.D + '/ssap-key'; // private, never shown or shared
 
 // the buttons a phone may press (the names the pointer socket knows); nothing else is passed on
 const KEYS = [
@@ -42,7 +43,7 @@ const SOCKET_URI = 'luna://com.webos.service.networkinput/getPointerInputSocket'
 const AUDIO = 'luna://com.webos.service.audio/master/';
 // The TV's control service (SSAP, what the LG ThinQ app talks to) hands out the pointer socket that really moves the pointer; the same
 // call over luna gives a Unix socket that takes the lines and does nothing with them. This service signs in to SSAP on the loopback with
-// a key of its own: the first time the TV asks on screen to allow it (the key is then kept in paths.SSAP_KEY).
+// a key of its own: the first time the TV asks on screen to allow it (the key is then kept in KEY_FILE).
 const SSAP_URL = 'ws://127.0.0.1:3000';
 const SSAP_URI = 'ssap://com.webos.service.networkinput/getPointerInputSocket';
 const SSAP_MANIFEST = {
@@ -90,7 +91,7 @@ function create(ctx, opts) {
 
   const readKey = () => {
     try {
-      return fs.readFileSync(paths.SSAP_KEY, 'utf8').trim();
+      return fs.readFileSync(KEY_FILE, 'utf8').trim();
     } catch (_) {
       return '';
     }
@@ -135,7 +136,7 @@ function create(ctx, opts) {
       if (key) payload['client-key'] = key;
       const reg = await ssapAsk(c, { type: 'register', id: 'r1', payload }, 'registered', waitMs);
       const got = reg.payload && reg.payload['client-key'];
-      if (got && got !== key) fs.writeFileSync(paths.SSAP_KEY, got, { mode: 0o600 });
+      if (got && got !== key) fs.writeFileSync(KEY_FILE, got, { mode: 0o600 });
       const s = await ssapAsk(c, { type: 'request', id: 'p1', uri: SSAP_URI }, 'response', 4000);
       if (!s.payload || !s.payload.socketPath) throw new Error('the TV gave no pointer socket');
       c.on('close', () => {

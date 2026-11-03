@@ -1,10 +1,10 @@
-// The page a paired phone opens for the phone remote (phoneremote.js): pairing with the code shown on the TV, then buttons, a touchpad and
+// The page a paired phone opens for the phone remote (service.js): pairing with the code shown on the TV, then buttons, a touchpad and
 // text entry. The page keeps a WebSocket to the TV open while it is on screen: it says who it is with the token it kept in localStorage,
 // checks that the TV still answers (a ping every 15 seconds), and reconnects by itself after a drop, a sleep or a restart of the service.
 // The look follows the redesign: a round pad with a large OK, volume and channel rockers, numbers and colours in a sheet, a tab bar, and a
 // status line under the TV name for every message. Spacing is by sibling margins (no flex gap: Chromium 68), and the page is always left to right.
-const web = require('./web'),
-  i18n = require('./i18n');
+const web = require('../../web'),
+  i18n = require('../../i18n');
 
 const PHONE_JS = `document.documentElement.dir='ltr'; /* the remote is laid out like a real one in every language: the arrows must not swap sides */
 var KEY='cytv-remote',curTab='kb',liveOk=false,appsIn=false,liveIn=false,tok='',ws=null,timer=0,delay=1000,lastRx=0,lastPing=0,lastAsk=0,pwrState='',n=0,blocked=false,ready=false,lastTouch=0,prev='',mac='',wol=null,offAt=0,MK='cytv-tvmac',$=function(i){return document.getElementById(i)};

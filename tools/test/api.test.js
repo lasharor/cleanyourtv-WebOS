@@ -290,7 +290,6 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       'notifyapi',
       'manager',
       'remap',
-      'phoneremote',
       'apps',
       'running',
       'zram',

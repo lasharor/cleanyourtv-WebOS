@@ -70,6 +70,16 @@ the reset. The manifest's `routes` is `/api/icons`. Like the Android box, the co
 and adds `icons: true` to `/api/apps` while the add-on runs; the launcher offers **Change icon** and **Reset icon** only then, and the
 manager's status has `icons` for its **App icons** row. Switched off, every app shows its own icon and the pictures stay on the TV.
 
+## The phone remote (the phoneremote add-on)
+
+`helper/addons-bundled/phoneremote/` holds everything of the [phone remote](../phone-remote.md): the service (`service.js`: pairing, tokens, the
+paired phones), its own WebSocket (`ws.js`), the key adapter (`remotekeys.js`), the phone page (`page.js`), the guess for the phone's name
+(`devicename.js`, `tvname.js`) and the Android app the TV hands out (`tv-remote.apk`, built from `mobile/`). The manifest's `routes` is
+`/api/phoneremote`; its settings stay in `config.json` (`phoneRemote`). The listener on port 8798 is the add-on's own, and it runs only while
+the phone remote is switched on and a phone is paired or the pairing window is open. The launcher and the Live TV page know nothing of it: a
+channel chosen on the phone is Live TV opened as a card opens it, then the channel's number pressed on the remote's digits. Only the manager
+has screens for it (**Features > Phone remote**), as it has for the Android box.
+
 ## Live TV (the iptv add-on)
 
 - The service part is `helper/addons-bundled/iptv/service.js`; it answers `/api/live/...` as before (`routes`).
