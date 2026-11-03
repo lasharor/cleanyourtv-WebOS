@@ -75,7 +75,7 @@ again it pairs with a new code.
 Logging out tells the TV (`{"t":"logout"}` on the connection; the TV answers `{"t":"bye"}`) and removes the phone from its list at once. What decides this is whether the
 TV can be reached, not whether its screen is on: a TV on standby that still answers is told. When the page's own connection is closed it opens a short one of
 its own, and waits three seconds at most. If the TV cannot be reached the phone still logs out and a note says the TV still lists it
-(remove it in the manager app, **Features › Phone remote › Paired phones**). The result shows as a toast at the top of the pairing screen: three seconds when the TV was told, longer when it was not. On the phone, the page deletes the token and every `cytv` entry it kept, and the Android app
+(remove it in the manager app, **Features › Phone remote › Paired phones**). The result shows as a toast at the top of the pairing screen: three seconds when the TV was told, ten seconds when it was not. On the phone, the page deletes the token and every `cytv` entry it kept, and the Android app
 forgets the TV's address, the network card address and the saved page, and returns to its start page.
 
 ## The apps on the TV
@@ -122,10 +122,24 @@ packet**.
 The app for the phone sends that packet itself, so it turns the TV on with nothing else on the network. In a browser the page can only show
 the TV's address: send the packet from Home Assistant, a router, an app or a Shortcut instead (below).
 
+### The setup screens
+
+The screens before the remote follow one set of rules (one column, the title on the same line, the main button at the bottom in reach of the thumb, the same cards, fields and messages), in the app and in a browser:
+
+| Screen | Where | What it does |
+|---|---|---|
+| **Find your TV** (Step 1 of 2) | the app, first run | **Find my TV** looks for the TV on the network. **Type the address instead** shows the address field and **Continue**; it also stops a search that is running, and **Find the TV instead** goes back. |
+| **Enter the code** (Step 2 of 2) | the app, after the TV is found | The TV's own page: the 6-digit code, the name of the phone, **Pair this device**. The steps are not repeated, the app already did step 1. |
+| **Enter the code** | a browser, the first screen | The same page. There is no find step in a browser, so there is no step label and one short card says where the code is on the TV. |
+| **Can't reach your TV** | the app, a known TV that does not answer | **Check again**, or **Use a different TV**. |
+| **The TV is off** | the app, when the TV's page does not load | **Turn on the TV** (the wake packet), **Check again**, **Use a different TV**. The remote opens by itself when the TV answers. |
+
+Every message on these screens is a toast over the top of the page, never text in the page, so nothing moves: green for three seconds when something was done, plain for three and a half seconds while something is going on, amber for ten seconds when the person has to do something next (a warning is also read out by a screen reader as an alert). The remote itself is not part of this.
+
 ### The app (Android)
 
 `mobile/` is the same page as an app, plus the two things a browser cannot do: it sends the wake packet, and it opens at all while the TV
-is off (it shows the last copy of the page it kept on the phone, or a start screen with **Turn on the TV** when it never loaded one). The button in the page's header carries the TV's state — **On** or **Off** —
+is off (it shows the last copy of the page it kept on the phone, or an off screen with **Turn on the TV** when it never loaded one). The button in the page's header carries the TV's state — **On** or **Off** —
 and tapping it does the other thing, with nothing to choose: it turns the TV off when it is on, and on (wake) when it is off.
 
 Pair once with the TV on; the page hands the app the TV's network address when it connects, so there is nothing else to set up. In the app a
@@ -139,7 +153,7 @@ the rest of this page (a download has no page to send a header, so the code trav
 As soon as the phone takes the file the TV notices, and that screen becomes the **pairing** screen by itself: its code now carries the TV's
 address and the pairing code (`cytv://add?host=<tv>:8794&code=…`), so scanning it with the camera opens the app, fills the address in and
 puts the code in, and you only pick a name for the phone and tap **Pair this device**. (A browser scanning the same screen before the app was downloaded gets the page's own
-address, as usual.) Without a camera, the app takes the address typed in and offers **Find the TV on this network**; the TV's page then asks
+address, as usual.) Without a camera, the app finds the TV for you (**Find my TV**) or takes the address typed in (**Type the address instead**); the TV's page then asks
 for the code it shows, as in a browser. The address has to be a private or link-local IPv4 address such as `192.168.1.50` (a port is
 optional): names like `lgwebostv.local`, public addresses and IPv6 are refused. If a scanned code names another TV than the one the app
 already has, the app asks **Connect to `<address>`?** and saves nothing until you tap **Connect**. When the TV's page does not load, the app

@@ -232,10 +232,14 @@ function create(ctx, opts) {
     const t = (tries[addr] = (tries[addr] || []).filter(x => now - x < 60000));
     if (t.length >= TRIES) return { status: 429, body: { error: i18n.tr(lang, 'Too many tries. Wait a minute.') } };
     t.push(now);
-    if (!pair) return { status: 403, body: { error: i18n.tr(lang, 'The TV is not waiting for a phone. Open Phone remote on the TV.') } };
+    if (!pair)
+      return {
+        status: 403,
+        body: { error: i18n.tr(lang, 'The TV is not waiting for a phone. On the TV, open Features > Phone remote > Pair a phone.') },
+      };
     if (typeof b.code !== 'string' || !same(b.code.trim(), pair.code)) {
       if (++pair.wrong >= WRONG_MAX) closePair();
-      return { status: 403, body: { error: i18n.tr(lang, 'Wrong code.') } };
+      return { status: 403, body: { error: i18n.tr(lang, 'That code is not right. Check the 6 digits on the TV screen.') } };
     }
     if (cfg().phones.length >= MAX_PHONES)
       return { status: 409, body: { error: i18n.tr(lang, 'Too many phones are paired. Remove one on the TV.') } };

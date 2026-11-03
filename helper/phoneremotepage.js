@@ -104,11 +104,11 @@ function plain(s){var r='',i,c;s=String(s||'');for(i=0;i<s.length;i++){c=s.charC
 function guess(){var n='';try{if(window.CYTV_APP&&window.CYTV_APP.deviceName)n=plain(window.CYTV_APP.deviceName())}catch(e){}
  return n||(typeof HINT==='string'&&plain(HINT))||kind()}
 var pnoteT=0;
-function pnote(s,k,ms){var e=$('pnote');clearTimeout(pnoteT);e.textContent=s;e.className=k||'';void e.offsetWidth;e.className=(k||'')+' on';pnoteT=setTimeout(function(){e.className=k||''},ms||3000)}
-function showPair(s,k){tok='';ready=false;show('pairbox');if(s)pnote(s,k||'warn',7000)}
+function pnote(s,k,ms){var e=$('pnote');clearTimeout(pnoteT);e.textContent=s;e.setAttribute('role',k==='warn'?'alert':'status');e.className=k||'';void e.offsetWidth;e.className=(k||'')+' on';pnoteT=setTimeout(function(){e.className=k||''},ms||3000)}
+function showPair(s,k){tok='';ready=false;show('pairbox');if(s)pnote(s,k||'warn',10000)}
 function pair(){var x=new XMLHttpRequest();x.open('POST','/api/pair');x.setRequestHeader('content-type','application/json');
- x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(e){}if(j.token){store(j.token);tok=j.token;blocked=false;delay=1000;tidy();show('remote');connect()}else pnote(j.error||t('Wrong code.'),'warn',7000)};
- x.onerror=function(){pnote(t('The TV did not answer. Is the phone on the same Wi-Fi?'),'warn',7000)};
+ x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(e){}if(j.token){clearTimeout(pnoteT);$('pnote').className='';store(j.token);tok=j.token;blocked=false;delay=1000;tidy();show('remote');connect()}else pnote(j.error||t('Wrong code.'),'warn',10000)};
+ x.onerror=function(){pnote(t('The TV did not answer. Check the phone is on the same Wi-Fi as the TV.'),'warn',10000)};
  x.send(JSON.stringify({code:$('code').value.trim(),name:$('pname').value.trim()}))}
 function ask(){if(!(ws&&ws.readyState===1))return;lastAsk=Date.now();try{ws.send(JSON.stringify({t:'power'}))}catch(e){}}
 function retry(ms){clearTimeout(timer);timer=setTimeout(connect,ms||delay);delay=Math.min(delay*2,10000)}
@@ -448,7 +448,7 @@ function logout(){
   setTimeout(function(){lgDraw(['done',w?'done':'skip','done'])},600);
   setTimeout(function(){
    wipe();$('lgp').className='hide dlgw';leaving=false;
-   showPair('');pnote(w?t('Logged out. This phone was removed from the TV’s list.'):t('Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.'),w?'ok':'warn',w?3000:7000);
+   showPair('');pnote(w?t('Logged out. This phone was removed from the TV’s list.'):t('Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.'),w?'ok':'warn',w?3000:10000);
    try{if(window.CYTV_APP&&CYTV_APP.forget)CYTV_APP.forget(w?'removed':'left')}catch(e){}
   },1300)}
  if(up){lgAck=function(){fin(true)};if(!send({t:'logout'}))tellTv(fin);else setTimeout(function(){fin(false)},3000)}
@@ -475,6 +475,8 @@ function cells(){var c=$('code'),v=c.value=c.value.replace(/\\D/g,''),k=document
  for(var i=0;i<k.length;i++){k[i].textContent=v.charAt(i);k[i].className=on&&i===Math.min(v.length,k.length-1)?'cell cur':'cell'}}
 ['input','focus','blur'].forEach(function(ev){$('code').addEventListener(ev,cells)});
 $('go').onclick=pair;$('code').onkeydown=function(e){if(e.keyCode===13)pair()};
+/* in the app the pairing screen is the second step (the app's first screen found the TV): the label says so and the steps are not repeated; in a browser it is the first screen and keeps them */
+if(window.CYTV_APP){var eb=$('eb'),ps=$('psub');eb.textContent=eb.getAttribute('data-app');ps.textContent=ps.getAttribute('data-app');$('steps').className='hide'}
 $('pname').value=guess();cells();try{var tn=localStorage.getItem('cytv-tvname');if(tn)$('tvname').textContent=tn}catch(e){}tok=stored();try{mac=localStorage.getItem(MK)||''}catch(e){}tab('kb');if(tok){show('remote');connect()}else show('pairbox');mark();autoPair();
 `;
 
@@ -585,18 +587,19 @@ textarea:focus{border:1.5px solid #ff8a5b;box-shadow:0 0 0 4px rgba(255,138,91,.
 
 .num{display:grid;grid-template-columns:repeat(3,1fr);margin:-5px}.num>*{margin:5px}.num button{height:64px;border-radius:18px;font-size:24px}.num .tx2{font-size:15px}
 .col{display:flex;margin-top:9px}.col>*+*{margin-left:10px}.col button{flex:1;height:44px;border:0;border-radius:14px}.cr{background:#e5484d}.cg{background:#30a46c}.cy{background:#f5c451}.cb{background:#3e63dd}
-#pairbox{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:26px 20px 26px}#pairbox>*{position:relative}
-#pairbox .glow{position:absolute;left:-80px;top:-120px;width:360px;height:360px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,138,91,.2),transparent)}
-#pairbox h1{font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.02em;margin:6px 0 6px}#pairbox h1+p{font-size:16px;margin:0}
-.steps{margin-top:14px;padding:14px;border-radius:20px;background:#1a1c23;border:1px solid #2e3140}.steps>div{display:flex;align-items:flex-start;font-size:15px;line-height:1.45;color:#dde0ea}.steps>div+div{margin-top:12px}
-.steps i{flex:none;width:28px;height:28px;border-radius:50%;background:#232631;display:flex;align-items:center;justify-content:center;font:700 14px system-ui;color:#ff8a5b;font-style:normal;margin-right:12px}
-#pairbox label{display:block;font-size:14px;font-weight:600;color:#a3a8b8;margin:16px 0 8px}#pairbox label+input{margin-top:0}
-.cellwrap{position:relative}.cells{display:flex;justify-content:space-between}
-.cell{width:48px;height:60px;border-radius:14px;background:#1a1c23;border:1.5px solid #2e3140;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700}.cell.cur{border-color:#ff8a5b;box-shadow:0 0 0 3px rgba(255,138,91,.2)}
+#pairbox{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;padding:72px 20px 24px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}#pairbox>*{position:relative}
+#pairbox .glow{position:absolute;left:-100px;top:-140px;width:320px;height:320px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,138,91,.14),transparent)}
+#pairbox .eyebrow{font-size:13px;font-weight:600;letter-spacing:.02em;color:#7b8092;margin:0 0 8px;min-height:20px}
+#pairbox h1{font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.02em;margin:0 0 8px}#pairbox .sub{font-size:16px;line-height:1.5;color:#a3a8b8;margin:0 0 24px}
+.steps{margin:0 0 24px;padding:16px;border-radius:20px;background:#14161c;border:1px solid #23262f}.steps>div{display:flex;align-items:flex-start;font-size:15px;line-height:1.5;color:#dde0ea}.steps>div+div{margin-top:16px}
+.steps i{flex:none;width:28px;height:28px;border-radius:50%;background:rgba(255,138,91,.14);display:flex;align-items:center;justify-content:center;font:800 14px system-ui;color:#ff8a5b;font-style:normal;margin-right:12px}
+#pairbox label{display:block;font-size:14px;font-weight:600;color:#a3a8b8;margin:0 0 8px}
+.cellwrap{position:relative;margin:0 0 24px}.cells{display:flex}
+.cell{flex:1;min-width:0;max-width:56px;height:64px;margin-left:8px;border-radius:16px;background:#14161c;border:1.5px solid #646b82;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700}.cell:first-child{margin-left:0}.cell:nth-child(4){margin-left:20px}.cell.cur{border-color:#ff8a5b;box-shadow:0 0 0 3px rgba(255,138,91,.2)}
 #pairbox .cellwrap input{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;padding:0;opacity:0;border:0;font-size:16px}
-#pairbox #pname{width:100%;padding:0 16px;height:56px;margin:0;border-radius:18px;border:1px solid #2e3140;font-weight:400;font-size:17px}
-#pairbox .pri{width:100%;height:58px;border-radius:18px;font-size:18px;margin-top:14px}
-#pairbox .note{display:flex;align-items:flex-start;font-size:13px;line-height:1.45;color:#a3a8b8;margin-top:12px}#pairbox .note .ic{width:18px;height:18px;margin:1px 10px 0 0}#pnote{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:60;width:calc(100% - 32px);max-width:398px;margin:0;padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.45;text-align:left;pointer-events:none;opacity:0;transform:translate(-50%,-24px);transition:transform .25s ease,opacity .25s ease;box-shadow:0 12px 30px rgba(0,0,0,.45)}#pnote.ok{background:#1b2420;border:1px solid #2c4a3a;color:#bfe9cf}#pnote.warn{background:#241f16;border:1px solid #5a4a2b;color:#f0d9a8}#pnote.on{opacity:1;transform:translate(-50%,0)}@media (prefers-reduced-motion:reduce){#pnote{transition:none}}
+#pairbox #pname{width:100%;padding:0 16px;height:56px;margin:0;border-radius:16px;background:#14161c;border:1.5px solid #646b82;font-weight:400;font-size:17px;outline:0}#pairbox #pname:focus{border-color:#ff8a5b;box-shadow:0 0 0 3px rgba(255,138,91,.2)}
+#pairbox .actions{margin-top:auto;padding-top:24px}#pairbox .pri{width:100%;height:58px;border-radius:18px;font-size:18px;margin:0;box-shadow:0 10px 24px rgba(255,138,91,.25)}#pairbox .pri:active{transform:scale(.98)}
+#pairbox .note{display:flex;align-items:flex-start;font-size:14px;line-height:1.5;color:#a3a8b8;margin-top:16px}#pairbox .note .ic{width:18px;height:18px;margin:2px 10px 0 0}#pnote{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:60;width:calc(100% - 32px);max-width:398px;margin:0;padding:12px 16px 12px 14px;border-radius:16px;font-size:14px;line-height:1.45;text-align:left;pointer-events:none;opacity:0;transform:translate(-50%,-24px);transition:transform .25s ease,opacity .25s ease;box-shadow:0 12px 30px rgba(0,0,0,.45);background:#1b1d25;border:1px solid #2e3140;border-left:4px solid #8a8fa0;color:#dde0ea}#pnote.ok{background:#12231b;border-left-color:#30a46c;color:#bfe9cf}#pnote.warn{background:#2a2412;border-left-color:#f5c451;color:#ffe9a8}#pnote.on{opacity:1;transform:translate(-50%,0)}@media (prefers-reduced-motion:reduce){#pnote{transition:none}}
 
 /* the app's on/off button: it carries the state, so it is wider than a plain icon button */
 .pwr{position:relative;width:auto;min-width:80px;padding:0 14px;justify-content:center;overflow:hidden;transition:background-color .22s,border-color .22s,color .22s}
@@ -665,12 +668,12 @@ function phonePage(lang, preCode, hint) {
 <meta http-equiv=cache-control content=no-store>
 <meta http-equiv=pragma content=no-cache><title>${T('Phone remote')}</title>
 <style>${STYLE}</style>
-<div id=pairbox class=hide><div class=glow></div><h1>${T('Pair a device')}</h1><p>${T('Use this device as a remote for your TV. You only do this once.')}</p>
-<div class=steps><div><i>1</i><span>${T('On the TV, in the manager app, open Features > Phone remote > Pair a phone. It shows a QR code and a 6-digit code.')}</span></div><div><i>2</i><span>${T('Type the 6-digit code shown on the TV screen.')}</span></div></div>
+<div id=pairbox class=hide><div class=glow></div><p class=eyebrow id=eb data-app="${T('Step 2 of 2')}">&nbsp;</p><h1>${T('Enter the code')}</h1><p class=sub id=psub data-app="${T('The 6-digit code is on the TV screen.')}">${T('Use this device as a remote for your TV. You only do this once.')}</p>
+<div class=steps id=steps><div><i>1</i><span>${T('On the TV, open the manager app: Features > Phone remote > Pair a phone. It shows a QR code and a 6-digit code.')}</span></div><div><i>2</i><span>${T('Type the 6-digit code below.')}</span></div></div>
 <label for=code>${T('Code from the TV')}</label><div class=cellwrap><div class=cells>${cellHtml}</div><input id=code inputmode=numeric maxlength=6 autocomplete=one-time-code autofocus value="${pre}"></div>
 <label for=pname>${T('Name of this device')}</label><input id=pname maxlength=30>
-<button class=pri id=go>${T('Pair this device')}</button>
-<div class=note>${ic('lock')}<span>${T('Only devices you pair can control the TV. You can block or remove any device from the TV later.')}</span></div></div>
+<div class=actions><button class=pri id=go>${T('Pair this device')}</button>
+<div class=note>${ic('lock')}<span>${T('Only devices you pair can control the TV. You can block or remove any device from the TV later.')}</span></div></div></div>
 <div id=remote class=hide>
 <div class=head><div class=who id=who role=button tabindex=0 aria-haspopup=dialog aria-label="${T('This remote')}"><div class=tvrow><div id=tvname>TV</div>${ic('chev')}</div><div class="st w" id=st><i></i><span id=stt>${T('Connecting…')}</span></div></div><button id=pwr class=info aria-label="${T('Power')}"><span class=pi>${ic('power')}<svg id=pwring class=hide viewBox="0 0 34 34" aria-hidden=true><circle cx=17 cy=17 r=15 stroke=currentColor stroke-width=2 stroke-linecap=round stroke-dasharray="70 100"></circle></svg><span id=pwpop class="pop hide"></span></span><span id=pwrlb class=hide></span></button></div>
 <div id=kb><div class=cv>

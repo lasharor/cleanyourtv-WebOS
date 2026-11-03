@@ -41,7 +41,7 @@ any change to the app, otherwise the TV keeps handing out the old one.
    so a phone without a camera app can just type that address; `adb install` works too.
 2. On the TV: **Features › Phone remote** must be on, with the pairing screen open (it shows the address, e.g. `http://192.168.1.50:8794`, and a
    6-digit code).
-3. Open the app, type the TV's address (or tap **Find the TV on this network**), and the TV's page asks for the 6-digit code it shows. The
+3. Open the app, tap **Find my TV** (or **Type the address instead** and type the TV's address), and the TV's page asks for the 6-digit code it shows. The
    other way round: scan the code on the TV with the **phone's camera** — the app opens itself with the address and the code already in
    place, so nothing has to be typed.
 
@@ -89,7 +89,7 @@ Nothing is sent anywhere but the TV. There is no analytics and no account.
 ## Files
 
 ```
-mobile/web/start.html                 the start screen (one source; the build copies it into the APK's assets)
+mobile/web/start.html                 the start screens: this one asks for the TV, off.html is the TV-off screen (one source each; the build copies them into the APK's assets)
 mobile/web/off.html                   the last resort when no copy of the TV's page was ever kept: a power button
 mobile/android/AndroidManifest.xml    one activity, two permissions (INTERNET, VIBRATE), the launcher icon
 mobile/android/build.ps1              the whole build, with the SDK's tools
