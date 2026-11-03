@@ -893,7 +893,7 @@ function customizeMenu() {
     },
   ]);
 }
-/* Wallpapers: switched on here and how often the photo changes; the photos are added in the manager (uploads from a phone, Immich) */
+/* Wallpapers: switched on here and how often the photo changes; the photos are added in the manager (uploads from a phone, and photo sources installed as add-ons) */
 function wallMenu() {
   openBuilt(t('Wallpapers'), function () {
     var w = cfg.wall || { on: false },

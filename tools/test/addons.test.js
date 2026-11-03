@@ -370,6 +370,63 @@ run(async () => {
   r = await call(a, '/api/addons');
   ok(r.j.book.position === '' && r.j.book.strip === true, 'an empty place leaves it to the theme');
 
+  // what an add-on can provide to a part of the service: only known things, and only running, switched-on add-ons are listed
+  ok(
+    addons.check(Object.assign({}, good, { provides: ['wallpapers', 'x', 'wallpapers'] })).manifest.provides.join() === 'wallpapers' &&
+      addons.check(good).manifest.provides.length === 0,
+    'provides keeps the known things, once each'
+  );
+  put(
+    'src',
+    Object.assign(svc('src'), { provides: ['wallpapers'] }),
+    "exports.create = () => ({ wallpapers: { label: 'Src', list: () => [] }, handle: (q, r) => r.end('{}') });"
+  );
+  put(
+    'srcoff',
+    Object.assign(svc('srcoff'), { provides: ['wallpapers'] }),
+    "exports.create = () => ({ wallpapers: {}, handle: (q, r) => r.end('{}') });"
+  );
+  cfg.update('test', c => {
+    c.addons = Object.assign({}, c.addons, { srcoff: { enabled: false } });
+  });
+  a.load();
+  ok(
+    a
+      .providers('wallpapers')
+      .map(x => x.id)
+      .join() === 'src' && a.providers('wallpapers')[0].mod.wallpapers.label === 'Src',
+    'providers(what) gives the running, switched-on add-ons that provide it, with their module'
+  );
+  ok(a.providers('nothing').length === 0, 'and nothing for what nobody provides');
+
+  // every add-on of the repository's catalog installs from a stand-in for GitHub (the real index and files) and loads: its service part
+  // gets the ctx the loader makes, so a catalog add-on cannot lean on something only the service has
+  {
+    const catRoot = path.join(__dirname, '..', '..', 'addons');
+    const gh2 = await serve((q, rs) => {
+      const f = path.join(catRoot, q.url.split('?')[0].replace(/\.\./g, ''));
+      if (fs.existsSync(f) && fs.statSync(f).isFile()) return rs.end(fs.readFileSync(f));
+      rs.writeHead(404);
+      rs.end();
+    });
+    process.env.CYTV_ADDONS_URL = gh2.url;
+    const index = JSON.parse(fs.readFileSync(path.join(catRoot, 'index.json'), 'utf8'));
+    for (const e of index.addons) {
+      r = await call(a, '/api/addons/install', 'POST', { id: e.id });
+      const inst = await call(a, '/api/addons/' + e.id);
+      ok(
+        r.code === 200 && inst.j.status === 'running',
+        'the catalog add-on ' + e.id + ' installs and runs: ' + (r.out || '').slice(0, 120) + ' ' + (inst.j.error || '')
+      );
+    }
+    ok(
+      a.providers('wallpapers').some(x => x.id === 'immich' && x.mod.wallpapers.label === 'Immich'),
+      'the Immich add-on is a wallpaper source once installed'
+    );
+    gh2.server.close();
+    delete process.env.CYTV_ADDONS_URL;
+  }
+
   // the catalog: a stand-in for GitHub
   const files = {
     'addon.json': JSON.stringify({ id: 'hello', name: 'Hello', version: '1.2.0', kind: 'page', entry: { page: 'index.html' } }),

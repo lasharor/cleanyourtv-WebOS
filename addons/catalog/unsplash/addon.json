@@ -1,0 +1,10 @@
+{
+  "id": "unsplash",
+  "name": "Unsplash",
+  "version": "1.0.0",
+  "kind": "service",
+  "description": "A new landscape photo from Unsplash behind Home now and then, with your own free Access Key. Nothing is saved on the TV.",
+  "entry": { "service": "service.js" },
+  "permissions": ["net.fetch"],
+  "provides": ["wallpapers"]
+}
