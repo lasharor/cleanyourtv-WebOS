@@ -100,4 +100,18 @@ run(async () => {
   }
   ok(back.length === 12 && sb.r === 1 && sb.c === 0, 'twenty notches up go back through every tile and stop at the first');
   ok(back[0] === seen[11], 'the way back starts at the tile before the last');
+
+  // ---- the pointer on the home screen (input.js pointerMoved): when a move of the cursor may move the focus ----
+  const inp = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'input.js'), 'utf8');
+  const pm = { lastMX: -1, lastMY: -1, pointerLive: false };
+  vm.createContext(pm);
+  vm.runInContext(source(inp, 'pointerMoved'), pm, { filename: 'pointerMoved' });
+  ok(typeof pm.pointerMoved === 'function', 'input.js has pointerMoved');
+  ok(pm.pointerMoved(500, 500) === false && pm.lastMX === 500, 'the first move only notes where the cursor is');
+  ok(pm.pointerMoved(510, 505) === false, 'a jitter under 24 px does nothing (the remote picked up)');
+  ok(pm.pointerMoved(530, 505) === true, 'a real move of 24 px or more moves the focus');
+  ok(pm.pointerMoved(536, 505) === true, 'after that a move of 6 px counts, so a cursor coming to rest over a tile focuses it');
+  ok(pm.pointerMoved(538, 506) === false, 'a move under 4 px still does nothing');
+  pm.pointerLive = false; // a button was pressed
+  ok(pm.pointerMoved(546, 506) === false, 'after a button press a small move does nothing again');
 });

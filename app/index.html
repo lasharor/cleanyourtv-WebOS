@@ -7032,6 +7032,8 @@ function hit(e) {
       held = false;
       return;
     }
+    var p = posOf(e); /* the focus goes to what was clicked, so the highlight shows what opens */
+    if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
     act(e);
   });
 }
@@ -7041,17 +7043,25 @@ function options(e) {
 }
 
 /* Pointer focus follows real pointer movement only: a tile sliding under a still cursor, a cursor jitter when
-   the remote is picked up, or a pointer move right after a button press must not steal the focus. */
+   the remote is picked up, or a pointer move right after a button press must not steal the focus. The first move after a button press
+   needs 24 px; after that every move of 4 px or more counts, so a cursor that comes to rest over a tile always focuses it (before, a
+   cursor nudged less than 24 px over a tile left the focus elsewhere, while a click opened the tile under it). */
+var pointerLive = false;
+function pointerMoved(x, y) {
+  if (lastMX < 0) {
+    lastMX = x;
+    lastMY = y;
+    return false;
+  }
+  if (Math.abs(x - lastMX) + Math.abs(y - lastMY) < (pointerLive ? 4 : 24)) return false;
+  lastMX = x;
+  lastMY = y;
+  pointerLive = true;
+  return true;
+}
 document.addEventListener('mousemove', function (ev) {
   if (stack.length || LIVE.on || PAGER.on || CS.on || Date.now() - lastKey < 1500) return;
-  if (lastMX < 0) {
-    lastMX = ev.clientX;
-    lastMY = ev.clientY;
-    return;
-  }
-  if (Math.abs(ev.clientX - lastMX) + Math.abs(ev.clientY - lastMY) < 24) return;
-  lastMX = ev.clientX;
-  lastMY = ev.clientY;
+  if (!pointerMoved(ev.clientX, ev.clientY)) return;
   var el = ev.target.closest ? ev.target.closest('.tile,.pill,.card-btn') : null,
     p = el && posOf(el);
   if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
@@ -7062,6 +7072,7 @@ document.addEventListener('keydown', function (e) {
   /* a right-to-left layout: Left moves to what is on the left, which is the next tile in the row (Live TV keeps left-to-right) */
   if (rtl() && !LIVE.on && (k === 37 || k === 39)) k = 76 - k;
   lastKey = Date.now();
+  pointerLive = false;
   /* a card's sheet has the keys while it is open (it undoes the swap above itself) */
   if (CS.on) {
     csKey(k, e);
