@@ -237,6 +237,12 @@ run(async () => {
   const noSceneRaw = { name: 'NS', effects: { scenes: 'custom' } }; // custom but no scenes array
   const noSceneTheme = themeMod.normalize(noSceneRaw, 'noscene', null, sceneDir);
   ok(noSceneTheme.v['effects.scenes'] === 'off', 'effects.scenes "custom" without a valid scenes array falls back to off');
+  // on the TV the launcher is a file:// page: a path alone does not reach the service, so the scene pictures need API in front,
+  // like the theme's font and wallpaper (theme.js)
+  ok(
+    /customBase = wantCustom \? API \+ '\/api\/theme\/scene\/'/.test(fs.readFileSync(path.join(root, 'app/src/js/scenes.js'), 'utf8')),
+    "custom scenes: the launcher asks the service's address for the pictures, not a path of the page"
+  );
   const cardsShape = req('cards');
   const cs = cardsShape.sanitize({
     greeting: { type: 'greeting', name: 'Salih', x: { deep: { deeper: 1 } } },

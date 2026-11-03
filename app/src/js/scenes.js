@@ -185,7 +185,7 @@ var SCENES = (function () {
       reset();
       lib = newLib;
       custom = newCustom;
-      customBase = wantCustom ? '/api/theme/scene/' + th.scenes.id + '/' : '';
+      customBase = wantCustom ? API + '/api/theme/scene/' + th.scenes.id + '/' : '';
     }
 
     on = want;
