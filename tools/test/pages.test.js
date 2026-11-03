@@ -153,4 +153,17 @@ run(async () => {
       /healthyT = setTimeout\(function \(\) \{\s*reloads = 0;\s*\}, 30000\)/.test(live),
     'Live TV reloads a stream whose picture time stops without a waiting event (issue 109)'
   );
+  // the text of an add-on on the Add-ons tab was cut off at the bottom of the screen (Weather forecast): it sits in a box of six lines and, when
+  // longer, drifts up by itself (the remote cannot scroll it), with a fade at the cut edge; only transform animates
+  const lst = msrc.filter(x => x[0] === 'list.js')[0][1];
+  const mcss = fs.readFileSync(path.join(root, 'manager', 'src', 'css', 'manager.css'), 'utf8');
+  ok(
+    /box\.className = 'abt'/.test(lst) &&
+      /aboutScroll\(box, txt\)/.test(lst) &&
+      /clearTimeout\(abTimer\)/.test(lst) &&
+      /'transform ' \+/.test(lst) &&
+      /#info \.abt \{\s*max-height: 270px;\s*overflow: hidden;/.test(mcss) &&
+      /#info \.abt\.ov \{\s*-webkit-mask-image/.test(mcss),
+    "an add-on's long text on the Add-ons tab stays in its box and scrolls by itself"
+  );
 });
