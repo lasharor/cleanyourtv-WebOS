@@ -734,5 +734,13 @@
     "Pressure": "Pressió",
     "Air quality": "Qualitat de l'aire",
     "Sunrise": "Sortida del sol",
-    "Sunset": "Posta de sol"
+    "Sunset": "Posta de sol",
+    "Connect": "Connecta",
+    "Connected to Spotify.": "Connectat a Spotify.",
+    "Disconnect Spotify": "Desconnecta Spotify",
+    "Open Spotify sign-in": "Obre l'inici de sessió de Spotify",
+    "Pasted address": "Adreça enganxada",
+    "Prepare sign-in": "Prepara l'inici de sessió",
+    "Sign in to Spotify again.": "Torna a iniciar la sessió a Spotify.",
+    "Spotify now playing": "Spotify ara sona"
 }

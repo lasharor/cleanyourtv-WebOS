@@ -782,5 +782,13 @@
  "Pressure": "Luchtdruk",
  "Air quality": "Luchtkwaliteit",
  "Sunrise": "Zonsopgang",
- "Sunset": "Zonsondergang"
+ "Sunset": "Zonsondergang",
+ "Connect": "Verbinden",
+ "Connected to Spotify.": "Verbonden met Spotify.",
+ "Disconnect Spotify": "Spotify loskoppelen",
+ "Open Spotify sign-in": "Spotify-aanmelding openen",
+ "Pasted address": "Geplakt adres",
+ "Prepare sign-in": "Aanmelding voorbereiden",
+ "Sign in to Spotify again.": "Meld je opnieuw aan bij Spotify.",
+ "Spotify now playing": "Spotify nu aan het spelen"
 }

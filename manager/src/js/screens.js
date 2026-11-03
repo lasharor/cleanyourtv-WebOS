@@ -215,11 +215,20 @@ function openWallPair() {
     }
   );
 }
-/* a photo source (an add-on that provides wallpapers: Immich, Unsplash, ...) has its own settings page on the phone */
-var wallSrc = '';
+/* a photo source (an add-on that provides wallpapers: Immich, Unsplash, ...) has its own settings page on the phone, and so has any
+   add-on whose service offers one (Add-ons > the add-on > Set up from your phone) */
+var wallSrc = '',
+  pairPath = '';
 function openSourcePair(id, label) {
+  pairScreen('wallsrc', id, label, '/api/wallpapers/source/' + id + '/settings');
+}
+function openAddonPair(id, label) {
+  pairScreen('addonpair', id, label, '/api/addons/' + id + '/settings');
+}
+function pairScreen(mode, id, label, path) {
   wallSrc = id;
-  shareMode = 'wallsrc';
+  pairPath = path;
+  shareMode = mode;
   push('share');
   $('share').style.display = 'block';
   $('shareurl').textContent = '';
@@ -229,9 +238,9 @@ function openSourcePair(id, label) {
     '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li>'
   );
   $('sharemsg').textContent = tr('Preparing\u2026');
-  api('/api/wallpapers/source/' + id + '/settings', {}).then(
+  api(path, {}).then(
     function (r) {
-      if (view !== 'share' || shareMode !== 'wallsrc') return;
+      if (view !== 'share' || shareMode !== mode) return;
       if (r.error) {
         $('sharemsg').textContent = tr(r.error);
         return;

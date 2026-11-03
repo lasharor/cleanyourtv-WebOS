@@ -716,5 +716,13 @@
  "Pressure": "Basınç",
  "Air quality": "Hava kalitesi",
  "Sunrise": "Gün doğumu",
- "Sunset": "Gün batımı"
+ "Sunset": "Gün batımı",
+ "Connect": "Bağlan",
+ "Connected to Spotify.": "Spotify'a bağlandı.",
+ "Disconnect Spotify": "Spotify bağlantısını kes",
+ "Open Spotify sign-in": "Spotify girişini aç",
+ "Pasted address": "Yapıştırılan adres",
+ "Prepare sign-in": "Girişi hazırla",
+ "Sign in to Spotify again.": "Spotify'da yeniden oturum açın.",
+ "Spotify now playing": "Spotify şimdi çalıyor"
 }

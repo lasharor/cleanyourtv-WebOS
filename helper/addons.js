@@ -329,7 +329,7 @@ function create(ctx) {
     }
     return '';
   };
-  const info = a => ({
+  const baseInfo = a => ({
     id: a.id,
     name: a.manifest ? a.manifest.name : a.id,
     version: a.manifest ? a.manifest.version : '',
@@ -350,6 +350,12 @@ function create(ctx) {
     inBook: bookable(a) && bookOf().hidden.indexOf(a.id) < 0,
     order: pagesInOrder().indexOf(a), // its place among the pages that can be in the book (-1: not a page)
   });
+  // a running add-on whose service has a phone page of its own (settings): the manager offers "Set up from your phone" for it
+  const info = a => {
+    const out = baseInfo(a);
+    if (a.status === 'running' && a.mod && typeof a.mod.settings === 'function') out.settings = true;
+    return out;
+  };
 
   // ---- the catalog ----
   const catalogBase = () => {
@@ -603,6 +609,15 @@ function create(ctx) {
         return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: false });
       }
       return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: changed });
+    }
+    // the add-on's phone page (settings in its service, like a photo source's): the manager shows "Set up from your phone" for it
+    if (m[2] === '/settings' && req.method === 'POST' && a.status === 'running' && a.mod && typeof a.mod.settings === 'function') {
+      const b = await body(req);
+      try {
+        return web.json(res, (await a.mod.settings(b && typeof b === 'object' ? b : {})) || {});
+      } catch (e) {
+        return web.json(res, { error: String((e && e.message) || e).slice(0, 160) });
+      }
     }
     if (a.status !== 'running' || !a.mod || typeof a.mod.handle !== 'function') return web.notFound(res);
     return viaAddon(a, req, res, m[2], body);

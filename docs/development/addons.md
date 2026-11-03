@@ -155,6 +155,12 @@ Each button the card declared becomes a target of the remote in the top row of H
 card asks for its data again a few times in the seconds after. A name the card did not declare is ignored. Routes: `POST /api/cards/feed {slot}` and
 `POST /api/cards/action {slot, name, arg}` ([API](../api.md)).
 
+### A phone page of the add-on
+
+A service that has a `settings(o)` function (the same contract as a photo source's: it opens a short-lived page on the LAN and answers `{url, code, qr, seconds}`, or closes it
+for `{stop: true}`) gets a **Set up from your phone** row on its screen in the manager's Add-ons (`POST /api/addons/<id>/settings`, `settings: true` in the add-on's entry of
+`GET /api/addons`). The weather add-on needs none (the city is an option on the Cards page); the Spotify add-on uses it for the sign-in.
+
 ## Pages: Home is page 1 of a book
 
 A page add-on is served at `http://127.0.0.1:8765/addon/<id>/...` while it runs, with a content security policy that lets it load
@@ -219,6 +225,7 @@ left out stays installed and running but has no button.
 | `immich` | Photos from your Immich albums as the Home wallpaper, a photo source (see above): the sync, the albums and the phone page (port 8795) moved here from Wallpapers. A TV that had Immich before hands its settings and photos to it once. |
 | `unsplash` | A new random photo from Unsplash as the Home wallpaper, a live photo source (see above): the Access Key, the 3-minute pace, the credit line and the phone page (port 8796). Pictures stay on Unsplash's host; nothing is saved on the TV. |
 | `weather` | The **Weather forecast** card for Home, a card of an add-on (see above): the weather at a city you choose on the phone page, with buttons for the remote (Now, Hours, Days). From Open-Meteo, no key; only the coordinates leave the TV, at most every 30 minutes. |
+| `spotify` | The **Spotify now playing** card for Home, a card of an add-on (see above): the cover, title and artist of what plays on your Spotify account, with previous, play or pause and next as buttons for the remote (Premium). Your own Spotify developer app (its Client ID; sign-in with PKCE), set up from your phone (page on port 8797): Add-ons > Spotify now playing > Set up from your phone. The tokens stay in the add-on's settings. |
 
 ## Versions
 
