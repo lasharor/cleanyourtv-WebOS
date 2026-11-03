@@ -102,6 +102,7 @@ run(async () => {
     let photos = ['a1', 'b2', 'bad id', '../x', 'a1', 7, 'notes'],
       nextReply = { url: 'https://images.example.com/p.jpg?w=3840&q=80', credit: 'Photo by Ann\n on Example' },
       settingsReply = { url: 'http://192.168.1.2:8794', code: '123456', qr: 'http://192.168.1.2:8794/#123456', seconds: 900 };
+    let pushReply = null;
     const settingsCalls = [];
     const good = {
       label: 'Demo',
@@ -116,6 +117,7 @@ run(async () => {
               : path.join(dirS, id + (id === 'b2' ? '.png' : '.jpg')),
       live: true,
       next: async () => nextReply,
+      push: () => pushReply,
       status: () => ({ summary: '2 photos \u00B7 synced now', error: '' }),
       settings: async o => (settingsCalls.push(o), settingsReply),
     };
@@ -201,6 +203,18 @@ run(async () => {
       (await call(ws, '/api/wallpapers/live/plain')).j.error && (await call(ws, '/api/wallpapers/live/nobody')).j.error,
       'a source that is not live, or unknown, has no live photo'
     );
+
+    let pj = (await call(ws, '/api/wallpapers/push')).j;
+    ok(pj.id === '' && pj.url === '', 'nothing waiting for Home: an empty answer');
+    pushReply = { url: 'https://images.example.com/q.jpg', credit: 'Photo by Bo\n on Example' };
+    pj = (await call(ws, '/api/wallpapers/push')).j;
+    ok(
+      pj.id === 'l/demo' && pj.url === pushReply.url && pj.credit === 'Photo by Bo  on Example',
+      'a photo a source has waiting is handed to Home with its entry'
+    );
+    pushReply = { url: 'https://x.example.com/p"onerror', credit: 'x' };
+    pj = (await call(ws, '/api/wallpapers/push')).j;
+    ok(pj.url === '', 'an address Home must not put into a url() is not handed out');
 
     const sj = (await call(ws, '/api/wallpapers/status')).j;
     ok(

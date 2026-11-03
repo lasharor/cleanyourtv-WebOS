@@ -10,9 +10,15 @@ var WALL = (function () {
   var list = [],
     stamp = '',
     cur = '',
+    curCredit = '',
     side = 0,
     timer = 0,
+    pollT = 0,
     els = null;
+  /* a "live" entry (l/<add-on>): a photo source that is not kept on the TV and asks its server now and then */
+  var isLive = function (id) {
+    return id.slice(0, 2) === 'l/';
+  };
   function want() {
     return !!(cfg.wall && cfg.wall.on);
   }
@@ -28,12 +34,7 @@ var WALL = (function () {
     });
     return els;
   }
-  function dim() {
-    var th = cfg.theme || {},
-      d = th.wallpaper && th.wallpaper.dim != null ? th.wallpaper.dim : 0.4;
-    layers()[2].style.background = 'rgba(' + (th.nightRgb || '7, 8, 11') + ',' + d + ')';
-  }
-  /* the line in a corner that a photo source asks for (the photographer of an Unsplash photo); inside #homepage, so it turns with Home */
+  /* the line a photo source asks for in a corner (the photographer of an Unsplash photo); inside #homepage, so it turns with Home */
   function credit(text) {
     var c = $('wpc');
     if (!c) {
@@ -41,22 +42,33 @@ var WALL = (function () {
       c.id = 'wpc';
       $('homepage').appendChild(c);
     }
-    c.textContent = text || '';
-    c.style.display = text ? 'block' : 'none';
+    c.textContent = want() ? text || '' : '';
+    c.style.display = c.textContent ? 'block' : 'none';
   }
-  /* a "live" entry (l/<add-on>): the add-on gives an address on its own server now and then, nothing is kept on the TV */
-  function showLive(id) {
-    api('/api/wallpapers/live/' + id.slice(2)).then(
-      function (x) {
-        if (x && x.url) show(id, x.url, x.credit || '');
-      },
-      function () {}
-    );
+  function dim() {
+    var th = cfg.theme || {},
+      d = th.wallpaper && th.wallpaper.dim != null ? th.wallpaper.dim : 0.4;
+    layers()[2].style.background = 'rgba(' + (th.nightRgb || '7, 8, 11') + ',' + d + ')';
   }
-  function show(id, address, text) {
-    if (id.slice(0, 2) === 'l/' && !address) return showLive(id);
-    var url = address || API + '/api/wallpapers/photo/' + id,
-      im = new Image();
+  /* a live entry is asked of the service (/api/wallpapers/live/<add-on>): it hands over an address on the source's own server and a
+     credit line. Nothing to show (no photo yet, no network): skip() makes next() pick another photo, and with only a live source the
+     one on screen stays */
+  function show(id, skip) {
+    if (isLive(id))
+      return api('/api/wallpapers/live/' + id.slice(2)).then(
+        function (r) {
+          if (r && r.url) load(id, r.url, skip, r.credit);
+          else if (skip) skip();
+        },
+        function () {}
+      );
+    load(id, API + '/api/wallpapers/photo/' + id, skip, '');
+  }
+  function load(id, url, skip, text) {
+    var im = new Image();
+    im.onerror = function () {
+      if (skip && !isLive(id)) skip();
+    };
     im.onload = function () {
       if (!want()) return;
       var l = layers(),
@@ -68,24 +80,50 @@ var WALL = (function () {
       off.classList.remove('on');
       dim();
       document.body.classList.add('wpon');
-      credit(text);
       cur = id;
+      curCredit = text || '';
+      credit(curCredit);
     };
     im.src = url;
   }
-  function next() {
+  function next(tries) {
     if (!list.length) return;
     var pick = list[Math.floor(Math.random() * list.length)];
-    for (var n = 0; pick === cur && list.length > 1 && n < 8; n++) pick = list[Math.floor(Math.random() * list.length)];
-    show(pick);
+    for (var n = 0; pick === cur && !isLive(pick) && list.length > 1 && n < 8; n++) pick = list[Math.floor(Math.random() * list.length)];
+    show(pick, function () {
+      if ((tries || 0) < 5 && list.length > 1) next((tries || 0) + 1);
+    });
+  }
+  function hasLive() {
+    return list.some(isLive);
   }
   function arm() {
     clearInterval(timer);
+    clearInterval(pollT);
+    if (hasLive()) {
+      poll();
+      pollT = setInterval(poll, 4000);
+    }
     var sec = wallSecs();
-    if (sec > 0 && list.length > 1) timer = setInterval(next, sec * 1000);
+    if (sec > 0 && (list.length > 1 || (list.length && isLive(list[0]))))
+      timer = setInterval(function () {
+        next();
+      }, sec * 1000);
+  }
+  /* a live source can have a photo for Home at once (Unsplash: the one the phone page's Test key and save fetched): while Home is on
+     screen with a live entry in the list it asks every few seconds, and the service hands the photo out once */
+  function poll() {
+    if (!want() || !hasLive()) return;
+    api('/api/wallpapers/push').then(
+      function (r) {
+        if (r && r.url && r.id) load(r.id, r.url, null, r.credit);
+      },
+      function () {}
+    );
   }
   function off() {
     clearInterval(timer);
+    clearInterval(pollT);
     document.body.classList.remove('wpon');
     credit('');
     if (els) {
@@ -93,6 +131,7 @@ var WALL = (function () {
       els[1].classList.remove('on');
     }
     cur = '';
+    curCredit = '';
   }
   /* after the settings were read: switched on or off, a new interval, or a different set of photos */
   function sync() {
@@ -100,6 +139,7 @@ var WALL = (function () {
     var st = (cfg.wallpapers && cfg.wallpapers.stamp) || '';
     if (st === stamp && list.length) {
       dim();
+      credit(curCredit);
       return arm();
     }
     stamp = st;
@@ -124,6 +164,7 @@ var WALL = (function () {
     },
     hidden: function () {
       clearInterval(timer);
+      clearInterval(pollT);
     },
   };
 })();

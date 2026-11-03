@@ -1,7 +1,7 @@
 # Wallpapers
 
 Your own photos behind the home screen. Out of the box they are files: photos you upload from a phone. Other sources are
-[add-ons](development/addons.md) you install in the manager: [Immich](https://immich.app) albums, and more. Everything ends up in
+[add-ons](development/addons.md) you install in the manager: [Immich](https://immich.app) albums, [Unsplash](https://unsplash.com), and more. Everything ends up in
 one rotation on the TV.
 
 ## Switching it on
@@ -63,6 +63,26 @@ and 100 MB.
 **From an earlier version.** Immich used to be part of Wallpapers. If your TV had it set up, the address, key, albums and photos stay
 where they were until you install the Immich add-on, which takes them over once (nothing is downloaded again). Until then they are not
 used. To drop them instead, use **Remove old Immich data** on the Wallpapers screen.
+
+## Unsplash (add-on)
+
+Install **Unsplash** in the manager's **Add-ons**. It adds a row on the Wallpapers screen that opens its page on the phone. A free
+Access Key (unsplash.com/developers: create an application and copy its Access Key; a new key may make 50 requests an hour) gives Home a
+new random landscape photo, from the search words you enter or, with none, from Unsplash's Wallpapers topic. The TV saves no picture:
+Home loads each one straight from Unsplash's image host.
+
+- **Test key and save** checks the key, saves it and fetches a photo at once, which Home shows within seconds.
+- At most one new photo every 3 minutes (2 requests each, 40 of the 50 an hour). In between, and while the hourly limit is used up
+  (a clear message; new photos come again after an hour), one of the last 30 photos shown comes round again. A request that fails is
+  tried again after 30 seconds.
+- Each photo shows its credit in a corner of Home, "Photo by NAME on Unsplash" (Unsplash's guidelines ask for it, so it cannot be
+  switched off); the phone page lists the recent photos with the photographer and Unsplash linked, and every download is reported to
+  Unsplash as the guidelines ask.
+- The key goes only in the `Authorization` header of requests to `api.unsplash.com`, which are never redirected; picture requests
+  carry no key. It is kept in the TV's `config.json` and the phone page shows its last four characters at most. **Remove Unsplash**
+  deletes it. **Turn Unsplash off** on the page stops it without losing the key.
+
+The Unsplash integration was first written by Edenik in a pull request to Wallpapers; it lives in this add-on now.
 
 ## More photo sources (add-ons)
 

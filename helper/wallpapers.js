@@ -146,6 +146,7 @@ function create(ctx) {
   //   file(id)         the absolute path of that photo (a JPEG, PNG or WebP), or ''
   //   live: true       it also offers one photo at a time that is not kept on the TV: Home asks next() each time it shows that entry
   //   next()           (live) -> {url, credit}: an https address of the picture and the text Home shows in a corner (the photographer)
+  //   push()           (live, optional) -> {url, credit} or null: a photo for Home to show now, once (Home asks every few seconds)
   //   status()         -> {summary, error}: one line for the manager (photos, last sync, what went wrong)
   //   settings(o)      -> {url, code, qr, seconds}: starts a short-lived page on the LAN for its settings (o.stop: close it)
   // The photos are listed as s/<add-on>/<id> and a live source as l/<add-on>. A source that throws offers nothing and is logged once.
@@ -197,18 +198,34 @@ function create(ctx) {
     fs.createReadStream(f).pipe(res);
   }
   // a live photo: the address goes into a CSS url() on Home, so only a plain https address is passed on
+  const livePhoto = r => {
+    if (typeof r.url !== 'string' || !/^https:\/\/[^\s"'()\\]{4,600}$/.test(r.url))
+      return { error: 'the source gave no usable picture address' };
+    return { url: r.url, credit: line(r.credit, 120) };
+  };
   async function liveNext(addon) {
     const s = srcOf(addon);
     if (!s || s.mod.wallpapers.live !== true || typeof s.mod.wallpapers.next !== 'function') return { error: 'not a live source' };
     try {
       const r = (await s.mod.wallpapers.next()) || {};
-      if (r.error) return { error: line(r.error, 160) };
-      if (typeof r.url !== 'string' || !/^https:\/\/[^\s"'()\\]{4,600}$/.test(r.url))
-        return { error: 'the source gave no usable picture address' };
-      return { url: r.url, credit: line(r.credit, 120) };
+      return r.error ? { error: line(r.error, 160) } : livePhoto(r);
     } catch (e) {
       return { error: line((e && e.message) || e, 160) };
     }
+  }
+  // a photo a live source wants Home to show now (Unsplash: the one "Test key and save" fetched), handed out once; Home asks every few
+  // seconds while a live entry is in its list
+  function pushNow() {
+    for (const s of sources()) {
+      const w = s.mod.wallpapers;
+      if (w.live !== true || typeof w.push !== 'function') continue;
+      const r = guard(s, () => w.push(), null);
+      if (r && !r.error) {
+        const p = livePhoto(r);
+        if (p.url) return { id: 'l/' + s.id, url: p.url, credit: p.credit };
+      }
+    }
+    return { id: '', url: '', credit: '' };
   }
   async function srcSettings(addon, stop) {
     const s = srcOf(addon);
@@ -371,6 +388,7 @@ function create(ctx) {
     if (ms) return sendSrcPhoto(res, ms[1], ms[2]);
     const ml = /^\/api\/wallpapers\/live\/([a-z][a-z0-9-]{1,31})$/.exec(u);
     if (ml) return json(await liveNext(ml[1]));
+    if (u === '/api/wallpapers/push') return json(pushNow());
     if (u === '/api/wallpapers/status') return json(status());
     if (u === '/api/wallpapers/list') return json({ photos: list(), stamp: stamp() });
     if (req.method !== 'POST') return web.notFound(res);
