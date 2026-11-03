@@ -89,7 +89,20 @@ function status(c,s){var off=c==='off';if(off)pwrState=''; /* the status line un
    Tones: info (white), warn (amber), bad (red). A warning or an error is shown over a power wait; an info message waits for it. */
 var note=null,noteT=0,stBase=null;
 function say(text,tone,ms){note={text:text,tone:tone};clearTimeout(noteT);noteT=setTimeout(function(){note=null;mark()},ms||2500);mark()}
-function guess(){var u=navigator.userAgent||'';return /iPad/.test(u)?'iPad':/iPhone/.test(u)?'iPhone':/Android/.test(u)?'Android phone':'Device'}
+/* The first guess for the name field, best source first: the Android app (the name set in Android settings, or maker and model), the name the
+   router has for this phone (HINT, put in by the TV), then what the browser says about the kind of device, then 'Device'. It can be edited. */
+function has(u,s){return u.indexOf(s)>=0}
+function kind(){var u=navigator.userAgent||'',tp=navigator.maxTouchPoints||0;
+ if(has(u,'iPad')||(has(u,'Macintosh')&&tp>1))return 'iPad';
+ if(has(u,'iPhone')||has(u,'iPod'))return 'iPhone';
+ if(has(u,'Android'))return has(u,'Mobile')?'Android phone':'Android tablet';
+ if(has(u,'CrOS'))return 'Chromebook';
+ var b=has(u,'Edg/')?'Edge':has(u,'OPR/')||has(u,'Opera')?'Opera':has(u,'Firefox/')?'Firefox':has(u,'Chrome/')?'Chrome':has(u,'Safari/')?'Safari':'',
+  o=has(u,'Windows')?'Windows':has(u,'Macintosh')?'Mac':has(u,'Linux')||has(u,'X11')?'Linux':'';
+ return b&&o?b+' on '+o:'Device'}
+function plain(s){var r='',i,c;s=String(s||'');for(i=0;i<s.length;i++){c=s.charCodeAt(i);if(c>31&&c!==127&&'<>"&'.indexOf(s.charAt(i))<0)r+=s.charAt(i)}return r.trim().slice(0,30)}
+function guess(){var n='';try{if(window.CYTV_APP&&window.CYTV_APP.deviceName)n=plain(window.CYTV_APP.deviceName())}catch(e){}
+ return n||(typeof HINT==='string'&&plain(HINT))||kind()}
 var pnoteT=0;
 function pnote(s,k,ms){var e=$('pnote');clearTimeout(pnoteT);e.textContent=s;e.className=k||'';void e.offsetWidth;e.className=(k||'')+' on';pnoteT=setTimeout(function(){e.className=k||''},ms||3000)}
 function showPair(s,k){tok='';ready=false;show('pairbox');$('pmsg').className=k||'';$('pmsg').textContent=s||''}
@@ -632,7 +645,7 @@ const P = {
   chev: '<path d="m6 9 6 6 6-6"/>',
 }; // prettier-ignore
 
-function phonePage(lang, preCode) {
+function phonePage(lang, preCode, hint) {
   // a code in the address the page was opened with: it goes into the input on the server, before any script runs
   const pre = /^[0-9]{6}$/.test(String(preCode || '')) ? String(preCode) : '';
   let cellHtml = '';
@@ -699,7 +712,11 @@ ${key('MENU', ic('menu'), T('Menu'), 'cn tl')}<button id=bnum class="cn tr" aria
 </div></div>
 ` +
     i18n.script(lang, PHONE_JS) +
-    '<script>' +
+    '<script>var HINT=' +
+    JSON.stringify(String(hint || ''))
+      .split('<')
+      .join(String.fromCharCode(92) + 'u003c') +
+    ';</script><script>' +
     PHONE_JS +
     '</script></html>'
   );

@@ -68,6 +68,7 @@ fails to load, the app tries again after 0, 1, 2, 4 and 8 seconds, then every 10
 |---|---|---|
 | the TV's address (`192.168.1.50:8794`) | app settings (SharedPreferences) | to open the page and to check the TV came back |
 | the TV's MAC address | app settings | for the Wake-on-LAN packet |
+| (nothing) | | the name set in Android settings, or the maker and model, is read only to fill the pairing page's name field (`deviceName()`); it can be changed there and is not stored by the app |
 | the phone remote's token | the WebView's `localStorage`, under the TV's own address | this is the browser's, not the app's: pairing lives in the page |
 
 Nothing is sent anywhere but the TV. There is no analytics and no account.
