@@ -111,14 +111,38 @@ function create(ctx) {
       items.push({ id: 'tv', label: T('This TV'), sub: T('Opens Spotify'), icon: 'devtv', active: false });
     return { menu: { title: T('Play on'), action: 'pick', items } };
   }
-  async function pick(id) {
-    if (id === 'tv') return openApp();
+  async function pick(arg) {
+    if (arg === 'tv') return openApp();
+    if (arg === 'no') return { ok: true };
+    // "w:<id>" is the answer Yes to the question below
+    const sure = arg.slice(0, 2) === 'w:',
+      id = sure ? arg.slice(2) : arg;
     const l = await np.devices();
     const d = (l.devices || []).filter(x => x.id === id)[0];
     // the TV is not moved to by a transfer (the app then stays paused): the cover's way takes the music over
     if (d && d.type === 'TV') return openApp();
+    // a device Spotify does not list is woken by handing it the sign-in over the network: only after a yes on the TV
+    if (d && d.wake && !sure)
+      return {
+        menu: {
+          title: T('Sign in on this device?'),
+          action: 'pick',
+          items: [
+            {
+              id: 'w:' + id,
+              label: d.name && d.name !== d.id ? d.name : d.type || 'Speaker',
+              sub: T('Yes, send it my Spotify sign-in'),
+              icon: icon(d.type),
+              active: false,
+            },
+            { id: 'no', label: T('Cancel'), icon: undefined, active: false },
+          ],
+        },
+      };
     const r = await np.transfer(id);
-    return r.error ? { error: T(r.error) } : { ok: true, said: T('Playing on') + ' ' + (d ? d.name : '') };
+    return r.error
+      ? { error: T(r.error) }
+      : { ok: true, said: T('Playing on') + ' ' + (d ? (d.name && d.name !== d.id ? d.name : d.type || 'Speaker') : '') };
   }
   // what the card shows is what the button acts on (presses in a burst: the second one undoes the first)
   const playingNow = n => (shown && want && Date.now() < want.until ? shown.playing : !!n.playing);
@@ -203,7 +227,7 @@ function create(ctx) {
       if (u === '/api/state') return json(said(np.status()));
       if (req.method !== 'POST') return json({ error: 'not found' }, 404);
       const b = await body(req);
-      if (u === '/api/prepare') return json(said(np.prepare(b.clientId, b.redirect)));
+      if (u === '/api/prepare') return json(said(np.prepare(b.clientId, b.redirect, b.wake === true)));
       if (u === '/api/finish') return json(said(await np.finish(b.address)));
       if (u === '/api/disconnect') return json(said(np.disconnect()));
       return json({ error: 'not found' }, 404);

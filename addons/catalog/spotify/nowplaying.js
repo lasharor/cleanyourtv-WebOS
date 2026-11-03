@@ -13,7 +13,9 @@ const crypto = require('crypto');
 const { URL } = require('url');
 const ACCOUNTS = () => process.env.CYTV_SPOTIFY_ACCOUNTS || 'https://accounts.spotify.com',
   API = () => process.env.CYTV_SPOTIFY_API || 'https://api.spotify.com/v1';
-const SCOPES = 'user-read-currently-playing user-read-playback-state user-modify-playback-state streaming',
+// streaming is asked only when the person switches the wake of speakers on (prepare): it is what lets the service hand the sign-in to a device
+const SCOPES = 'user-read-currently-playing user-read-playback-state user-modify-playback-state',
+  WAKE_SCOPE = 'streaming',
   NOT_FOUND = 'No device is playing on Spotify.',
   REDIRECT = 'http://127.0.0.1:8888/callback',
   PENDING_MS = 10 * 60 * 1000,
@@ -92,6 +94,8 @@ function create(opts) {
         asking = false;
       });
   }
+  // waking speakers is on only when the sign-in was made with that permission
+  const wakeOn = () => /streaming/.test(sp().scope || '');
   function status() {
     const s = sp();
     const connected = !!(s.refreshToken || s.accessToken);
@@ -102,14 +106,14 @@ function create(opts) {
       clientId: s.clientId ? String(s.clientId).slice(0, 4) + '…' + String(s.clientId).slice(-4) : '',
       redirect: s.redirect || REDIRECT,
       controls: /user-modify-playback-state/.test(s.scope || ''),
-      wake: /streaming/.test(s.scope || ''),
+      wake: wakeOn(),
       rejected: rejection() || undefined,
       signedIn,
       error: problem || undefined,
     };
   }
   // the sign-in address for the phone: PKCE (S256), a state to check on return
-  function prepare(clientId, redirect) {
+  function prepare(clientId, redirect, wake) {
     const cid = String(clientId || '').trim();
     if (!CLIENT_ID.test(cid)) return { error: 'The Client ID is 32 letters and digits, from your app on developer.spotify.com.' };
     const red = String(redirect || '').trim() || REDIRECT;
@@ -126,7 +130,7 @@ function create(opts) {
           response_type: 'code',
           client_id: cid,
           redirect_uri: red,
-          scope: SCOPES,
+          scope: wake === true ? SCOPES + ' ' + WAKE_SCOPE : SCOPES,
           code_challenge_method: 'S256',
           code_challenge: challenge,
           state,
@@ -490,9 +494,10 @@ function create(opts) {
   // the devices Spotify lists for the account (the ones with Spotify open and signed in), and the ones found on the network, to choose
   // where the music plays; a device that has to be woken first has wake: true
   async function devices() {
-    const asked = nearby();
+    // the network is looked at (mDNS) only while waking is switched on
+    const asked = wakeOn() ? nearby() : null;
     const r = await player('GET', '/me/player/devices');
-    await asked;
+    if (asked) await asked;
     if (r.error) return { error: r.error };
     let j;
     try {
@@ -509,7 +514,7 @@ function create(opts) {
         active: !!(d && d.is_active),
       }))
       .filter(d => /^[0-9A-Za-z._:-]{10,80}$/.test(d.id));
-    Object.keys(near).forEach(id => {
+    Object.keys(wakeOn() ? near : {}).forEach(id => {
       if (list.length < 20 && !list.some(d => d.id === id || d.name === near[id].name))
         list.push({ id, name: near[id].name, type: near[id].type, active: false, wake: true });
     });
@@ -517,7 +522,7 @@ function create(opts) {
   }
   // log the account in on a device of the network, so that Spotify lists it
   async function wake(id) {
-    if (!/streaming/.test(sp().scope || '')) return { error: 'Sign in to Spotify again to wake this device.' };
+    if (!wakeOn()) return { error: 'Waking speakers is off: switch it on in the set-up page and sign in again.' };
     const me = await player('GET', '/me');
     let user = '';
     try {

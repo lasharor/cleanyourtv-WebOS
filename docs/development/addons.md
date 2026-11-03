@@ -125,7 +125,7 @@ and its **buttons** send the add-on **actions**. The frame stays closed: no netw
 - `id`: as a card's: lower-case letters, digits and hyphens, the card type is `x-<id>`. A downloaded card with the same id wins; the id of a card of
   the launcher itself is refused. The card is offered (in Customise and on the phone page, with its options as the form) only while the add-on runs and
   is switched on, and goes with it; it is not removed from **Cards**.
-- `poll`: seconds between two requests for data (2 to 3600; 0 or left out: the card has no data). The launcher asks only while Home is on screen, one
+- `poll`: seconds between two requests for data (2 to 3600; 0 or left out: the card has no data). While Home is on screen the launcher asks at this pace; while it is not (an app in front) at most once a minute. It asks one
   request at a time, and only for a card that is set for a place.
 - `actions`: what the card's buttons can do (at most 8): a `name` and a `label`, which is what the remote's focus shows and is in the language of
   the add-on (translate it with the add-on's own words).

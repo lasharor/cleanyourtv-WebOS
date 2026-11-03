@@ -45,11 +45,19 @@ run(async () => {
   ok(sc.parse(Buffer.from([1, 2, 3]), '10.0.0.9') === null, 'a broken message gives nothing');
 
   // the device: it has a key pair in the same group, and opens the blob like a Spotify Connect device does
+  // a known answer, worked out outside this code (Python hashlib/hmac, following librespot's discovery: the HMAC key is the first 16 bytes
+  // of the SHA-1 of the shared secret): a mistake in the formulas cannot hide behind a test that uses the same formulas
+  const kk = sc.keys(Buffer.from(Array.from({ length: 128 }, (_, i) => i + 1)));
+  ok(
+    kk.ck.toString('hex') === 'ac75645be894c1291e8fe1f99f272f17302ca610' && kk.ek.toString('hex') === '38359f90be2e5658774c2f43c611c458',
+    'the keys of the blob are those of librespot (HMAC key = first 16 bytes of the SHA-1 of the secret)'
+  );
+
   const dev = crypto.createDiffieHellman(sc.PRIME, Buffer.from([2]));
   dev.generateKeys();
   const sealed = sc.seal(dev.getPublicKey().toString('base64'), 'THE-ACCESS-TOKEN');
   const secret = dev.computeSecret(Buffer.from(sealed.clientKey, 'base64'));
-  const base = crypto.createHash('sha1').update(secret).digest();
+  const base = crypto.createHash('sha1').update(secret).digest().slice(0, 16);
   const ck = crypto.createHmac('sha1', base).update('checksum').digest();
   const ek = crypto.createHmac('sha1', base).update('encryption').digest().slice(0, 16);
   const raw = Buffer.from(sealed.blob, 'base64');

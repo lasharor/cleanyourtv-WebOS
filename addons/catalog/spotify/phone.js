@@ -25,8 +25,10 @@ function steps(box,s){var cur=0,rows=[];
  var out;
  mk(t('Client ID and sign-in'),function(b){p(b,t('In the app Settings, under Basic Information, copy the Client ID and paste it here. The Client secret is not needed.'));
   var ci=el('input',{type:'text',autocomplete:'off',autocapitalize:'off',spellcheck:'false',placeholder:t('Client ID')}),go=el('button',{type:'button','class':'p'},t('Prepare sign-in'));
-  b.appendChild(ci);b.appendChild(go);var er=el('div',{});b.appendChild(er);
-  go.onclick=function(){er.innerHTML='';api('prepare',{clientId:ci.value}).then(function(r){
+  var wk=false,wb=el('button',{type:'button'},t('Wake speakers on my network: off'));
+  wb.onclick=function(){wk=!wk;wb.textContent=wk?t('Wake speakers on my network: on'):t('Wake speakers on my network: off')};
+  b.appendChild(ci);b.appendChild(wb);p(b,t('On: asks Spotify for one more permission, and the TV can hand your sign-in to a speaker that Spotify does not list, after you confirm it on the TV. Off: nothing is sent to any device.'));b.appendChild(go);var er=el('div',{});b.appendChild(er);
+  go.onclick=function(){er.innerHTML='';api('prepare',{clientId:ci.value,wake:wk}).then(function(r){
    if(r.error){note(er,r.error,1);return}
    out.innerHTML='';out.appendChild(el('a',{'class':'lk',href:r.url,target:'_blank',rel:'noopener'},t('Open Spotify sign-in')));
    p(out,t('Approve the access. The next page will not open: copy its whole address from the browser and paste it here.'));
@@ -36,7 +38,7 @@ function steps(box,s){var cur=0,rows=[];
  mk(t('Approve and connect'),function(b){out=b;p(b,t('Prepare the sign-in in the step before first. The sign-in button and the box for the address appear here.'))});
  open(0)}
 function show(s){var box=$('box');box.innerHTML='';if(s.error&&!s.connected)note(box,s.error,1);
- if(s.connected){note(box,t('Connected to Spotify.')+(s.account?' '+t('Signed in as')+' '+s.account:''));if(s.error)note(box,s.error,1);var d=el('button',{type:'button'},t('Disconnect Spotify'));d.onclick=function(){api('disconnect',{}).then(show)};box.appendChild(d);return}
+ if(s.connected){note(box,t('Connected to Spotify.')+(s.account?' '+t('Signed in as')+' '+s.account:''));note(box,s.wake?t('Waking speakers: on'):t('Waking speakers: off. Disconnect and sign in again to change it.'));if(s.error)note(box,s.error,1);var d=el('button',{type:'button'},t('Disconnect Spotify'));d.onclick=function(){api('disconnect',{}).then(show)};box.appendChild(d);return}
  steps(box,s)}
 function state(){return api('state').then(function(s){$('login').className='hide';$('main').className='';$('sum').textContent='';show(s)})}
 $('go').onclick=function(){code=$('code').value.trim();state().catch(function(){})};

@@ -168,6 +168,17 @@ async function info(d) {
   return { id: j.deviceID, name, type: type || 'Speaker', key: j.publicKey, token: j.tokenType };
 }
 
+// the two keys of the blob from the shared secret, as the discovery of librespot (discovery/src/server.rs) derives them on the device's
+// side: the HMAC key is the FIRST 16 BYTES of the SHA-1 of the secret (not all 20), the checksum key is HMAC(that, "checksum") and the
+// AES key the first 16 bytes of HMAC(that, "encryption")
+function keys(secret) {
+  const base = crypto.createHash('sha1').update(secret).digest().slice(0, 16);
+  return {
+    ck: crypto.createHmac('sha1', base).update('checksum').digest(),
+    ek: crypto.createHmac('sha1', base).update('encryption').digest().slice(0, 16),
+  };
+}
+
 // the blob of addUser: the token, encrypted with the key both sides get from the Diffie-Hellman exchange; null when the device's
 // key is not one (empty, too short, not base64)
 function seal(devKey, token, rnd) {
@@ -181,9 +192,7 @@ function seal(devKey, token, rnd) {
   } catch (_) {
     return null;
   }
-  const base = crypto.createHash('sha1').update(secret).digest();
-  const ck = crypto.createHmac('sha1', base).update('checksum').digest();
-  const ek = crypto.createHmac('sha1', base).update('encryption').digest().slice(0, 16);
+  const { ck, ek } = keys(secret);
   const iv = rnd || crypto.randomBytes(16);
   const c = crypto.createCipheriv('aes-128-ctr', ek, iv);
   const enc = Buffer.concat([c.update(Buffer.from(String(token))), c.final()]);
@@ -210,4 +219,4 @@ async function wake(d, user, token, id) {
   return !!j && j.status === 101;
 }
 
-module.exports = { discover, info, wake, seal, parse, isLan, PRIME };
+module.exports = { discover, info, wake, seal, keys, parse, isLan, PRIME };

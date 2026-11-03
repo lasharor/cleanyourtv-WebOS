@@ -772,13 +772,23 @@ function cardFeed(el) {
     }
   );
 }
+/* Is Home on screen? webOS reports it as hidden while it is shown on some TVs, so a page that is painting counts as shown too: an animation
+   frame, which a page that is really hidden does not get, came in the last 3 seconds. */
+var cardsFrameAt = 0;
+function cardsShown() {
+  return !document.hidden || Date.now() - cardsFrameAt < 3000;
+}
 setInterval(function () {
-  /* asked at the card's own pace also while webOS calls Home hidden: it reports that wrongly on some TVs while Home is on screen, and a
-     card that is not asked then shows a stale song (the answer is a small local request) */
-  var els = $('cards') ? $('cards').children : [];
+  requestAnimationFrame(function () {
+    cardsFrameAt = Date.now();
+  });
+  /* a card is asked at its own pace while Home is shown; while it is not (a video app in front) only once a minute, and a card that has
+     no answer yet is asked at once */
+  var gap = cardsShown() ? 0 : 60,
+    els = $('cards') ? $('cards').children : [];
   for (var i = 0; i < els.length; i++) {
     var pk = els[i]._pk;
-    if (pk && pk.poll && Date.now() - (els[i]._feedAt || 0) >= pk.poll * 1000) cardFeed(els[i]);
+    if (pk && pk.poll && Date.now() - (els[i]._feedAt || 0) >= (els[i]._data ? Math.max(pk.poll, gap) : pk.poll) * 1000) cardFeed(els[i]);
   }
 }, 1000);
 /* every card of an add-on asked again (after a button: the same add-on may fill several places, and all of them show the new state) */

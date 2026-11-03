@@ -164,6 +164,7 @@ run(async () => {
   const np = NP.create({ settings, fetch: req('fetch'), log: m => said.push(m) });
 
   // ---- the sign-in ----
+  const au0 = r => new (require('url').URL)(r.url).searchParams;
   ok(np.prepare('short', '').error, 'a Client ID that is not 32 hex digits is refused');
   ok(np.prepare(CID, 'http://localhost:8888/callback').error, 'localhost is refused as a redirect address (Spotify does not accept it)');
   ok(np.prepare(CID, 'http://192.168.1.5/cb').error, 'a plain http address on the network is refused');
@@ -172,6 +173,12 @@ run(async () => {
     'https and loopback addresses are accepted'
   );
   ok((await np.finish('http://127.0.0.1:8888/callback?code=x&state=y')).error, 'finishing without a prepared sign-in is refused');
+  ok(
+    !/streaming/.test(au0(np.prepare(CID, '')).get('scope')),
+    'the sign-in does not ask for the streaming permission unless waking speakers is switched on'
+  );
+  ok(/streaming/.test(au0(np.prepare(CID, '', true)).get('scope')), 'with waking switched on it does');
+  ok(!/streaming/.test(au0(np.prepare(CID, '', 'yes')).get('scope')), 'only a true switch counts');
   const prep = np.prepare(CID, '');
   const au = new (require('url').URL)(prep.url);
   const q = k => au.searchParams.get(k);
@@ -470,8 +477,32 @@ run(async () => {
     seen.xfer.length === 1 && seen.xfer[0].device_ids[0] === 'speaker-device-0001' && seen.xfer[0].play === true,
     'the music moves to it and keeps playing'
   );
-  ok((await svc.cards.action('nowplaying', {}, 'pick', 'no')).error, 'an id that is not a device id is refused');
+  ok((await svc.cards.action('nowplaying', {}, 'pick', 'x')).error, 'an id that is not a device id is refused');
   ok(seen.xfer.length === 1, 'and Spotify is not asked');
+  ok((await svc.cards.action('nowplaying', {}, 'pick', 'no')).ok === true && seen.xfer.length === 1, 'Cancel in the question does nothing');
+  // a speaker that Spotify does not list: asked first, woken only after the yes
+  const realDevices = svc.np.devices,
+    realWake = svc.np.wake,
+    realTransfer = svc.np.transfer,
+    woke = [];
+  svc.np.devices = async () => ({ devices: [{ id: 'wake-device-000001', name: 'Hall', type: 'Speaker', wake: true }] });
+  svc.np.wake = async id => (woke.push(id), { ok: true });
+  svc.np.transfer = async id => (woke.push(id), { ok: true });
+  const ask = await svc.cards.action('nowplaying', {}, 'pick', 'wake-device-000001');
+  ok(
+    ask.menu &&
+      ask.menu.action === 'pick' &&
+      ask.menu.items[0].id === 'w:wake-device-000001' &&
+      ask.menu.items[1].id === 'no' &&
+      woke.length === 0,
+    'a speaker to wake is first asked about on the TV: nothing is sent yet'
+  );
+  await svc.cards.action('nowplaying', {}, 'pick', 'w:wake-device-000001');
+  ok(woke.length === 1 && woke[0] === 'wake-device-000001', 'after the yes it is woken');
+  svc.np.devices = realDevices;
+  svc.np.wake = realWake;
+  svc.np.transfer = realTransfer;
+  ok(np.status().wake === true, 'the status says waking speakers is on when the permission was granted');
   launched.length = 0;
   ok((await svc.cards.action('nowplaying', {}, 'open')).ok === true, 'the cover opens the Spotify app');
   ok(
