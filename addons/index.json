@@ -47,6 +47,29 @@
       }
     },
     {
+      "id": "jellyfin",
+      "name": "Jellyfin continue watching",
+      "version": "1.0.0",
+      "description": "A row on Home with where you were in Jellyfin, with the pictures; OK opens your Jellyfin app.",
+      "about": "A card for Home with the films and episodes you did not finish on your Jellyfin server, and if you like the next episode of a series you follow: the picture, the title and how far you got. Each one is a button: OK opens your Jellyfin app, the official one, Litefin or Moonfin. Litefin opens the title itself (after its version 2.0.20); the others open on their own Home. The card talks only to your own server. Set up: Add-ons > Jellyfin continue watching > Set up from your phone. The TV keeps only the access token, never your password.",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "net.fetch",
+        "luna"
+      ],
+      "files": {
+        "addon.json": "46c4c4f785042586eab9bf04b46c9588a243008eb9a7f9c474af364c88b2f176",
+        "cards/continue/card.css": "4fa91cf45225cb62e120295378dc72bcd6f4ee9442ee7f2059fb17ccdb636841",
+        "cards/continue/card.html": "625e062837cbda14fc3d37f7c716adeaed0ef65ca0b2c87346ee03bbc7213f8d",
+        "cards/continue/card.js": "070f228981684091b7da9f9c25af638321f100c53ba1b5bb6263f757a7d22942",
+        "cards/continue/preview.jpg": "0ac03a4a4243c4534eddbfee7a7ae1996491f5036b663d690044e2f769446009",
+        "jellyfin.js": "65511aad779fe149625e5f2805fa14be35a2cb60c06fff5a4d0a8b5ea786684b",
+        "phone.js": "2746902ef82be054d1fee24d8e34b9a0c99e732332ca1e2c2de08cddbe2b8f2a",
+        "service.js": "d3e56e2263ae2b7447428ca09b45d894d5b7c0f207cab5153cceb777ac1e6213"
+      }
+    },
+    {
       "id": "spotify",
       "name": "Spotify now playing",
       "version": "1.0.0",
@@ -96,7 +119,7 @@
       ],
       "files": {
         "addon.json": "c1988ff75d83c81498e7e62183b9634268520721216134cfb71f60957c8c8207",
-        "page/index.html": "61acdf7e9d1f537c5933d6e1b40666b1c779998cbcdf93448faaeec9aca541a5",
+        "page/index.html": "8daacb7309e4f7c60d4d6cd9c8e7aab72af9f2dbde3252b002c9b4b531ec1f11",
         "service.js": "63e99e9fa925c642bf37a337093f45d32ec0a7bd9f522b365018a437d60f6758",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"

@@ -232,7 +232,8 @@ function create(ctx) {
       // a few vetted helpers and settings of the service, for every add-on (not the service's own parts)
       util: { lanIp: web.lanIp, randomInt: nc.randomInt, mkdirp: nc.mkdirp, i18n: require('./i18n') },
       env: {
-        lang: () => config.get().lang || '', // the language the manager's Language setting chose ('' follows the TV)
+        // the language the manager's Language setting chose; while it follows the TV, the one Home is shown in ('' before Home asked)
+        lang: () => config.get().lang || require('./i18n').screen() || '',
         wallpaperSize: () => ((config.get().wallpapers || {}).size === 'hd' ? 'hd' : '4k'), // Wallpapers > Picture size
       },
       log: m => console.log('addon ' + a.id + ': ' + String(m).slice(0, 300)),
