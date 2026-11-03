@@ -213,6 +213,9 @@ function create(ctx) {
   const settingsOf = id => addonsCfg(id).settings || {};
   const enabledOf = a =>
     a.manifest.enabledOption ? config.options()[a.manifest.enabledOption] !== false : addonsCfg(a.id).enabled !== false;
+  // whether an add-on is on now: one whose switch is an option (Live TV: options.liveTv) follows that option, also when another screen
+  // changes it (the manager's Live TV > Show Live TV); the others keep what was read at start or set with /enable
+  const isOn = a => (a.manifest && a.manifest.enabledOption ? enabledOf(a) : a.enabled);
   const find = id => list.filter(x => x.id === id)[0];
   const paused = () => fs.existsSync(path.join(path.dirname(P.ADDONS), 'DISABLE-ADDONS')) || fs.existsSync(path.join(P.ADDONS, 'DISABLE'));
 
@@ -365,7 +368,7 @@ function create(ctx) {
     about: a.manifest ? a.manifest.about : '',
     preview: !!previewFile(a),
     permissions: a.manifest ? a.manifest.permissions : [],
-    enabled: a.enabled,
+    enabled: isOn(a),
     status: a.status,
     error: a.error,
     bundled: a.bundled,
@@ -621,7 +624,8 @@ function create(ctx) {
       const b = await body(req);
       if (typeof b.enabled !== 'boolean') return web.json(res, { error: 'enabled must be true or false' }, 400);
       if (!a.manifest) return web.json(res, { error: 'this add-on cannot be switched on: ' + a.error }, 400);
-      const opt = a.manifest.enabledOption;
+      const opt = a.manifest.enabledOption,
+        changed = b.enabled !== isOn(a);
       config.update('addon:' + a.id, cfg => {
         if (opt) cfg.options = Object.assign({}, cfg.options, { [opt]: b.enabled });
         else {
@@ -629,13 +633,13 @@ function create(ctx) {
           cfg.addons[a.id] = Object.assign({}, cfg.addons[a.id], { enabled: b.enabled });
         }
       });
-      const changed = b.enabled !== a.enabled;
       a.enabled = b.enabled;
       if (a.manifest.kind === 'page' && a.status !== 'paused') {
         a.status = b.enabled ? 'running' : 'off';
         return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: false });
       }
-      return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: changed });
+      // an add-on switched by an option stays loaded and the launcher reads the option: no restart for it
+      return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: changed && !opt });
     }
     // the add-on's phone page (settings in its service, like a photo source's): the manager shows "Set up from your phone" for it
     if (m[2] === '/settings' && req.method === 'POST' && a.status === 'running' && a.mod && typeof a.mod.settings === 'function') {
@@ -671,7 +675,7 @@ function create(ctx) {
   // the running, switched-on add-ons that provide something ("provides" in their manifest): [{id, name, mod}]
   const providers = what =>
     list
-      .filter(a => a.manifest && a.status === 'running' && a.enabled && a.mod && a.manifest.provides.indexOf(what) >= 0)
+      .filter(a => a.manifest && a.status === 'running' && isOn(a) && a.mod && a.manifest.provides.indexOf(what) >= 0)
       .map(a => ({ id: a.id, name: a.manifest.name, mod: a.mod }));
 
   // the cards of the running, switched-on add-ons that provide "cards": [{addon, dir, mod, card}]
