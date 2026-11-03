@@ -2,7 +2,7 @@
 
 An add-on is a feature that is loaded, installed and removed on its own. Live TV and the Android box are bundled add-ons: they ship in the package (`helper/addons-bundled/iptv/` and
 `helper/addons-bundled/androidbox/`) and still answer their old paths (`/api/live/...`, `/api/androidbox...`), so the launcher and the
-manager did not change for them. A bundled add-on gets the service's own ctx as well as its add-on fields. Other add-ons come from a catalog in this repository and are installed from the manager (**Add-ons**).
+manager did not change for them. A bundled add-on gets the service's own ctx as well as its add-on fields. Every add-on, bundled or not, also gets `util` (`lanIp`, `randomInt`, `mkdirp`, `i18n`) and `env` (`lang()`, `wallpaperSize()`). Other add-ons come from a catalog in this repository and are installed from the manager (**Add-ons**).
 
 What is done, and what is not:
 
@@ -82,6 +82,25 @@ manager's status has `icons` for its **App icons** row. Switched off, every app 
 - **A launcher with Live TV as a page needs a service that serves add-on pages.** At release, `app/version.json` must name that
   service version as `minService`.
 
+## Providing something to the service: photo sources
+
+A service add-on can plug into a part of the service. The manifest says what with `"provides": ["wallpapers"]`; the add-on returns the
+matching object from `create()`. For wallpapers, `helper/wallpapers.js` asks every running, switched-on add-on that provides it. The
+object is `wallpapers` on the module `create()` returns:
+
+| Member | What it does |
+|---|---|
+| `label` | The name in the manager (**Wallpapers**). |
+| `list()` | Ids of the photos it has now (letters, digits, `-`, `_`, `.`; at most 500). Each is a file it can hand out. |
+| `file(id)` | The absolute path of that photo: a JPEG, PNG or WebP. Core serves it at `/api/wallpapers/photo/s/<add-on>/<id>`. |
+| `live: true`, `next()` | A live source keeps nothing on the TV. Home asks `next()` each time it shows that entry and gets `{url, credit}`: a plain `https://` address of the picture (it goes into a CSS `url()`, so quotes, brackets and spaces are refused) and a line Home shows in the bottom right corner, such as the photographer. The source decides how often it asks its server. |
+| `status()` | `{summary, error}`: one line for the manager (photos, last sync, what went wrong). |
+| `settings(o)` | Starts a short-lived page on the LAN for the source's settings and returns `{url, code, qr, seconds}`; `o.stop` closes it. The manager shows the code. A source with its own settings keeps secrets (an API key) in its own settings, never in a reply. |
+
+Core merges the photos with the uploads: `s/<add-on>/<id>` for a file and `l/<add-on>` for a live source. A source that throws offers
+nothing and is logged once. `GET /api/wallpapers/status` has a `sources` list only when an add-on provides photos. Core still does the
+rotation, the dimming and the Picture size setting; a source only supplies photos.
+
 ## Pages: Home is page 1 of a book
 
 A page add-on is served at `http://127.0.0.1:8765/addon/<id>/...` while it runs, with a content security policy that lets it load
@@ -143,6 +162,8 @@ left out stays installed and running but has no button.
 | `bigclock` | A full-screen clock (a page add-on, the smallest example). |
 | `dnscheck` | Asks the TV's own resolver for the hosts the debloat blocks and shows each as Blocked or Reachable (issue 92). A host that does not exist, or resolves to 0.0.0.0, 127.x or ::, counts as blocked; a control host (example.com) tells whether DNS works at all, and when it does not, no host is called blocked. Add your own hosts with `curl -X POST localhost:8765/api/addons/dnscheck/hosts -d '{"hosts":["ads.example.net"]}'` on the TV. |
 | `sysinfo` | Memory, swap, load and uptime of the TV, live, from `/proc`. |
+| `immich` | Photos from your Immich albums as the Home wallpaper, a photo source (see above): the sync, the albums and the phone page (port 8795) moved here from Wallpapers. A TV that had Immich before hands its settings and photos to it once. |
+| `unsplash` | A new random photo from Unsplash as the Home wallpaper, a live photo source (see above): the Access Key, the 3-minute pace, the credit line and the phone page (port 8796). Pictures stay on Unsplash's host; nothing is saved on the TV. |
 
 ## Versions
 

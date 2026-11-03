@@ -111,6 +111,12 @@ function closeShare() {
     wallRefresh();
     return;
   }
+  if (shareMode === 'wallsrc') {
+    api('/api/wallpapers/source/' + wallSrc + '/settings', { stop: true }).catch(function () {});
+    pop();
+    wallRefresh();
+    return;
+  }
   if (shareMode === 'abox') {
     api('/api/androidbox/pair', { stop: true }).catch(function () {});
     pop();

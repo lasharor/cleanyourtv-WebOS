@@ -18,7 +18,17 @@ run(async () => {
           fs
             .readdirSync(path.join(root, 'addons', 'catalog'))
             .filter(d => fs.existsSync(path.join(root, 'addons', 'catalog', d, 'service.js')))
-            .map(d => 'addons/catalog/' + d + '/service.js')
+            // every .js file of a service add-on runs in the service (service.js and the files it requires)
+            .reduce(
+              (all, d) =>
+                all.concat(
+                  fs
+                    .readdirSync(path.join(root, 'addons', 'catalog', d))
+                    .filter(f => /\.js$/.test(f))
+                    .map(f => 'addons/catalog/' + d + '/' + f)
+                ),
+              []
+            )
         )
         .map(f => path.join(root, f))
     );

@@ -92,4 +92,7 @@ run(async () => {
     /reload-home\.sh/.test(upd) && !/pkill -f "\[a\]pp-id=com\.webos\.app\.home"/.test(upd),
     'a launcher update reloads Home with reload-home.sh (webOS 6 restarts webapp-mgr)'
   );
+  // Home opens the manager (More settings...): LG's grey splash with a spinner must not show before its first paint
+  const mi = JSON.parse(fs.readFileSync(path.join(root, 'manager', 'app', 'appinfo.json'), 'utf8'));
+  ok(mi.noSplashOnLaunch === true && mi.spinnerOnLaunch === false, 'the manager app opens without the grey splash and spinner');
 });
