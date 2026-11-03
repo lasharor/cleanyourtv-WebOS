@@ -129,7 +129,8 @@ run(async () => {
       const m = JSON.parse(t);
       seen.push(m);
       if (m.type === 'register') {
-        const reply = () => c.send(JSON.stringify({ type: 'registered', id: m.id, payload: { 'client-key': m.payload['client-key'] || 'KEY1' } }));
+        const reply = () =>
+          c.send(JSON.stringify({ type: 'registered', id: m.id, payload: { 'client-key': m.payload['client-key'] || 'KEY1' } }));
         m.payload['client-key'] ? reply() : setTimeout(reply, 100);
       } else if (m.type === 'request') {
         c.send(JSON.stringify({ type: 'response', id: m.id, payload: { returnValue: true, socketPath: 'ws://x/pointer.sock' } }));
@@ -138,7 +139,14 @@ run(async () => {
   });
   await new Promise(r => srv.listen(0, '127.0.0.1', r));
   const ssapUrl = 'ws://127.0.0.1:' + srv.address().port;
-  const k7 = RK.create({ luna: async () => ({ returnValue: true }) }, { ssap: true, ssapUrl, connect: async a => ((opened.length = 0), opened.push(a), { closed: false, on() {}, send: () => true, terminate() {} }) });
+  const k7 = RK.create(
+    { luna: async () => ({ returnValue: true }) },
+    {
+      ssap: true,
+      ssapUrl,
+      connect: async a => ((opened.length = 0), opened.push(a), { closed: false, on() {}, send: () => true, terminate() {} }),
+    }
+  );
   let e7 = '';
   try {
     await k7.move(1, 1);

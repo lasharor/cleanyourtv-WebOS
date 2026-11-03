@@ -1778,7 +1778,11 @@ function build() {
   }
   if (view === 'prphone') {
     var sp = prSel || {};
-    rows.push({ label: sp.name || 'Phone', sub: (sp.blocked ? 'blocked' : 'allowed') + ' \u00B7 last used ' + prAgo(sp.seen) + prPaired(sp), fn: null });
+    rows.push({
+      label: sp.name || 'Phone',
+      sub: (sp.blocked ? 'blocked' : 'allowed') + ' \u00B7 last used ' + prAgo(sp.seen) + prPaired(sp),
+      fn: null,
+    });
     rows.push({
       label: sp.blocked ? 'Allow this phone' : 'Block this phone',
       sub: sp.blocked ? 'it can connect again with the token it has' : 'it stays paired but sends nothing until you allow it',
@@ -1798,7 +1802,7 @@ function build() {
     return;
   }
   if (view === 'prexpire') {
-    var cur = pr && pr.expireDays !== undefined ? pr.expireDays : 14;
+    var expireCur = pr && pr.expireDays !== undefined ? pr.expireDays : 14;
     rows.push({
       label: 'Remove phones that are not used',
       sub: 'for security',
@@ -1817,7 +1821,7 @@ function build() {
     ].forEach(function (o) {
       rows.push({
         label: o[1],
-        sub: cur === o[0] ? 'selected' : o[0] === 14 ? 'default' : '',
+        sub: expireCur === o[0] ? 'selected' : o[0] === 14 ? 'default' : '',
         info: { t: 'After ' + o[1], d: 'A phone not used for ' + o[1] + ' is removed. ' + o[2] },
         fn: function () {
           prCall('/api/phoneremote', { expireDays: o[0] }, 'Saved');
@@ -1827,10 +1831,13 @@ function build() {
     rows.push({ sep: true });
     rows.push({
       label: 'Never remove',
-      sub: cur === 0 ? 'selected' : 'not recommended',
-      info: { t: 'Never remove', d: 'Not recommended: a lost phone keeps the remote for ever, until you remove it by hand in Paired phones. You are asked to confirm.' },
+      sub: expireCur === 0 ? 'selected' : 'not recommended',
+      info: {
+        t: 'Never remove',
+        d: 'Not recommended: a lost phone keeps the remote for ever, until you remove it by hand in Paired phones. You are asked to confirm.',
+      },
       fn: function () {
-        if (cur !== 0) push('confirm-pr-exp-off');
+        if (expireCur !== 0) push('confirm-pr-exp-off');
       },
     });
     rows.push({ sep: true });
@@ -3673,6 +3680,7 @@ function voiceRefresh() {
   );
 }
 /* Phone remote: a page on a paired phone that works as the TV's remote (helper/phoneremote.js). On/off, pairing by QR code, the paired phones */
+var qrShown = ''; /* the text the QR code on screen was drawn from */
 function openPhoneRemote() {
   api('/api/phoneremote').then(
     function (r) {
@@ -3768,7 +3776,15 @@ function prPaired(p) {
 /* the setting "Remove unused phones" in words: 14 -> "after 2 weeks", 0 -> "never" */
 function prExpireLabel(d) {
   d = d === undefined ? 14 : d;
-  return d === 0 ? 'never' : d === 30 ? 'after 1 month' : d === 14 ? 'after 2 weeks' : d === 7 ? 'after 1 week' : 'after ' + d + (d === 1 ? ' day' : ' days');
+  return d === 0
+    ? 'never'
+    : d === 30
+      ? 'after 1 month'
+      : d === 14
+        ? 'after 2 weeks'
+        : d === 7
+          ? 'after 1 week'
+          : 'after ' + d + (d === 1 ? ' day' : ' days');
 }
 function prAgo(t) {
   var m = Math.round((Date.now() - t) / 60000);

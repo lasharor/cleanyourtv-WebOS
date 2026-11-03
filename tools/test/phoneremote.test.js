@@ -575,7 +575,10 @@ run(async () => {
     ok(cfg3.get().phoneRemote.phones.length === 0, 'and it is gone from the list of paired phones');
     const f2 = await phone(port3, tok3);
     await sleep(100);
-    ok(f2.msgs.some(m => m.t === 'denied' && m.reason === 'revoked'), 'its token no longer works');
+    ok(
+      f2.msgs.some(m => m.t === 'denied' && m.reason === 'revoked'),
+      'its token no longer works'
+    );
     pr3.stop();
   }
 
@@ -583,7 +586,14 @@ run(async () => {
   {
     const day = 86400000,
       now = Date.now();
-    const mk = (id, seenDaysAgo) => ({ id, name: 'p' + id, hash: 'h', created: now - 90 * day, seen: now - seenDaysAgo * day, blocked: false });
+    const mk = (id, seenDaysAgo) => ({
+      id,
+      name: 'p' + id,
+      hash: 'h',
+      created: now - 90 * day,
+      seen: now - seenDaysAgo * day,
+      blocked: false,
+    });
     const cfgE = memoryConfig({ phoneRemote: { enabled: true, phones: [mk('aaaaaaa1', 40), mk('aaaaaaa2', 10), mk('aaaaaaa3', 2)] } });
     const prE = PR.create({ config: cfgE }, { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna });
     prE.start();
@@ -593,9 +603,15 @@ run(async () => {
     st = await call(prE, '/api/phoneremote', 'POST', { expireDays: 5 });
     ok(st.code === 400 && /Choose 1, 3, 7, 14 or 30/.test(st.j.error), 'only the offered numbers of days are accepted');
     st = await call(prE, '/api/phoneremote', 'POST', { expireDays: 7 });
-    ok(st.j.expireDays === 7 && st.j.phones.map(x => x.id).join() === 'aaaaaaa3', 'choosing 7 days removes the phone unused for 10 days at once');
+    ok(
+      st.j.expireDays === 7 && st.j.phones.map(x => x.id).join() === 'aaaaaaa3',
+      'choosing 7 days removes the phone unused for 10 days at once'
+    );
     st = await call(prE, '/api/phoneremote', 'POST', { expireDays: 0 });
-    ok(st.j.expireDays === 0 && st.j.phones.length === 1 && st.j.enabled === true, 'never keeps every phone, and a body without "enabled" leaves the remote switched on');
+    ok(
+      st.j.expireDays === 0 && st.j.phones.length === 1 && st.j.enabled === true,
+      'never keeps every phone, and a body without "enabled" leaves the remote switched on'
+    );
     cfgE.update('test', c => {
       c.phoneRemote.phones[0].seen = now - 200 * day;
     });
@@ -643,7 +659,10 @@ run(async () => {
   // ---- the page ----
   const pg = req('phoneremotepage').phonePage('en');
   ok(
-    /localStorage/.test(pg) && /new WebSocket/.test(pg) && /visibilitychange/.test(pg) && /status\('off',t\("Can't reach the TV"\)\)/.test(pg),
+    /localStorage/.test(pg) &&
+      /new WebSocket/.test(pg) &&
+      /visibilitychange/.test(pg) &&
+      /status\('off',t\("Can't reach the TV"\)\)/.test(pg),
     'the page keeps a socket, reconnects on wake and keeps its token'
   );
   ok(
@@ -764,7 +783,8 @@ run(async () => {
     /function loadLive\(\)/.test(pg) &&
       /function openLive\(/.test(pg) &&
       /liveOk = list.length > 0/.test(pg) &&
-      /wakeThen\(go\)/.test(pg) && /say\(t\('The TV did not come on'\),'bad',4000\)/.test(pg),
+      /wakeThen\(go\)/.test(pg) &&
+      /say\(t\('The TV did not come on'\),'bad',4000\)/.test(pg),
     'a channel opens through the same wake-first path as an app'
   );
   ok(
@@ -792,13 +812,15 @@ run(async () => {
   ok(
     /function openApp\(id,title\)/.test(pg) &&
       /if\(onNow\(\)\)return goNow\(function\(\)\{launchApp\(id,title\)\}\)/.test(pg) &&
-      /wakeThen\(function\(\)\{launchApp\(id,title\)\}\)/.test(pg) && /pendStart\('on'\);\s*whenOn/.test(pg),
+      /wakeThen\(function\(\)\{launchApp\(id,title\)\}\)/.test(pg) &&
+      /pendStart\('on'\);\s*whenOn/.test(pg),
     'with the TV off, a tap wakes it first and opens the app once the TV says it is on'
   );
   // the screensaver counts as on, but a launch stays hidden behind it: a Back key takes it away first (Live TV setup, a channel, an app)
   ok(
-    /function goNow\(go\)\{if\(pwrState!=='Screen Saver'\)return go\(\);if\(!send\(\{t:'key',k:'BACK'\}\)\)return;setTimeout\(go,900\)\}/.test(pg) &&
-      (pg.match(/if\(onNow\(\)\)return goNow\(go\);/g) || []).length === 2,
+    /function goNow\(go\)\{if\(pwrState!=='Screen Saver'\)return go\(\);if\(!send\(\{t:'key',k:'BACK'\}\)\)return;setTimeout\(go,900\)\}/.test(
+      pg
+    ) && (pg.match(/if\(onNow\(\)\)return goNow\(go\);/g) || []).length === 2,
     'with the screensaver on, Live TV setup and a channel wake the screen before they open'
   );
   // a channel asked for by the phone reaches the Live TV page: the launcher passes it on (to the frame's address, or as a message when the page is open)
@@ -850,7 +872,9 @@ run(async () => {
   );
   // the touchpad fills the room between the header and the tab bar: no dead strip above the bottom buttons
   ok(
-    /\.pad\{position:relative;margin:18px auto 0;width:calc\(100% - 40px\);max-width:390px;height:clamp\(300px,calc\(100vh - 380px\),432px\)/.test(pg) &&
+    /\.pad\{position:relative;margin:18px auto 0;width:calc\(100% - 40px\);max-width:390px;height:clamp\(300px,calc\(100vh - 380px\),432px\)/.test(
+      pg
+    ) &&
       /class=padhint id=padhint/.test(pg) &&
       /\.sbar\.drag \.sthumb\{background:#ff8a5b\}/.test(pg) &&
       /#tabbar\{flex:none/.test(pg) === false &&
@@ -865,13 +889,17 @@ run(async () => {
   ok(
     !/class=logo/.test(pg) &&
       !/class=grow/.test(pg) &&
-      /#pairbox\{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:26px/.test(pg),
+      /#pairbox\{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:26px/.test(
+        pg
+      ),
     'the pairing screen has no icon at the top and no spacer pushing the button down, and it is centered in the window'
   );
   {
     const start = fs.readFileSync(path.join(__dirname, '..', '..', 'mobile', 'web', 'start.html'), 'utf8');
     ok(
-      !/class=logo/.test(start) && /<div class=glow><\/div>/.test(start) && /#wrap\{[^}]*min-height:100vh;[^}]*justify-content:center/.test(start),
+      !/class=logo/.test(start) &&
+        /<div class=glow><\/div>/.test(start) &&
+        /#wrap\{[^}]*min-height:100vh;[^}]*justify-content:center/.test(start),
       "the app's start page looks like the pairing screen: no icon, the glow in the corner, centered in the window"
     );
   }
@@ -889,7 +917,9 @@ run(async () => {
     'a key press and a touchpad tap ask the app for a short vibration (the pad does not buzz on every swipe step)'
   );
   ok(
-    /bridge\(\$\('pad'\)\);bridge\(\$\('sbar'\)\)/.test(pg) && /addEventListener\('wheel'/.test(pg) && /addEventListener\('contextmenu'/.test(pg),
+    /bridge\(\$\('pad'\)\);bridge\(\$\('sbar'\)\)/.test(pg) &&
+      /addEventListener\('wheel'/.test(pg) &&
+      /addEventListener\('contextmenu'/.test(pg),
     'the pad and the scroll strip also work with a mouse: drag, wheel over the pad, right click for Back'
   );
   ok(
@@ -897,7 +927,10 @@ run(async () => {
     'the touchpad has a scroll strip at its right: dragging the thumb scrolls the page on the TV (UP and DOWN keys when there is no pointer)'
   );
   ok(
-    /setInterval\(tick,ptr\?33:45\)/.test(pg) && /ax=Math\.max\(-5\*lim/.test(pg) && /\{t:'move',dx:dx,dy:dy\}/.test(pg) && /padKeysUntil=Date\.now\(\)\+30000/.test(pg),
+    /setInterval\(tick,ptr\?33:45\)/.test(pg) &&
+      /ax=Math\.max\(-5\*lim/.test(pg) &&
+      /\{t:'move',dx:dx,dy:dy\}/.test(pg) &&
+      /padKeysUntil=Date\.now\(\)\+30000/.test(pg),
     'the touchpad presses at most one arrow key every 45 ms and drops what is beyond five steps, so keys never queue behind the finger'
   );
   ok(
@@ -923,13 +956,10 @@ run(async () => {
   );
   // a backslash in the page's script is an escape of the template it is written in: \d must reach the phone as \d
   ok(
-    pg.indexOf('code=('+'\\'+'d{6})') > 0 && pg.indexOf("replace(/^"+'\\'+"d+"+'\\'+"s*/") > 0 && pg.indexOf('(d{6})') < 0,
+    pg.indexOf('code=(' + '\\' + 'd{6})') > 0 && pg.indexOf('replace(/^' + '\\' + 'd+' + '\\' + 's*/') > 0 && pg.indexOf('(d{6})') < 0,
     'the regular expressions in the page keep their backslashes (the QR code in the address is found; a channel title loses its number)'
   );
-  ok(
-    /id=pwrlb/.test(pg) && /function mark\(\)/.test(pg),
-    'the header button carries the TV state, in the app and in a browser'
-  );
+  ok(/id=pwrlb/.test(pg) && /function mark\(\)/.test(pg), 'the header button carries the TV state, in the app and in a browser');
   ok(
     /\$\('pwr'\)\.onclick=function\(\)\{if\(pwHeld\)\{pwHeld=false;return\}if\(pwBusy\(\)\)return;if\(ready\)powerPress\(\);else if\(native\(\)\)wakeNow\(\);else\{drop\(\);delay=1000;blocked=false;connect\(\);say\(/.test(
       pg
@@ -974,13 +1004,22 @@ run(async () => {
   const menu = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'menu.js'), 'utf8');
   ok(/view === 'phones'/.test(menu) && /push\('phones'\)/.test(menu), 'the Paired phones row opens a screen of its own');
   ok(
-    /Remove unused phones/.test(menu) && /view === 'prexpire'/.test(menu) && /view === 'confirm-pr-exp-off'/.test(menu) && /expireDays: 0/.test(menu) && /for security/.test(menu),
+    /Remove unused phones/.test(menu) &&
+      /view === 'prexpire'/.test(menu) &&
+      /view === 'confirm-pr-exp-off'/.test(menu) &&
+      /expireDays: 0/.test(menu) &&
+      /for security/.test(menu),
     'Remove unused phones: five choices, and "never" asks first with a warning'
   );
   {
     const rem = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'remote.js'), 'utf8');
     ok(
-      /function prLiveTick\(/.test(rem) && /setInterval\(prLiveTick, 2500\)/.test(rem) && /clearInterval\(prLiveTimer\)/.test(rem) && /prIsPhoneView\(\)\) prLiveStart\(\)/.test(menu) && /view === 'prphone'/.test(rem) && /prLiveKey\(r\) === prLiveKey\(pr\)/.test(rem),
+      /function prLiveTick\(/.test(rem) &&
+        /setInterval\(prLiveTick, 2500\)/.test(rem) &&
+        /clearInterval\(prLiveTimer\)/.test(rem) &&
+        /prIsPhoneView\(\)\) prLiveStart\(\)/.test(menu) &&
+        /view === 'prphone'/.test(rem) &&
+        /prLiveKey\(r\) === prLiveKey\(pr\)/.test(rem),
       'the phone screens in the manager follow the TV every few seconds, only while one of them is open (a phone that logs out disappears), and redraw only when the list changed'
     );
   }
