@@ -34,7 +34,7 @@ def add_dir(files, arc_root, src, mode_for=None, skip=(), skip_dirs=()):
             if n in skip or n.startswith('.'):
                 continue
             p = os.path.join(root, n)
-            rel = os.path.relpath(p, src)
+            rel = os.path.relpath(p, src).replace(os.sep, '/')   # an archive path has no backslash, whatever the system building it
             mode = 0o755 if (n.endswith('.sh') or n in ('ezinject', '10-cleanyourtv-home', '15-cleanyourtv-debloat')) else 0o644
             body = open(p, 'rb').read()
             add(files, arc_root + '/' + rel, body, mode)
@@ -94,6 +94,10 @@ add(data, s + '/licenses/THIRD-PARTY.md', open(P('THIRD-PARTY.md'), 'rb').read()
 add(data, s + '/licenses/LICENSE', open(P('LICENSE'), 'rb').read())
 add(data, s + '/compat.json', open(P('compat.json'), 'rb').read())
 add(data, s + '/config.example.json', open(P('config.example.json'), 'rb').read())
+# the phone remote's Android app, when this checkout has one: the TV serves it (port 8794, /app.apk) and the manager shows a QR code for it
+apk = P('mobile', 'app', 'tv-remote.apk')
+if os.path.isfile(apk):
+    add(data, s + '/mobile/tv-remote.apk', open(apk, 'rb').read())
 add_dir(data, s + '/payload/app', P('app'), skip_dirs=('src',))
 if BUILD:
     add(data, s + '/BUILD', (BUILD + '\n').encode())

@@ -78,6 +78,16 @@ function load(keep) {
         },
         function () {}
       );
+      api('/api/phoneremote').then(
+        function (r) {
+          pr = r;
+          if (view === 'main') {
+            build();
+            draw();
+          }
+        },
+        function () {}
+      );
       if (s.checking)
         setTimeout(function () {
           load(true);

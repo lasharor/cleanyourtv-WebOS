@@ -94,6 +94,18 @@ function closeShare() {
     if (view === 'addonrepos') loadAddons();
     return;
   }
+  if (shareMode === 'remote') {
+    api('/api/phoneremote/pair', { stop: true }).catch(function () {});
+    pop();
+    prRefresh();
+    return;
+  }
+  if (shareMode === 'app') {
+    api('/api/phoneremote/pair', { stop: true }).catch(function () {});
+    pop();
+    prRefresh();
+    return;
+  }
   if (shareMode === 'abox') {
     api('/api/androidbox/pair', { stop: true }).catch(function () {});
     pop();

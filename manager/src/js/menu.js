@@ -1,4 +1,5 @@
 function build() {
+  if (prIsPhoneView()) prLiveStart();
   rows = [];
   if (view === 'share') {
     rows.push({ label: 'Close', fn: closeShare });
@@ -1181,6 +1182,187 @@ function build() {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
+  if (view === 'phoneremote') {
+    var q = pr || { enabled: false, phones: [], keys: {} },
+      ph = q.phones || [];
+    rows.push({
+      label: 'Phone remote',
+      sub: onoff(q.enabled),
+      info: {
+        t: 'Phone remote',
+        d: q.enabled
+          ? 'On: the port is open while a phone is paired or a pairing window is open. Choose it to switch the phone remote off.'
+          : 'Off: nothing listens on the network. Choose it to switch the phone remote on.',
+      },
+      fn: function () {
+        prCall('/api/phoneremote', { enabled: !q.enabled });
+      },
+    });
+    rows.push({
+      label: 'Pair a phone',
+      sub: q.enabled ? 'QR code' : 'switches it on',
+      info: { t: 'Pair a phone', d: 'Shows a QR code. Scan it with the phone, then type the 6-digit code on the phone.' },
+      fn: openPrPair,
+    });
+    rows.push({
+      label: 'Install the app (Android)',
+      sub: q.app && q.app.available ? 'Android only' : 'not in this build',
+      info: {
+        t: 'Install the app (Android)',
+        d: 'The best way to use the phone remote on Android. It can turn the TV on from standby and remembers the TV. Scanning the pairing QR code opens the app with the code filled in. Other phones use the browser page.',
+      },
+      dim: !(q.app && q.app.available),
+      fn: openPrApp,
+    });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Remove unused phones',
+      sub: prExpireLabel(q.expireDays),
+      info: {
+        t: 'Remove unused phones',
+        d: 'For security: a phone nobody uses stops working by itself. One that is lost, sold or forgotten would otherwise control the TV for ever.',
+      },
+      fn: function () {
+        push('prexpire');
+      },
+    });
+    rows.push({
+      label: 'Paired phones',
+      sub: ph.length ? ph.length + (ph.length === 1 ? ' phone' : ' phones') : 'none yet',
+      info: { t: 'Paired phones', d: 'The phones that can control the TV, and when each was last used. Choose one to block or remove it.' },
+      fn: function () {
+        push('phones');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'phones') {
+    var lst = (pr && pr.phones) || [];
+    rows.push({
+      label: 'Paired phones',
+      sub: lst.length ? (lst.length === 1 ? 'one phone' : lst.length + ' in all') : 'none yet',
+      fn: null,
+    });
+    if (!lst.length) rows.push({ label: 'No phone is paired', sub: 'Pair a phone, and it is listed here', fn: null });
+    lst.forEach(function (p) {
+      rows.push({
+        label: p.name,
+        sub: p.blocked ? 'blocked' : p.online ? 'connected' : prAgo(p.seen),
+        info: { t: p.name, d: 'Last used ' + prAgo(p.seen) + prPaired(p) + '. Choose it to block or remove it.' },
+        fn: function () {
+          prSel = p;
+          push('prphone');
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Remove all phones',
+      sub: lst.length ? 'every phone has to pair again' : 'nothing to remove',
+      dim: !lst.length,
+      fn: function () {
+        if (lst.length) push('confirm-pr-all');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'prphone') {
+    var sp = prSel || {};
+    rows.push({ label: sp.name || 'Phone', sub: (sp.blocked ? 'blocked' : 'allowed') + ' \u00B7 last used ' + prAgo(sp.seen) + prPaired(sp), fn: null });
+    rows.push({
+      label: sp.blocked ? 'Allow this phone' : 'Block this phone',
+      sub: sp.blocked ? 'it can connect again with the token it has' : 'it stays paired but sends nothing until you allow it',
+      fn: function () {
+        prCall('/api/phoneremote/access', { id: sp.id, allow: !!sp.blocked }, sp.blocked ? 'Phone allowed' : 'Phone blocked');
+      },
+    });
+    rows.push({
+      label: 'Remove this phone',
+      sub: 'its token stops working; it has to pair again',
+      fn: function () {
+        prCall('/api/phoneremote/revoke', { id: sp.id }, 'Phone removed');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'prexpire') {
+    var cur = pr && pr.expireDays !== undefined ? pr.expireDays : 14;
+    rows.push({
+      label: 'Remove phones that are not used',
+      sub: 'for security',
+      info: {
+        t: 'Remove phones that are not used',
+        d: 'A phone that was lost, sold or forgotten stays able to control the TV until it is removed. Only phones that are not connected are removed, and one can pair again with a new code.',
+      },
+      fn: null,
+    });
+    [
+      [1, '1 day', 'Suits a TV in a shared or rented place.'],
+      [3, '3 days', ''],
+      [7, '1 week', ''],
+      [14, '2 weeks', 'The default.'],
+      [30, '1 month', 'The longest.'],
+    ].forEach(function (o) {
+      rows.push({
+        label: o[1],
+        sub: cur === o[0] ? 'selected' : o[0] === 14 ? 'default' : '',
+        info: { t: 'After ' + o[1], d: 'A phone not used for ' + o[1] + ' is removed. ' + o[2] },
+        fn: function () {
+          prCall('/api/phoneremote', { expireDays: o[0] }, 'Saved');
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Never remove',
+      sub: cur === 0 ? 'selected' : 'not recommended',
+      info: { t: 'Never remove', d: 'Not recommended: a lost phone keeps the remote for ever, until you remove it by hand in Paired phones. You are asked to confirm.' },
+      fn: function () {
+        if (cur !== 0) push('confirm-pr-exp-off');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'confirm-pr-exp-off') {
+    rows.push({
+      label: 'Warning',
+      sub: 'for security',
+      info: {
+        t: 'Warning',
+        d: 'A phone that is lost, stolen or forgotten can control the TV for ever, until you remove it by hand in Paired phones. Keep this on unless you are sure.',
+      },
+      fn: null,
+    });
+    rows.push({ label: 'Cancel', fn: pop });
+    rows.push({
+      label: 'Yes, never remove unused phones',
+      sub: 'phones stay',
+      info: { t: 'Never remove unused phones', d: 'Every paired phone stays until it is removed by hand.' },
+      fn: function () {
+        prCall('/api/phoneremote', { expireDays: 0 }, 'Unused phones are kept');
+      },
+    });
+    return;
+  }
+  if (view === 'confirm-pr-all') {
+    rows.push({ label: 'Cancel', fn: pop });
+    rows.push({
+      label: 'Yes, remove all phones',
+      sub: 'every token stops working',
+      fn: function () {
+        prCall('/api/phoneremote/revoke', { all: true }, 'All phones removed');
+      },
+    });
+    return;
+  }
   if (view === 'wallpapers') {
     var w = wp || { uploads: 0, total: 0, limits: { uploads: 100 }, bytes: 0 },
       old = w.legacyImmich;
@@ -1378,6 +1560,15 @@ function build() {
       label: 'Android box',
       sub: ab && ab.configured ? ab.settings.host : ab ? 'off' : '',
       fn: openAndroidBox,
+    });
+    rows.push({
+      label: 'Phone remote',
+      sub: pr ? (pr.enabled ? pr.phones.length + ' phones' : onoff(false)) : '',
+      info: {
+        t: 'Phone remote',
+        d: 'Use a phone as the TV remote over your Wi-Fi. Pair it once with a QR code and a 6-digit code, then use the web page or the Android app. Each phone can be blocked or removed, and unused ones are removed by themselves.',
+      },
+      fn: openPhoneRemote,
     });
     rows.push({ label: 'Home Assistant', sub: st.voice && st.voice.ha ? 'set up' : 'not set up', fn: openHa });
     rows.push({

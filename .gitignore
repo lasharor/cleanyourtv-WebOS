@@ -4,3 +4,6 @@ site/
 .venv/
 node_modules/
 .lint-pages/
+# what the app build makes (the APK, the debug key, the dex)
+mobile/android/build/
+mobile/android/build-keystore/

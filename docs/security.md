@@ -14,6 +14,7 @@ local network on request, and an optional notification endpoint is off by defaul
 | 8769 | Voice setup page | Ten minutes, at a random 128-bit address, closed after saving |
 | 8791 | Wallpapers page | While the QR screen is open in the manager app: a 6-digit code shown on the TV, at most an hour; see [Wallpapers](wallpapers.md) |
 | 8793 | Android box page | Ten minutes while its QR screen is open in the manager app: a 6-digit code shown on the TV; see [Android box](android-box.md) |
+| 8794 | Phone remote | Only while the phone remote is switched on in the manager app **and** a phone is paired or its QR screen is open; every phone needs a token from a one-time code; see [Phone remote](phone-remote.md) |
 | 8792 | Cards page | The same, for the options of the cards on Home; see [Cards](launcher.md#cards) |
 | 8794 | App icons page | The same, for choosing a picture for an app; see [Your own icon](launcher.md#your-own-icon) |
 | 8795 | Immich page | The same, for the Immich add-on (address, API key, albums); see [Wallpapers](wallpapers.md#immich-add-on) |
@@ -101,6 +102,47 @@ downloaded over HTTPS from the repository the TV already updates from and checke
 so the check protects against a damaged download, not against someone who can publish to the repository (the same is true of
 stable releases, which are not signed yet). The only pre-release the updater reads is the one tagged `dev`, and the files must be
 the package and launcher names the updater already expects.
+
+## Phone remote
+
+A phone that pairs can press the TV's remote keys, so the pairing is strict. Off until switched on in the manager app; the port (8794)
+listens on the network only while a phone is paired or the QR screen is open. Pairing needs the 6-digit code shown on the TV (the QR code
+carries it in its address, so a phone that scans the screen pairs without typing; that is the same information as the digits, and a
+photograph of the screen already gave it away): it works
+once, an address gets five tries a minute, the window closes after eight wrong codes and three minutes after the QR screen was left, and
+a pairing request from a web page of another site is refused. The phone gets a random 128-bit token; the TV keeps only its SHA-256 in
+`config.json` (root only), compares in constant time, and never logs tokens, hashes or codes. Nothing is accepted from a connection before
+it shows a valid token (first message, 5 seconds), wrong tokens shut an address out for a minute, a connection may send 40 messages a
+second, and a page from another origin cannot open the WebSocket. Phones can be blocked or removed in the manager app and are cut off
+at once. It is plain HTTP: anyone who can watch your Wi-Fi traffic can read the token and the keys (and could pair only with a code from
+the screen, but could replay a stolen token), as for the other phone pages. A paired phone can also put the TV in standby with the TV's
+own power key (`POWER`, not the service's full power-off, so Wake-on-LAN keeps working); turning it on again needs the app, below.
+The port also hands out the phone app's package (`/app.apk`), but only with the code shown on the TV (see [The phone app](#the-phone-app)). The file itself holds no code or key.
+
+## The phone app
+
+The app (`mobile/`) is the same page in a WebView plus the one thing a browser cannot do: send the Wake-on-LAN packet. What it means for
+security:
+
+- The TV hands the app out: the phone remote's port serves `/app.apk`, but only with the 6-digit code shown on the TV, in the address
+  (`/app.apk?code=…`, which is what the manager's QR code carries) — a download cannot send a header, so the code travels there instead.
+  A wrong code counts like a wrong pairing code. The file holds no key and no address; it is the same for every TV.
+- The app keeps the TV's address and MAC in its own settings, and the phone remote's token stays in the WebView's `localStorage`, as in a
+  browser. Nothing is sent anywhere but the TV.
+- The connect QR code on the TV carries the one-time pairing code (`cytv://add?host=…&code=…`), so scanning it pairs the phone without
+  typing. That is the same information the TV shows as digits, and the same rule applies: whoever can see the TV's screen can pair, the code
+  works once, and the pairing window closes on its own. The link does not work after the code has been used.
+- **Scanning** is the phone's own camera app: the TV's code is a `cytv://` link, so the camera opens the app with the address and the code.
+  The app holds no camera permission of its own.
+- A JavaScript bridge (`window.CYTV_APP`) is exposed to the WebView, so the app only lets it load the TV's own address and its bundled pages;
+  any other link opens in the browser. The address itself must be a literal private or link-local IPv4 address (hostnames, public
+  addresses and IPv6 are refused), and a `cytv://` link that names another TV than the saved one asks the user to confirm first. The
+  bridge can wake the TV, keep the address, MAC and name it was given, make the phone vibrate, check whether the TV answers and pass on
+  a pairing code — nothing else.
+- Waking the TV needs no secret: the packet carries no key, and any device that knows the TV's MAC can send it, before or after it is removed
+  from the paired phones. That is true of every Wake-on-LAN setup, including LG's own. The app does not change it.
+- Everything else — pairing, tokens, blocking, the keys — is the phone remote's, described above. Uninstalling the app leaves the pairing on
+  the TV; remove it in the manager if you want it gone.
 
 ## Limits to know about
 

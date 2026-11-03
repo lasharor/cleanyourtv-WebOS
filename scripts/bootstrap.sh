@@ -117,6 +117,7 @@ copy_files() {
   rm -rf $D/addons-bundled; [ -d $S/helper/addons-bundled ] && cp -r $S/helper/addons-bundled $D/   # add-ons that ship with the package (addons.js)
   rm -rf $D/cardpreviews; [ -d $S/helper/cardpreviews ] && cp -r $S/helper/cardpreviews $D/   # the pictures of the launcher's own cards (cardcatalog.js)
   [ -d $S/i18n ] && { mkdir -p $D/i18n; cp $S/i18n/* $D/i18n/; }   # the translations, for the phone pages (helper/i18n.js)
+  [ -d $S/mobile ] && { mkdir -p $D/mobile; cp $S/mobile/* $D/mobile/; }   # the phone remote's app, which the TV serves for its QR code
   if [ -f $S/BUILD ]; then cp $S/BUILD $D/BUILD; else rm -f $D/BUILD; fi   # the commit of a test build
   cp $S/scripts/* $D/
   mkdir -p $D/inputhook && cp $S/inputhook/* $D/inputhook/ && chmod 755 $D/inputhook/ezinject
