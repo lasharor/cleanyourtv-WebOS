@@ -26,7 +26,20 @@ run(async () => {
       { name: 'prev', label: 'Previous' },
       { name: 'toggle', label: 'Play or pause' },
     ],
-    options: [{ key: 'title', kind: 'text', label: 'Title', default: 'Hi' }],
+    options: [
+      { key: 'title', kind: 'text', label: 'Title', default: 'Hi' },
+      { key: 'place', kind: 'place', label: 'City' },
+      {
+        key: 'unit',
+        kind: 'choice',
+        label: 'Unit',
+        default: 'c',
+        choices: [
+          ['c', 'Celsius'],
+          ['f', 'Fahrenheit'],
+        ],
+      },
+    ],
   };
   const man = {
     id: 'demo',
@@ -110,6 +123,30 @@ exports.create = () => ({
   );
   r = await call(cards, '/api/cards/set', 'POST', { slot: 'side', type: 'x-demo-card' });
   ok(r.j.ok === true, 'it can be chosen for a place');
+
+  // ---- the launcher's own settings for the card (Customise > Weather): the same options on every place that has the card ----
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { place: 'Oslo', lat: 59.91, lon: 10.75, unit: 'f' } });
+  ok(
+    r.j.ok === true && r.j.cards.side.place === 'Oslo' && r.j.cards.other.place === 'Oslo' && r.j.cards.other.unit === 'f',
+    'the city and the unit are set on every place with the card: ' + r.out
+  );
+  ok(r.j.cards.side.lat === 59.91 && r.j.cards.side.title === 'Hello', 'with its coordinates, and the other options stay');
+  ok(config.get().cards.side.unit === 'f', 'and they are saved in the settings');
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { unit: 'k' } });
+  ok(r.j.error && config.get().cards.side.unit === 'f', 'a value that is not a choice of the card is refused');
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { place: 'Oslo' } });
+  ok(r.j.error && /coordinates/.test(r.j.error), 'a city without coordinates is refused');
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { place: 'X', lat: 99, lon: 0 } });
+  ok(r.j.error, 'coordinates out of range are refused');
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { place: '<b>Rome</b>', lat: 41.9, lon: 12.5 } });
+  ok(
+    config.get().cards.side.place === 'bRome/b',
+    'markup and control characters are taken out of a city: ' + config.get().cards.side.place
+  );
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-nothing', set: { unit: 'f' } });
+  ok(r.j.error === 'unknown card type', 'an unknown card type is refused');
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { secret: 'x' } });
+  ok(!r.j.error && config.get().cards.side.secret === undefined, 'an option the card does not declare is dropped');
   r = await call(cards, '/api/cards/remove', 'POST', { id: 'demo-card' });
   ok(r.code === 400 && /add-on/.test(r.j.error), 'a card of an add-on is not removed as a downloaded one: ' + r.out);
 

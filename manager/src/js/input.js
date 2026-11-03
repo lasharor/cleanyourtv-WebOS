@@ -72,6 +72,20 @@ function wantView() {
     cardsFromHome = true;
     openCards();
   }
+  /* the launcher's Customise > Weather > More on your phone: the QR code of the cards page at once, Back returns to the cards */
+  if (p && p.open === 'cardspair') {
+    cardsFromHome = true;
+    api('/api/cards/status', {}).then(
+      function (r) {
+        cs = r;
+        push('cards');
+        openCardsPair();
+      },
+      function () {
+        banner('The service did not answer', 'err');
+      }
+    );
+  }
 }
 document.addEventListener('webOSRelaunch', function () {
   view = 'main';

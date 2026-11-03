@@ -1,22 +1,354 @@
-/* The forecast card: it draws on a transparent background and fills its frame. Sizes follow the height of the frame (vh), so the same
-   page serves a small and a large card; the colour and the typeface are the theme's (the launcher sends them). */
-html { font-size: 4.6vh; }
-body { margin: 0; height: 100vh; overflow: hidden; color: #fff; font-family: sans-serif; background: transparent; }
-#main { position: absolute; left: 0; right: 0; top: 0; bottom: 28%; overflow: hidden; }
-#tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 24%; }
-.tab { position: absolute; top: 0; bottom: 0; width: 32%; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem; font-size: 0.8rem; opacity: 0.55; box-sizing: border-box; }
-.tab.on { opacity: 1; background: rgba(255, 255, 255, 0.16); }
-.big { display: flex; align-items: center; }
-.big .t { font-size: 3rem; font-weight: 600; line-height: 1; }
-.big svg { width: 2.8rem; height: 2.8rem; margin: 0 0.5rem; }
-.sub { font-size: 0.85rem; opacity: 0.75; margin-top: 0.15rem; }
-.grid { display: flex; flex-wrap: wrap; margin-top: 0.3rem; }
-.grid div { width: 33%; font-size: 0.7rem; opacity: 0.85; padding: 0.1rem 0; }
-.grid b { display: block; font-size: 0.85rem; font-weight: 600; opacity: 1; }
-.cols { display: flex; height: 100%; align-items: stretch; }
-.col { flex: 1 1 0; text-align: center; display: flex; flex-direction: column; justify-content: center; font-size: 0.72rem; }
-.col svg { width: 1.5rem; height: 1.5rem; margin: 0.1rem auto; display: block; }
-.col b { font-size: 0.9rem; font-weight: 600; }
-.col i { font-style: normal; opacity: 0.6; }
-.msg { font-size: 0.9rem; opacity: 0.8; }
-svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* The forecast card: it draws on a transparent frame and only the glass is drawn, as big as its content (card.js tells the launcher where it
+   is, for the focus ring). Sizes are in px of the TV's 1920x1080 canvas, which is what the frame is made of. Type: the theme's face, tabular
+   numbers, nothing under 18px. The glass is a quiet dark surface with a 1px ring and no white wash, so white type reads on a bright wallpaper
+   too; a single small shadow keeps the letters sharp. */
+html {
+  font-size: 16px;
+}
+body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  font-family: sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+body.wait #gl {
+  display: none;
+}
+#gl {
+  box-sizing: border-box;
+  width: 100%;
+  background: rgba(14, 20, 32, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  border-radius: 32px;
+  position: relative;
+}
+.ic {
+  width: 1em;
+  height: 1em;
+  display: block;
+  flex: none;
+}
+.s2 {
+  color: rgba(255, 255, 255, 0.72);
+}
+.s3 {
+  color: rgba(255, 255, 255, 0.62);
+}
+.k-sun {
+  color: #ffd36b;
+}
+html[dir="rtl"] #gl {
+  direction: rtl;
+}
+
+/* one line: as wide as its text and its padding, 44px high */
+#gl.strip {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  max-width: 100%;
+  height: 44px;
+  border-radius: 999px;
+  padding: 0 20px;
+  font-size: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+html[dir="rtl"] body.strip,
+html[dir="rtl"] body.compact {
+  justify-content: flex-start;
+}
+.strip .ic {
+  font-size: 26px;
+  margin-right: 10px;
+}
+.strip .t {
+  font-weight: 600;
+  margin-right: 12px;
+}
+.strip .d {
+  margin-left: 12px;
+}
+.strip .rn {
+  margin-left: 12px;
+  color: #7cc4ff;
+  display: flex;
+}
+.strip .pc {
+  margin-left: 6px;
+}
+html[dir="rtl"] .strip .ic {
+  margin-right: 0;
+  margin-left: 10px;
+}
+html[dir="rtl"] .strip .t {
+  margin-right: 0;
+  margin-left: 12px;
+}
+
+/* compact: 420x112 */
+#gl.cmp {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  max-width: 100%;
+  height: 112px;
+  max-height: 100%;
+  padding: 0 28px 0 22px;
+}
+.cmp .ic.big {
+  font-size: 56px;
+  margin-right: 14px;
+}
+.cmp .tmp {
+  font-size: 64px;
+  font-weight: 300;
+  line-height: 1;
+}
+.cmp .rt {
+  margin-left: 18px;
+  min-width: 0;
+}
+.cmp .c1 {
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.cmp .c2 {
+  font-size: 20px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hrs {
+  display: flex;
+}
+.hrs div {
+  width: 66px;
+  text-align: center;
+  font-size: 19px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.72);
+}
+.hrs .ic {
+  font-size: 32px;
+  margin: 4px auto 5px;
+}
+.hrs b {
+  display: block;
+  font-size: 22px;
+  font-weight: 600;
+  color: #fff;
+}
+html[dir="rtl"] .cmp .ic.big {
+  margin-right: 0;
+  margin-left: 14px;
+}
+html[dir="rtl"] .cmp .rt {
+  margin-left: 0;
+  margin-right: 18px;
+}
+
+/* panel: 520 wide; Minimal is 168 high, Rich 260 */
+#gl.pnl {
+  padding: 26px 32px;
+}
+#gl.pnl.min {
+  height: 168px;
+  padding: 16px 32px;
+}
+.pnl .city {
+  font-size: 22px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.72);
+}
+.pnl.min .city {
+  font-size: 20px;
+}
+.pnl .main {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+}
+.pnl.min .main {
+  margin-top: 0;
+}
+.pnl .main .ic {
+  font-size: 76px;
+  margin-right: 14px;
+}
+.pnl .tmp {
+  font-size: 96px;
+  font-weight: 200;
+  line-height: 1;
+}
+.pnl.min .tmp {
+  font-size: 92px;
+}
+.pnl .side {
+  margin-left: 18px;
+  min-width: 0;
+}
+.pnl .cond {
+  font-size: 28px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pnl .hl {
+  font-size: 24px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+.pnl .lo {
+  margin-left: 8px;
+}
+html[dir="rtl"] .pnl .main .ic {
+  margin-right: 0;
+  margin-left: 14px;
+}
+
+html[dir="rtl"] .pnl .side {
+  margin-left: 0;
+  margin-right: 18px;
+}
+#gl.pnl.rich {
+  height: 260px;
+  max-height: 100%;
+  padding: 22px 32px 16px;
+}
+.pnl.rich .top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  height: 28px;
+  line-height: 28px;
+}
+.pnl.rich .city {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 16px;
+}
+.pnl.rich .hl {
+  font-size: 22px;
+  font-weight: 400;
+  margin-top: 0;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.72);
+}
+.pnl.rich .main {
+  height: 88px;
+  margin-top: 4px;
+}
+.pnl.rich .main .ic {
+  font-size: 72px;
+  margin-right: 12px;
+}
+.pnl.rich .tmp {
+  font-size: 88px;
+}
+.pnl.rich .side {
+  flex: 1;
+  min-width: 0;
+  margin-left: 20px;
+  text-align: left;
+}
+.pnl.rich .cond {
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 30px;
+  max-height: 60px;
+  overflow: hidden;
+  white-space: normal;
+}
+.pnl.rich .fl {
+  font-size: 20px;
+  line-height: 26px;
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pnl.rich .hr {
+  position: absolute;
+  left: 32px;
+  right: 32px;
+  bottom: 16px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex;
+}
+.pnl.rich .hr div {
+  flex: 1;
+  text-align: center;
+  font-size: 20px;
+  line-height: 22px;
+  color: rgba(255, 255, 255, 0.72);
+}
+.pnl.rich .hr .ic {
+  font-size: 30px;
+  margin: 2px auto;
+}
+.pnl.rich .hr b {
+  display: block;
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 600;
+  color: #fff;
+}
+.pnl.rich .top,
+.pnl.rich .main,
+.pnl.rich .hr {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+html[dir="rtl"] .pnl.rich .main .ic {
+  margin-right: 0;
+  margin-left: 12px;
+}
+html[dir="rtl"] .pnl.rich .side {
+  margin-left: 0;
+  margin-right: 20px;
+  text-align: right;
+}
+html[dir="rtl"] .pnl.rich .city {
+  margin-right: 0;
+  margin-left: 16px;
+}
+
+/* no city, or no answer: one line or two */
+#gl.msg {
+  padding: 16px 28px;
+  text-align: center;
+  min-height: 44px;
+}
+.msg .m1 {
+  font-size: 26px;
+  font-weight: 500;
+}
+.msg .m2 {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 2px;
+}
+body.strip #gl.msg {
+  display: inline-flex;
+  width: auto;
+  height: 44px;
+  border-radius: 999px;
+  padding: 0 20px;
+  align-items: center;
+  font-size: 24px;
+}
+body.strip .msg .m1 {
+  font-size: 24px;
+}

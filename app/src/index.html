@@ -6,12 +6,13 @@
 @include css/home.css
 @include css/menus.css
 @include css/addons.css
+@include css/wxdrawer.css
 @include css/rtl.css
 </style></head><body>
 <div id="homepage"><div class="glow" id="gA"></div><div class="glow" id="gB"></div>
 <div id="top"><div id="clock"><div id="greet"></div><div id="time"></div><div id="date"></div></div><div id="bar"></div></div>
 <div id="shelf"><div id="name"></div></div>
-<div id="cards"></div>
+<div id="cards"></div><div id="wxd"></div><input id="wxq" type="text" autocomplete="off">
 <div id="view"><div id="scroll"><div id="dock"></div><div id="grid"></div></div></div>
 <div id="pagestrip"></div></div>
 <div id="pages"></div>
@@ -24,6 +25,7 @@
 @include js/tiles.js
 @include js/theme.js
 @include js/cards.js
+@include js/wxdrawer.js
 @include js/scenes.js
 @include js/wall.js
 @include js/config.js

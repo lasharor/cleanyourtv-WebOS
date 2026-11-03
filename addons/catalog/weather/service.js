@@ -1,24 +1,16 @@
 // The weather add-on: the service part of the forecast card (cards/forecast/). The card asks for its data every minute
 // (cards.feed); the weather comes from Open-Meteo through weather.js, which asks for a place at most every 30 minutes and keeps the last answer.
-// The buttons of the card (Now, Hours, Days) arrive as actions and choose which of the three the card shows; after five minutes it is
-// Now again. The words are translated here, in the language of the screens, so the page in its closed frame needs no translation.
+// The answer has what the card shows (now, the next days, translated words) and wx, the weather as the launcher's drawer draws it (OK on
+// the card opens it: Now, Hours and Days in a panel of the launcher). The words of the card are translated here, in the language of the
+// screens, so the page in its closed frame needs no translation.
 const path = require('path');
 const wx = require('./weather');
-
-const VIEWS = ['now', 'hours', 'days'],
-  VIEW_MS = 5 * 60 * 1000;
 
 function create(ctx) {
   const i18n = ctx.util.i18n;
   ctx.util.mkdirp(ctx.dataDir);
   const w = wx.create({ path: path.join(ctx.dataDir, 'weather.json'), fetch: ctx.fetch });
   const T = s => i18n.tr(i18n.lang(null, ctx.env.lang()), s);
-  let view = 'now',
-    viewAt = 0;
-  const current = () => {
-    if (view !== 'now' && Date.now() - viewAt > VIEW_MS) view = 'now';
-    return view;
-  };
 
   // WMO weather codes as Open-Meteo gives them: an icon (the page draws it) and a word
   function kind(code, day) {
@@ -34,10 +26,10 @@ function create(ctx) {
   }
   const icon = (code, day) => kind(code, day)[0];
   const LABELS = [
-    'Now',
-    'Hours',
-    'Days',
     'Feels like',
+    'Now',
+    'High',
+    'Low',
     'Humidity',
     'Wind',
     'Rain chance',
@@ -46,7 +38,8 @@ function create(ctx) {
     'Air quality',
     'Sunrise',
     'Sunset',
-    'Choose a city from your phone',
+    'Choose a city',
+    'Select to set it on the TV',
   ];
 
   async function feed(id, opt) {
@@ -61,7 +54,6 @@ function create(ctx) {
       week = d.week || [];
     return {
       labels,
-      view: current(),
       unit: r.unit,
       at: r.at,
       city: String(opt.place || '').slice(0, 60),
@@ -79,15 +71,14 @@ function create(ctx) {
         sunrise: week[0] ? week[0].sunrise : '',
         sunset: week[0] ? week[0].sunset : '',
       },
-      hours: (d.hours || []).slice(0, 12).map(h => ({ t: h.t, temp: h.temp, icon: icon(h.code, h.day), rain: h.rain })),
+      hours: (d.hours || []).slice(0, 6).map(x => ({ t: x.t, icon: icon(x.code, x.day), temp: x.temp, rain: x.rain })),
       days: week.map(x => ({ date: x.date, icon: icon(x.code, true), max: x.max, min: x.min, rain: x.rain })),
+      wx: { now: r.now, unit: r.unit, at: r.at, detail: r.detail },
     };
   }
-  function action(id, opt, name) {
-    if (VIEWS.indexOf(name) < 0) return { error: 'no such action' };
-    view = name;
-    viewAt = Date.now();
-    return { ok: true };
+  // the buttons of the card (open, settings) are the launcher's own: nothing reaches the add-on
+  function action() {
+    return { error: 'no such action' };
   }
   return { cards: { feed, action }, handle: (q, r) => r.end('{}') };
 }

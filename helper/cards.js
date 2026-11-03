@@ -232,6 +232,47 @@ function create(ctx) {
     });
     return { ok: true };
   }
+  // an option value from the launcher's own settings (Customise > Weather), checked against what the card declares: {value} or {error}
+  function checkOption(f, v) {
+    if (f.kind === 'choice') return f.choices.some(c => c[0] === v) ? { value: v } : { error: 'not a choice of this card' };
+    if (typeof v !== 'string') return { error: 'not a text' };
+    const t = Array.from(v)
+      .filter(ch => ch.charCodeAt(0) > 31 && ch.charCodeAt(0) !== 127 && ch !== '<' && ch !== '>')
+      .join('')
+      .trim()
+      .slice(0, f.kind === 'place' ? 40 : 200);
+    return { value: t };
+  }
+  // the launcher's Customise > Weather: {type, set} -> every place that holds a card of this downloaded or add-on type gets those options
+  // (the city with its coordinates, the unit, the size). Only options the card declares count, and a city has both coordinates or none.
+  function setOptions(type, set) {
+    const ty = packTypes().filter(x => x.type === type)[0];
+    if (!ty) return { error: 'unknown card type' };
+    if (!set || typeof set !== 'object' || Array.isArray(set)) return { error: 'no options' };
+    const patch = {};
+    for (const f of ty.fields) {
+      if (!(f.key in set)) continue;
+      const r = checkOption(f, set[f.key]);
+      if (r.error) return { error: r.error };
+      patch[f.key] = r.value;
+      if (f.kind === 'place') {
+        const lat = set.lat,
+          lon = set.lon;
+        if (typeof lat === 'number' && typeof lon === 'number' && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+          patch.lat = Math.round(lat * 100) / 100;
+          patch.lon = Math.round(lon * 100) / 100;
+        } else return { error: 'a city needs its coordinates' };
+      }
+    }
+    const have = Object.keys(config.get().cards || {}).filter(id => (config.get().cards[id] || {}).type === type);
+    if (!have.length) return { error: 'this card is not on Home' };
+    const next = Object.assign({}, config.get().cards);
+    config.update('cards (launcher)', conf => {
+      for (const id of have) next[id] = Object.assign({}, next[id], patch);
+      conf.cards = next;
+    });
+    return { ok: true, cards: next };
+  }
   function save(cards) {
     const c = sanitize(cards) || {};
     config.update('cards (phone)', conf => {
@@ -390,6 +431,16 @@ function create(ctx) {
     if (u === '/api/cards/feed') return web.json(res, await addonFeed(b.slot));
     if (u === '/api/cards/action') return web.json(res, await addonAction(b.slot, String(b.name || ''), b.arg));
     if (u === '/api/cards/set') return web.json(res, setType(String(b.slot || ''), String(b.type || '')));
+    // the launcher's Customise > Weather: {type, set: {place, lat, lon, unit, size}} -> those options on every place with that card
+    if (u === '/api/cards/options') return web.json(res, setOptions(String(b.type || ''), b.set));
+    // the launcher's own city search (typed with the TV's keyboard): {q} -> {places: [{name, area, lat, lon}]}, as on the phone page
+    if (u === '/api/cards/places') {
+      try {
+        return web.json(res, { places: await weather.search(b.q, i18n.lang(req, config.get().lang)) });
+      } catch (e) {
+        return web.json(res, { error: 'City search is not available now.', places: [] });
+      }
+    }
     // the weather card: {lat, lon, unit} -> the weather there (Open-Meteo, at most every 30 minutes)
     if (u === '/api/cards/weather') return web.json(res, await weather.get(b.lat, b.lon, b.unit));
     // Home Assistant cards: {ids} -> their states (kept 20 s); {id} -> switched (lights, switches, fans, scenes, scripts)

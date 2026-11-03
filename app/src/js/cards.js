@@ -694,6 +694,11 @@ function cardButtons(el, list) {
   (el._btns || []).forEach(function (b) {
     if (b.parentNode) b.parentNode.removeChild(b);
   });
+  if (!el._bw) {
+    el._bw = document.createElement('div');
+    el._bw.style.cssText = CARD_FRAME_BOX + ';pointer-events:none';
+    el.appendChild(el._bw);
+  }
   el._btns = ok.map(function (b) {
     var d = document.createElement('div');
     d.className = 'card-btn' + (b.look ? ' card-btn-' + b.look : '');
@@ -701,8 +706,9 @@ function cardButtons(el, list) {
       (b.r ? 'border-radius:' + b.r + 'px;' : '') + 'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%';
     d._o = { action: 'cardbtn', label: b.label, fixed: true };
     d._btn = { card: el, name: b.name };
+    d.style.pointerEvents = 'auto';
     hit(d);
-    el.appendChild(d);
+    el._bw.appendChild(d);
     return d;
   });
   if (window.refreshTop) refreshTop();
@@ -711,7 +717,19 @@ function cardButtons(el, list) {
    An answer can carry {menu: {title, action, items: [{id, label, sub, active}]}}: it is shown as a menu, and a row sends that action
    again with its id as the argument (the Spotify card's "Play on"); {said} is a short notice. */
 function cardBtnAct(d) {
-  cardAction(d._btn.card, d._btn.name, '');
+  var el = d._btn.card;
+  /* the button named settings is the launcher's own: the weather card without a city is one such button, and OK (or a click) opens
+     Customise > Weather instead of asking the add-on */
+  if (d._btn.name === 'settings') {
+    if (el._card && el._card.type === WX_TYPE) wxMenu();
+    return;
+  }
+  /* so is open: the weather card's drawer (wxdrawer.js) with the hours, the days and the sun */
+  if (d._btn.name === 'open') {
+    if (el._card && el._card.type === WX_TYPE) wxdOpen(el);
+    return;
+  }
+  cardAction(el, d._btn.name, '');
 }
 function cardAction(el, name, arg) {
   api('/api/cards/action', { slot: el._slot, name: name, arg: arg, lang: LANG }).then(
@@ -796,6 +814,9 @@ function cardFeedAll() {
   var els = $('cards') ? $('cards').children : [];
   for (var i = 0; i < els.length; i++) cardFeed(els[i]);
 }
+/* the page of a card is at least 44px high, centred on its place: a strip taller than a slim slot is drawn whole, not cut (the buttons
+   sit in a box of the same size, so their percentages stay the page's) */
+var CARD_FRAME_BOX = 'position:absolute;left:0;top:50%;width:100%;height:100%;min-height:44px;transform:translateY(-50%)';
 function cardFrame(id, pk) {
   return {
     draw: function (el, o) {
@@ -803,11 +824,12 @@ function cardFrame(id, pk) {
       /* a card with its own page: the glass style (cards.style) gives it the frosted panel too, its page inside the margins */
       if (!/\bcard-frame\b/.test(el.className)) el.className += ' card-frame';
       if (!el._f) {
+        el.style.overflow = 'visible';
         var f = document.createElement('iframe');
         f.setAttribute('sandbox', 'allow-scripts');
         f.setAttribute('tabindex', '-1');
         f.setAttribute('scrolling', 'no');
-        f.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none';
+        f.style.cssText = CARD_FRAME_BOX + ';border:0;background:transparent;pointer-events:none';
         f.onload = function () {
           cardFrameSend(el);
         };

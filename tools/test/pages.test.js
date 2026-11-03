@@ -172,4 +172,36 @@ run(async () => {
     /var states = \['off'\]\.concat\(\s*pr\.modes\.filter\(function \(m\) \{\s*return seen\[m\];/.test(mm),
     'the preload State row offers only the modes the TV itself uses'
   );
+  // Customise > Weather: the forecast card's city, unit and size are set on the TV; with no city the card is one button that opens it
+  const rd = f => fs.readFileSync(path.join(root, ...f.split('/')), 'utf8');
+  const wmenus = rd('app/src/js/menus.js'),
+    wcards = rd('app/src/js/cards.js'),
+    winput = rd('app/src/js/input.js'),
+    wmgr = rd('manager/src/js/input.js');
+  ok(
+    /CARD_PACKS\.forecast\.actions\.length\s*\? \{ label: t\('Weather'\)/.test(wmenus) &&
+      /label: t\('Look'\)[\s\S]{0,200}look: c\.look === 'rich' \? 'minimal' : 'rich'/.test(wmenus) &&
+      /'\/api\/cards\/options', \{ type: WX_TYPE, set: set \}/.test(wmenus) &&
+      /'\/api\/cards\/places', \{ q: v \}/.test(wmenus) &&
+      /label: t\('City'\)/.test(wmenus) &&
+      !/label: t\('Place'\)/.test(wmenus),
+    'Customise > Top & cards has Weather (a city, not a place) once the forecast card is there'
+  );
+  ok(
+    /d\._btn\.name === 'settings'/.test(wcards) && /el\._card\.type === WX_TYPE\) wxMenu\(\)/.test(wcards),
+    'the settings button of the weather card opens Customise > Weather instead of asking the add-on'
+  );
+  const wdr = rd('app/src/js/wxdrawer.js');
+  ok(
+    /d\._btn\.name === 'open'/.test(wcards) && /wxdOpen\(el\)/.test(wcards) && /function wxdOpen/.test(wdr) && /WXD\.on/.test(winput),
+    'OK or a click on the weather card opens the drawer (Now, Hours, Days), which the keys and the mouse then drive'
+  );
+  ok(
+    /id === 'wxq'/.test(winput) && /wxFind\(e\.target\.value\)/.test(winput),
+    'the city is typed with the TV keyboard; OK searches, Back closes'
+  );
+  ok(
+    /p\.open === 'cardspair'/.test(wmgr) && /openCardsPair\(\)/.test(wmgr),
+    "the manager opens the cards' phone page (QR code) at once when asked"
+  );
 });
