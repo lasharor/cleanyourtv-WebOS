@@ -164,7 +164,7 @@ run(async () => {
       return { returnValue: true };
     },
   });
-  const res = await pre.apply();
+  const res = await pre.apply(true);
   ok(
     res.closed.join() === 'netflix' &&
       calls.indexOf('closeByAppId:netflix') >= 0 &&

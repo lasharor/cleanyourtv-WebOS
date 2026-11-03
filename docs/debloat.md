@@ -46,9 +46,28 @@ updated.
 
 ## Preloaded apps
 
-LG starts some apps in the background at boot so they open faster (YouTube, Netflix, the web browser). On a TV with little
-memory that can cost more than it saves. In **Debloat** you can switch on **Close YouTube / Netflix / Web Browser preloaded at
-boot**: about 90 seconds after the service starts, and when you switch it on, the app is closed if it is running and not in front.
-The ids are listed in `options.closePreloaded` in `config.json`. Nothing is changed on the TV: LG preloads the app again at the
-next boot and the service closes it again, and the app opens a little slower the first time you start it. Home, the inputs and
-CleanYourTV's own apps are never closed this way.
+LG's preload manager (`webos-preload-manager`) starts some apps in the background so they open faster: YouTube, Netflix, the web
+browser, Home, the inputs. It looks again every 5 minutes, so an app you close comes back. On a TV with little memory that can cost
+more than it saves.
+
+In the manager app, **Experimental > Preloaded apps** lists every app in the TV's preload policy with what it costs in memory.
+Select an app to change:
+
+- **State**: *off* (never preloaded) or how much of the app LG starts: *partial*, *semi-full*, *full*, *criu* (restored from a
+  snapshot). Press to go to the next one.
+- **How often**: *periodic* (again at every check) or *oneshot* (once).
+- **Back to the TV's own**: the values the TV had when it started.
+
+An app LG does not allow to be preloaded on your TV, and Home (which LG manages with its own rules), are shown but cannot be changed.
+Switching an app off also closes it when it runs in the background and is not in front.
+
+The choices are kept in `options.preloadPolicy` in `config.json`. LG's preload manager keeps nothing over a reboot, so the service
+sets them again about 20 seconds after it starts, and again every 5 minutes in case LG changed them back. Nothing is written to
+the TV's own files: reset every app, or reboot without the boot scripts, and the TV is as LG ships it.
+
+Older versions had three switches in **Debloat** (`options.closePreloaded`); an app on that list counts as switched off.
+
+How it was found on a webOS 25 TV (`com.webos.service.preloadmanager`): `setPreloadPolicy` changes the policy at run time only; an
+omitted `isEnabled` becomes false, so the service always sends it; the daemon accepts any text as a mode, so the service checks it
+against the four known ones; `isAllowed` can be read but not changed. Other firmware may differ: if the TV has no preload
+manager, the screen says so.
