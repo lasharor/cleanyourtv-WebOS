@@ -72,23 +72,25 @@
     {
       "id": "spotify",
       "name": "Spotify now playing",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "A card for Home with what plays on your Spotify account, and buttons for the remote.",
-      "about": "A card for Home that shows what plays, or is paused, on any device of your Spotify account: the cover, the title, the artist and a thin progress bar, with previous, play or pause and next as buttons for the remote (the controls need Spotify Premium). It asks Spotify's Web API with your own Spotify developer app (only its Client ID: the sign-in uses PKCE, so the project holds no credential and no client secret is needed); the tokens stay on the TV, in this add-on's settings. Set it up from your phone: Add-ons > Spotify now playing > Set up from your phone. The idea and the first version are from @Edenik (pull request 127).",
+      "about": "A card for Home that shows what plays, or is paused, on any device of your Spotify account: the cover, the title, the artist and a thin progress bar, with previous, play or pause, next and the output (where it plays) as buttons for the remote, and the cover opens the Spotify app of the TV on the song (the controls need Spotify Premium). It asks Spotify's Web API with your own Spotify developer app (only its Client ID: the sign-in uses PKCE, so the project holds no credential and no client secret is needed); the tokens stay on the TV, in this add-on's settings. Set it up from your phone: Add-ons > Spotify now playing > Set up from your phone. The idea and the first version are from @Edenik (pull request 127).",
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
-        "net.fetch"
+        "net.fetch",
+        "luna"
       ],
       "files": {
-        "addon.json": "3c0b9dbd4e980513d3986100321164b7ab2ca0a4ebb499936b05364a6cde7f77",
-        "cards/nowplaying/card.css": "f00ef31dc24f7fd9530bdabe6b74aae9b1c9b0660f879a7b10b41f8f1c943958",
-        "cards/nowplaying/card.html": "1250308bd63a9441fac2683006268e21b0e7861c7c56b33a109ae7db4b6db026",
-        "cards/nowplaying/card.js": "23fcb35875f914807cc820e1b1854407a9661025ebee6de63e6c4b178343efc6",
+        "addon.json": "a056ead7d1e80ad1c0926944cb282647d9cc41b0702c4ffacf1cff0698cf85b8",
+        "cards/nowplaying/card.css": "dda495fdc8ff99886284a7eadf3893b237e24c0ea497da048a21a56847665843",
+        "cards/nowplaying/card.html": "d58e43f0b0e52be39c5abd1e6875ccb08de280372486e56ed85543938f96b557",
+        "cards/nowplaying/card.js": "32f66b8d194aea41fea8773226a059380200971cd9be514e07a1b1d6d11210aa",
         "cards/nowplaying/preview.jpg": "b4ec2f53f497cc06bac9967277cb28250a289a0d578b5a9bf469fe2c71319a82",
-        "nowplaying.js": "2400ec2590e55679363d17237386be683049b266dd8a59466fced0baa8fd5883",
+        "nowplaying.js": "308680ae425826b6f2e8127fe0bc6738a0965338bf592c366d83582fc9669e8f",
         "phone.js": "58b836bba61f34958b0864b94a968eee4799ce24e69ab2abd76cca55801feac9",
-        "service.js": "fe0dcaf4c962536a083fcd9842279123c7b78f9e173a4a771e1c474561610946"
+        "service.js": "bf876c6594c884dd78c0b2dc8679bb80c785d4f6d875a61d6173d7e7ce02aa5a",
+        "spotifyconnect.js": "0b586d4f90645ad319d3c7247a4910668169da56f828e2dc7eb0f1b48599aa06"
       }
     },
     {

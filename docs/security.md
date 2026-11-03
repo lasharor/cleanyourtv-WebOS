@@ -18,7 +18,7 @@ local network on request, and an optional notification endpoint is off by defaul
 | 8794 | App icons page | The same, for choosing a picture for an app; see [Your own icon](launcher.md#your-own-icon) |
 | 8795 | Immich page | The same, for the Immich add-on (address, API key, albums); see [Wallpapers](wallpapers.md#immich-add-on) |
 | 8796 | Unsplash page | The same, for the Unsplash add-on (Access Key, search words); see [Wallpapers](wallpapers.md#unsplash-add-on) |
-| 8797 | Spotify page | The same, for the Spotify add-on (the Client ID of your own Spotify app, the sign-in); see [Cards](launcher.md#cards) |
+| 8797 | Spotify page | The same, for the Spotify add-on (the Client ID of your own Spotify app, the sign-in); see [Spotify now playing](#spotify-now-playing) |
 | 8798 | Jellyfin page | The same, for the Jellyfin add-on (server address, user name and password; the TV keeps only the access token); see [Cards](launcher.md#cards) |
 
 What the setup changes on the TV is listed in [What it changes on the TV](tv-changes.md).
@@ -54,6 +54,21 @@ nothing else. Searching a place on the phone page sends the name you type to `ge
 They use the Home Assistant address and token set under **More** > **Home Assistant**, the same ones Voice uses; nothing else is stored. The service reads the states with one
 request every 20 seconds at most, switches only lights, switches, fans, input booleans and automations (and runs scenes and scripts)
 when you press OK on a card, and passes a camera's picture to the launcher. Locks, alarms and covers are never switched.
+
+## Spotify now playing
+
+Optional, and only with the Spotify now playing add-on (it asks for the permissions `net.fetch` and `luna`, the second only for the call that starts the Spotify app of the TV). You bring your own Spotify app: the service uses its **Client ID** (not a secret) and
+the sign-in code flow with PKCE, so no client secret is ever needed or stored. The sign-in happens on its own phone page (port
+8797, opened from the manager app, ten minutes to an hour, plain HTTP like the other phone pages: the address you paste back and the Client ID are visible on
+your Wi-Fi while you type them). The service then asks `accounts.spotify.com` for the tokens and `api.spotify.com` for what plays,
+over HTTPS, and fetches the cover from `*.scdn.co`. The scopes are `user-read-currently-playing` and `user-read-playback-state`
+(what plays) and `user-modify-playback-state` (the card's buttons: play, pause, next, previous, and the seek that puts a song back where it was when the cover opens the Spotify app; the output button lists the
+devices of the account and moves the music to the one you choose; and the permission **streaming**, used only to wake a speaker of your network that Spotify does not list (see below); nothing else is changed, no playlist, no library, no volume). The service sends these only when you press a button or the cover on the card. The access token (valid an hour) and the refresh token (about six months) are
+kept in `config.json` under `spotify`, readable by root only; they are never written to the log, never returned by the service
+(the launcher's settings leave `spotify` out) and `tools/diagnose.sh` hides them and the Client ID. **Disconnect Spotify** deletes them;
+you can also remove the app's access at spotify.com/account/apps.
+
+Waking a speaker (the output button, only when you choose a speaker that Spotify does not list): the service asks the local network with mDNS for Spotify Connect devices (UDP 5353, multicast) and, for the one you choose, sends it your account's access token over plain HTTP on the local network, encrypted for that device with a Diffie-Hellman key exchange (as the Spotify apps do). Only private addresses are asked, and the device that answers must report the id that was listed. Any device of your network can answer the discovery, though, and calls itself what it likes: the token goes to the one you choose, so choose a device that you recognise. The token is valid for an hour and you can revoke the app's access at spotify.com/account/apps.
 
 ## Voice
 

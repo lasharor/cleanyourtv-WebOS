@@ -1312,3 +1312,20 @@ body.scenes-on {
   background: rgba(255, 255, 255, 0.14);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9);
 }
+/* the focus the card asks for: a ring around a cover, a filled round button (the Spotify card, as it was drawn by the launcher itself) */
+.card-btn-ring,
+.card-btn-fill {
+  transition:
+    transform calc(0.15s * var(--spd)) ease-out,
+    background-color calc(0.15s * var(--spd)) linear;
+}
+.card-btn-ring.f {
+  background: none;
+  box-shadow: 0 0 0 4px var(--focus);
+  transform: scale(1.04);
+}
+.card-btn-fill.f {
+  background: var(--acc);
+  box-shadow: none;
+  transform: scale(1.1);
+}

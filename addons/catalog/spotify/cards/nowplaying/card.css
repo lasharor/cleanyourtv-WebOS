@@ -1,17 +1,42 @@
-/* The Now playing card: transparent background, fills its frame; sizes follow the height of the frame (vh); the colour and typeface
-   are the theme's (the launcher sends them). */
-html { font-size: 4.4vh; }
-body { margin: 0; height: 100vh; overflow: hidden; color: #fff; font-family: sans-serif; background: transparent; }
-#main { position: absolute; left: 0; right: 0; top: 0; bottom: 30%; display: flex; align-items: center; overflow: hidden; }
-#main img, #main .nocover { height: 100%; aspect-ratio: 1 / 1; border-radius: 0.4rem; object-fit: cover; flex: none; background: rgba(255, 255, 255, 0.12); }
-#main .txt { margin: 0 0.9rem; min-width: 0; }
-#main .t { font-size: 1.15rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#main .a { font-size: 0.85rem; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#main .tm { font-size: 0.7rem; opacity: 0.6; margin-top: 0.2rem; }
-#main .msg { font-size: 0.8rem; opacity: 0.7; }
-#bar { position: absolute; left: 0; right: 0; bottom: 27%; height: 2.5%; background: rgba(255, 255, 255, 0.2); border-radius: 2px; overflow: hidden; }
-#bar i { display: block; height: 100%; width: 100%; background: currentColor; transform-origin: left; transform: scaleX(0); }
-[dir=rtl] #bar i { transform-origin: right; }
-#tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 24%; }
-.btn { position: absolute; top: 0; bottom: 0; width: 18%; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem; background: rgba(255, 255, 255, 0.1); }
-.btn svg { width: 1.3rem; height: 1.3rem; fill: currentColor; stroke: none; }
+/* The Now playing card, the look of the card the launcher drew itself before it became an add-on (sizes in px of the launcher's 1080p
+   page, which the frame has too): a pill with the cover (square, unaltered), a small label, the title, the artist, a thin bar and the
+   buttons with the time. A place smaller than 200 high (np-sm) is compact: the cover at its height, the text, no buttons. The bar's
+   fill grows with a transform, the GPU's only job. The colour and typeface are the theme's (the launcher sends them). */
+html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; }
+body { color: #fff; font-family: sans-serif; }
+#card { display: flex; align-items: center; box-sizing: border-box; padding: 20px; background: rgba(8, 12, 18, 0.62); border-radius: 27px; position: absolute; left: 0; top: 0; }
+[dir=rtl] #card { left: auto; right: 0; }
+.np-art { flex: none; position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.08); border-radius: 10px; }
+.np-art img { position: absolute; left: 0; top: 0; display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.45s ease-out; }
+.np-t { flex: 1; min-width: 0; padding: 0 30px; text-align: left; }
+.np-s { font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
+.np-n { font-size: 40px; font-weight: 600; margin-top: 2px; }
+.np-a { font-size: 30px; opacity: 0.7; margin-top: 2px; }
+.np-s, .np-n, .np-a { white-space: nowrap; overflow: hidden; direction: ltr; }
+.np-s span, .np-n span, .np-a span { display: inline-block; unicode-bidi: plaintext; }
+/* the text is wider than the card: it runs to its end and back, resting a while at each end */
+.np-run span { animation: np-fw 10s linear infinite alternate; }
+.np-run.np-rtl span { animation-name: np-bw; }
+@keyframes np-fw { 0%, 18% { transform: translateX(0); } 82%, 100% { transform: translateX(var(--np-d)); } }
+@keyframes np-bw { 0%, 18% { transform: translateX(var(--np-d)); } 82%, 100% { transform: translateX(0); } }
+.np-bar { height: 9px; margin-top: 12px; border-radius: 5px; background: rgba(255, 255, 255, 0.18); overflow: hidden; }
+.np-bar i { display: block; height: 100%; background: currentColor; transform: scaleX(0); transform-origin: 0 50%; }
+.np-c { display: flex; align-items: center; margin-top: 18px; }
+.np-time { flex: none; margin-left: auto; font-size: 24px; opacity: 0.75; white-space: nowrap; direction: ltr; }
+.np-btn { flex: none; width: 52px; height: 52px; margin-right: 14px; border-radius: 26px; color: inherit; }
+.np-btn svg { display: block; width: 28px; height: 28px; margin: 12px; fill: currentColor; }
+.np-sm { padding: 0 20px 0 0 !important; border-radius: 14px !important; }
+.np-sm .np-art { border-radius: 14px 0 0 14px; }
+.np-sm .np-c { display: none; }
+.np-sm .np-t { padding: 0 18px; }
+.np-sm .np-s { font-size: 16px; }
+.np-sm .np-n { font-size: 28px; margin-top: 2px; }
+.np-sm .np-a { font-size: 22px; margin-top: 0; }
+.np-sm .np-bar { height: 5px; margin-top: 8px; }
+[dir=rtl] .np-bar i { transform-origin: 100% 50%; }
+[dir=rtl] .np-sm { padding: 0 0 0 20px !important; }
+[dir=rtl] .np-sm .np-art { border-radius: 0 14px 14px 0; }
+[dir=rtl] .np-btn { margin-right: 0; margin-left: 14px; }
+[dir=rtl] .np-time { margin-left: 0; margin-right: auto; }
+[dir=rtl] .np-t { text-align: right; }
+.msg { font-size: 22px; opacity: 0.7; padding: 20px; }

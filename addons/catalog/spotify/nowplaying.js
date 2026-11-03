@@ -32,6 +32,8 @@ const CLIENT_ID = /^[0-9a-f]{32}$/i,
   // the redirect addresses Spotify accepts: https, or http only on a loopback address written as an IP (not localhost)
   REDIRECT_OK = /^(https:\/\/[^\s/?#]+(\/[^\s?#]*)?|http:\/\/(127\.0\.0\.1|\[::1\])(:\d{1,5})?(\/[^\s?#]*)?)$/;
 
+const connect = require('./spotifyconnect');
+
 const b64url = buf => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const form = o =>
   Object.keys(o)
@@ -42,7 +44,9 @@ const artOk = u =>
   /^https:\/\/([a-z0-9-]+\.)*scdn\.co\//i.test(u) || (!!process.env.CYTV_SPOTIFY_API && u.indexOf(API().replace(/\/v1$/, '') + '/') === 0);
 
 function create(opts) {
-  const fetch = opts.fetch;
+  const fetch = opts.fetch,
+    TICK = opts.tick || 1500, // how often open() looks for the restart of the track
+    SC = opts.connect || connect;
   // the settings of the add-on (config.json, addons.spotify.settings) as the module below always had them: config.get().spotify and
   // config.update(source, fn); a deleted key is set to undefined, which the file leaves out
   const config = {
@@ -456,7 +460,150 @@ function create(opts) {
     last = null; // the next answer is asked for again
     return { ok: true, body: r.body };
   }
-  return { status, prepare, finish, disconnect, now, art, control, tell, REDIRECT };
+  // the Connect devices on the local network (found with mDNS, asked for their id): a speaker or a TV that has been idle is not in
+  // Spotify's list until it is woken, but the Spotify apps show it. Kept for 20 seconds.
+  let near = {}, // device id -> {d, name, type}
+    scanned = 0,
+    scan = null;
+  // one scan at a time, shared by whoever asks while it runs
+  function nearby() {
+    if (scan) return scan;
+    if (Date.now() - scanned < 20000) return Promise.resolve();
+    scanned = Date.now();
+    scan = (async () => {
+      try {
+        const got = await Promise.all((await SC.discover(opts.scan || 1300)).slice(0, 12).map(d => SC.info(d).then(i => i && { d, i })));
+        const found = {};
+        got.forEach(g => {
+          if (g) found[g.i.id] = { d: g.d, name: g.i.name, type: g.i.type };
+        });
+        if (Object.keys(found).length !== Object.keys(near).length)
+          say('the network has ' + Object.keys(found).length + ' Spotify Connect device(s) that can be asked');
+        near = found;
+      } catch (_) {
+        near = {};
+      }
+      scan = null;
+    })();
+    return scan;
+  }
+  // the devices Spotify lists for the account (the ones with Spotify open and signed in), and the ones found on the network, to choose
+  // where the music plays; a device that has to be woken first has wake: true
+  async function devices() {
+    const asked = nearby();
+    const r = await player('GET', '/me/player/devices');
+    await asked;
+    if (r.error) return { error: r.error };
+    let j;
+    try {
+      j = JSON.parse(r.body.toString('utf8'));
+    } catch (_) {
+      return { error: 'Spotify did not answer. Is the TV online?' };
+    }
+    const list = (Array.isArray(j.devices) ? j.devices : [])
+      .slice(0, 20)
+      .map(d => ({
+        id: String((d && d.id) || ''),
+        name: String((d && d.name) || '').slice(0, 60),
+        type: String((d && d.type) || '').slice(0, 20),
+        active: !!(d && d.is_active),
+      }))
+      .filter(d => /^[0-9A-Za-z._:-]{10,80}$/.test(d.id));
+    Object.keys(near).forEach(id => {
+      if (list.length < 20 && !list.some(d => d.id === id || d.name === near[id].name))
+        list.push({ id, name: near[id].name, type: near[id].type, active: false, wake: true });
+    });
+    return { devices: list };
+  }
+  // log the account in on a device of the network, so that Spotify lists it
+  async function wake(id) {
+    if (!/streaming/.test(sp().scope || '')) return { error: 'Sign in to Spotify again to wake this device.' };
+    const me = await player('GET', '/me');
+    let user = '';
+    try {
+      user = String(JSON.parse(me.body.toString('utf8')).id || '');
+    } catch (_) {}
+    const tok = await token();
+    const dev = near[id];
+    say('waking a ' + (dev ? dev.type : 'device') + ' of the network');
+    if (!dev || !user || !tok || !(await SC.wake(dev.d, user, tok, id))) {
+      say('the device did not take the sign-in');
+      return { error: 'That device did not answer.' };
+    }
+    for (let n = 0; n < 12; n++) {
+      await new Promise(r => setTimeout(r, opts.wait || 1000));
+      const l = await devices();
+      if ((l.devices || []).some(d => d.id === id && !d.wake)) {
+        say('the device registered with Spotify');
+        return { ok: true };
+      }
+    }
+    say('the device did not register with Spotify');
+    return { error: 'That device did not answer.' };
+  }
+  // move the music to a device; what plays keeps playing, and a paused song stays paused
+  async function transfer(id) {
+    if (!/^[0-9A-Za-z._:-]{10,80}$/.test(String(id || ''))) return { error: 'That device is not available.' };
+    const cur = await now(true);
+    const t0 = Date.now();
+    const body = { device_ids: [String(id)], play: cur.playing !== false };
+    let r = await player('PUT', '/me/player', body);
+    // only a device that Spotify does not know (404) is woken; any other answer (busy, signed out) is told as it is
+    if (r.error === NOT_FOUND && near[id]) {
+      const w = await wake(id);
+      if (w.error) return w;
+      r = await player('PUT', '/me/player', body);
+    }
+    say('moving the music to another device: ' + (r.error || 'done'));
+    if (r.error) return { error: r.error === NOT_FOUND ? 'That device is not available.' : r.error };
+    // some devices start the song from the beginning: it is set back to where it was
+    if (cur.playing && cur.link) resume(cur.link, cur.progress || 0, t0);
+    return { ok: true };
+  }
+  // The Spotify app of the TV, opened on the song that plays. The app has to be started with the track as its target to show it, and
+  // then plays it again from the start (on the device that played it): so the place it was at, plus the time since, is seeked to as
+  // soon as the restart shows (looked for for about 40 seconds; another track meanwhile, or no restart, ends it). A paused track
+  // is not touched: the app is started without a target and shows its Home.
+  async function open(launch) {
+    const cur = await now(true);
+    const m = /\/(track|episode)\/([A-Za-z0-9]+)/.exec(cur.link || '');
+    const t0 = Date.now();
+    const target = cur.playing && m ? { contentTarget: 'spotify:' + m[1] + ':' + m[2] } : {};
+    const out = await launch(target);
+    if (target.contentTarget) resume(cur.link, cur.progress || 0, t0);
+    return out;
+  }
+  // a command of the user (next, previous, pause...) ends a running resume, and so does a pause seen after the song played: the
+  // place it is given back to is only right while the song plays on without interruption
+  let resuming = 0;
+  function resume(link, progress, t0) {
+    const mine = ++resuming;
+    let n = 0,
+      played = false;
+    const tick = async () => {
+      if (++n > 27 || mine !== resuming) return;
+      let out;
+      try {
+        out = await ask(false);
+      } catch (_) {
+        return;
+      }
+      if (mine !== resuming) return;
+      last = { at: Date.now(), out };
+      if (out.link && out.link !== link) return; // another track: nothing to give back
+      if (out.playing) played = true;
+      else if (played) return; // paused meanwhile
+      const expected = progress + (Date.now() - t0);
+      if (out.playing && out.link === link && out.progress < expected - 6000) {
+        await player('PUT', '/me/player/seek?position_ms=' + Math.round(expected));
+        last = null;
+        return;
+      }
+      setTimeout(tick, TICK);
+    };
+    setTimeout(tick, TICK);
+  }
+  return { status, prepare, finish, disconnect, now, art, control, devices, transfer, open, tell, REDIRECT };
 }
 
 module.exports = { create, REDIRECT, REDIRECT_OK, CLIENT_ID };

@@ -1,39 +1,42 @@
 {
   "id": "spotify",
   "name": "Spotify now playing",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A card for Home with what plays on your Spotify account, and buttons for the remote.",
-  "about": "A card for Home that shows what plays, or is paused, on any device of your Spotify account: the cover, the title, the artist and a thin progress bar, with previous, play or pause and next as buttons for the remote (the controls need Spotify Premium). It asks Spotify's Web API with your own Spotify developer app (only its Client ID: the sign-in uses PKCE, so the project holds no credential and no client secret is needed); the tokens stay on the TV, in this add-on's settings. Set it up from your phone: Add-ons > Spotify now playing > Set up from your phone. The idea and the first version are from @Edenik (pull request 127).",
+  "about": "A card for Home that shows what plays, or is paused, on any device of your Spotify account: the cover, the title, the artist and a thin progress bar, with previous, play or pause, next and the output (where it plays) as buttons for the remote, and the cover opens the Spotify app of the TV on the song (the controls need Spotify Premium). It asks Spotify's Web API with your own Spotify developer app (only its Client ID: the sign-in uses PKCE, so the project holds no credential and no client secret is needed); the tokens stay on the TV, in this add-on's settings. Set it up from your phone: Add-ons > Spotify now playing > Set up from your phone. The idea and the first version are from @Edenik (pull request 127).",
   "kind": "service",
   "entry": { "service": "service.js" },
-  "permissions": ["net.fetch"],
+  "permissions": ["net.fetch", "luna"],
+  "luna": [{ "uri": "luna://com.webos.applicationManager/launch" }],
   "provides": ["cards"],
   "minService": "1.6.16",
   "cards": [
     {
       "id": "nowplaying",
       "name": "Spotify now playing",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "What plays on your Spotify account, with buttons.",
-      "about": "The cover, the title and the artist of what plays on any device of your Spotify account, with a progress bar and buttons for the remote (previous, play or pause, next). It is empty while nothing plays. Set up first: Add-ons > Spotify now playing > Set up from your phone.",
+      "about": "The cover, the title and the artist of what plays on any device of your Spotify account, with a progress bar and buttons for the remote (previous, play or pause, next and the output, where it plays); the cover opens the Spotify app on the song. It is empty while nothing plays. Set up first: Add-ons > Spotify now playing > Set up from your phone.",
       "size": "medium",
       "page": "card.html",
-      "poll": 5,
+      "poll": 6,
       "actions": [
         { "name": "prev", "label": "Previous" },
         { "name": "toggle", "label": "Play or pause" },
-        { "name": "next", "label": "Next" }
+        { "name": "next", "label": "Next" },
+        { "name": "output", "label": "Play on" },
+        { "name": "open", "label": "Open in Spotify" },
+        { "name": "pick", "label": "Play on" }
       ],
       "options": [
         {
-          "key": "size",
+          "key": "bar",
           "kind": "choice",
-          "label": "Size",
-          "default": "medium",
+          "label": "Progress bar",
+          "default": "on",
           "choices": [
-            ["medium", "Medium"],
-            ["small", "Small"],
-            ["large", "Large"]
+            ["on", "Shown"],
+            ["off", "Hidden"]
           ]
         }
       ]

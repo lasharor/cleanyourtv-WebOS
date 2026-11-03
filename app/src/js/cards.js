@@ -665,7 +665,17 @@ function cardButtons(el, list) {
       v = Number(v);
       return isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
     };
-    ok.push({ name: n.name, label: el._pk.actions[i].label, x: q(n.x), y: q(n.y), w: q(n.w), h: q(n.h) });
+    /* r: the corner radius in px (a round button), look: how the focus shows ("ring" around a cover, "fill" on a button) */
+    ok.push({
+      name: n.name,
+      label: el._pk.actions[i].label,
+      x: q(n.x),
+      y: q(n.y),
+      w: q(n.w),
+      h: q(n.h),
+      r: Math.max(0, Math.min(60, Number(n.r) || 0)),
+      look: n.look === 'ring' || n.look === 'fill' ? n.look : '',
+    });
   });
   /* the page says percent of its frame; the frame can sit inside the card's margins (glass cards), so the targets are moved there */
   var f = el._f,
@@ -686,8 +696,8 @@ function cardButtons(el, list) {
   });
   el._btns = ok.map(function (b) {
     var d = document.createElement('div');
-    d.className = 'card-btn';
-    d.style.cssText = 'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%';
+    d.className = 'card-btn' + (b.look ? ' card-btn-' + b.look : '');
+    d.style.cssText = (b.r ? 'border-radius:' + b.r + 'px;' : '') + 'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%';
     d._o = { action: 'cardbtn', label: b.label, fixed: true };
     d._btn = { card: el, name: b.name };
     hit(d);
@@ -696,13 +706,20 @@ function cardButtons(el, list) {
   });
   if (window.refreshTop) refreshTop();
 }
-/* OK on a button: the add-on gets the action, then the card is asked for its data again (the answer to a button shows within seconds) */
+/* OK on a button: the add-on gets the action, then the card is asked for its data again (the answer to a button shows within seconds).
+   An answer can carry {menu: {title, action, items: [{id, label, sub, active}]}}: it is shown as a menu, and a row sends that action
+   again with its id as the argument (the Spotify card's "Play on"); {said} is a short notice. */
 function cardBtnAct(d) {
-  var el = d._btn.card;
-  api('/api/cards/action', { slot: el._slot, name: d._btn.name, lang: LANG }).then(
+  cardAction(d._btn.card, d._btn.name, '');
+}
+function cardAction(el, name, arg) {
+  api('/api/cards/action', { slot: el._slot, name: name, arg: arg, lang: LANG }).then(
     function (r) {
       if (r && r.error) toast(t(r.error), true);
-      [400, 1500, 3500].forEach(function (ms) {
+      else if (r && r.said) toast(r.said);
+      if (r && r.menu && r.menu.items && r.menu.items.length) cardMenu(el, r.menu);
+      /* Spotify's own answer follows within a few seconds of a command: asked again at short intervals meanwhile */
+      [300, 900, 1800, 3000, 5000].forEach(function (ms) {
         setTimeout(function () {
           cardFeed(el);
         }, ms);
@@ -711,6 +728,29 @@ function cardBtnAct(d) {
     function () {
       toast(t('The service did not answer.'), true);
     }
+  );
+}
+function cardMenu(el, menu) {
+  var at = 0,
+    list = menu.items.slice(0, 20);
+  list.forEach(function (it, i) {
+    if (it.active) at = i;
+  });
+  openBuilt(
+    String(menu.title || '').slice(0, 40),
+    function () {
+      return list.map(function (it) {
+        return {
+          icon: /^dev(tv|computer|phone|speaker)$/.test(it.icon) ? it.icon : undefined,
+          label: String(it.label || '').slice(0, 60),
+          sub: String(it.sub || '').slice(0, 40),
+          fn: function () {
+            if (!it.active) cardAction(el, String(menu.action || ''), String(it.id || '').slice(0, 100));
+          },
+        };
+      });
+    },
+    at
   );
 }
 /* a card of an add-on asks its add-on for data now and then (card.json "poll", seconds): only while Home is shown, one request at a time */
@@ -722,6 +762,8 @@ function cardFeed(el) {
     function (r) {
       el._busy = false;
       el._data = r && typeof r === 'object' ? r : { error: 'no answer' };
+      /* a notice of the add-on (Spotify turned the sign-in down): shown once, the add-on remembers that it was */
+      if (el._data.notice) toast(String(el._data.notice).slice(0, 160), true);
       if (el.parentNode && el._card) cardType(el._card.type).draw(el, el._card);
     },
     function () {

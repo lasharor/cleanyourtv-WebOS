@@ -947,5 +947,20 @@
  "Sign out": "Sign out",
  "Do nothing": "Do nothing",
  "Does nothing": "Does nothing",
- "blocks the button's own action": "blocks the button's own action"
+ "blocks the button's own action": "blocks the button's own action",
+ "Play on": "Play on",
+ "Playing here": "Playing here",
+ "This TV": "This TV",
+ "Opens Spotify": "Opens Spotify",
+ "Spotify did not open.": "Spotify did not open.",
+ "Playing on": "Playing on",
+ "Open in Spotify": "Open in Spotify",
+ "That device is not available.": "That device is not available.",
+ "That device did not answer.": "That device did not answer.",
+ "Spotify does not accept your account for this app. Add it under Users Management in your Spotify app.": "Spotify does not accept your account for this app. Add it under Users Management in your Spotify app.",
+ "Spotify no longer accepts the saved sign-in. Sign in again from Add-ons > Spotify now playing.": "Spotify no longer accepts the saved sign-in. Sign in again from Add-ons > Spotify now playing.",
+ "Sign in to Spotify again to wake this device.": "Sign in to Spotify again to wake this device.",
+ "Progress bar": "Progress bar",
+ "Shown": "Shown",
+ "Hidden": "Hidden"
 }

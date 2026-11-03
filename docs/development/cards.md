@@ -66,4 +66,9 @@ background and fills its frame. Write ES5: it runs on Chromium 68 (webOS 5) too.
 When a card needs data that the TV cannot work out alone (the weather, what plays on your Spotify), or buttons for the remote, it comes with an
 [add-on](addons.md#providing-something-to-the-service-cards) instead: the add-on's service asks the internet and the frame stays closed. The page is
 a page card as above; the message it gets has one more key, `m.data` (what the add-on's service said for this card, or `{error}`), and it can send
-`{cytvCard: 'buttons', buttons: [...]}` to make parts of itself targets of the remote.
+`{cytvCard: 'buttons', buttons: [...]}` to make parts of itself targets of the remote. A button is `{name, x, y, w, h}` (percent of the frame; `name` is one of
+the card's `actions`), and may have `r` (corner radius in px) and `look` (`ring` around a cover, `fill` on a round button) for how the focus shows.
+
+What an action answers is shown by the launcher: `{error}` as a notice, `{said}` as a short note, and `{menu: {title, action, items: [{id, label, sub, icon, active}]}}`
+as a menu (icons: `devtv`, `devcomputer`, `devphone`, `devspeaker`); a row sends `action` again with its `id` as the argument. A feed that has `notice` shows it
+once as a notice (the service keeps from sending it again).
