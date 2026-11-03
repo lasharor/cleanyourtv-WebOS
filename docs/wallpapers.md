@@ -1,7 +1,8 @@
 # Wallpapers
 
-Your own photos behind the home screen, from two sources: photos you upload from a phone, and photos from albums on your
-[Immich](https://immich.app) server. Both end up in one library on the TV.
+Your own photos behind the home screen. Out of the box they are files: photos you upload from a phone. Other sources are
+[add-ons](development/addons.md) you install in the manager: [Immich](https://immich.app) albums, and more. Everything ends up in
+one rotation on the TV.
 
 ## Switching it on
 
@@ -19,29 +20,29 @@ no photos in the library, Home looks as before. The theme **Still** switches the
 ## Adding photos
 
 In the manager app, **Wallpapers** > **Manage from your phone** shows a QR code and a 6-digit code. Scan it with a phone on the
-same Wi-Fi. The page has two parts:
+same Wi-Fi. The page is for uploading:
 
 - **Upload photos**: choose one or more photos. Each one is scaled on the phone before it is sent (to 3840 or 1920 pixels on the
   long side, see **Picture size**), which also turns an iPhone's HEIC photos into JPEG. The page shows the progress and what failed.
   Uploaded photos are listed below, each with a × to delete it.
-- **Configure Immich**: the server address and an API key, then **Test connection and save**. Choose albums and **Save albums and
-  sync** (choosing albums while a sync runs starts another one right after it). The synced photos are listed; tap one to hide it from the TV (tap again to show it).
 
 The page is served by the TV itself on port 8791, needs the code shown on the TV, stays open while you use it (at most an hour)
-and closes when you leave the QR screen. It is not encrypted: photos and the Immich key travel over your Wi-Fi.
+and closes when you leave the QR screen. It is not encrypted: photos travel over your Wi-Fi.
 
 ## The manager screen
 
 | Row | What it does |
 |---|---|
 | Manage from your phone | The QR code for the phone page. |
-| Local uploads, Immich, Total | How many photos there are per source, when Immich was last synced and its last error, and the space used. |
-| Sync now | Downloads new and changed photos from the chosen Immich albums and removes the ones that left them. |
-| Picture size | 4K (3840 pixels, the default) or Full HD (1920). Applies to new uploads and to the next Immich sync. On a 4K TV, Home is laid out at 1920 x 1080 but drawn at 3840 x 2160, so a 4K photo is shown pixel for pixel; Full HD fits about four times as many photos in 150 MB. |
+| Local uploads, one row per photo source, Total | How many photos there are per source, a line about each source (for Immich when it was last synced and its last error), and the space the uploads use. A source row opens that source's own page on the phone. |
+| Picture size | 4K (3840 pixels, the default) or Full HD (1920). Applies to new uploads and to what photo sources download next. On a 4K TV, Home is laid out at 1920 x 1080 but drawn at 3840 x 2160, so a 4K photo is shown pixel for pixel; Full HD fits about four times as many photos in 150 MB. |
 | Remove all uploads | Deletes every uploaded photo, after a confirmation. |
-| Disconnect Immich | Forgets the address and the key and deletes the Immich photos, after a confirmation. |
+| Immich is an add-on now, Remove old Immich data | Only on a TV that used Immich before it became an add-on: the old settings and photos wait until you install the Immich add-on, which takes them over once. **Remove old Immich data** deletes them instead, after a confirmation. |
 
-## Immich
+## Immich (add-on)
+
+Install **Immich** in the manager's **Add-ons**. It adds a row on the Wallpapers screen that opens its page on the phone: the server
+address and an API key, then **Test connection and save**, the albums, and the synced photos (tap one to hide it from the TV).
 
 Create an API key in Immich under **Account settings** > **API keys** with at least the `album.read`, `asset.read` and `asset.view`
 permissions (`asset.download` too for full-size pictures on older servers). The key is kept in the service's settings file
@@ -54,9 +55,14 @@ it is tracked by its Immich ID, not its file name. Photos that are no longer in 
 else is touched. At 4K the TV asks for Immich's full-size picture (Immich 1.120 or newer), then the original when it is a JPEG,
 PNG or WebP, then the preview; at Full HD it uses the preview (about 1440 pixels).
 
-The sync runs every six hours, and with **Sync now**. Shortly after the TV starts it only runs when the last sync is more than a
-day old. When Immich cannot be reached the photos already on the TV stay, and the error is shown. Showing a photo never needs
-Immich.
+The sync runs every six hours, and when you save albums or press **Sync now** on the phone page. Shortly after the TV starts it only
+runs when the last sync is more than a day old. When Immich cannot be reached the photos already on the TV stay, and the error is
+shown. Showing a photo never needs Immich. The photos are kept in the add-on's own folder (`addon-data/immich/`), at most 300 photos
+and 100 MB.
+
+**From an earlier version.** Immich used to be part of Wallpapers. If your TV had it set up, the address, key, albums and photos stay
+where they were until you install the Immich add-on, which takes them over once (nothing is downloaded again). Until then they are not
+used. To drop them instead, use **Remove old Immich data** on the Wallpapers screen.
 
 ## More photo sources (add-ons)
 
@@ -71,9 +77,8 @@ size.
 | | |
 |---|---|
 | Uploads | At most 100 photos, 12 MB each; JPEG, PNG and WebP (checked by their content, not their name). |
-| Immich | At most 300 photos. |
-| Space | 150 MB for both together. A full library refuses uploads and stops the sync with a message. |
+| Space | 150 MB for the uploads. A full library refuses uploads with a message. Each photo source keeps its own photos and limits (Immich: 300 photos, 100 MB). |
 
-The photos are stored in `/media/developer/cleanyourtv/wallpapers/`: `upload/` (each under a random name), `immich/` (each under
-its Immich ID) and `index.json`, which records the source, size and checksum of every file. Only files listed there are ever
+The photos are stored in `/media/developer/cleanyourtv/wallpapers/`: `upload/` (each under a random name) and `index.json`, which records every upload (`immich/` is what an earlier version synced
+from Immich, kept until the Immich add-on takes it over). Only files listed there are ever
 deleted. They survive restarts and updates; **Uninstall** removes them with the rest.

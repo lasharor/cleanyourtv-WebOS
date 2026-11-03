@@ -1,6 +1,6 @@
-// Wallpapers (wallpapers.js): uploads from the phone page (the code, picture types, limits, deleting) and the Immich sync against a
-// stand-in for Immich (only new or changed photos are downloaded, videos and trashed ones are skipped, a photo that left the albums is
-// deleted, hidden ones too, a failed sync keeps the cache, the key stays in the service).
+// Wallpapers (wallpapers.js): uploads from the phone page (the code, picture types, limits, deleting), the photo sources that add-ons
+// provide, and what an earlier version kept of Immich (handed to the Immich add-on once, or removed). The Immich add-on has its own tests
+// (immich.test.js).
 const fs = require('fs'),
   http = require('http'),
   path = require('path');
@@ -48,7 +48,10 @@ run(async () => {
   const config = memoryConfig({});
   const wp = W.create({ config });
   let r = await call(wp, '/api/wallpapers/status');
-  ok(r.j.total === 0 && r.j.size === '4k' && !r.j.immich.configured, 'no photos at first; the picture size is 4K');
+  ok(
+    r.j.total === 0 && r.j.size === '4k' && r.j.immich === undefined && r.j.legacyImmich === undefined,
+    'no photos at first; the picture size is 4K'
+  );
 
   // ---- the phone page ----
   r = await call(wp, '/api/wallpapers/pair', 'POST', {});
@@ -57,8 +60,8 @@ run(async () => {
   await sleep(100);
   let p = await phone('GET', '/');
   ok(
-    p.code === 200 && /Upload photos/.test(p.text) && /Configure Immich/.test(p.text),
-    'the page offers Upload photos and Configure Immich'
+    p.code === 200 && /Upload photos|Choose photos/.test(p.text) && !/Immich/.test(p.text),
+    'the page offers Upload photos and nothing about Immich'
   );
   p = await phone('GET', '/api/state', undefined, '000000');
   ok(p.code === 403, 'the API needs the code');
@@ -85,120 +88,9 @@ run(async () => {
   r = await call(wp, '/api/wallpapers/list');
   ok(r.j.photos.length === 1 && /^u\/[a-f0-9]{16}$/.test(r.j.photos[0]), 'the list for the launcher holds the upload');
 
-  // ---- Immich ----
-  const A = (n, extra) =>
-    Object.assign(
-      {
-        id: 'aaaaaaaa-0000-0000-0000-00000000000' + n,
-        type: 'IMAGE',
-        checksum: 'c' + n,
-        fileCreatedAt: '2026-01-0' + n + 'T00:00:00Z',
-        originalMimeType: 'image/jpeg',
-      },
-      extra || {}
-    );
-  let album = [A(1), A(2), A(3, { type: 'VIDEO' }), A(4, { isTrashed: true }), A(5)];
-  let down = 0,
-    keyOk = true,
-    downAll = false;
-  const im = await serve((q, res) => {
-    const send = (c, o, raw) => {
-      res.writeHead(c, { 'content-type': raw ? 'image/jpeg' : 'application/json' });
-      res.end(raw || JSON.stringify(o));
-    };
-    if (downAll) return send(500, {});
-    if (q.headers['x-api-key'] !== 'secret-key-1234' || !keyOk) return send(401, {});
-    const u = q.url;
-    if (u === '/api/albums') return send(200, [{ id: 'bbbbbbbb-0000-0000-0000-000000000001', albumName: 'Family', assetCount: 5 }]);
-    if (u === '/api/albums?shared=true') return send(200, []);
-    if (/^\/api\/albums\/bbbbbbbb/.test(u)) return send(200, { assets: album });
-    // a newer Immich (2.x, 3.x): the album does not list its photos, they are searched by album, page by page
-    if (/^\/api\/albums\/cccccccc/.test(u)) return send(200, { id: 'cccccccc-0000-0000-0000-000000000001', assetCount: 3 });
-    if (u === '/api/search/metadata' && q.method === 'POST') {
-      let b = '';
-      q.on('data', c => (b += c));
-      q.on('end', () => {
-        const f = JSON.parse(b),
-          all = [A(6), A(7), A(8)].filter(() => f.albumIds[0] === 'cccccccc-0000-0000-0000-000000000001');
-        const pg = f.page || 1;
-        send(200, { assets: { items: all.slice((pg - 1) * 2, pg * 2), nextPage: pg * 2 < all.length ? String(pg + 1) : null } });
-      });
-      return;
-    }
-    const m = /^\/api\/assets\/([0-9a-f-]+)\/(thumbnail\?size=(fullsize|preview)|original)$/.exec(u);
-    if (m) {
-      if (m[3] === 'fullsize' && /1$/.test(m[1])) return send(404, {}); // no full-size image for this one: the original is used
-      down++;
-      return send(200, null, JPEG);
-    }
-    send(404, {});
-  });
-  await phone('POST', '/api/immich/connect', { url: im.url + '/', key: 'wrong' }, code).then(x => {
-    ok(/refused the API key/.test(x.j.error || ''), 'a wrong key is reported: ' + (x.j.error || ''));
-  });
-  p = await phone('POST', '/api/immich/connect', { url: im.url + '/', key: 'secret-key-1234' }, code);
-  ok(p.j.ok === true && p.j.albums[0].name === 'Family', 'the connection test lists the albums');
-  r = await call(wp, '/api/wallpapers/status');
-  ok(
-    r.j.immich.configured && r.j.immich.keyHint === '…1234' && JSON.stringify(r.j).indexOf('secret-key') < 0,
-    'the status shows the last four characters of the key only'
-  );
-  p = await phone('POST', '/api/immich/albums', { ids: ['bbbbbbbb-0000-0000-0000-000000000001'] }, code);
-  await wp.sync();
-  r = await call(wp, '/api/wallpapers/status');
-  ok(
-    r.j.immich.photos === 3 && down === 3 && !r.j.immich.error && r.j.immich.lastSync > 0,
-    'the sync downloads the photos (not the video or the trashed one)'
-  );
-  await wp.sync();
-  ok(down === 3, 'a second sync downloads nothing');
-  album[1] = A(2, { checksum: 'changed' });
-  await wp.sync();
-  ok(down === 4, 'a changed photo is downloaded again');
-  await phone(
-    'POST',
-    '/api/immich/albums',
-    { ids: ['bbbbbbbb-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000001'] },
-    code
-  );
-  await wp.sync();
-  r = await call(wp, '/api/wallpapers/status');
-  ok(
-    r.j.immich.photos === 6 && down === 7,
-    'an album on a newer Immich (photos found by search, in pages) is synced too: ' + r.j.immich.photos
-  );
-  await phone('POST', '/api/immich/albums', { ids: ['bbbbbbbb-0000-0000-0000-000000000001'] }, code);
-  await wp.sync();
-  ok((await call(wp, '/api/wallpapers/status')).j.immich.photos === 3, "a deselected album's photos are removed");
-  album = [A(1), A(2, { checksum: 'changed' })];
-  await wp.sync();
-  const imFiles = fs.readdirSync(path.join(process.env.CYTV_DIR, 'wallpapers', 'immich'));
-  ok(
-    imFiles.length === 2 && fs.readdirSync(path.join(process.env.CYTV_DIR, 'wallpapers', 'upload')).length === 1,
-    'a photo that left the album is deleted, the uploads stay'
-  );
-  p = await phone('POST', '/api/immich/hide', { id: A(1).id, hidden: true }, code);
-  r = await call(wp, '/api/wallpapers/list');
-  ok(r.j.photos.length === 2 && r.j.photos.indexOf('i/' + A(1).id) < 0, 'a hidden Immich photo is not shown');
-  downAll = true;
-  await wp.sync();
-  r = await call(wp, '/api/wallpapers/status');
-  ok(
-    r.j.immich.error && r.j.immich.photos === 1 && fs.readdirSync(path.join(process.env.CYTV_DIR, 'wallpapers', 'immich')).length >= 1,
-    'when Immich is down the cache stays: ' + r.j.immich.error
-  );
-  downAll = false;
-  r = await call(wp, '/api/wallpapers/set', 'POST', { size: 'hd' });
-  ok(r.j.size === 'hd', 'the picture size can be Full HD');
-  r = await call(wp, '/api/wallpapers/disconnect', 'POST', {});
-  ok(
-    !r.j.immich.configured && r.j.immich.photos === 0 && r.j.uploads === 1 && !(config.get().wallpapers || {}).immich,
-    'disconnecting forgets the key and deletes only the Immich photos'
-  );
   r = await call(wp, '/api/wallpapers/remove-uploads', 'POST', {});
   ok(r.j.uploads === 0 && r.j.total === 0, 'all uploads can be removed');
   await call(wp, '/api/wallpapers/pair', 'POST', { stop: true });
-  im.server.close();
 
   // ---- photo sources: add-ons that provide "wallpapers" ----
   {

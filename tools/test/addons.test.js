@@ -399,6 +399,34 @@ run(async () => {
   );
   ok(a.providers('nothing').length === 0, 'and nothing for what nobody provides');
 
+  // every add-on of the repository's catalog installs from a stand-in for GitHub (the real index and files) and loads: its service part
+  // gets the ctx the loader makes, so a catalog add-on cannot lean on something only the service has
+  {
+    const catRoot = path.join(__dirname, '..', '..', 'addons');
+    const gh2 = await serve((q, rs) => {
+      const f = path.join(catRoot, q.url.split('?')[0].replace(/\.\./g, ''));
+      if (fs.existsSync(f) && fs.statSync(f).isFile()) return rs.end(fs.readFileSync(f));
+      rs.writeHead(404);
+      rs.end();
+    });
+    process.env.CYTV_ADDONS_URL = gh2.url;
+    const index = JSON.parse(fs.readFileSync(path.join(catRoot, 'index.json'), 'utf8'));
+    for (const e of index.addons) {
+      r = await call(a, '/api/addons/install', 'POST', { id: e.id });
+      const inst = await call(a, '/api/addons/' + e.id);
+      ok(
+        r.code === 200 && inst.j.status === 'running',
+        'the catalog add-on ' + e.id + ' installs and runs: ' + (r.out || '').slice(0, 120) + ' ' + (inst.j.error || '')
+      );
+    }
+    ok(
+      a.providers('wallpapers').some(x => x.id === 'immich' && x.mod.wallpapers.label === 'Immich'),
+      'the Immich add-on is a wallpaper source once installed'
+    );
+    gh2.server.close();
+    delete process.env.CYTV_ADDONS_URL;
+  }
+
   // the catalog: a stand-in for GitHub
   const files = {
     'addon.json': JSON.stringify({ id: 'hello', name: 'Hello', version: '1.2.0', kind: 'page', entry: { page: 'index.html' } }),

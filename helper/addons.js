@@ -195,6 +195,12 @@ function create(ctx) {
       dir: a.dir,
       dataDir,
       proc: P.PROC, // the TV's /proc, for add-ons that read system counters (the tests move it)
+      // a few vetted helpers and settings of the service, for every add-on (not the service's own parts)
+      util: { lanIp: web.lanIp, randomInt: nc.randomInt, mkdirp: nc.mkdirp, i18n: require('./i18n') },
+      env: {
+        lang: () => config.get().lang || '', // the language the manager's Language setting chose ('' follows the TV)
+        wallpaperSize: () => ((config.get().wallpapers || {}).size === 'hd' ? 'hd' : '4k'), // Wallpapers > Picture size
+      },
       log: m => console.log('addon ' + a.id + ': ' + String(m).slice(0, 300)),
       settings: {
         get: () => Object.assign({}, settingsOf(a.id)),
@@ -456,6 +462,7 @@ function create(ctx) {
     if (n) {
       activate(n);
       startOne(n);
+      handOver();
     }
     return { id, version: e.version, restartNeeded: false };
   }
@@ -588,9 +595,16 @@ function create(ctx) {
     return viaAddon(a, req, res, m[2], body);
   }
 
+  // a part of the service that kept something an add-on now looks after (the Wallpapers of Immich) hands it over once
+  const handOver = () => {
+    const w = ctx.feature && ctx.feature('wallpapers');
+    if (w && typeof w.adoptLegacy === 'function') Promise.resolve(w.adoptLegacy()).catch(() => {});
+  };
+
   function start() {
     load();
     list.forEach(startOne);
+    handOver();
   }
 
   // the service part of a running add-on (the launch hook in apps.js asks the Android box for it)

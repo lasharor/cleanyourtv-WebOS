@@ -30,6 +30,23 @@
       }
     },
     {
+      "id": "immich",
+      "name": "Immich",
+      "version": "1.0.0",
+      "description": "Photos from your Immich albums as the Home wallpaper, synced to the TV.",
+      "about": "",
+      "preview": "",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "files": {
+        "addon.json": "b16b363150bbe9dc1ba3b6fc7a98073f8ed11c11996507691d33ce75a67b00c9",
+        "phone.js": "7f64427c617e10baac60e6c711b7a86ad74929f39409f2b603f7526fb85f3a3d",
+        "service.js": "ccb1bb3d0094f93cb1d4f52ca847f5ff59cd790470183e0616cf373933b8b349"
+      }
+    },
+    {
       "id": "sysinfo",
       "name": "TV status",
       "version": "1.0.0",
