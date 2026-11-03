@@ -1228,7 +1228,7 @@ function build() {
     });
     rows.push({
       label: 'Paired phones',
-      sub: ph.length ? ph.length + (ph.length === 1 ? ' phone' : ' phones') : 'none yet',
+      sub: ph.length ? prCount(ph.length) : 'none yet',
       info: { t: 'Paired phones', d: 'The phones that can control the TV, and when each was last used. Choose one to block or remove it.' },
       fn: function () {
         push('phones');
@@ -1570,7 +1570,7 @@ function build() {
     });
     rows.push({
       label: 'Phone remote',
-      sub: pr ? (pr.enabled ? pr.phones.length + ' phones' : onoff(false)) : '',
+      sub: pr ? (pr.enabled ? prCount(pr.phones.length) + ' paired' : onoff(false)) : '',
       info: {
         t: 'Phone remote',
         d: 'Use a phone as the TV remote over your Wi-Fi. Pair it once with a QR code and a 6-digit code, then use the web page or the Android app. Each phone can be blocked or removed, and unused ones are removed by themselves.',

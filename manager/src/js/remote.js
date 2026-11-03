@@ -1,4 +1,7 @@
 /* Phone remote: a page on a paired phone that works as the TV's remote (helper/phoneremote.js). On/off, pairing by QR code, the paired phones */
+function prCount(n) {
+  return n + (n === 1 ? ' phone' : ' phones');
+}
 var qrShown = ''; /* the text the QR code on screen was drawn from */
 function openPhoneRemote() {
   api('/api/phoneremote').then(
