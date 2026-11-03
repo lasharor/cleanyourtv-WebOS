@@ -84,6 +84,23 @@
       }
     },
     {
+      "id": "tuner",
+      "name": "LG tuner guide",
+      "version": "1.0.0",
+      "description": "The channels and the guide of LG's own tuner (antenna or cable) in the Live TV guide.",
+      "about": "Adds the channels of the TV's own tuner (antenna, cable) to the Live TV guide, with what is on now and next and the schedule of the channel you select, read from the same data LG's own guide uses. Choosing a channel opens LG's Live TV on it. It is slow to open LG's own guide on some budget TVs; this one is the Live TV guide you already use. Nothing is read until you open the guide. The idea and the first version are from @Tech-Dex (pull request 144, issue 126). Needs the Live TV add-on (it ships with CleanYourTV) switched on.",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "luna"
+      ],
+      "files": {
+        "addon.json": "64b622364a0dc347938ff207e7b656be5584c632619ec405a529baf36c624f0a",
+        "service.js": "bccb72452170e9d0358bd27fd8dffe61b4dc76e3051e363d6189da9f7ef49b4f",
+        "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
+      }
+    },
+    {
       "id": "unsplash",
       "name": "Unsplash",
       "version": "1.0.0",

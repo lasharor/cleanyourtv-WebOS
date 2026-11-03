@@ -80,7 +80,9 @@ run(async () => {
   const cfg = req('config').memory({ addons: { later: { enabled: false } } });
   // the service of this tree (the catalog's add-ons ask for the service they need)
   const SVC = /const VERSION = '([^']+)'/.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'helper', 'helper.js'), 'utf8'))[1];
-  const a = addons.create({ config: cfg, version: SVC, feature: () => null });
+  const lunaCalls = [];
+  const fakeLuna = async (uri, payload, o) => (lunaCalls.push({ uri, payload, o }), { returnValue: true });
+  const a = addons.create({ config: cfg, version: SVC, feature: () => null, luna: fakeLuna });
   a.start();
   const by = id => a.list().filter(x => x.id === id)[0];
   ok(by('demo').status === 'running' && by('demo').enabled, 'a good add-on runs');
@@ -400,6 +402,52 @@ run(async () => {
     'providers(what) gives the running, switched-on add-ons that provide it, with their module'
   );
   ok(a.providers('nothing').length === 0, 'and nothing for what nobody provides');
+
+  // permission "luna": the manifest lists the calls an add-on may make to LG's services, and the app each is made as
+  const lunaOk = Object.assign({}, good, {
+    permissions: ['luna'],
+    luna: [{ uri: 'luna://com.example.one/ask', as: 'com.example.app' }, { uri: 'luna://com.example.two/' }],
+  });
+  const lm = addons.check(lunaOk, SVC);
+  ok(
+    lm.manifest && lm.manifest.luna.length === 2 && lm.manifest.luna[0].as === 'com.example.app' && lm.manifest.luna[1].as === '',
+    'a manifest with luna calls is accepted'
+  );
+  ok(addons.check(Object.assign({}, lunaOk, { permissions: [] }), SVC).error, 'a luna list without the permission is refused');
+  ok(addons.check(Object.assign({}, lunaOk, { luna: undefined }), SVC).error, 'the permission without a list is refused');
+  ok(
+    addons.check(Object.assign({}, lunaOk, { luna: [{ uri: 'http://x/y' }] }), SVC).error,
+    'a call that is not luna://service/method is refused'
+  );
+  ok(
+    addons.check(Object.assign({}, lunaOk, { luna: [{ uri: 'luna://a.b.c/x', as: 'bad app!' }] }), SVC).error,
+    'an app id with odd characters is refused'
+  );
+  ok(addons.check(Object.assign({}, lunaOk, { luna: new Array(9).fill({ uri: 'luna://a.b.c/x' }) }), SVC).error, 'at most 8 calls');
+  ok(addons.check(good, SVC).manifest.luna.length === 0, 'an add-on without them has none');
+  put(
+    'lunaa',
+    Object.assign(svc('lunaa'), { permissions: ['luna'], luna: lunaOk.luna }),
+    "exports.create = c => ({ call: (u, o) => c.luna(u, { x: 1 }, o), handle: (q, r) => r.end('{}') });"
+  );
+  put('lunab', svc('lunab'), "exports.create = c => ({ has: !!c.luna, handle: (q, r) => r.end('{}') });");
+  a.load();
+  const la = a.module('lunaa');
+  let lr = await la.call('luna://com.example.one/ask', {});
+  ok(
+    lr.returnValue === true && lunaCalls[0].o.appId === 'com.example.app' && lunaCalls[0].payload.x === 1,
+    'a listed call is made, as the app the manifest names'
+  );
+  lr = await la.call('luna://com.example.two/anything?x', {});
+  ok(lr.returnValue === true && lunaCalls[1].o.appId === undefined, 'a call under a listed prefix is made, as no app when none is named');
+  lr = await la.call('luna://com.webos.applicationManager/launch', {});
+  ok(lr.returnValue === false && /may not call/.test(lr.errorText) && lunaCalls.length === 2, 'a call that is not listed is not made');
+  lr = await la.call('luna://com.example.one/ask', { wait: 99999, appId: 'com.evil' });
+  ok(
+    lunaCalls[2].o.appId === 'com.example.app' && lunaCalls[2].o.wait <= 20000,
+    'the app cannot be chosen by the add-on, and the wait is limited'
+  );
+  ok(a.module('lunab').has === false, 'an add-on without the permission has no luna at all');
 
   // every add-on of the repository's catalog installs from a stand-in for GitHub (the real index and files) and loads: its service part
   // gets the ctx the loader makes, so a catalog add-on cannot lean on something only the service has

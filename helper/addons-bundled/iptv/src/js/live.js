@@ -314,9 +314,29 @@ var LIVE = (function () {
     );
   }
   /* defer: while zapping (Up/Down) the new channel starts only once the keys have paused, so skipped channels never reach the provider */
+  /* a channel an add-on brought (the LG tuner, flag 8) has no stream: the add-on opens it (LG's Live TV on that channel) and this page
+     steps aside. Nothing else of the page changes: the guide lists it and shows its programmes like any other channel. */
+  function openSource(c) {
+    api('/api/live/open', { id: c.id }).then(
+      function (r) {
+        if (r && r.error) toastL(t(r.error));
+        else o.exit();
+      },
+      function () {
+        toastL(t('The helper is not reachable.'));
+      }
+    );
+  }
+  /* the channel to play when the page opens: the last one, or the first that has a stream (the channels of an add-on have none) */
+  function firstPlayable(pref) {
+    if (byNum[pref] && !(byNum[pref].fl & 8)) return pref;
+    for (var i = 0; i < chans.length; i++) if (!(chans[i].fl & 8)) return chans[i].num;
+    return 0;
+  }
   function play(num, quiet, defer) {
     var c = byNum[num];
     if (!c) return;
+    if (c.fl & 8) return openSource(c);
     gen++;
     cur = num;
     try {
@@ -1021,8 +1041,10 @@ var LIVE = (function () {
               )
               .then(function () {
                 layer('lv-msg', false);
-                play(byNum[last] ? last : chans[0].num);
-                if (guideNext) {
+                var first = firstPlayable(last);
+                if (first) play(first);
+                /* only channels of an add-on (no playlist): the guide is all there is to show */
+                if (guideNext || !first) {
                   guideNext = false;
                   openList();
                 }
@@ -1038,9 +1060,16 @@ var LIVE = (function () {
       });
   }
   function step(d) {
-    var i = chans.indexOf(byNum[cur]);
-    i = (i + d + chans.length) % chans.length;
-    play(chans[i].num, false, 180);
+    var i = chans.indexOf(byNum[cur]),
+      n = chans.length;
+    /* Up and Down zap through the channels that have a stream */
+    for (var k = 0; k < n; k++) {
+      i = (i + d + n) % n;
+      if (!(chans[i].fl & 8)) {
+        play(chans[i].num, false, 180);
+        return;
+      }
+    }
   }
   var guideNext = false;
   o.enter = function (guide) {

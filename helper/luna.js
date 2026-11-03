@@ -16,17 +16,15 @@ function keepStdinOpen(opts) {
   }
 }
 
+// o.appId: call as that app (luna-send -a), which some services need; epgdb only answers com.webos.service.iepg
 function luna(uri, payload, opts) {
   const o = opts || {};
   const wait = o.wait || 5000;
-  const script = 'luna-send -n 1 -w ' + wait + ' -f "$1" "$2" </dev/null';
+  const args = (o.appId ? ['-a', String(o.appId)] : []).concat(['-n', '1', '-w', String(wait), '-f', uri, JSON.stringify(payload || {})]);
   const keep = keepStdinOpen(o);
   const result = keep
-    ? exec.run('luna-send', ['-n', '1', '-w', String(wait), '-f', uri, JSON.stringify(payload || {})], {
-        timeout: o.timeout || wait + 3000,
-        keepStdinOpen: true,
-      })
-    : exec.run('/bin/sh', ['-c', script, 'sh', uri, JSON.stringify(payload || {})], { timeout: o.timeout || wait + 3000 });
+    ? exec.run('luna-send', args, { timeout: o.timeout || wait + 3000, keepStdinOpen: true })
+    : exec.run('/bin/sh', ['-c', 'luna-send "$@" </dev/null', 'sh'].concat(args), { timeout: o.timeout || wait + 3000 });
   return result.then(r => {
     try {
       return JSON.parse(r.out);
