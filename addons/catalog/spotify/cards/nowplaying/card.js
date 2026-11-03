@@ -142,6 +142,9 @@ function tick() {
     tx = clock(at()) + ' / ' + clock(D.duration);
   built.bar.firstChild.style.transform = 'scaleX(' + Math.max(0, Math.min(1, f)).toFixed(3) + ')';
   if (built.time._tx !== tx) built.time.textContent = built.time._tx = tx;
+  /* a narrow place has no room for the time next to the buttons: it is left out rather than cut in half */
+  built.time.style.visibility =
+    built.time.offsetLeft + built.time.offsetWidth > built.c.clientWidth || built.time.offsetLeft < 0 ? 'hidden' : '';
   [built.s, built.n, built.a].forEach(function (b) {
     if (b.clientWidth !== b._fw) fit(b);
   });
