@@ -143,6 +143,7 @@ function create(ctx) {
   }
 
   function set(b) {
+    resume = false;
     if (typeof b.enabled === 'boolean') {
       config.update('manager', c => {
         if (b.enabled) c.remapOn = true;
@@ -185,6 +186,25 @@ function create(ctx) {
   }
 
   // learning: the next button press that is not an arrow, OK or Back; a code that is already in use is reported, not taken
+  // The button's own action (Netflix: the app, then LG's store) opens over the manager and the manager comes back reset, losing the code. So the
+  // service watches the learning itself and, once a button is caught, brings the manager back; it then resumes with the code (`resume`).
+  let resume = false,
+    watch = null;
+  const MANAGER = 'com.cleanyourtv.manager';
+  function watchLearn() {
+    clearTimeout(watch);
+    const t0 = Date.now();
+    (function tick() {
+      watch = setTimeout(() => {
+        const l = learnState();
+        if (l.state === 'got') {
+          resume = true;
+          // LG's app starts a moment after the press: come back after it, and again in case it was slow
+          for (const ms of [1200, 4000]) setTimeout(() => luna('luna://com.webos.applicationManager/launch', { id: MANAGER, params: { open: 'remaplearned' } }).catch(() => {}), ms);
+        } else if (l.state === 'waiting' && Date.now() - t0 < 50000) tick();
+      }, 500);
+    })();
+  }
   let named = { code: '', key: '' }; // LG's name for the button just learned; found once, while the system log still has the press
   function learnState() {
     const l = inputhook.learnState();
@@ -193,7 +213,7 @@ function create(ctx) {
     if (named.code !== code || !named.key) named = { code, key: keynames.nameFor(code) };
     const nm = { key: named.key, button: keynames.label(named.key) };
     if (taken().indexOf(code) >= 0) return Object.assign({}, l, nm, { state: 'taken' });
-    return Object.assign({}, l, nm, { existing: shown()[code] || null });
+    return Object.assign({}, l, nm, { existing: shown()[code] || null, resume });
   }
 
   async function handle(req, res, u, body) {
@@ -205,7 +225,9 @@ function create(ctx) {
     const b = (await body(req)) || {};
     if (u === '/api/remap/learn') {
       if (!enabled()) return json({ error: 'off' }, 400);
+      resume = false;
       inputhook.startLearn('remap');
+      watchLearn();
       return json({ returnValue: true });
     }
     if (u === '/api/remap/fire') {

@@ -53,6 +53,7 @@ function wantView() {
   try {
     p = JSON.parse(window.webOSSystem.launchParams || '{}');
   } catch (e) {}
+  if (p && p.open === 'remaplearned') rmResume();
   if (p && p.open === 'wallpapers') openWallpapers();
   if (p && p.open === 'icons') openIconPair(String(p.app || ''));
   if (p && p.open === 'addons') wantTab = 2;

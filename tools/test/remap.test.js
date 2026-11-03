@@ -205,6 +205,14 @@ run(async () => {
   r = await call(f, '/api/remap/learn-state');
   ok(r.j.state === 'got' && r.j.code === '403' && r.j.existing === null, 'the next button that is not an arrow, OK or Back is learned');
   ok(!conf.get().keys['403'] && conf.get().keys.input === '', 'a learned remap button is not saved as the Input, Home, voice or Guide key');
+  // the button's own action covers the manager: the service brings it back, and the code is kept for it
+  await sleep(2000);
+  ok(
+    launched.some(l => l.indexOf('launch {"id":"com.cleanyourtv.manager","params":{"open":"remaplearned"}}') === 0),
+    'the manager is opened again once a button is learned'
+  );
+  r = await call(f, '/api/remap/learn-state');
+  ok(r.j.resume === true && r.j.code === '403', 'the learned button waits for the manager to resume');
 
   // ---- the name of a button ----
   const kn = req('keynames');

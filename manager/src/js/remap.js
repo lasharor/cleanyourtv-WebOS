@@ -155,6 +155,23 @@ function rmLearn() {
     })();
   });
 }
+/* the manager was opened again by the service after the button's own action (Netflix, the store) covered it: carry on with the learned button */
+function rmResume() {
+  api('/api/remap/learn-state').then(function (l) {
+    if (l.state !== 'got' || !l.resume || l.name !== 'remap') return;
+    api('/api/remap').then(function (r) {
+      rm = r;
+      push('remap');
+      rmCode = String(l.code);
+      rmKey = l.key || '';
+      rmBtn = l.button || '';
+      view = 'remapact';
+      idx = 0;
+      build();
+      draw();
+    });
+  });
+}
 /* the apps or the inputs to choose from */
 function rmChoose(kind) {
   api(kind === 'input' ? '/api/inputs' : '/api/apps').then(
