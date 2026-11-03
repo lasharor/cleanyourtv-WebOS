@@ -408,9 +408,8 @@ function kbdOpen(on){$('kbs').className=on?'':'hide';if(on)setTimeout(function()
 /* This remote: the TV's name opens what this phone knows about the connection, and where it is logged out. Logging out tells the TV
    (when it answers) to forget this phone, closes the connection and deletes everything the page and the app kept. */
 var me={name:'',seen:0,created:0},leaving=false,lgAck=null;
-function ago(x){if(!x)return t('never');var m=Math.round((Date.now()-x)/60000);return m<1?t('just now'):m<60?t(m+' min ago'):m<1440?t(Math.round(m/60)+' h ago'):t(Math.round(m/1440)+' days ago')}
 function thOpen(on){$('ths').className=on?'':'hide';if(!on)return;
- $('thname').textContent=$('tvname').textContent;$('kvseen').textContent=ago(me.seen);$('kvas').textContent=me.name||'-';
+ $('thname').textContent=$('tvname').textContent;$('kvas').textContent=me.name||'-';
  $('kvon').textContent=me.created?new Date(me.created).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'-';$('kvad').textContent=location.host}
 function cfmOpen(on){$('cfm').className=on?'dlgw':'hide dlgw';if(!on)return;
  $('cfh').textContent=t('Log out of %s?').replace('%s',$('tvname').textContent);
@@ -684,7 +683,7 @@ ${key('MENU', ic('menu'), T('Menu'), 'cn tl')}<button id=bnum class="cn tr" aria
 <div class=kbrow><button id=clrtxt class=ghostb>${T('Clear')}</button><button id=deltxt class=ghostb aria-label="${T('Delete')}">${ic('del')}</button><button id=entertxt class=pri><span>${T('Enter')}</span>${ic('enter')}</button></div></div></div>
 <div id=ths class=hide><div id=thsheet class=drawer role=dialog aria-label="${T('This remote')}"><div class=grab></div><div class=top><b id=thname></b><button id=xth aria-label="${T('Close')}">${ic('close')}</button></div>
 <p>${T('This phone is paired with the TV.')}</p>
-<dl class=kv><div><dt>${T('Last used')}</dt><dd id=kvseen></dd></div><div><dt>${T('Paired as')}</dt><dd id=kvas></dd></div><div><dt>${T('Paired on')}</dt><dd id=kvon></dd></div><div><dt>${T('TV address')}</dt><dd id=kvad></dd></div></dl>
+<dl class=kv><div><dt>${T('Paired as')}</dt><dd id=kvas></dd></div><div><dt>${T('Paired on')}</dt><dd id=kvon></dd></div><div><dt>${T('TV address')}</dt><dd id=kvad></dd></div></dl>
 <button id=lgo class=outb>${T('Log out of this TV')}</button></div></div>
 <div id=pnote role=status aria-live=polite></div>
 <div id=cfm class="hide dlgw"><div class=dlg role=alertdialog aria-labelledby=cfh><h3 id=cfh></h3><p id=cfp></p><div class=two><button id=cfno class=ghostb>${T('Stay paired')}</button><button id=cfyes class=pri>${T('Log out')}</button></div></div></div>
