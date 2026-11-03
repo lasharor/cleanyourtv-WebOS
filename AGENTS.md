@@ -70,7 +70,7 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 6. **Licence:** the project is MIT. Do not copy code from GPL projects; describe behaviour and write your own.
 7. **Do not release, tag, force-push or change repository settings.** The maintainer does that. Work on a branch and open the pull request
    against `dev`; once merged, every push to `dev` publishes the dev build (the pre-release `dev`), which people can install from the
-   manager app (Update channel > Dev builds). A release goes out from `dev` once a day, unless the file `RELEASE-HOLD` is in the repository root (`tools/release.sh` then releases nothing; delete the file to release again).
+   manager app (Update channel > Dev builds). A release goes out from `dev` once a day, unless the file `RELEASE-HOLD` is in the repository root (`tools/release.sh` then releases nothing; delete the file to release again). If `RELEASE-NOTES.md` is in the repository root, `tools/release.sh` uses it as the release notes (sections, credits, pictures from `docs/screenshots/`) instead of the commit subjects and removes it in the release commit: write it as the changes come in.
 
 ## Commands
 

@@ -64,6 +64,12 @@ say "release v$svc_new: service $svc -> $svc_new, launcher $fe -> $fe_new"
   # shellcheck disable=SC2086
   git log --no-merges --invert-grep --grep='^Release [0-9]' --format='- %s' "$last..HEAD" -- $PKG
 } > "$NOTES"
+# RELEASE-NOTES.md in the repository root is the release notes, written by hand as the changes came in (sections, credits, pictures from
+# docs/screenshots): it takes the place of the commit subjects, and goes with this release (removed in the release commit below)
+if [ -f RELEASE-NOTES.md ]; then
+  { echo "Service $svc_new, launcher $fe_new."; echo; cat RELEASE-NOTES.md; } > "$NOTES"
+  say "the release notes are RELEASE-NOTES.md"
+fi
 
 if [ -n "$DRY" ]; then
   cat "$NOTES" >&2
@@ -81,6 +87,7 @@ fi
 rm -f helper/helper.js.bak app/version.json.bak app/src/js/core.js.bak
 [ "$(ver < helper/helper.js)" = "$svc_new" ] && [ "$(fever < app/version.json)" = "$fe_new" ] || { say "the version change did not apply"; exit 1; }
 git add helper/helper.js app/version.json app/src/js/core.js app/index.html
+git rm -q --ignore-unmatch RELEASE-NOTES.md
 git diff --cached --quiet || git commit -q -m "Release $svc_new (launcher $fe_new)"   # nothing to commit when both were raised by hand
 git push -q origin HEAD:refs/heads/dev   # refs/heads: the dev pre-release has a tag of the same name
 git push -q origin HEAD:refs/heads/main
