@@ -150,9 +150,11 @@ The app is in the package, so the phone installs it from the TV: **Phone remote 
 `http://<tv>:8794/app.apk?code=…` — scan it, open the download, install. The file is only handed out with the code shown on the TV, like
 the rest of this page (a download has no page to send a header, so the code travels in the address).
 
-As soon as the phone takes the file the TV notices, and that screen becomes the **pairing** screen by itself: its code now carries the TV's
-address and the pairing code (`cytv://add?host=<tv>:8794&code=…`), so scanning it with the camera opens the app, fills the address in and
-puts the code in, and you only pick a name for the phone and tap **Pair this device**. (A browser scanning the same screen before the app was downloaded gets the page's own
+The two screens are two parts of one flow: the install screen says **Part 1 of 2**, and as soon as the phone takes the file the TV notices and
+that screen becomes **Part 2: pair the app** by itself. Its code now carries the TV's
+address and the pairing code (`cytv://add?host=<tv>:8794&code=…`), so scanning it with the phone's camera opens the app, fills the address in and
+puts the code in, and you only pick a name for the phone and tap **Pair this device**. The screen offers the other way too: open the app, tap **Find my TV**
+and type the code shown on the TV. (A browser scanning the same screen before the app was downloaded gets the page's own
 address, as usual.) Without a camera, the app finds the TV for you (**Find my TV**) or takes the address typed in (**Type the address instead**); the TV's page then asks
 for the code it shows, as in a browser. The address has to be a private or link-local IPv4 address such as `192.168.1.50` (a port is
 optional): names like `lgwebostv.local`, public addresses and IPv6 are refused. If a scanned code names another TV than the one the app
