@@ -1013,6 +1013,15 @@ run(async () => {
   );
   {
     const rem = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'remote.js'), 'utf8');
+    const cnt = new Function(rem.match(/function prCount\([^)]*\) \{[^}]*\}/)[0] + '; return prCount;')();
+    ok(
+      cnt(0) === '0 phones' &&
+        cnt(1) === '1 phone' &&
+        cnt(2) === '2 phones' &&
+        /prCount\(pr\.phones\.length\) \+ ' paired'/.test(menu) &&
+        !/length \+ ' phones'/.test(menu),
+      'the phone counts say "1 phone paired" on the Features row and "1 phone" in the list, never "1 phones"'
+    );
     ok(
       /function prLiveTick\(/.test(rem) &&
         /setInterval\(prLiveTick, 2500\)/.test(rem) &&
