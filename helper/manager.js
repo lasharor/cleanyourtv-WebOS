@@ -123,6 +123,9 @@ function create(ctx) {
       config.update('manager', c => {
         c.keys = Object.assign({ input: '241', home: '', voice: '' }, c.keys || {});
         c.keys[l.name] = l.code;
+        // a button that becomes one of ours cannot stay remapped: the hook binds a code once, to the Input/Guide/voice key. Remove its
+        // action here (and log it) so the manager does not keep showing a button that no longer does what it says.
+        if (c.remap && c.remap[l.code]) delete c.remap[l.code];
       });
       if (inputhook.markSaved) inputhook.markSaved();
       if (l.name === 'input') ensureHook(l.code);

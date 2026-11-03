@@ -26,6 +26,7 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 | Live TV: playlist, guide, favourites | the bundled add-on iptv: `helper/addons-bundled/iptv/service.js` (service), `helper/addons-bundled/iptv/src/` (the player page, built into `page/index.html`); `app/src/js/live.js` only turns the book to it |
 | Add-ons (loader, page serving, catalog install, the launcher's pages (the book: `PAGER`) and the manager's Add-ons screen) | `helper/addons.js`, `helper/addons-bundled/`, `addons/` (catalog), `app/src/js/addons.js`, `docs/development/addons.md` |
 | An app that opens on an Android box over ADB (input switch, ADB start) | the bundled add-on androidbox: `helper/addons-bundled/androidbox/service.js`, `adbclient.js` (the ADB protocol), `page.js` (phone page); the hook in `/api/launch` in `helper/apps.js`, `docs/android-box.md` |
+| Remote key remapping (a button opens an app, input, Live TV, Home) | `helper/remap.js`, `helper/keynames.js` (the name of a button), `scripts/remapkey.sh`, the binds in `helper/inputhook.js`, `manager/src/js/remap.js`, `docs/key-remap.md` |
 | Picture notifications | `notify/app/`, `helper/notify.js`, `helper/notifyapi.js` |
 | Voice (Moonshine, OpenRouter, Home Assistant) | `helper/voice.js` (microphone, recogniser), `helper/answers.js` (Assist, OpenRouter, your server), `voice/` |
 | Themes | `helper/themeschema.js` (the schema), `helper/theme.js` (downloads), `themes/` (read from GitHub), `docs/themes.md` |
@@ -69,7 +70,7 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 6. **Licence:** the project is MIT. Do not copy code from GPL projects; describe behaviour and write your own.
 7. **Do not release, tag, force-push or change repository settings.** The maintainer does that. Work on a branch and open the pull request
    against `dev`; once merged, every push to `dev` publishes the dev build (the pre-release `dev`), which people can install from the
-   manager app (Update channel > Dev builds). A release goes out from `dev` once a day, unless the file `RELEASE-HOLD` is in the repository root (`tools/release.sh` then releases nothing; delete the file to release again).
+   manager app (Update channel > Dev builds). A release goes out from `dev` once a day, unless the file `RELEASE-HOLD` is in the repository root (`tools/release.sh` then releases nothing; delete the file to release again). If `RELEASE-NOTES.md` is in the repository root, `tools/release.sh` uses it as the release notes (sections, credits, pictures from `docs/screenshots/`) instead of the commit subjects and removes it in the release commit: write it as the changes come in.
 
 ## Commands
 

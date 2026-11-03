@@ -289,6 +289,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       'inputkey',
       'notifyapi',
       'manager',
+      'remap',
       'apps',
       'running',
       'zram',

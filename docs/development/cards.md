@@ -27,7 +27,7 @@ launcher draws it from its template, like the Text card, so a card cannot run an
 - `options`: at most 10, typed on the phone page (**Cards** > **Set up from your phone**). `kind` is `text`, `long` (several lines),
   `choice` (with `choices: [[value, label], ...]`) or `place` (a place searched by name, like the weather card's; the key must be `place`, and
   the card gets `{{opt.place}}`, `{{opt.lat}}` and `{{opt.lon}}`). `default` is used until something is filled in; a choice without a default starts at its first choice.
-- `template`: at most 1500 characters (a card has a `template` or a `page`, see below). What the Text card knows: `{{greeting}}`, `{{time}}`, `{{date}}`, `{{weekday}}`,
+- `template`: at most 1500 characters (a card has a `template` or a `page`, see below). What the Text card knows: `{{greeting}}` (and `{{greeting.name}}`, the greeting with the card's option `name`, kept apart from the sentence so a Hebrew or Arabic name reads right; the plain greeting when it is empty), `{{time}}`, `{{date}}`, `{{weekday}}`,
   `{{weather.temp}}` and `{{weather.text}}` (with a weather card on Home); `**bold**`, `*italic*` and a line starting with `#` for a heading.
   And for downloaded cards: `{{opt.<key>}}` (what was filled in), `{{year}}`, `{{year.percent}}`, `{{year.left}}`, and the filters
   `{{opt.date|days}}` (days until a date, `YYYY-MM-DD`), `|ago` (days since), `|upper` and `|lower`.
@@ -60,3 +60,10 @@ parent.postMessage({ cytvCard: 'ready' }, '*');   // asks for the message above
 the launcher's clock format for `toLocaleTimeString(lang, clock)`, `size` is small, medium or large, `align` and `dir` how the text runs, `ink`, `font`
 and `fs` the colour, typeface and size scale of the text of the theme. The page keeps its own time (`setInterval`), draws on a transparent
 background and fills its frame. Write ES5: it runs on Chromium 68 (webOS 5) too.
+
+## A card from an add-on
+
+When a card needs data that the TV cannot work out alone (the weather, what plays on your Spotify), or buttons for the remote, it comes with an
+[add-on](addons.md#providing-something-to-the-service-cards) instead: the add-on's service asks the internet and the frame stays closed. The page is
+a page card as above; the message it gets has one more key, `m.data` (what the add-on's service said for this card, or `{error}`), and it can send
+`{cytvCard: 'buttons', buttons: [...]}` to make parts of itself targets of the remote.

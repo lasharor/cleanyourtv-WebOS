@@ -75,7 +75,8 @@ and troubleshooting.
    channel list, a programme guide (XMLTV) and number entry. It does not use LG's tuner, and the project provides no channels.
 
 3. **[An Inputs list on the Input key](https://lasharor.github.io/cleanyourtv-WebOS/input-key/).** The remote's Input button opens
-   the dock apps, the HDMI inputs (with what is connected) and Live TV over the running app.
+   the dock apps, the HDMI inputs (with what is connected) and Live TV over the running app. Other buttons (the Netflix or Prime key,
+   a colour key) can open an app or an input: [Key remapping](https://lasharor.github.io/cleanyourtv-WebOS/key-remap/), off until you switch it on.
 
 4. **[Picture notifications](https://lasharor.github.io/cleanyourtv-WebOS/notifications/).** A card with a photo over whatever is on
    screen, sent from your network with a POST request, for example from Home Assistant.

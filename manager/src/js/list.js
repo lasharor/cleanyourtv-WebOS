@@ -146,6 +146,17 @@ function draw() {
     $('sub').style.whiteSpace = 'pre-line';
     return;
   }
+  if (view.indexOf('remap') === 0) {
+    $('sub').textContent = tr(rmSub());
+    $('sub').style.whiteSpace = 'pre-line';
+    if (inf) {
+      var b3 = document.createElement('b');
+      b3.textContent = tr(inf.t);
+      ie.appendChild(b3);
+      ie.appendChild(document.createTextNode(tr(inf.d)));
+    }
+    return;
+  }
   if (inf) {
     var b = document.createElement('b');
     b.textContent = tr(inf.t);

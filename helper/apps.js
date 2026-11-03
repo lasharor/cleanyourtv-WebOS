@@ -458,6 +458,8 @@ function create(ctx) {
             template: have[id].template,
             page: have[id].page,
             size: have[id].size,
+            poll: have[id].poll || 0,
+            actions: have[id].addon ? have[id].actions : [],
             options: have[id].options.map(o => ({
               key: o.key,
               kind: o.kind,

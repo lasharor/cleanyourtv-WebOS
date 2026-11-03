@@ -29,8 +29,9 @@ const KINDS = ['page', 'service'];
 const PERMISSIONS = ['net.fetch', 'config.own', 'notify', 'key.guide'];
 // keys a page keeps for itself; every other key (the number and colour buttons, Back) switches pages or goes back to Home
 const CLAIMS = ['digits', 'colors', 'back'];
-// what an add-on can provide to a part of the service (wallpapers: photo sources, see helper/wallpapers.js)
-const PROVIDES = ['wallpapers'];
+// what an add-on can provide to a part of the service (wallpapers: photo sources, see helper/wallpapers.js; cards: cards for Home with
+// their own page, data and actions, see helper/cardcatalog.js)
+const PROVIDES = ['wallpapers', 'cards'];
 // where the user may put the page strip ('' leaves it to the theme)
 const POSITIONS = ['', 'top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
 const ID = /^[a-z][a-z0-9-]{1,31}$/;
@@ -80,6 +81,17 @@ function check(m, serviceVersion) {
     r => /^\/api\/[a-z][a-z0-9-]*\/?$/.test(r) && !/^\/api\/addons\/?$/.test(r)
   );
   const t = m.tile && typeof m.tile === 'object' ? m.tile : null;
+  // cards for Home (provides "cards"): each is checked as a card.json is, with a poll interval and the actions of its buttons
+  const cards = [];
+  if (m.cards !== undefined) {
+    if (!Array.isArray(m.cards) || m.cards.length > 4) return { error: 'cards is a list of at most 4 cards' };
+    for (const c of m.cards) {
+      const r = require('./cardcatalog').clean(c, '', { addon: true });
+      if (r.error) return { error: 'card ' + String((c && c.id) || '?').slice(0, 28) + ': ' + r.error };
+      if (cards.some(x => x.id === r.card.id)) return { error: 'two cards have the id ' + r.card.id };
+      cards.push(r.card);
+    }
+  }
   return {
     manifest: {
       id: m.id,
@@ -92,6 +104,7 @@ function check(m, serviceVersion) {
       permissions: perms,
       routes,
       provides: (Array.isArray(m.provides) ? m.provides : []).filter((c, i, a) => PROVIDES.indexOf(c) >= 0 && a.indexOf(c) === i),
+      cards,
       claims: (Array.isArray(m.claims) ? m.claims : []).filter((c, i, a) => CLAIMS.indexOf(c) >= 0 && a.indexOf(c) === i),
       enabledOption: /^[A-Za-z]{2,24}$/.test(m.enabledOption || '') ? m.enabledOption : '',
       tile: t
@@ -316,7 +329,7 @@ function create(ctx) {
     }
     return '';
   };
-  const info = a => ({
+  const baseInfo = a => ({
     id: a.id,
     name: a.manifest ? a.manifest.name : a.id,
     version: a.manifest ? a.manifest.version : '',
@@ -337,6 +350,12 @@ function create(ctx) {
     inBook: bookable(a) && bookOf().hidden.indexOf(a.id) < 0,
     order: pagesInOrder().indexOf(a), // its place among the pages that can be in the book (-1: not a page)
   });
+  // a running add-on whose service has a phone page of its own (settings): the manager offers "Set up from your phone" for it
+  const info = a => {
+    const out = baseInfo(a);
+    if (a.status === 'running' && a.mod && typeof a.mod.settings === 'function') out.settings = true;
+    return out;
+  };
 
   // ---- the catalog ----
   const catalogBase = () => {
@@ -591,6 +610,15 @@ function create(ctx) {
       }
       return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: changed });
     }
+    // the add-on's phone page (settings in its service, like a photo source's): the manager shows "Set up from your phone" for it
+    if (m[2] === '/settings' && req.method === 'POST' && a.status === 'running' && a.mod && typeof a.mod.settings === 'function') {
+      const b = await body(req);
+      try {
+        return web.json(res, (await a.mod.settings(b && typeof b === 'object' ? b : {})) || {});
+      } catch (e) {
+        return web.json(res, { error: String((e && e.message) || e).slice(0, 160) });
+      }
+    }
     if (a.status !== 'running' || !a.mod || typeof a.mod.handle !== 'function') return web.notFound(res);
     return viaAddon(a, req, res, m[2], body);
   }
@@ -619,7 +647,27 @@ function create(ctx) {
       .filter(a => a.manifest && a.status === 'running' && a.enabled && a.mod && a.manifest.provides.indexOf(what) >= 0)
       .map(a => ({ id: a.id, name: a.manifest.name, mod: a.mod }));
 
-  return { name: 'addons', prefix: '/api/addons', match, pageMay, module, providers, handle, start, load, list: () => list.map(info) };
+  // the cards of the running, switched-on add-ons that provide "cards": [{addon, dir, mod, card}]
+  const cardsOf = () => {
+    const out = [];
+    for (const a of providers('cards'))
+      for (const c of find(a.id).manifest.cards) out.push({ addon: a.id, dir: find(a.id).dir, mod: a.mod, card: c });
+    return out;
+  };
+
+  return {
+    name: 'addons',
+    prefix: '/api/addons',
+    match,
+    pageMay,
+    module,
+    providers,
+    cardsOf,
+    handle,
+    start,
+    load,
+    list: () => list.map(info),
+  };
 }
 
 module.exports = { create, check, cleanIndex, KINDS, PERMISSIONS };

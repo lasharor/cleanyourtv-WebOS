@@ -90,6 +90,13 @@ var INFO = {
     'The remote’s Guide button. Open this screen to learn the button and to switch on CleanYourTV’s guide for LG’s own Live TV (the antenna or cable tuner): a lighter guide shown over the picture instead of LG’s.',
   'Guide for LG’s own Live TV':
     'On: the Guide button opens CleanYourTV’s guide of the tuner while LG’s own Live TV is in front (or Live TV, the playlist, is off). Off: the Guide button works as before. Needs the Guide key learned.',
+  'Key remapping':
+    'Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list, instead of LG\u2019s action. You press the button so the TV can tell us which one it is. It is off until you switch it on; while it is off nothing runs for it.',
+  'Add a button':
+    'Press the button you want to use on the remote. Arrows, OK and Back cannot be used, and neither can the Input, Guide, voice or Home key. You can add up to 12.',
+  'Give every button back to LG':
+    'Removes every remapped button. Each goes back to LG\u2019s action at once. A reboot without the boot scripts does the same.',
+  'Give the button back to LG': 'Removes this button\u2019s action. It goes back to LG\u2019s action at once.',
   'Share log':
     'Shows a QR code. Scan it with a phone on the same Wi-Fi to copy a report for a bug report. Addresses and URL paths are masked; the page closes after ten minutes.',
   'Uninstall': 'Removes the apps, the boot scripts and your settings, then restarts the TV so LG\u2019s Home comes back.',

@@ -260,6 +260,17 @@ function cardMarkup(src, opt) {
     'year.percent': String(Math.round(((yr - y0) / (y1 - y0)) * 100)),
     'year.left': String(Math.ceil((y1 - yr) / 86400000)),
     greeting: greetText(''),
+    /* the greeting with the name of the card's option "name", kept apart from the sentence by Unicode isolates so a Hebrew or Arabic
+       name reads right in an English greeting; the plain greeting when none was typed */
+    'greeting.name': greetText(
+      opt && opt.name
+        ? '\u2068' +
+            String(opt.name)
+              .replace(/[\u0000-\u001f\u202a-\u202e\u2066-\u2069]/g, '')
+              .slice(0, 30) +
+            '\u2069'
+        : ''
+    ),
     time: timeText(),
     date: dateText(),
     weekday: dateText({ weekday: 'long' }),
@@ -604,6 +615,7 @@ function cardFrameCtx(el, pk, o) {
   var cs = getComputedStyle(el);
   return {
     opt: opt,
+    data: pk.poll ? el._data || null : undefined /* what the add-on behind the card last said (cardFeed) */,
     lang: LOC,
     clock: clockOpts(),
     size: /^(small|medium|large)$/.test(opt.size) ? opt.size : pk.size,
@@ -619,15 +631,107 @@ function cardFrameSend(el) {
     el._f.contentWindow.postMessage({ cytvCard: el._ctx }, '*');
   } catch (e) {}
 }
-window.addEventListener('message', function (e) {
-  /* a card page that has loaded asks for what it should show */
-  if (!e.data || e.data.cytvCard !== 'ready') return;
+/* the card element that owns a message's frame */
+function cardOf(src) {
   var els = $('cards').children;
-  for (var i = 0; i < els.length; i++) if (els[i]._f && els[i]._f.contentWindow === e.source) cardFrameSend(els[i]);
+  for (var i = 0; i < els.length; i++) if (els[i]._f && els[i]._f.contentWindow === src) return els[i];
+  return null;
+}
+window.addEventListener('message', function (e) {
+  var m = e.data && e.data.cytvCard,
+    el = m && cardOf(e.source);
+  if (!el) return;
+  /* a card page that has loaded asks for what it should show */
+  if (m === 'ready') cardFrameSend(el);
+  /* a card of an add-on tells where its buttons are (percent of its frame): each becomes a target of the remote, and OK sends the
+     add-on the action of that name. Only the actions the card's add-on declared count. */ else if (
+    m === 'buttons' &&
+    el._pk &&
+    el._pk.actions.length
+  )
+    cardButtons(el, e.data.buttons);
 });
+/* the buttons of a card of an add-on: made again only when they changed, and the top row of the remote follows */
+function cardButtons(el, list) {
+  var ok = [],
+    names = el._pk.actions.map(function (a) {
+      return a.name;
+    });
+  (Array.isArray(list) ? list : []).slice(0, 8).forEach(function (b) {
+    var n = b && typeof b === 'object' ? b : {},
+      i = names.indexOf(n.name);
+    if (i < 0) return;
+    var q = function (v) {
+      v = Number(v);
+      return isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
+    };
+    ok.push({ name: n.name, label: el._pk.actions[i].label, x: q(n.x), y: q(n.y), w: q(n.w), h: q(n.h) });
+  });
+  var key = JSON.stringify(ok);
+  if (el._bk === key) return;
+  el._bk = key;
+  (el._btns || []).forEach(function (b) {
+    if (b.parentNode) b.parentNode.removeChild(b);
+  });
+  el._btns = ok.map(function (b) {
+    var d = document.createElement('div');
+    d.className = 'card-btn';
+    d.style.cssText = 'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%';
+    d._o = { action: 'cardbtn', label: b.label, fixed: true };
+    d._btn = { card: el, name: b.name };
+    hit(d);
+    el.appendChild(d);
+    return d;
+  });
+  if (window.refreshTop) refreshTop();
+}
+/* OK on a button: the add-on gets the action, then the card is asked for its data again (the answer to a button shows within seconds) */
+function cardBtnAct(d) {
+  var el = d._btn.card;
+  api('/api/cards/action', { slot: el._slot, name: d._btn.name }).then(
+    function (r) {
+      if (r && r.error) toast(t(r.error), true);
+      [400, 1500, 3500].forEach(function (ms) {
+        setTimeout(function () {
+          cardFeed(el);
+        }, ms);
+      });
+    },
+    function () {
+      toast(t('The service did not answer.'), true);
+    }
+  );
+}
+/* a card of an add-on asks its add-on for data now and then (card.json "poll", seconds): only while Home is shown, one request at a time */
+function cardFeed(el) {
+  if (!el._pk || !el.parentNode || el._busy) return;
+  el._busy = true;
+  el._feedAt = Date.now();
+  api('/api/cards/feed', { slot: el._slot }).then(
+    function (r) {
+      el._busy = false;
+      el._data = r && typeof r === 'object' ? r : { error: 'no answer' };
+      if (el.parentNode && el._card) cardType(el._card.type).draw(el, el._card);
+    },
+    function () {
+      el._busy = false;
+      el._data = { error: 'The service did not answer.' };
+      if (el.parentNode && el._card) cardType(el._card.type).draw(el, el._card);
+    }
+  );
+}
+setInterval(function () {
+  if (document.hidden) return;
+  var els = $('cards') ? $('cards').children : [];
+  for (var i = 0; i < els.length; i++) {
+    var pk = els[i]._pk;
+    if (pk && pk.poll && Date.now() - (els[i]._feedAt || 0) >= pk.poll * 1000) cardFeed(els[i]);
+  }
+}, 1000);
 function cardFrame(id, pk) {
   return {
     draw: function (el, o) {
+      el._pk = pk;
       if (!el._f) {
         var f = document.createElement('iframe');
         f.setAttribute('sandbox', 'allow-scripts');
@@ -704,6 +808,7 @@ function drawCards() {
     st.height = sl.h;
     st.setProperty('--ch', sl.h);
     el._card = c;
+    el._slot = sl.id;
     box.appendChild(el);
   });
   tickCards();
@@ -728,6 +833,8 @@ function cardTargets() {
   for (var i = 0; i < els.length; i++) {
     var ty = CARD_TYPES[els[i]._card.type];
     if (ty && ty.act && els[i].style.display !== 'none') out.push(els[i]);
+    /* the buttons of a card of an add-on */
+    if (els[i]._btns && els[i].offsetParent) out.push.apply(out, els[i]._btns);
   }
   return out;
 }

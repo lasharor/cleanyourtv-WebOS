@@ -8,6 +8,10 @@ function build() {
     rows = kRows;
     return;
   }
+  if (view.indexOf('remap') === 0) {
+    rmRows();
+    return;
+  }
   if (view === 'notifyhow' || view === 'voicehow') {
     rows.push({ label: 'Back', fn: pop });
     return;
@@ -466,6 +470,13 @@ function build() {
         });
       }
     }
+    if (a1.settings)
+      rows.push({
+        label: 'Set up from your phone',
+        fn: function () {
+          openAddonPair(a1.id, a1.name);
+        },
+      });
     rows.push({
       label: a1.enabled ? 'Switch off' : 'Switch on',
       sub: a1.enabled ? 'on' : 'off',
@@ -1214,6 +1225,7 @@ function build() {
         push('guidekey');
       },
     });
+    rows.push({ label: 'Key remapping', sub: 'a button opens an app or input', fn: openRemap });
     rows.push({ sep: true });
     rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
   } else if (tb === 'features') {

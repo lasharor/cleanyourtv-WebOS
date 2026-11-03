@@ -35,7 +35,8 @@ const text = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');
 const safeRel = f => typeof f === 'string' && /^[\w][\w.-]{0,60}$/.test(f);
 
 // a card.json as the launcher will use it, or {error}
-function clean(m, folder) {
+// opts.addon: a card of an add-on (addon.json "cards"): it may poll the add-on for data and have buttons that send it actions
+function clean(m, folder, opts) {
   if (!m || typeof m !== 'object' || Array.isArray(m)) return { error: 'card.json is not an object' };
   if (!ID.test(m.id || '')) return { error: 'id must be lower-case letters, digits and hyphens (2 to 28), starting with a letter' };
   if (BUILTIN.indexOf(m.id) >= 0) return { error: 'this id is a card of the launcher itself' };
@@ -50,6 +51,23 @@ function clean(m, folder) {
       return { error: 'page must be an .html file in the folder of the card' };
   } else if (typeof m.template !== 'string' || !m.template || m.template.length > 1500)
     return { error: 'template is missing or longer than 1500 characters' };
+  const add = !!(opts && opts.addon);
+  if (add && !hasPage) return { error: 'a card of an add-on has a page' };
+  let poll = 0;
+  const actions = [];
+  if (add) {
+    if (m.poll !== undefined && (!Number.isInteger(m.poll) || m.poll < 0 || m.poll > 3600))
+      return { error: 'poll is a number of seconds (0 to 3600)' };
+    poll = m.poll ? Math.max(2, m.poll) : 0;
+    const acts = Array.isArray(m.actions) ? m.actions : [];
+    if (acts.length > 8) return { error: 'at most 8 actions' };
+    for (const a of acts) {
+      if (!a || typeof a !== 'object' || !/^[a-z][a-z0-9-]{0,19}$/.test(a.name || ''))
+        return { error: 'an action has a name (lower-case letters, digits, hyphens)' };
+      if (actions.some(x => x.name === a.name)) return { error: 'two actions are called ' + a.name };
+      actions.push({ name: a.name, label: text(a.label, 40) || a.name });
+    }
+  }
   const raw = Array.isArray(m.options) ? m.options : [];
   if (raw.length > MAX_OPTIONS) return { error: 'at most ' + MAX_OPTIONS + ' options' };
   const options = [];
@@ -79,6 +97,8 @@ function clean(m, folder) {
       options,
       template: hasPage ? '' : m.template,
       page: hasPage ? m.page : '',
+      poll,
+      actions,
     },
   };
 }
@@ -160,6 +180,17 @@ function create(ctx) {
     return out;
   }
 
+  // the cards of add-ons that run (addon.json "cards"), as the installed ones: {id: card with addon}. A downloaded card with the same
+  // id wins, and an add-on's card is not removed from here (it goes with its add-on)
+  function fromAddons() {
+    const out = {},
+      ad = ctx && ctx.feature && ctx.feature('addons');
+    for (const e of ad && ad.cardsOf ? ad.cardsOf() : [])
+      if (!out[e.card.id]) out[e.card.id] = Object.assign({}, e.card, { addon: e.addon });
+    return out;
+  }
+  const all = () => Object.assign(fromAddons(), installed());
+
   async function catalog() {
     let entries;
     try {
@@ -217,7 +248,8 @@ function create(ctx) {
 
   // an installed card goes; a slot that used it shows the theme's own card again (the launcher knows no such type any more)
   function remove(id) {
-    if (!ID.test(id || '') || !installed()[id]) return { error: 'not installed' };
+    if (!ID.test(id || '') || !installed()[id])
+      return { error: fromAddons()[id] ? 'this card comes with its add-on: remove the add-on' : 'not installed' };
     rmrf(path.join(P.CARDPACKS, id));
     return { id };
   }
@@ -228,6 +260,20 @@ function create(ctx) {
     if (BUILTIN.indexOf(id) >= 0) {
       try {
         return fs.readFileSync(path.join(__dirname, 'cardpreviews', id + '.jpg'));
+      } catch (_) {
+        return null;
+      }
+    }
+    // the picture of a card of an add-on is in the add-on's folder: cards/<id>/preview.jpg
+    const own = fromAddons()[id];
+    if (own) {
+      const e = ctx
+        .feature('addons')
+        .cardsOf()
+        .filter(x => x.addon === own.addon && x.card.id === id)[0];
+      try {
+        const b = e && fs.readFileSync(path.join(e.dir, 'cards', id, 'preview.jpg'));
+        return b && imageType(b) ? b : null;
       } catch (_) {
         return null;
       }
@@ -268,9 +314,19 @@ function create(ctx) {
     "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data:; font-src data: 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'";
   function serve(req, res, u) {
     const m = /^\/card\/([a-z][a-z0-9-]*)\/([\w][\w.-]{0,60})$/.exec(u);
-    const card = m && installed()[m[1]];
+    const card = m && all()[m[1]];
     if (!card || !card.page || req.method !== 'GET') return web.notFound(res);
-    const file = path.join(P.CARDPACKS, m[1], m[2]);
+    // an add-on's card keeps its files in the add-on's folder, cards/<id>/
+    let dir = path.join(P.CARDPACKS, m[1]);
+    if (card.addon) {
+      const e = ctx
+        .feature('addons')
+        .cardsOf()
+        .filter(x => x.addon === card.addon && x.card.id === m[1])[0];
+      if (!e) return web.notFound(res);
+      dir = path.join(e.dir, 'cards', m[1]);
+    }
+    const file = path.join(dir, m[2]);
     let st;
     try {
       st = fs.statSync(file);
@@ -309,7 +365,7 @@ function create(ctx) {
     return false;
   }
   const match = u => u.indexOf('/card/') === 0;
-  return { handle, installed, catalog, install, remove, preview, serve, match };
+  return { handle, installed, all, catalog, install, remove, preview, serve, match };
 }
 
 module.exports = { create, clean, cleanIndex, ID, KINDS, BUILTIN };
