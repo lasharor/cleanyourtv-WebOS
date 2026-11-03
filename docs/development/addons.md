@@ -161,27 +161,7 @@ A service that has a `settings(o)` function (the same contract as a photo source
 for `{stop: true}`) gets a **Set up from your phone** row on its screen in the manager's Add-ons (`POST /api/addons/<id>/settings`, `settings: true` in the add-on's entry of
 `GET /api/addons`). The weather add-on needs none (the city is an option on the Cards page); the Spotify add-on uses it for the sign-in.
 
-## Providing something to the service: channels for Live TV
-
-An add-on with `"provides": ["livetv"]` brings channels and their guide to the Live TV guide (the bundled `iptv` add-on): they are listed after the
-playlist's, numbered on from them, in a group of their own, with what is on now and next, and the guide of a selected channel. They have no
-stream: choosing one calls the add-on, which opens it in its own way (the LG tuner add-on launches LG's Live TV on that channel). The service
-part answers with `livetv` on the object `create()` returns:
-
-```js
-livetv: {
-  label: 'LG tuner',                                   // the name of its group in the guide
-  channels: async () => [{ id: 'a_1_28', name: 'Alpha' }],   // id: letters, digits, . _ - (at most 64); 2000 channels at most
-  epg: async (id, full) => [[start, end, 'Title', 'Description']],   // seconds since 1970, by start; now and next, or (full) more
-  open: async id => ({ returnValue: true }),           // choosing the channel: {returnValue: true} or {error}
-}
-```
-
-The page knows such a channel by the flag 8 and the id `<add-on>:<id>`; favourites keep it by that id. A call that fails or takes more than 20
-seconds leaves the rest of the guide as it is. Routes: `/api/live/channels` and `/api/live/epg` carry them, `POST /api/live/open {id}` opens one
-([API](../api.md)).
-
-### The permission `luna`
+## Permissions for LG's services
 
 A service add-on has no access to LG's services unless its manifest asks: `"permissions": ["luna"]` and a list of the calls it may make, each
 the address of a call (or its beginning) and, when LG's service only answers a named app, the app the call is made as:
@@ -263,7 +243,7 @@ left out stays installed and running but has no button.
 | `unsplash` | A new random photo from Unsplash as the Home wallpaper, a live photo source (see above): the Access Key, the 3-minute pace, the credit line and the phone page (port 8796). Pictures stay on Unsplash's host; nothing is saved on the TV. |
 | `weather` | The **Weather forecast** card for Home, a card of an add-on (see above): the weather at a city you choose on the phone page, with buttons for the remote (Now, Hours, Days). From Open-Meteo, no key; only the coordinates leave the TV, at most every 30 minutes. |
 | `spotify` | The **Spotify now playing** card for Home, a card of an add-on (see above): the cover, title and artist of what plays on your Spotify account, with previous, play or pause and next as buttons for the remote (Premium). Your own Spotify developer app (its Client ID; sign-in with PKCE), set up from your phone (page on port 8797): Add-ons > Spotify now playing > Set up from your phone. The tokens stay in the add-on's settings. |
-| `tuner` | **LG tuner guide**: the channels of the TV's own tuner (antenna, cable) in the Live TV guide, with what is on now and next and the schedule of the selected channel, read from the data LG's own guide uses; choosing one opens LG's Live TV on it. A channel source for Live TV (`provides: ["livetv"]`, see above) with the permission `luna` for three LG services. Nothing is read until the guide is opened. Needs service 1.6.17. |
+| `tuner` | **TV guide (LG tuner)**: a guide for the TV's own tuner (antenna, cable): the channels, what is on now and next and the schedule of the selected channel, read from the data LG's own guide uses; OK opens LG's Live TV on the channel. A page add-on of its own, with the permission `luna` for three LG services. Its page is built from the same guide code as Live TV (`addons/catalog/tuner/src/index.html` includes the files of `helper/addons-bundled/iptv/src`), so the two guides stay alike; it needs neither Live TV nor a playlist. Needs service 1.6.17. |
 
 ## Versions
 

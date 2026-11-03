@@ -31,9 +31,8 @@ const PERMISSIONS = ['net.fetch', 'config.own', 'notify', 'key.guide', 'luna'];
 // keys a page keeps for itself; every other key (the number and colour buttons, Back) switches pages or goes back to Home
 const CLAIMS = ['digits', 'colors', 'back'];
 // what an add-on can provide to a part of the service (wallpapers: photo sources, see helper/wallpapers.js; cards: cards for Home with
-// their own page, data and actions, see helper/cardcatalog.js; livetv: channels and guide data for the Live TV guide, see
-// helper/addons-bundled/iptv/service.js)
-const PROVIDES = ['wallpapers', 'cards', 'livetv'];
+// their own page, data and actions, see helper/cardcatalog.js)
+const PROVIDES = ['wallpapers', 'cards'];
 // where the user may put the page strip ('' leaves it to the theme)
 const POSITIONS = ['', 'top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
 const ID = /^[a-z][a-z0-9-]{1,31}$/;

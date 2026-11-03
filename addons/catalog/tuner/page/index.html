@@ -1,0 +1,2230 @@
+<!doctype html>
+<!-- Built by tools/build-pages.js from addons/catalog/tuner/src: edit the files there, not this one. The guide itself (the markup, the style and the
+     script) is the one of Live TV, helper/addons-bundled/iptv/src: it is built twice, so the guide has one code to keep. -->
+<html><head><meta charset="utf-8"><title>TV guide</title>
+<meta name="viewport" content="width=1920">
+<style>
+/* the page is 1920 x 1080 like the launcher; the colours are the launcher's (it sends the theme variables, see js/shim.js) */
+:root {
+  --ink: #f5f6f8;
+  --ink2: rgba(245, 246, 248, 0.62);
+  --night: #07080b;
+  --night-rgb: 7, 8, 11;
+  --panel: #14161b;
+  --panel2: #1a1c22;
+  --acc: #f5f6f8;
+  --acc-ink: #0b0c10;
+  --focus: #f5f6f8;
+  --font: "LG Smart UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --fs: 1;
+  --spd: 1;
+  --pill-bg: rgba(255, 255, 255, 0.09);
+  --pill-ring: rgba(255, 255, 255, 0.1);
+  --row-r: 30px;
+  --menu-bg: rgba(5, 6, 9, 0.97);
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+html,
+body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #000;
+  color: var(--ink);
+  font-family: var(--font);
+}
+/* Live TV (the page of the iptv add-on, shown by the launcher in a frame). The channel banner, the guide and its menus take the theme's colours (--panel, --acc, ...);
+   the error and setup cards keep their own. */
+#lv {
+  --ink2: rgba(245, 246, 248, 0.76);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  z-index: 60;
+  background: #000;
+  display: none;
+}
+#lv.on {
+  display: block;
+}
+#lv-stage,
+#lv-stage video {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: #000;
+}
+#lv .layer {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s linear;
+}
+#lv .layer.on {
+  opacity: 1;
+}
+#lv-guide.on,
+#lv-filter.on,
+#lv-menu.on {
+  pointer-events: auto; /* the pointer works on them while they are open */
+}
+/* channel banner: a floating panel in the launcher's style */
+#lv-osd {
+  left: 96px;
+  right: 96px;
+  bottom: 64px;
+  height: 232px;
+  border-radius: 44px;
+  padding: 0 44px 0 36px;
+  display: flex;
+  align-items: center;
+  background: var(--panel);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 30px 60px rgba(0, 0, 0, 0.5);
+}
+/* channel banner: a floating panel in the launcher's style */
+#lv-osd > * + * {
+  margin-left: 32px;
+}
+#lv-osd .logo {
+  width: 150px;
+  height: 150px;
+  border-radius: 34px;
+  background: var(--panel2);
+  object-fit: contain;
+  flex: none;
+}
+#lv-osd .num {
+  font-size: 92px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  min-width: 120px;
+  flex: none;
+}
+#lv-osd .info {
+  flex: 1;
+  min-width: 0;
+}
+#lv-osd .name {
+  font-size: 50px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#lv-osd .now {
+  font-size: 32px;
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#lv-osd .next {
+  font-size: 26px;
+  color: var(--ink2);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pbar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+.pbar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: currentColor;
+  width: 0;
+}
+#lv-osd .pbar {
+  margin-top: 16px;
+  color: var(--acc);
+}
+#lv-numin {
+  right: 96px;
+  top: 64px;
+  font-size: 88px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+#lv-msg {
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 34px;
+}
+#lv-msg > * + * {
+  margin-top: 18px;
+}
+#lv-msg.on {
+  background: rgba(0, 0, 0, 0.62);
+}
+#lv-msg b {
+  font-size: 56px;
+  letter-spacing: -0.02em;
+}
+#lv-msg .small {
+  font-size: 26px;
+  color: var(--ink2);
+  max-width: 1100px;
+}
+#lv.gd #lv-spin,
+#lv.gd #lv-tune {
+  visibility: hidden; /* the guide list covers the middle of the screen */
+}
+#lv-tune {
+  left: 0;
+  right: 0;
+  top: 590px;
+  text-align: center;
+  font-size: 30px;
+  color: var(--ink2);
+}
+#lv-toast {
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  padding: 16px 34px;
+  border-radius: 30px;
+  background: rgba(12, 13, 17, 0.94);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font-size: 28px;
+  white-space: nowrap;
+}
+#lv-stats {
+  left: 48px;
+  top: 40px;
+  padding: 14px 22px;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.65);
+  font: 24px/1.35 monospace;
+  white-space: pre;
+  color: #cfe;
+}
+#lv-menu,
+#lv-filter {
+  right: 96px;
+  top: 196px;
+  width: 640px;
+  padding: 30px 28px 22px;
+  border-radius: 40px;
+  background: var(--panel);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 30px 60px rgba(0, 0, 0, 0.5);
+}
+#lv-menu h3,
+#lv-filter h3 {
+  font-size: 34px;
+  margin: 0 0 14px 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mrow {
+  display: flex;
+  align-items: center;
+  height: 76px;
+  margin-bottom: 10px;
+  padding: 0 28px;
+  border-radius: var(--row-r);
+  background: var(--panel2);
+  font-size: 28px;
+}
+.mrow .ml {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mrow .mv {
+  color: var(--ink2);
+  flex: none;
+  margin-left: 20px;
+}
+.mrow.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+}
+.mrow.f .mv {
+  color: inherit;
+  opacity: 0.62;
+}
+.bds {
+  display: flex;
+  align-items: center;
+  margin-left: 16px;
+  flex: none;
+}
+.bds > * + * {
+  margin-left: 8px;
+}
+/* the badges keep their own 16 px on top of the row's spacing */
+.crow > .bds {
+  margin-left: 38px;
+}
+.bd {
+  font-size: 19px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  white-space: nowrap;
+}
+.bd.w {
+  background: rgba(255, 200, 80, 0.22);
+  color: #ffd27a;
+}
+.crow.f .bd {
+  background: rgba(11, 12, 16, 0.14);
+  color: var(--acc-ink);
+}
+.crow.f .bd.w {
+  background: rgba(160, 100, 0, 0.2);
+  color: #6a4200;
+}
+svg.st {
+  width: 26px;
+  height: 26px;
+  fill: #ffcc4d;
+  flex: none;
+}
+.crow.f svg.st {
+  fill: #c98a00;
+} /* the favourite star; a plain .st is the menu's right-hand text */
+.empty {
+  padding: 40px 30px;
+  font-size: 30px;
+  color: var(--ink2);
+  max-width: 860px;
+  line-height: 1.35;
+}
+.ctab.f {
+  background: none;
+  box-shadow: none;
+  color: var(--ink2);
+  font-size: 23px;
+}
+#lv-search {
+  display: none;
+  flex: none;
+  width: 420px;
+  height: 56px;
+  border-radius: 28px;
+  border: 0;
+  outline: 0;
+  padding: 0 24px;
+  font: inherit;
+  font-size: 26px;
+  background: var(--ink);
+  color: #0b0c10;
+}
+#lv-osd .facts {
+  font-size: 24px;
+  color: var(--ink2);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#lv-spin {
+  left: 932px;
+  top: 512px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 6px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  animation: lvsp 1s linear infinite;
+}
+@keyframes lvsp {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* guide screen (OK) */
+#lv-guide {
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: rgba(var(--night-rgb), 0.9);
+}
+#lv-glow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 720px;
+  background: radial-gradient(ellipse 1400px 640px at 26% -6%, rgba(var(--c), 0.3), transparent 70%);
+}
+#lv-gtop {
+  position: absolute;
+  left: 96px;
+  right: 96px;
+  top: 54px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+}
+#lv-gtop > * + * {
+  margin-left: 36px;
+}
+#lv-gtitle {
+  font-size: 56px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  flex: none;
+}
+#lv-gtabs {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  align-items: center;
+}
+#lv-gtabs > * + * {
+  margin-left: 14px;
+}
+.ctab {
+  height: 56px;
+  padding: 0 26px;
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 28px;
+  font-size: 25px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  flex: none;
+  background: var(--pill-bg);
+  box-shadow: inset 0 0 0 1px var(--pill-ring);
+}
+.ctab.on {
+  background: var(--acc);
+  color: var(--acc-ink);
+}
+.ctab.m {
+  background: none;
+  box-shadow: none;
+  color: var(--ink2);
+  padding: 0 6px;
+}
+#lv-gclock {
+  font-size: 56px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+#lv-rows {
+  position: absolute;
+  left: 96px;
+  top: 196px;
+  width: 900px;
+}
+.crow {
+  display: flex;
+  align-items: center;
+  height: 104px;
+  margin-bottom: 12px;
+  padding: 0 28px 0 18px;
+  border-radius: var(--row-r);
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+.crow > * + * {
+  margin-left: 22px;
+}
+.crow .lg {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: var(--panel);
+  object-fit: contain;
+  flex: none;
+}
+.crow .n {
+  width: 78px;
+  font-size: 27px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.crow .t {
+  flex: 1;
+  min-width: 0;
+}
+.crow .nm {
+  font-size: 30px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crow .nw {
+  font-size: 24px;
+  color: var(--ink2);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crow .pbar {
+  margin-top: 9px;
+  height: 6px;
+  color: var(--acc);
+}
+.crow.cur .n {
+  color: var(--ink);
+}
+.crow.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+  box-shadow: 0 20px 34px rgba(0, 0, 0, 0.5);
+}
+.crow.f .n,
+.crow.f .nw {
+  color: inherit;
+  opacity: 0.62;
+}
+.crow.f .pbar {
+  background: rgba(11, 12, 16, 0.18);
+  color: var(--acc-ink);
+}
+.crow.f .lg {
+  background: #e9ebef;
+}
+.cmore {
+  height: 22px;
+  text-align: center;
+  font-size: 20px;
+  color: var(--ink2);
+  width: 900px;
+  position: absolute;
+  left: 0;
+}
+#lv-detail {
+  position: absolute;
+  left: 1070px;
+  top: 196px;
+  width: 754px;
+}
+#lv-detail .dn {
+  font-size: 64px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#lv-detail .dg {
+  font-size: 24px;
+  color: var(--ink2);
+  margin-top: 6px;
+}
+#lv-detail .card {
+  margin-top: 30px;
+  padding: 30px 34px;
+  border-radius: 36px;
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+#lv-detail .dt {
+  font-size: 24px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+}
+#lv-detail .dp {
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+  line-height: 1.12;
+  max-height: 96px;
+  overflow: hidden;
+}
+#lv-detail .dd {
+  font-size: 26px;
+  color: rgba(245, 246, 248, 0.82);
+  margin-top: 14px;
+  line-height: 1.35;
+  max-height: 140px;
+  overflow: hidden;
+}
+#lv-detail .card .pbar {
+  margin-top: 20px;
+  color: var(--acc);
+}
+#lv-detail h3 {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--ink2);
+  margin: 30px 0 10px;
+}
+#lv-detail .up {
+  display: flex;
+  font-size: 27px;
+  height: 50px;
+  align-items: center;
+  white-space: nowrap;
+}
+#lv-detail .up > * + * {
+  margin-left: 22px;
+}
+#lv-detail .up .tm {
+  width: 86px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+#lv-detail .up .tt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style></head><body>
+<div id="lv"><div id="lv-stage"></div><div id="lv-spin" class="layer"></div><div id="lv-osd" class="layer"><img class="logo" id="lv-ologo" alt=""><div class="num" id="lv-onum"></div><div class="info"><div class="name" id="lv-oname"></div><div class="now" id="lv-onow"></div><div class="next" id="lv-onext"></div><div class="facts" id="lv-ofacts"></div><div class="pbar"><i id="lv-obar"></i></div></div></div><div id="lv-numin" class="layer"></div><div id="lv-guide" class="layer"><div id="lv-glow"></div><div id="lv-gtop"><div id="lv-gtitle"></div><div id="lv-gtabs"></div><input id="lv-search" type="text" autocomplete="off"><div id="lv-gclock"></div></div><div id="lv-rows"></div><div id="lv-detail"></div></div><div id="lv-filter" class="layer"></div><div id="lv-menu" class="layer"></div><div id="lv-msg" class="layer"></div><div id="lv-tune" class="layer"></div><div id="lv-toast" class="layer"></div><div id="lv-stats" class="layer"></div></div>
+<script>
+var I18N = {"ar":{"_name":"العربية","_dir":"rtl","_pct":79,"%d channels":{"zero":"%d قناة","one":"%d قناة","two":"%d قناتان","few":"%d قنوات","many":"%d قناة","other":"%d قناة"},"%d of %d":"%d من %d","%d of %d on":"%d من %d مفعّل","Added to favourites":"أُضيف إلى المفضلة","All":"الكل","All channels":"كل القنوات","and enter this code:":"وأدخل هذا الرمز:","Back":"رجوع","buffer":"التخزين المؤقت","build %s":"البناء %s","Checking why...":"جارٍ معرفة السبب...","Clear":"صافٍ","Clear filters":"مسح عوامل التصفية","Close":"إغلاق","Country":"البلد","Customise":"تخصيص","dropped":"تم التخطي","Favourite":"المفضلة","Favourites":"المفضلة","Filters":"عوامل التصفية","frames":"إطارات","Guide":"الدليل","guide: %s":"الدليل: %s","Language":"اللغة","Later":"لاحقًا","Launcher":"المشغّل","Live TV":"البث المباشر","Loading channels...":"جارٍ تحميل القنوات...","never":"أبدًا","Next":"التالي","No channels match.":"لا قنوات مطابقة.","No favourites yet. Press the green button on a channel.":"لا مفضلة بعد. اضغط الزر الأخضر على قناة.","No guide data":"لا بيانات في الدليل","not available":"غير متاح","Nothing watched yet.":"لم تُشاهد شيئًا بعد.","Now":"الآن","Off":"إيقاف","On":"تشغيل","Open":"فتح","Open this address on your phone or computer:":"افتح هذا العنوان على هاتف أو حاسوب:","Press OK to try again.":"اضغط OK للمحاولة مجددًا.","Quality":"الجودة","Recent":"الأخيرة","refused":"مرفوض","reloaded":"أُعيد تحميله","Removed from favourites":"أُزيل من المفضلة","Search":"بحث","Search...":"بحث...","Set up Live TV":"إعداد البث المباشر","Statistics":"الإحصاءات","Stream":"البث","streams":"بثوث","Text":"نص","The address answers with a web page, not a video.":"العنوان يعيد صفحة ويب، لا فيديو.","The helper is not reachable.":"تعذّر الوصول إلى الخدمة.","The server refused the stream: it may be blocked in your country or need special request headers.":"رفض الخادم البث: قد يكون محجوبًا في بلدك أو يحتاج رؤوس طلب خاصة.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"يستجيب البث لكن التلفاز لم يستطع تشغيله: على الأرجح صيغة لا يستطيع فكّها.","The stream is too slow to start.":"يستغرق بدء البث وقتًا طويلًا.","The stream server cannot be reached.":"تعذّر الوصول إلى خادم البث.","The stream server reported an error.":"أبلغ خادم البث عن خطأ.","The stream was not found (404): the channel is offline or its address has changed.":"لم يُعثر على البث (404): القناة متوقفة أو تغيّر عنوانها.","Then paste your M3U playlist address. This page closes by itself.":"ثم الصق عنوان قائمة تشغيل M3U. تُغلق هذه الصفحة تلقائيًا.","This channel is not available.":"هذه القناة غير متاحة.","This stream is protected by DRM and cannot be played here.":"هذا البث محمي بـ DRM ولا يمكن تشغيله هنا.","Tuning...":"جارٍ ضبط القناة...","Hours":"الساعات","Wind":"الرياح"},"ca":{"_name":"Català","_dir":"ltr","_pct":79,"%d channels":{"one":"%d canal","other":"%d canals"},"%d of %d":"%d de %d","%d of %d on":"%d de %d d'activats","Added to favourites":"Afegit als preferits","All":"Tot","All channels":"Tots els canals","and enter this code:":"i introdueix aquest codi:","Back":"Enrere","buffer":"memòria intermèdia","build %s":"compilació %s","Checking why...":"S'està cercant el motiu...","Clear":"Esborra","Clear filters":"Esborra els filtres","Close":"Tanca","Country":"País","Customise":"Personalitza","dropped":"perduts","Favourite":"Preferit","Favourites":"Preferits","Filters":"Filtres","frames":"fotogrames","Guide":"Guia","guide: %s":"guia: %s","Language":"Idioma","Later":"Més tard","Launcher":"Llançador","Live TV":"TV en directe","Loading channels...":"S'estan carregant els canals...","never":"mai","Next":"Següent","No channels match.":"Cap canal no coincideix.","No favourites yet. Press the green button on a channel.":"Encara no hi ha preferits. Prem el botó verd sobre un canal.","No guide data":"No hi ha dades de la guia","not available":"no disponible","Nothing watched yet.":"Encara no s'ha vist res.","Now":"Ara","Off":"Desactivat","On":"Activat","Open":"Obre","Open this address on your phone or computer:":"Obre aquesta adreça al telèfon o a l'ordinador:","Press OK to try again.":"Prem OK per tornar-ho a provar.","Quality":"Qualitat","Recent":"Recents","refused":"rebutjat","reloaded":"tornat a carregar","Removed from favourites":"S'ha tret dels preferits","Search":"Cerca","Search...":"Cerca...","Set up Live TV":"Configura la TV en directe","Statistics":"Estadístiques","Stream":"Emissió","streams":"emissions","Text":"Text","The address answers with a web page, not a video.":"L'adreça respon amb una pàgina web, no amb un vídeo.","The helper is not reachable.":"No es pot connectar amb el servei auxiliar.","The server refused the stream: it may be blocked in your country or need special request headers.":"El servidor ha rebutjat l'emissió: pot estar bloquejada al teu país o necessitar capçaleres de sol·licitud especials.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"L'emissió respon, però el televisor no l'ha pogut reproduir: probablement té un format que no pot descodificar.","The stream is too slow to start.":"L'emissió triga massa a iniciar-se.","The stream server cannot be reached.":"No es pot contactar amb el servidor de l'emissió.","The stream server reported an error.":"El servidor de l'emissió ha indicat un error.","The stream was not found (404): the channel is offline or its address has changed.":"No s'ha trobat l'emissió (404): el canal està fora de línia o n'ha canviat l'adreça.","Then paste your M3U playlist address. This page closes by itself.":"Després enganxa l'adreça de la llista M3U. Aquesta pàgina es tancarà automàticament.","This channel is not available.":"Aquest canal no està disponible.","This stream is protected by DRM and cannot be played here.":"Aquesta emissió està protegida per DRM i no es pot reproduir aquí.","Tuning...":"S'està sintonitzant...","Hours":"Hores","Wind":"Vent"},"de":{"_name":"Deutsch","_dir":"ltr","_pct":90,"%d channels":{"one":"%d Sender","other":"%d Sender"},"%d of %d":"%d von %d","%d of %d on":"%d von %d an","Added to favourites":"Zu Favoriten hinzugefügt","All":"Alle","All channels":"Alle Sender","and enter this code:":"und gib diesen Code ein:","Back":"Zurück","buffer":"Puffer","build %s":"Build %s","Checking why...":"Ursache wird gesucht...","Clear":"Klar","Clear filters":"Filter löschen","Close":"Schließen","Country":"Land","Customise":"Anpassen","dropped":"verworfen","Favourite":"Favorit","Favourites":"Favoriten","Filters":"Filter","frames":"Bilder","Guide":"Guide","guide: %s":"Programmführer: %s","Language":"Sprache","Later":"Später","Launcher":"Launcher","Live TV":"Live-TV","Loading channels...":"Sender werden geladen...","never":"nie","Next":"Danach","No channels match.":"Keine passenden Sender.","No favourites yet. Press the green button on a channel.":"Noch keine Favoriten. Drücke bei einem Sender die grüne Taste.","No guide data":"Keine Programmdaten","not available":"nicht verfügbar","Nothing watched yet.":"Noch nichts angesehen.","Now":"Jetzt","Off":"Aus","On":"An","Open":"Öffnen","Open this address on your phone or computer:":"Öffne diese Adresse auf dem Handy oder Computer:","Press OK to try again.":"OK drücken, um es erneut zu versuchen.","Quality":"Qualität","Recent":"Zuletzt","refused":"abgelehnt","reloaded":"neu geladen","Removed from favourites":"Aus Favoriten entfernt","Search":"Suchen","Search...":"Suchen...","Set up Live TV":"Live-TV einrichten","Statistics":"Statistik","Stream":"Stream","streams":"Streams","Text":"Text","The address answers with a web page, not a video.":"Die Adresse liefert eine Webseite, kein Video.","The helper is not reachable.":"Der Helper ist nicht erreichbar.","The server refused the stream: it may be blocked in your country or need special request headers.":"Der Server verweigert den Stream: vielleicht in deinem Land gesperrt oder es werden spezielle Header benötigt.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"Der Stream antwortet, aber der Fernseher konnte ihn nicht abspielen: wahrscheinlich ein Format, das er nicht dekodieren kann.","The stream is too slow to start.":"Der Stream startet zu langsam.","The stream server cannot be reached.":"Der Stream-Server ist nicht erreichbar.","The stream server reported an error.":"Der Stream-Server meldet einen Fehler.","The stream was not found (404): the channel is offline or its address has changed.":"Der Stream wurde nicht gefunden (404): Der Sender ist offline oder die Adresse hat sich geändert.","Then paste your M3U playlist address. This page closes by itself.":"Füge dann die Adresse deiner M3U-Playlist ein. Diese Seite schließt sich von selbst.","This channel is not available.":"Dieser Sender ist nicht verfügbar.","This stream is protected by DRM and cannot be played here.":"Dieser Stream ist DRM-geschützt und kann hier nicht abgespielt werden.","Tuning...":"Sender wird eingestellt...","Set up":"Eingerichtet","TV":"TV","This plays your own playlist, not the TV’s tuner. For antenna or cable, add a TV button in Customise.":"Dies spielt deine eigene Playlist ab, nicht den Tuner des Fernsehers. Für Antenne oder Kabel füge unter Anpassen eine TV-Schaltfläche hinzu.","Hours":"Stunden"},"es":{"_name":"Español","_dir":"ltr","_pct":84,"%d channels":{"one":"%d canal","other":"%d canales"},"%d of %d":"%d de %d","%d of %d on":"%d de %d activados","Added to favourites":"Añadido a favoritos","All":"Todos","All channels":"Todos los canales","and enter this code:":"e introduce este código:","Back":"Atrás","buffer":"búfer","build %s":"versión %s","Checking why...":"Buscando la causa...","Clear":"Despejado","Clear filters":"Quitar filtros","Close":"Cerrar","Country":"País","Customise":"Personalizar","dropped":"perdidas","Favourite":"Favorito","Favourites":"Favoritos","Filters":"Filtros","frames":"imágenes","Guide":"Guide","guide: %s":"guía: %s","Language":"Idioma","Later":"Más tarde","Launcher":"Launcher","Live TV":"TV en directo","Loading channels...":"Cargando canales...","never":"nunca","Next":"Después","No channels match.":"Ningún canal coincide.","No favourites yet. Press the green button on a channel.":"Aún no hay favoritos. Pulsa el botón verde en un canal.","No guide data":"Sin guía","not available":"no disponible","Nothing watched yet.":"Todavía no has visto nada.","Now":"Ahora","Off":"Desactivado","On":"Activado","Open":"Abrir","Open this address on your phone or computer:":"Abre esta dirección en tu móvil u ordenador:","Press OK to try again.":"Pulsa OK para reintentar.","Quality":"Calidad","Recent":"Recientes","refused":"rechazada","reloaded":"recargado","Removed from favourites":"Quitado de favoritos","Search":"Buscar","Search...":"Buscar...","Set up Live TV":"Configurar TV en directo","Statistics":"Estadísticas","Stream":"Emisión","streams":"emisiones","Text":"Texto","The address answers with a web page, not a video.":"La dirección devuelve una página web, no un vídeo.","The helper is not reachable.":"El helper no está disponible.","The server refused the stream: it may be blocked in your country or need special request headers.":"El servidor rechaza la emisión: puede estar bloqueada en tu país o necesitar cabeceras especiales.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"La emisión responde, pero el televisor no pudo reproducirla: probablemente un formato que no sabe decodificar.","The stream is too slow to start.":"La emisión tarda demasiado en empezar.","The stream server cannot be reached.":"No se puede acceder al servidor de la emisión.","The stream server reported an error.":"El servidor de la emisión informa de un error.","The stream was not found (404): the channel is offline or its address has changed.":"No se encontró la emisión (404): el canal está fuera de línea o su dirección cambió.","Then paste your M3U playlist address. This page closes by itself.":"Después pega la dirección de tu lista M3U. Esta página se cierra sola.","This channel is not available.":"Este canal no está disponible.","This stream is protected by DRM and cannot be played here.":"Esta emisión está protegida con DRM y no se puede reproducir aquí.","Tuning...":"Sintonizando...","Hours":"Horas","Wind":"Viento"},"fr":{"_name":"Français","_dir":"ltr","_pct":84,"%d channels":{"one":"%d chaîne","other":"%d chaînes"},"%d of %d":"%d sur %d","%d of %d on":"%d sur %d activés","Added to favourites":"Ajouté aux favoris","All":"Tous","All channels":"Toutes les chaînes","and enter this code:":"et saisissez ce code :","Back":"Retour","buffer":"tampon","build %s":"version %s","Checking why...":"Recherche de la cause...","Clear":"Dégagé","Clear filters":"Effacer les filtres","Close":"Fermer","Country":"Pays","Customise":"Personnaliser","dropped":"perdues","Favourite":"Favori","Favourites":"Favoris","Filters":"Filtres","frames":"images","Guide":"Guide","guide: %s":"guide : %s","Language":"Langue","Later":"Plus tard","Launcher":"Launcher","Live TV":"TV en direct","Loading channels...":"Chargement des chaînes...","never":"jamais","Next":"Ensuite","No channels match.":"Aucune chaîne trouvée.","No favourites yet. Press the green button on a channel.":"Pas encore de favoris. Appuyez sur la touche verte sur une chaîne.","No guide data":"Pas de guide","not available":"non disponible","Nothing watched yet.":"Rien de regardé pour l’instant.","Now":"Maintenant","Off":"Désactivé","On":"Activé","Open":"Ouvrir","Open this address on your phone or computer:":"Ouvrez cette adresse sur votre téléphone ou ordinateur :","Press OK to try again.":"Appuyez sur OK pour réessayer.","Quality":"Qualité","Recent":"Récents","refused":"refusée","reloaded":"rechargé","Removed from favourites":"Retiré des favoris","Search":"Rechercher","Search...":"Rechercher...","Set up Live TV":"Configurer la TV en direct","Statistics":"Statistiques","Stream":"Flux","streams":"flux","Text":"Texte","The address answers with a web page, not a video.":"L’adresse renvoie une page web, pas une vidéo.","The helper is not reachable.":"L’assistant est injoignable.","The server refused the stream: it may be blocked in your country or need special request headers.":"Le serveur refuse le flux : il est peut-être bloqué dans votre pays ou nécessite des en-têtes spéciaux.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"Le flux répond, mais le téléviseur n’a pas pu le lire : probablement un format qu’il ne sait pas décoder.","The stream is too slow to start.":"Le flux démarre trop lentement.","The stream server cannot be reached.":"Le serveur de flux est injoignable.","The stream server reported an error.":"Le serveur de flux signale une erreur.","The stream was not found (404): the channel is offline or its address has changed.":"Flux introuvable (404) : la chaîne est hors ligne ou son adresse a changé.","Then paste your M3U playlist address. This page closes by itself.":"Collez ensuite l’adresse de votre liste M3U. Cette page se ferme toute seule.","This channel is not available.":"Cette chaîne n’est pas disponible.","This stream is protected by DRM and cannot be played here.":"Ce flux est protégé par DRM et ne peut pas être lu ici.","Tuning...":"Connexion...","Hours":"Heures","Wind":"Vent"},"hu":{"_name":"Magyar","_dir":"ltr","_pct":84,"%d channels":{"one":"%d csatorna","other":"%d csatorna"},"%d of %d":"%d / %d","%d of %d on":"%d / %d be","Added to favourites":"Hozzáadva a kedvencekhez","All":"Összes","All channels":"Összes csatorna","and enter this code:":"és írd be ezt a kódot:","Back":"Vissza","buffer":"puffer","build %s":"%s build","Checking why...":"Az ok ellenőrzése…","Clear":"Törlés","Clear filters":"Szűrők törlése","Close":"Bezárás","Country":"Ország","Customise":"Testreszabás","dropped":"megszakadt","Favourite":"Kedvenc","Favourites":"Kedvencek","Filters":"Szűrők","frames":"képkockák","Guide":"Műsorújság","guide: %s":"műsorújság: %s","Language":"Nyelv","Later":"Később","Launcher":"Főképernyő","Live TV":"Élő TV","Loading channels...":"Csatornák betöltése...","never":"soha","Next":"Tovább","No channels match.":"Nincs megfelelő csatorna.","No favourites yet. Press the green button on a channel.":"Még nincs kedvenc. Nyomd meg a zöld gombot egy csatornán.","No guide data":"Nincs műsorújság-adat","not available":"nem érhető el","Nothing watched yet.":"Még nincs megtekintési előzmény.","Now":"Most","Off":"Ki","On":"Be","Open":"Megnyitás","Open this address on your phone or computer:":"Nyisd meg ezt a címet telefonon vagy számítógépen:","Press OK to try again.":"Az újrapróbálkozáshoz nyomj OK-t.","Quality":"Minőség","Recent":"Legutóbbi","refused":"elutasítva","reloaded":"újratöltve","Removed from favourites":"Eltávolítva a kedvencekből","Search":"Keresés","Search...":"Keresés...","Set up Live TV":"Élő TV beállítása","Statistics":"Statisztika","Stream":"Adatfolyam","streams":"adatfolyamok","Text":"Szöveg","The address answers with a web page, not a video.":"A cím weboldalt ad vissza, nem videót.","The helper is not reachable.":"A segédszolgáltatás nem érhető el.","The server refused the stream: it may be blocked in your country or need special request headers.":"A szerver elutasította az adatfolyamot: lehet, hogy az országodban nem elérhető, vagy speciális kérésfejléceket igényel.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"Az adatfolyam válaszol, de a tévé nem tudja lejátszani: valószínűleg nem támogatott formátum.","The stream is too slow to start.":"Az adatfolyam túl lassan indul.","The stream server cannot be reached.":"Az adatfolyam-szerver nem érhető el.","The stream server reported an error.":"Az adatfolyam-szerver hibát jelzett.","The stream was not found (404): the channel is offline or its address has changed.":"Az adatfolyam nem található (404): a csatorna nem elérhető, vagy megváltozott a címe.","Then paste your M3U playlist address. This page closes by itself.":"Ezután illeszd be az M3U lejátszási listád címét. Az oldal magától bezárul.","This channel is not available.":"Ez a csatorna nem érhető el.","This stream is protected by DRM and cannot be played here.":"Ez az adatfolyam DRM-védelemmel rendelkezik, ezért itt nem játszható le.","Tuning...":"Hangolás…","Set up":"Beállítás","TV":"Tévé","This plays your own playlist, not the TV’s tuner. For antenna or cable, add a TV button in Customise.":"Ez a saját lejátszási listádat játssza le, nem a tévé tunerét használja. Antennás vagy kábeles adáshoz adj hozzá TV-gombot a Testreszabás menüben.","no picture":"nincs kép"},"it":{"_name":"Italiano","_dir":"ltr","_pct":84,"%d channels":{"one":"%d canale","other":"%d canali"},"%d of %d":"%d di %d","%d of %d on":"%d di %d attivi","Added to favourites":"Aggiunto ai preferiti","All":"Tutti","All channels":"Tutti i canali","and enter this code:":"e inserisci questo codice:","Back":"Indietro","buffer":"buffer","build %s":"build %s","Checking why...":"Verifica del motivo...","Clear":"Cancella","Clear filters":"Cancella filtri","Close":"Chiudi","Country":"Paese","Customise":"Personalizza","dropped":"persa","Favourite":"Preferito","Favourites":"Preferiti","Filters":"Filtri","frames":"fotogrammi","Guide":"Guida","guide: %s":"guida: %s","Language":"Lingua","Later":"Più tardi","Launcher":"Launcher","Live TV":"Live TV","Loading channels...":"Caricamento canali...","never":"mai","Next":"Avanti","No channels match.":"Nessun canale corrisponde.","No favourites yet. Press the green button on a channel.":"Ancora nessun preferito. Premi il pulsante verde su un canale.","No guide data":"Nessun dato guida","not available":"non disponibile","Nothing watched yet.":"Ancora niente guardato.","Now":"Adesso","Off":"Off","On":"On","Open":"Apri","Open this address on your phone or computer:":"Apri questo indirizzo sul tuo telefono o computer:","Press OK to try again.":"Premi OK per riprovare.","Quality":"Qualità","Recent":"Recenti","refused":"rifiutato","reloaded":"ricaricato","Removed from favourites":"Rimosso dai preferiti","Search":"Cerca","Search...":"Cerca...","Set up Live TV":"Configura Live TV","Statistics":"Statistiche","Stream":"Stream","streams":"stream","Text":"Testo","The address answers with a web page, not a video.":"L'indirizzo risponde con una pagina web, non un video.","The helper is not reachable.":"L'helper non è raggiungibile.","The server refused the stream: it may be blocked in your country or need special request headers.":"Il server ha rifiutato lo stream: potrebbe essere bloccato nel tuo paese o richiedere intestazioni di richiesta speciali.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"Lo stream risponde, ma il TV non è riuscito a riprodurlo: probabilmente un formato che non riesce a decodificare.","The stream is too slow to start.":"Lo stream è troppo lento per avviarsi.","The stream server cannot be reached.":"Il server dello stream non è raggiungibile.","The stream server reported an error.":"Il server dello stream ha segnalato un errore.","The stream was not found (404): the channel is offline or its address has changed.":"Lo stream non è stato trovato (404): il canale è offline o il suo indirizzo è cambiato.","Then paste your M3U playlist address. This page closes by itself.":"Poi incolla l'indirizzo della tua playlist M3U. Questa pagina si chiude da sola.","This channel is not available.":"Questo canale non è disponibile.","This stream is protected by DRM and cannot be played here.":"Questo stream è protetto da DRM e non può essere riprodotto qui.","Tuning...":"Sintonizzazione...","Set up":"Configura","TV":"TV","This plays your own playlist, not the TV’s tuner. For antenna or cable, add a TV button in Customise.":"Riproduce la tua playlist, non il sintonizzatore del TV. Per antenna o cavo, aggiungi un pulsante TV in Personalizza.","Hours":"Ore","Wind":"Vento"},"nl":{"_name":"Nederlands","_dir":"ltr","_pct":89,"%d channels":{"one":"%d zender","other":"%d zenders"},"%d of %d":"%d van %d","%d of %d on":"%d van %d aan","Added to favourites":"Toegevoegd aan favorieten","All":"Alle","All channels":"Alle zenders","and enter this code:":"en voer deze code in:","Back":"Terug","buffer":"buffer","build %s":"build %s","Checking why...":"Oorzaak wordt gezocht...","Clear":"Helder","Clear filters":"Filters wissen","Close":"Sluiten","Country":"Land","Customise":"Aanpassen","dropped":"gemist","Favourite":"Favoriet","Favourites":"Favorieten","Filters":"Filters","frames":"beelden","Guide":"Guide","guide: %s":"gids: %s","Language":"Taal","Later":"Later","Launcher":"Launcher","Live TV":"Live TV","Loading channels...":"Zenders laden...","never":"nooit","Next":"Straks","No channels match.":"Geen zenders gevonden.","No favourites yet. Press the green button on a channel.":"Nog geen favorieten. Druk op de groene knop bij een zender.","No guide data":"Geen programmagegevens","not available":"niet beschikbaar","Nothing watched yet.":"Nog niets bekeken.","Now":"Nu","Off":"Uit","On":"Aan","Open":"Openen","Open this address on your phone or computer:":"Open dit adres op je telefoon of computer:","Press OK to try again.":"Druk op OK om het opnieuw te proberen.","Quality":"Kwaliteit","Recent":"Recent","refused":"geweigerd","reloaded":"opnieuw geladen","Removed from favourites":"Verwijderd uit favorieten","Search":"Zoeken","Search...":"Zoeken...","Set up Live TV":"Live TV instellen","Statistics":"Statistieken","Stream":"Stream","streams":"streams","Text":"Tekst","The address answers with a web page, not a video.":"Het adres geeft een webpagina, geen video.","The helper is not reachable.":"De helper is niet bereikbaar.","The server refused the stream: it may be blocked in your country or need special request headers.":"De server weigert de stream: mogelijk geblokkeerd in jouw land of er zijn speciale headers nodig.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"De stream antwoordt, maar de tv kon hem niet afspelen: waarschijnlijk een formaat dat hij niet kan decoderen.","The stream is too slow to start.":"De stream start te langzaam.","The stream server cannot be reached.":"De streamserver is niet bereikbaar.","The stream server reported an error.":"De streamserver meldt een fout.","The stream was not found (404): the channel is offline or its address has changed.":"De stream is niet gevonden (404): de zender is offline of het adres is gewijzigd.","Then paste your M3U playlist address. This page closes by itself.":"Plak daarna het adres van je M3U-afspeellijst. Deze pagina sluit vanzelf.","This channel is not available.":"Deze zender is niet beschikbaar.","This stream is protected by DRM and cannot be played here.":"Deze stream is met DRM beveiligd en kan hier niet worden afgespeeld.","Tuning...":"Afstemmen...","Set up":"Ingesteld","Hours":"Uren"},"pl":{"_name":"Polski","_dir":"ltr","_pct":84,"%d channels":{"one":"%d kanał","few":"%d kanały","many":"%d kanałów","other":"%d kanałów"},"%d of %d":"%d z %d","%d of %d on":"%d z %d włączonych","Added to favourites":"Dodano do ulubionych","All":"Wszystkie","All channels":"Wszystkie kanały","and enter this code:":"i wpisz ten kod:","Back":"Wstecz","buffer":"bufor","build %s":"kompilacja %s","Checking why...":"Sprawdzanie przyczyny...","Clear":"Wyczyść","Clear filters":"Wyczyść filtry","Close":"Zamknij","Country":"Kraj","Customise":"Dostosuj","dropped":"porzucono","Favourite":"Ulubiony","Favourites":"Ulubione","Filters":"Filtry","frames":"klatki","Guide":"Przewodnik","guide: %s":"przewodnik: %s","Language":"Język","Later":"Później","Launcher":"Launcher","Live TV":"Telewizja na żywo","Loading channels...":"Ładowanie kanałów...","never":"nigdy","Next":"Dalej","No channels match.":"Brak pasujących kanałów.","No favourites yet. Press the green button on a channel.":"Brak ulubionych. Naciśnij zielony przycisk na kanale.","No guide data":"Brak danych przewodnika","not available":"niedostępne","Nothing watched yet.":"Jeszcze nic nie oglądano.","Now":"Teraz","Off":"Wył.","On":"Wł.","Open":"Otwórz","Open this address on your phone or computer:":"Otwórz ten adres na telefonie lub komputerze:","Press OK to try again.":"Naciśnij OK, aby spróbować ponownie.","Quality":"Jakość","Recent":"Ostatnie","refused":"odrzucono","reloaded":"przeładowano","Removed from favourites":"Usunięto z ulubionych","Search":"Szukaj","Search...":"Szukaj...","Set up Live TV":"Skonfiguruj telewizję na żywo","Statistics":"Statystyki","Stream":"Strumień","streams":"strumienie","Text":"Tekst","The address answers with a web page, not a video.":"Adres odpowiada stroną internetową, a nie wideo.","The helper is not reachable.":"Pomocnik jest nieosiągalny.","The server refused the stream: it may be blocked in your country or need special request headers.":"Serwer odrzucił strumień: może być zablokowany w Twoim kraju lub wymagać specjalnych nagłówków żądania.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"Strumień odpowiada, ale telewizor nie mógł go odtworzyć: prawdopodobnie format, którego nie może zdekodować.","The stream is too slow to start.":"Strumień uruchamia się zbyt wolno.","The stream server cannot be reached.":"Nie można połączyć się z serwerem strumienia.","The stream server reported an error.":"Serwer strumienia zgłosił błąd.","The stream was not found (404): the channel is offline or its address has changed.":"Nie znaleziono strumienia (404): kanał jest niedostępny lub jego adres uległ zmianie.","Then paste your M3U playlist address. This page closes by itself.":"Następnie wklej adres swojej playlisty M3U. Ta strona zamknie się automatycznie.","This channel is not available.":"Ten kanał jest niedostępny.","This stream is protected by DRM and cannot be played here.":"Ten strumień jest chroniony przez DRM i nie może być tutaj odtworzony.","Tuning...":"Dostrajanie...","Set up":"Skonfigurowano","TV":"TV","This plays your own playlist, not the TV’s tuner. For antenna or cable, add a TV button in Customise.":"To odtwarza Twoją playlistę, nie tuner telewizora. Do anteny lub kablówki dodaj przycisk TV w Dostosuj.","Hours":"Godziny","Wind":"Wiatr"},"pt":{"_name":"Português (Brasil)","_dir":"ltr","_pct":75,"%d channels":{"one":"%d canal","other":"%d canais"},"%d of %d":"%d de %d","%d of %d on":"%d de %d ativado","Added to favourites":"Adicionado aos favoritos","All":"Todos","All channels":"Todos os canais","and enter this code:":"e digite este código:","Back":"Voltar","buffer":"buffer","build %s":"build %s","Checking why...":"Verificando o motivo...","Clear":"Limpar","Clear filters":"Limpar filtros","Close":"Fechar","Country":"País","Customise":"Personalizar","dropped":"descartados","Favourite":"Favorito","Favourites":"Favoritos","Filters":"Filtros","frames":"quadros","Guide":"Guia","guide: %s":"guia: %s","Language":"Idioma","Later":"Mais tarde","Launcher":"Inicializador","Live TV":"TV ao vivo","Loading channels...":"Carregando canais...","never":"nunca","Next":"Avançar","No channels match.":"Nenhum canal correspondente.","No favourites yet. Press the green button on a channel.":"Nenhum favorito ainda. Pressione o botão verde em um canal.","No guide data":"Sem dados de guia","not available":"não disponível","Nothing watched yet.":"Nada assistido ainda.","Now":"Agora","Off":"Desativado","On":"Ativado","Open":"Abrir","Open this address on your phone or computer:":"Abra este endereço no seu celular ou computador:","Press OK to try again.":"Pressione OK para tentar novamente.","Quality":"Qualidade","Recent":"Recentes","refused":"recusado","reloaded":"recarregado","Removed from favourites":"Removido dos favoritos","Search":"Buscar","Search...":"Buscar...","Set up Live TV":"Configurar TV ao vivo","Statistics":"Estatísticas","Stream":"Transmissão","streams":"transmissões","Text":"Texto","The address answers with a web page, not a video.":"O endereço responde com uma página web, não com um vídeo.","The helper is not reachable.":"O serviço auxiliar não está acessível.","The server refused the stream: it may be blocked in your country or need special request headers.":"O servidor recusou a transmissão: pode estar bloqueada em seu país ou exigir cabeçalhos de requisição especiais.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"A transmissão responde, mas a TV não conseguiu reproduzi-la: provavelmente um formato que ela não consegue decodificar.","The stream is too slow to start.":"A transmissão demora muito para iniciar.","The stream server cannot be reached.":"Não foi possível conectar ao servidor de transmissão.","The stream server reported an error.":"O servidor de transmissão relatou um erro.","The stream was not found (404): the channel is offline or its address has changed.":"A transmissão não foi encontrada (404): o canal está fora do ar ou o endereço foi alterado.","Then paste your M3U playlist address. This page closes by itself.":"Depois cole o endereço da sua lista de reprodução M3U. Esta página fecha sozinha.","This channel is not available.":"Este canal não está disponível.","This stream is protected by DRM and cannot be played here.":"Esta transmissão é protegida por DRM e não pode ser reproduzida aqui.","Tuning...":"Sintonizando...","Hours":"Horas","Wind":"Vento"},"ru":{"_name":"Русский","_dir":"ltr","_pct":79,"%d channels":{"one":"%d канал","few":"%d канала","many":"%d каналов","other":"%d канала"},"%d of %d":"%d из %d","%d of %d on":"%d из %d включено","Added to favourites":"Добавлено в избранное","All":"Все","All channels":"Все каналы","and enter this code:":"и введите этот код:","Back":"Назад","buffer":"буфер","build %s":"сборка %s","Checking why...":"Выясняем причину...","Clear":"Ясно","Clear filters":"Сбросить фильтры","Close":"Закрыть","Country":"Страна","Customise":"Настроить","dropped":"пропущено","Favourite":"Избранное","Favourites":"Избранное","Filters":"Фильтры","frames":"кадры","Guide":"Guide","guide: %s":"программа передач: %s","Language":"Язык","Later":"Позже","Launcher":"Лаунчер","Live TV":"Прямой эфир","Loading channels...":"Загрузка каналов...","never":"никогда","Next":"Далее","No channels match.":"Нет подходящих каналов.","No favourites yet. Press the green button on a channel.":"Избранного пока нет. Нажмите зелёную кнопку на канале.","No guide data":"Нет данных программы","not available":"недоступно","Nothing watched yet.":"Пока ничего не смотрели.","Now":"Сейчас","Off":"Выкл.","On":"Вкл.","Open":"Открыть","Open this address on your phone or computer:":"Откройте этот адрес на телефоне или компьютере:","Press OK to try again.":"Нажмите OK, чтобы попробовать снова.","Quality":"Качество","Recent":"Недавние","refused":"отклонено","reloaded":"перезагружено","Removed from favourites":"Удалено из избранного","Search":"Найти","Search...":"Поиск...","Set up Live TV":"Настроить прямой эфир","Statistics":"Статистика","Stream":"Поток","streams":"потоки","Text":"Текст","The address answers with a web page, not a video.":"Адрес отвечает веб-страницей, а не видео.","The helper is not reachable.":"Служба недоступна.","The server refused the stream: it may be blocked in your country or need special request headers.":"Сервер отклонил поток: возможно, он заблокирован в вашей стране или требует особых заголовков запроса.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"Поток отвечает, но телевизор не смог его воспроизвести: вероятно, формат, который он не умеет декодировать.","The stream is too slow to start.":"Поток слишком долго запускается.","The stream server cannot be reached.":"Сервер потока недоступен.","The stream server reported an error.":"Сервер потока сообщил об ошибке.","The stream was not found (404): the channel is offline or its address has changed.":"Поток не найден (404): канал не в эфире или его адрес изменился.","Then paste your M3U playlist address. This page closes by itself.":"Затем вставьте адрес вашего плейлиста M3U. Эта страница закроется сама.","This channel is not available.":"Этот канал недоступен.","This stream is protected by DRM and cannot be played here.":"Этот поток защищён DRM и здесь не воспроизводится.","Tuning...":"Настройка канала...","Hours":"Часы","Wind":"Ветер"},"tr":{"_name":"Türkçe","_dir":"ltr","_pct":79,"%d channels":"%d kanal","%d of %d":"%d / %d","%d of %d on":"%d / %d açık","Added to favourites":"Favorilere eklendi","All":"Tümü","All channels":"Tüm kanallar","and enter this code:":"ve bu kodu girin:","Back":"Geri","buffer":"tampon","build %s":"derleme %s","Checking why...":"Nedeni araştırılıyor...","Clear":"Açık","Clear filters":"Filtreleri temizle","Close":"Kapat","Country":"Ülke","Customise":"Özelleştir","dropped":"atlandı","Favourite":"Favoriler","Favourites":"Favoriler","Filters":"Filtreler","frames":"kare","Guide":"Rehber","guide: %s":"rehber: %s","Language":"Dil","Later":"Sonra","Launcher":"Başlatıcı","Live TV":"Canlı TV","Loading channels...":"Kanallar yükleniyor...","never":"hiç","Next":"İleri","No channels match.":"Eşleşen kanal yok.","No favourites yet. Press the green button on a channel.":"Henüz favori yok. Bir kanalda yeşil tuşa basın.","No guide data":"Rehber bilgisi yok","not available":"kullanılamıyor","Nothing watched yet.":"Henüz bir şey izlenmedi.","Now":"Şimdi","Off":"Kapalı","On":"Açık","Open":"Aç","Open this address on your phone or computer:":"Bu adresi telefonda veya bilgisayarda açın:","Press OK to try again.":"Tekrar denemek için OK'a basın.","Quality":"Kalite","Recent":"Son","refused":"reddedildi","reloaded":"yeniden yüklendi","Removed from favourites":"Favorilerden kaldırıldı","Search":"Ara","Search...":"Ara...","Set up Live TV":"Canlı TV'yi ayarla","Statistics":"İstatistikler","Stream":"Akış","streams":"akışlar","Text":"Metin","The address answers with a web page, not a video.":"Adres bir video değil, bir web sayfası döndürüyor.","The helper is not reachable.":"Hizmete ulaşılamıyor.","The server refused the stream: it may be blocked in your country or need special request headers.":"Sunucu akışı reddetti: ülkenizde engellenmiş olabilir veya özel istek başlıkları gerektirebilir.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"Akış yanıt veriyor ama TV oynatamadı: büyük olasılıkla çözemediği bir biçim.","The stream is too slow to start.":"Akışın başlaması çok uzun sürüyor.","The stream server cannot be reached.":"Akış sunucusuna ulaşılamıyor.","The stream server reported an error.":"Akış sunucusu bir hata bildirdi.","The stream was not found (404): the channel is offline or its address has changed.":"Akış bulunamadı (404): kanal yayında değil veya adresi değişti.","Then paste your M3U playlist address. This page closes by itself.":"Sonra M3U oynatma listenizin adresini yapıştırın. Bu sayfa kendiliğinden kapanır.","This channel is not available.":"Bu kanal kullanılamıyor.","This stream is protected by DRM and cannot be played here.":"Bu akış DRM korumalı ve burada oynatılamaz.","Tuning...":"Kanal ayarlanıyor...","Hours":"Saatler","Wind":"Rüzgâr"},"vi":{"_name":"Tiếng Việt","_dir":"ltr","_pct":80,"%d channels":{"one":"%d kênh","other":"%d kênh"},"%d of %d":"%d trên %d","%d of %d on":"%d trên %d đang bật","Added to favourites":"Đã thêm vào mục yêu thích","All":"Tất cả","All channels":"Tất cả kênh","and enter this code:":"và nhập mã này:","Back":"Quay lại","buffer":"bộ đệm","build %s":"bản dựng %s","Checking why...":"Đang kiểm tra nguyên nhân...","Clear":"Xóa","Clear filters":"Xóa bộ lọc","Close":"Đóng","Country":"Quốc gia","Customise":"Tùy chỉnh","dropped":"đã bị loại bỏ","Favourite":"Yêu thích","Favourites":"Mục yêu thích","Filters":"Bộ lọc","frames":"khung hình","Guide":"Hướng dẫn chương trình","guide: %s":"hướng dẫn: %s","Language":"Ngôn ngữ","Later":"Để sau","Launcher":"Trình khởi chạy","Live TV":"Truyền hình trực tiếp","Loading channels...":"Đang tải kênh...","never":"không bao giờ","Next":"Tiếp theo","No channels match.":"Không tìm thấy kênh phù hợp.","No favourites yet. Press the green button on a channel.":"Chưa có kênh yêu thích. Nhấn nút màu xanh lá trên một kênh.","No guide data":"Không có dữ liệu hướng dẫn chương trình","not available":"không khả dụng","Nothing watched yet.":"Chưa xem nội dung nào.","Now":"Bây giờ","Off":"Tắt","On":"Bật","Open":"Mở","Open this address on your phone or computer:":"Mở địa chỉ này trên điện thoại hoặc máy tính:","Press OK to try again.":"Nhấn OK để thử lại.","Quality":"Chất lượng","Recent":"Gần đây","refused":"bị từ chối","reloaded":"đã tải lại","Removed from favourites":"Đã xóa khỏi mục yêu thích","Search":"Tìm kiếm","Search...":"Tìm kiếm...","Set up Live TV":"Thiết lập truyền hình trực tiếp","Statistics":"Thống kê","Stream":"Luồng phát","streams":"luồng phát","Text":"Văn bản","The address answers with a web page, not a video.":"Địa chỉ này trả về một trang web, không phải video.","The helper is not reachable.":"Không thể kết nối với dịch vụ hỗ trợ.","The server refused the stream: it may be blocked in your country or need special request headers.":"Máy chủ từ chối luồng phát: nội dung có thể bị chặn tại quốc gia của bạn hoặc cần các tiêu đề yêu cầu đặc biệt.","The stream answers, but the TV could not play it: probably a format it cannot decode.":"Luồng phát có phản hồi nhưng TV không thể phát: có thể định dạng này không được TV giải mã hỗ trợ.","The stream is too slow to start.":"Luồng phát khởi động quá chậm.","The stream server cannot be reached.":"Không thể kết nối với máy chủ luồng phát.","The stream server reported an error.":"Máy chủ luồng phát báo lỗi.","The stream was not found (404): the channel is offline or its address has changed.":"Không tìm thấy luồng phát (404): kênh đang ngoại tuyến hoặc địa chỉ đã thay đổi.","Then paste your M3U playlist address. This page closes by itself.":"Sau đó dán địa chỉ danh sách phát M3U của bạn. Trang này sẽ tự đóng.","This channel is not available.":"Kênh này hiện không khả dụng.","This stream is protected by DRM and cannot be played here.":"Luồng phát này được bảo vệ bằng DRM và không thể phát tại đây.","Tuning...":"Đang dò...","Set up":"Thiết lập","TV":"TV","This plays your own playlist, not the TV’s tuner. For antenna or cable, add a TV button in Customise.":"Tính năng này phát danh sách kênh của riêng bạn, không sử dụng bộ thu sóng của TV. Nếu dùng anten hoặc truyền hình cáp, hãy thêm nút TV trong mục Tùy chỉnh."},"en":{"%d channels":{"one":"%d channel","other":"%d channels"}}};
+/* ---------- language: the pages are written in English and translated where text is shown ----------
+   I18N holds the translations this page uses, from i18n/<language>.json, put in by tools/build-pages.js ({language: {English: text}}).
+   The language is the TV's, unless the manager's Language setting chose another (setLang). t() looks a text up whole, then the parts
+   of a text joined by line breaks or " · ", and fills in templates: "%s" is any text, "%d" a number ("Launcher %s", "%d photos").
+   A text without a translation stays English. A translation can have plural forms, {"one": "%d foto", "other": "%d foto's"}: the
+   form follows the first number in the text, by the language's plural rules (Unicode CLDR: zero, one, two, few, many, other). The
+   English plural forms are in I18N.en. */
+var LANG_TV = String((window.webOSSystem && window.webOSSystem.locale) || navigator.language || 'en')
+    .slice(0, 2)
+    .toLowerCase(),
+  LANG = 'en',
+  LT = null,
+  LTPL = null;
+/* '' or undefined: the TV's language; a language without translations here falls back to English */
+function setLang(code) {
+  var c = code || LANG_TV;
+  LANG = I18N[c] && (c === 'en' || I18N[c]._name) ? c : 'en';
+  LT = I18N[LANG] || null;
+  LTPL = null;
+  if (document.documentElement) {
+    document.documentElement.lang = LANG;
+    /* a right-to-left language (_dir "rtl": Arabic, Hebrew) mirrors the layout; the pages' CSS has the [dir="rtl"] rules */
+    document.documentElement.dir = LT && LT._dir === 'rtl' ? 'rtl' : 'ltr';
+  }
+}
+/* left and right swap places in a right-to-left layout: the arrow keys follow what the eye sees */
+function rtl() {
+  return !!(LT && LT._dir === 'rtl');
+}
+/* the plural form of n in the current language: the browser's rules, or a small table of the same rules for older engines */
+function pluralForm(n) {
+  try {
+    if (window.Intl && Intl.PluralRules) return new Intl.PluralRules(LANG).select(n);
+  } catch (e) {}
+  var i = Math.floor(Math.abs(n)),
+    m10 = i % 10,
+    m100 = i % 100;
+  if (/^(ja|zh|ko|th|vi|id|ms|tr)$/.test(LANG)) return 'other';
+  if (/^(fr|pt)$/.test(LANG)) return i < 2 ? 'one' : 'other';
+  if (/^(ru|uk|be)$/.test(LANG))
+    return m10 === 1 && m100 !== 11 ? 'one' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'few' : 'many';
+  if (LANG === 'pl') return i === 1 ? 'one' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'few' : 'many';
+  if (/^(cs|sk)$/.test(LANG)) return i === 1 ? 'one' : i >= 2 && i <= 4 ? 'few' : 'other';
+  if (LANG === 'ar')
+    return i === 0 ? 'zero' : i === 1 ? 'one' : i === 2 ? 'two' : m100 >= 3 && m100 <= 10 ? 'few' : m100 >= 11 ? 'many' : 'other';
+  if (LANG === 'he') return i === 1 ? 'one' : i === 2 ? 'two' : 'other';
+  return n === 1 ? 'one' : 'other';
+}
+/* a translation, with its plural form picked for n when it has forms */
+function tForm(v, n) {
+  if (typeof v === 'string') return v;
+  if (!v) return '';
+  return (n !== undefined && v[pluralForm(+String(n).replace(',', '.'))]) || v.other || '';
+}
+setLang('');
+/* which capture of a template holds its first number (the plural form follows it) */
+function firstNum(key) {
+  var k = 0,
+    re = /%[sd]/g,
+    x;
+  while ((x = re.exec(key))) {
+    k++;
+    if (x[0] === '%d') return k;
+  }
+  return 1;
+}
+function tTemplates() {
+  if (LTPL) return LTPL;
+  LTPL = [];
+  for (var k in LT)
+    if (k.charAt(0) !== '_' && /%[sd]/.test(k))
+      LTPL.push([
+        new RegExp(
+          '^' +
+            k
+              .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              .replace(/%s/g, '([\\s\\S]+?)')
+              .replace(/%d/g, '([0-9][0-9.,]*)') +
+            '$'
+        ),
+        k,
+        /\n| · /.test(k),
+      ]);
+  LTPL.sort(function (a, b) {
+    return b[1].length - a[1].length;
+  });
+  return LTPL;
+}
+function tTpl(s, joined) {
+  var tp = tTemplates();
+  for (var i = 0; i < tp.length; i++) {
+    if (tp[i][2] !== joined) continue;
+    var m = tp[i][0].exec(s);
+    if (m) {
+      var j = 1,
+        num = /%d/.test(tp[i][1]) ? m[firstNum(tp[i][1])] : undefined;
+      return tForm(LT[tp[i][1]], num).replace(/%[sd]/g, function () {
+        return t(m[j++]);
+      });
+    }
+  }
+  return null;
+}
+function t(s) {
+  if (!LT || s === null || s === undefined || s === '') return s;
+  s = String(s);
+  if (Object.prototype.hasOwnProperty.call(LT, s)) return tForm(LT[s]);
+  var r = tTpl(s, true);
+  if (r !== null) return r;
+  if (s.indexOf('\n') >= 0) return s.split('\n').map(t).join('\n');
+  if (s.indexOf(' · ') >= 0) return s.split(' · ').map(t).join(' · ');
+  r = tTpl(s, false);
+  return r !== null ? r : s;
+}
+/* the manager calls it tr: its code has local variables named t */
+function tr(s) {
+  return t(s);
+}
+/* the languages for the manager's Language list: English and every language this page has, with how complete it is */
+function languages() {
+  var out = [{ code: 'en', name: 'English', pct: 100 }];
+  for (var c in I18N) if (c !== 'en') out.push({ code: c, name: I18N[c]._name || c, pct: I18N[c]._pct || 0 });
+  return out;
+}
+/* ---------- what the launcher's script gave Live TV, for the page of the iptv add-on ----------
+   This page is shown by the launcher in a frame (app/src/js/addons.js, LIVE in live.js there). The launcher tells it what to do with
+   messages ({cytv: 'init' | 'enter' | 'guide' | 'resume' | 'key'}); the page tells the launcher to close it ({cytvAddon: 'close'}). */
+var API = '';
+/* This page is built twice from the same files (tools/build-pages.js): as Live TV (the iptv add-on, the playlist: API /api/live) and as the
+   TV guide of another add-on (the LG tuner: its channels have no stream, the add-on opens them; API /api/addons/<id>). The add-on is known
+   by the address the page is served from. */
+var ADDON = (/\/addon\/([\w-]+)\//.exec(location.pathname) || [])[1] || 'iptv';
+var LIVE_API = ADDON === 'iptv' ? '/api/live' : '/api/addons/' + ADDON;
+var Q = {};
+location.search
+  .replace(/^\?/, '')
+  .split('&')
+  .forEach(function (p) {
+    var i = p.indexOf('=');
+    if (i > 0) Q[p.slice(0, i)] = decodeURIComponent(p.slice(i + 1).replace(/\+/g, ' '));
+  });
+var LOC = Q.loc || undefined; /* the launcher's date and time language */
+var CLOCK = Q.clock || '';
+function $(id) {
+  return document.getElementById(id);
+}
+function api(p, body) {
+  return fetch(API + p, body ? { method: 'POST', body: JSON.stringify(body) } : {}).then(function (x) {
+    return x.json();
+  });
+}
+function perfMark() {}
+var OLDGPU = (function () {
+  var m = /Chrome\/(\d+)/.exec(navigator.userAgent || '');
+  return !!m && +m[1] < 79;
+})();
+function setHtml(el, h) {
+  if (!OLDGPU || !el.parentNode) {
+    el.innerHTML = h;
+    return el;
+  }
+  var n = el.cloneNode(false);
+  n.innerHTML = h;
+  el.parentNode.replaceChild(n, el);
+  return n;
+}
+function clockOpts() {
+  var o = { hour: 'numeric', minute: '2-digit' };
+  if (CLOCK === '24') o.hourCycle = 'h23';
+  else if (CLOCK === '12') {
+    o.hourCycle = 'h12';
+    o.hour = 'numeric';
+  }
+  return o;
+}
+function hsl2rgb(h, s, l) {
+  var a = s * Math.min(l, 1 - l);
+  function f(n) {
+    var k = (n + h / 30) % 12;
+    return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))));
+  }
+  return [f(0), f(8), f(4)];
+}
+function hashHue(id) {
+  var h = 0;
+  for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
+  return h;
+}
+/* the time of the last key: Live TV keeps the pointer from taking the selection back for a moment after one */
+var lastKey = 0;
+setLang(Q.lang || '');
+/* ---------- Live TV (plays the user's M3U playlist in the TV's own video player) ---------- */
+var LIVE_ICON =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130"><rect width="130" height="130" fill="#ef4f5f"/><rect x="25" y="36" width="80" height="54" rx="13" fill="none" stroke="#fff" stroke-width="8"/><path d="M58 52 L58 74 L77 63 Z" fill="#fff"/><path d="M48 104 H82" stroke="#fff" stroke-width="8" stroke-linecap="round"/></svg>'
+  );
+var LIVE = (function () {
+  var chans = [],
+    groups = [],
+    byNum = {},
+    byKey = {},
+    cur = 0,
+    epgNow = {},
+    video = null,
+    variants = [],
+    vi = 0,
+    beginT = 0,
+    pend = false,
+    osdT = 0,
+    numT = 0,
+    numBuf = '',
+    spinT = 0,
+    failed = false,
+    loaded = false,
+    setupT = 0,
+    fetchT = 0;
+  var streams = [],
+    si = 0,
+    reloads = 0,
+    started = false,
+    stallT = 0,
+    playedT = 0,
+    gen = 0,
+    tuneT = 0,
+    toastT = 0,
+    statsT = 0;
+  var S = { fav: [], recent: [], failed: {} },
+    F = { cc: '', lang: '', q: '' },
+    Q = '',
+    fac = { cc: [], lang: [], q: [] },
+    searching = false,
+    stats = false;
+  var L = { open: false, g: 0, col: 'c', ci: 0, list: [] },
+    FP = { open: false, i: 0 },
+    M = { open: false, i: 0, items: [] },
+    o = { on: false };
+  var tuneAt = 0; /* when the channel was chosen, for the timing in perfMark */
+  var START_MS = 15000,
+    STALL_MS = 8000;
+  function lesc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function layer(id, on) {
+    $(id).classList.toggle('on', !!on);
+  }
+  function msg(h) {
+    setHtml($('lv-msg'), h);
+    layer('lv-msg', true);
+  }
+  function toastL(s) {
+    var e = $('lv-toast');
+    e.textContent = s;
+    layer('lv-toast', true);
+    clearTimeout(toastT);
+    toastT = setTimeout(function () {
+      layer('lv-toast', false);
+    }, 2200);
+  }
+  /* A plain .m3u8 address is set as the element's src (the type is not needed); anything else keeps its <source type> variants. */
+  function variantsFor(url) {
+    var v = [];
+    if (/\.m3u8(\?|$)/.test(url)) return [{ src: url, type: '' }];
+    /* An Xtream .ts link plays at once as a plain src (1-2 s); the provider's HLS and a typed .ts on webOS 5/6 only stall until START_MS.
+       They stay as fallbacks (issues 9 and 13). */
+    if (/\/live\/.+\.ts(\?|$)/.test(url)) {
+      v.push({ src: url, type: '' });
+      v.push({ src: url.replace(/\.ts(\?|$)/, '.m3u8$1'), type: 'application/x-mpegURL' });
+      v.push({ src: url, type: 'application/x-mpegURL' });
+      return v;
+    }
+    /* Any other address (often without an extension, e.g. http://host:port/user/pass/8078) also starts as a plain src: typed as HLS
+       first it took about 30 s on webOS 5, plain about 2 s (issue 13). HLS stays as the fallback. */
+    v.push({ src: url, type: '' });
+    v.push({ src: url, type: 'application/x-mpegURL' });
+    return v;
+  }
+
+  /* ---------- what the viewer did (kept in the service) ---------- */
+  function isFav(c) {
+    return S.fav.indexOf(c.key) >= 0;
+  }
+  function post(b) {
+    api(LIVE_API + '/state', b).catch(function () {});
+  }
+  function toggleFav(c) {
+    if (!c || !c.key) return;
+    var on = !isFav(c);
+    S.fav = S.fav.filter(function (k) {
+      return k !== c.key;
+    });
+    if (on) S.fav.unshift(c.key);
+    post({ op: 'fav', key: c.key, on: on });
+    toastL(t(on ? 'Added to favourites' : 'Removed from favourites'));
+    if (L.open) {
+      L.list = listFor(L.g);
+      L.ci = Math.max(0, Math.min(L.ci, L.list.length - 1));
+      drawList();
+    }
+  }
+  function markPlayed(c) {
+    if (!c || !c.key) return;
+    S.recent = [c.key]
+      .concat(
+        S.recent.filter(function (k) {
+          return k !== c.key;
+        })
+      )
+      .slice(0, 30);
+    post({ op: 'recent', key: c.key });
+    if (S.failed[c.key]) {
+      delete S.failed[c.key];
+      post({ op: 'failed', key: c.key, on: false });
+    }
+  }
+
+  /* ---------- the player: one <video>, several streams per channel, tuning screen, recovery ---------- */
+  /* One <video> element for the whole session: creating and destroying it on every channel change makes the TV rebuild its video plane. */
+  var lastTime = -1,
+    lastProgressAt = 0 /* when the picture time last moved, for the stall watchdog */,
+    progressT = 0,
+    healthyT = 0;
+  /* Some TVs (webOS 25) freeze a stream without a 'waiting' event, so nothing armed the stall timer (issue 109): a started stream whose
+     picture time has not moved for STALL_MS is reloaded by stalled(), as after 'waiting'. When 'waiting' fires first, startVariant() has
+     reset 'started' by then and this does nothing. */
+  function watchProgress() {
+    if (!started || pend || !video || video.paused || video.ended || document.hidden) return;
+    if (lastProgressAt && Date.now() - lastProgressAt >= STALL_MS) {
+      lastProgressAt = Date.now();
+      stalled();
+    }
+  }
+  function ensureVideo() {
+    if (video) return video;
+    var v = document.createElement('video');
+    v.autoplay = true;
+    video = v;
+    /* Not every TV fires 'playing' again after 'waiting' (or at all for some streams), so moving picture time counts as playing too */
+    function onPlaying() {
+      clearTimeout(spinT);
+      clearTimeout(stallT);
+      lastProgressAt = Date.now();
+      layer('lv-spin', false);
+      layer('lv-tune', false);
+      if (!started) {
+        started = true;
+        /* after half a minute of playing the one reload a stall gets is available again: a freeze every few hours is not a dead stream */
+        clearTimeout(healthyT);
+        healthyT = setTimeout(function () {
+          reloads = 0;
+        }, 30000);
+        perfMark('live playing ' + (Date.now() - tuneAt) + ' variant ' + vi + (variants[vi] && variants[vi].type ? ' typed' : ' src'));
+        clearTimeout(playedT);
+        var c = byNum[cur];
+        playedT = setTimeout(function () {
+          markPlayed(c);
+        }, 3000);
+      }
+    }
+    v.addEventListener('playing', onPlaying);
+    v.addEventListener('timeupdate', function () {
+      if (v.currentTime !== lastTime) {
+        lastTime = v.currentTime;
+        if (v.currentTime > 0) onPlaying();
+      }
+    });
+    v.addEventListener('waiting', function () {
+      layer('lv-spin', true);
+      if (started) {
+        clearTimeout(stallT);
+        stallT = setTimeout(stalled, STALL_MS);
+      }
+    });
+    /* capture: a failing <source> reports on the <source>, and that event does not bubble; an old, removed <source> is ignored */
+    v.addEventListener(
+      'error',
+      function (e) {
+        if (e.target === v || e.target.parentNode === v) onError();
+      },
+      true
+    );
+    $('lv-stage').appendChild(v);
+    progressT = setInterval(watchProgress, 1000);
+    return v;
+  }
+  function release() {
+    clearTimeout(spinT);
+    clearTimeout(beginT);
+    clearTimeout(stallT);
+    clearTimeout(playedT);
+    clearTimeout(tuneT);
+    clearTimeout(healthyT);
+    clearInterval(progressT);
+    progressT = 0;
+    pend = false;
+    if (video) {
+      try {
+        video.pause();
+        video.removeAttribute('src');
+        while (video.firstChild) video.removeChild(video.firstChild);
+        video.load();
+      } catch (e) {}
+      if (video.parentNode) video.parentNode.removeChild(video);
+      video = null;
+    }
+  }
+  function tuneText() {
+    var c = byNum[cur];
+    return t('Tuning...') + (streams.length > 1 ? '  ' + t('Stream') + ' ' + (si + 1) + '/' + streams.length : '');
+  }
+  function showTune() {
+    var c = byNum[cur];
+    $('lv-tune').textContent = (c ? c.name + '  ' : '') + tuneText();
+    layer('lv-tune', true);
+  }
+  function stalled() {
+    /* a live stream that stopped: reload it once, then move on */
+    if (!video || pend || !started) return;
+    if (reloads < 1) {
+      reloads++;
+      startVariant();
+    } else onError();
+  }
+  function onError() {
+    if (!video || pend) return;
+    if (vi < variants.length - 1) {
+      vi++;
+      startVariant();
+      return;
+    }
+    if (si < streams.length - 1) {
+      si++;
+      reloads = 0;
+      variants = variantsFor(streams[si].url);
+      vi = 0;
+      startVariant();
+      return;
+    } /* the channel's next stream */
+    giveUp();
+  }
+  function startVariant() {
+    clearTimeout(spinT);
+    clearTimeout(stallT);
+    clearTimeout(healthyT);
+    pend = false;
+    started = false;
+    lastTime = -1;
+    lastProgressAt = 0;
+    var v = ensureVideo(),
+      d = variants[vi];
+    layer('lv-spin', true);
+    showTune();
+    while (v.firstChild) v.removeChild(v.firstChild);
+    if (!d.type) {
+      v.src = d.src;
+    } else {
+      v.removeAttribute('src');
+      var src = document.createElement('source');
+      src.src = d.src;
+      src.type = d.type;
+      v.appendChild(src);
+      v.load();
+    }
+    spinT = setTimeout(function () {
+      if (v === video && !started && !failed && !(v.readyState >= 3 && !v.paused)) onError();
+    }, START_MS);
+  }
+  var WHY = {
+    refused: 'The server refused the stream: it may be blocked in your country or need special request headers.',
+    gone: 'The stream was not found (404): the channel is offline or its address has changed.',
+    server: 'The stream server reported an error.',
+    notvideo: 'The address answers with a web page, not a video.',
+    drm: 'This stream is protected by DRM and cannot be played here.',
+    unreachable: 'The stream server cannot be reached.',
+    slow: 'The stream is too slow to start.',
+    ok: 'The stream answers, but the TV could not play it: probably a format it cannot decode.',
+    unknown: 'This channel is not available.',
+  };
+  function giveUp() {
+    clearTimeout(spinT);
+    clearTimeout(stallT);
+    layer('lv-spin', false);
+    layer('lv-tune', false);
+    failed = true;
+    var c = byNum[cur],
+      g = gen;
+    if (!c) return;
+    if (c.key && !S.failed[c.key]) {
+      S.failed[c.key] = Date.now();
+      post({ op: 'failed', key: c.key, on: true });
+    }
+    var head = '<b>' + lesc(c.name) + '</b>',
+      tail = '<div class="small">' + t('Press OK to try again.') + '</div>';
+    msg(head + '<div>' + t('This channel is not available.') + '</div><div class="small">' + t('Checking why...') + '</div>');
+    api(LIVE_API + '/probe?key=' + encodeURIComponent(c.key) + '&i=0').then(
+      function (r) {
+        if (g !== gen || !failed) return;
+        msg(head + '<div>' + t(WHY[r.reason] || WHY.unknown) + '</div>' + tail);
+      },
+      function () {
+        if (g === gen && failed) msg(head + '<div>' + t(WHY.unknown) + '</div>' + tail);
+      }
+    );
+  }
+  /* defer: while zapping (Up/Down) the new channel starts only once the keys have paused, so skipped channels never reach the provider */
+  /* a channel with no stream address (the LG tuner's) is opened by the add-on that brought it (LG's Live TV on that channel), and this page
+     steps aside. The guide lists it and shows its programmes like any other channel. */
+  function openChannel(c) {
+    api(LIVE_API + '/open', { id: c.id }).then(
+      function (r) {
+        if (r && r.error) toastL(t(r.error));
+        else o.exit();
+      },
+      function () {
+        toastL(t('The helper is not reachable.'));
+      }
+    );
+  }
+  /* the channel to play when the page opens: the last one, or the first that has a stream */
+  function firstPlayable(pref) {
+    if (byNum[pref] && byNum[pref].url) return pref;
+    for (var i = 0; i < chans.length; i++) if (chans[i].url) return chans[i].num;
+    return 0;
+  }
+  function play(num, quiet, defer) {
+    var c = byNum[num];
+    if (!c) return;
+    if (!c.url) return openChannel(c);
+    gen++;
+    cur = num;
+    try {
+      localStorage.setItem('live.last', String(num));
+    } catch (e) {}
+    tuneAt = Date.now();
+    streams = [{ url: c.url, q: c.q }].concat(c.alt);
+    si = 0;
+    reloads = 0;
+    failed = false;
+    variants = variantsFor(c.url);
+    vi = 0;
+    layer('lv-msg', false);
+    clearTimeout(beginT);
+    clearTimeout(spinT);
+    clearTimeout(stallT);
+    clearTimeout(playedT);
+    if (defer) {
+      pend = true;
+      if (video) {
+        try {
+          video.pause();
+        } catch (e) {}
+      }
+      layer('lv-spin', true);
+      showTune();
+      beginT = setTimeout(function () {
+        startVariant();
+        loadEpg([c.id]);
+      }, defer);
+    } else {
+      startVariant();
+      loadEpg([c.id]);
+    }
+    if (!quiet) showOsd();
+    else fillOsd();
+  }
+  function pickStream(i) {
+    var c = byNum[cur];
+    if (!c || i < 0 || i >= streams.length) return;
+    gen++;
+    failed = false;
+    si = i;
+    reloads = 0;
+    variants = variantsFor(streams[si].url);
+    vi = 0;
+    layer('lv-msg', false);
+    startVariant();
+  }
+
+  /* ---------- the banner ---------- */
+  function hm(ts) {
+    var d = new Date(ts * 1000);
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+  function facts(c) {
+    var a = [];
+    if (c.cc) a.push(cname(c.cc));
+    if (c.lang) a.push(c.lang);
+    if (c.q) a.push(c.q);
+    if (c.alt.length) a.push(c.alt.length + 1 + ' ' + t('streams'));
+    return a.join('  ·  ');
+  }
+  function fillOsd() {
+    var c = byNum[cur];
+    if (!c) return;
+    $('lv-onum').textContent = c.num;
+    $('lv-oname').textContent = c.name;
+    var lg = $('lv-ologo');
+    if (c.logo) {
+      lg.src = c.logo;
+      lg.style.display = '';
+    } else lg.style.display = 'none';
+    var e = epgNow[c.id],
+      now = Math.floor(Date.now() / 1000),
+      f = facts(c);
+    if (e && e.now) {
+      $('lv-onow').textContent = hm(e.now[0]) + '  ' + e.now[2];
+      $('lv-obar').style.width = Math.max(0, Math.min(100, ((now - e.now[0]) / (e.now[1] - e.now[0])) * 100)) + '%';
+    } else {
+      $('lv-onow').textContent = e ? '' : t('No guide data');
+      $('lv-obar').style.width = '0';
+    }
+    $('lv-onext').textContent = e && e.next ? t('Next') + '  ' + hm(e.next[0]) + '  ' + e.next[2] : f;
+    $('lv-ofacts').textContent = e && e.next ? f : '';
+  }
+  function showOsd() {
+    fillOsd();
+    layer('lv-osd', true);
+    clearTimeout(osdT);
+    osdT = setTimeout(function () {
+      layer('lv-osd', false);
+    }, 5500);
+  }
+  function loadEpg(ids, cb) {
+    ids = ids.filter(function (i) {
+      return i;
+    });
+    if (!ids.length) {
+      cb && cb();
+      return;
+    }
+    api(LIVE_API + '/epg?ids=' + encodeURIComponent(ids.join(',')))
+      .then(function (x) {
+        for (var k in x) epgNow[k] = x[k];
+        if (byNum[cur] && ids.indexOf(byNum[cur].id) >= 0) fillOsd();
+        cb && cb();
+      })
+      .catch(function () {
+        cb && cb();
+      });
+  }
+  setInterval(function () {
+    if (o.on && byNum[cur]) loadEpg([byNum[cur].id]);
+  }, 30000);
+
+  /* ---------- the guide: tabs, favourites, recents, filters, search ---------- */
+  var full = {};
+  function cname(code) {
+    try {
+      if (window.Intl && Intl.DisplayNames) {
+        var n = new Intl.DisplayNames([LOC], { type: 'region' }).of(code);
+        if (n && n !== code) return n;
+      }
+    } catch (e) {}
+    return code;
+  }
+  function passes(c) {
+    if (F.cc && c.cc !== F.cc) return false;
+    if (F.lang && c.lang !== F.lang) return false;
+    if (F.q && c.q !== F.q) return false;
+    if (Q) {
+      var s = (c.name + ' ' + c.cc + ' ' + cname(c.cc || '') + ' ' + c.lang + ' ' + c.cats.join(' ')).toLowerCase();
+      if (s.indexOf(Q) < 0) return false;
+    }
+    return true;
+  }
+  function baseList(g) {
+    if (g === 0) return chans;
+    if (g === 1)
+      return S.fav
+        .map(function (k) {
+          return byKey[k];
+        })
+        .filter(Boolean);
+    if (g === 2)
+      return S.recent
+        .map(function (k) {
+          return byKey[k];
+        })
+        .filter(Boolean);
+    var n = groups[g - 3];
+    return chans.filter(function (c) {
+      return c.cats.indexOf(n) >= 0;
+    });
+  }
+  function listFor(g) {
+    return baseList(g).filter(passes);
+  }
+  function tabNames() {
+    return [t('All channels'), t('Favourites'), t('Recent')].concat(groups);
+  }
+  function gcolor() {
+    var n = tabNames()[L.g],
+      c = hsl2rgb(hashHue(n), 0.5, 0.42);
+    $('lv-glow').style.setProperty('--c', c.join(','));
+  }
+  function openList() {
+    L.open = true;
+    var c = byNum[cur];
+    L.g = 0;
+    if (c && c.cats[0]) {
+      var gi = groups.indexOf(c.cats[0]);
+      if (gi >= 0) L.g = gi + 3;
+    }
+    L.list = listFor(L.g);
+    L.ci = Math.max(0, L.list.indexOf(c));
+    drawList();
+    $('lv').classList.add('gd');
+    layer('lv-guide', true);
+    fetchVisible();
+  }
+  function closeList() {
+    L.open = false;
+    endSearch(false);
+    FP.open = false;
+    layer('lv-filter', false);
+    $('lv').classList.remove('gd');
+    layer('lv-guide', false);
+  }
+  function pct(p, now) {
+    return Math.max(0, Math.min(100, ((now - p[0]) / (p[1] - p[0])) * 100));
+  }
+  var STAR = '<svg class="st" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .6-5.3 4.7 1.7 7.2L12 17.8 5.6 21.5l1.7-7.2L2 9.6 9 9z"/></svg>';
+  function badges(c) {
+    var h = '';
+    if (isFav(c)) h += STAR;
+    if (c.q) h += '<span class="bd">' + c.q + '</span>';
+    if (c.fl & 1) h += '<span class="bd w">GEO</span>';
+    if (c.fl & 2) h += '<span class="bd w">NOT 24/7</span>';
+    if (c.fl & 4) h += '<span class="bd w">HEADERS</span>';
+    if (c.alt.length) h += '<span class="bd">×' + (c.alt.length + 1) + '</span>';
+    if (c.key && S.failed[c.key]) h += '<span class="bd w">!</span>';
+    return h ? '<div class="bds">' + h + '</div>' : '';
+  }
+  function filterText() {
+    var a = [];
+    if (F.cc) a.push(cname(F.cc));
+    if (F.lang) a.push(F.lang);
+    if (F.q) a.push(F.q);
+    if (Q) a.push('“' + Q + '”');
+    return a.join('  ·  ');
+  }
+  function drawList(keepWindow) {
+    var now = Math.floor(Date.now() / 1000),
+      names = tabNames();
+    $('lv-gtitle').textContent = ADDON === 'iptv' ? t('Live TV') : t('TV guide');
+    var d = new Date(),
+      tabs = '';
+    if (L.g > 0)
+      tabs +=
+        '<div class="ctab m" data-g="' +
+        (L.g - 1) +
+        '">‹</div><div class="ctab" data-g="' +
+        (L.g - 1) +
+        '">' +
+        lesc(names[L.g - 1]) +
+        '</div>';
+    tabs += '<div class="ctab on">' + lesc(names[L.g]) + '</div>';
+    if (L.g < names.length - 1)
+      tabs +=
+        '<div class="ctab" data-g="' +
+        (L.g + 1) +
+        '">' +
+        lesc(names[L.g + 1]) +
+        '</div><div class="ctab m" data-g="' +
+        (L.g + 1) +
+        '">›</div>';
+    var ft = filterText();
+    if (ft) tabs += '<div class="ctab f">' + lesc(t('Filters') + ': ' + ft) + '</div>';
+    setHtml($('lv-gtabs'), tabs);
+    $('lv-gclock').textContent = d.toLocaleTimeString(LOC, clockOpts());
+    gcolor();
+    var N = 7,
+      cs = Math.max(0, Math.min(L.ci - 3, L.list.length - N)),
+      h = '';
+    if (keepWindow && L.cs !== undefined) cs = Math.max(0, Math.min(L.cs, L.list.length - N)); // hovering must not slide the rows under the pointer
+    L.cs = cs;
+    for (var j = cs; j < Math.min(L.list.length, cs + N); j++) {
+      var c = L.list[j],
+        e = epgNow[c.id],
+        pn = e && e.now;
+      h +=
+        '<div class="crow' +
+        (j === L.ci ? ' f' : '') +
+        (c.num === cur ? ' cur' : '') +
+        '" data-j="' +
+        j +
+        '"><div class="n">' +
+        c.num +
+        '</div>' +
+        (c.logo ? '<img class="lg" src="' + lesc(c.logo) + '" alt="">' : '<div class="lg"></div>') +
+        '<div class="t"><div class="nm">' +
+        lesc(c.name) +
+        '</div><div class="nw">' +
+        (pn ? lesc(hm(pn[0]) + '  ' + pn[2]) : e ? '' : lesc(t('No guide data'))) +
+        '</div>' +
+        (pn ? '<div class="pbar"><i style="width:' + pct(pn, now) + '%"></i></div>' : '') +
+        '</div>' +
+        badges(c) +
+        '</div>';
+    }
+    if (!L.list.length)
+      h =
+        '<div class="empty">' +
+        lesc(
+          t(
+            L.g === 1 && !S.fav.length
+              ? 'No favourites yet. Press the green button on a channel.'
+              : L.g === 2 && !S.recent.length
+                ? 'Nothing watched yet.'
+                : 'No channels match.'
+          )
+        ) +
+        '</div>';
+    setHtml($('lv-rows'), h);
+    drawDetail();
+  }
+  function drawDetail() {
+    var c = L.list[L.ci];
+    if (!c) {
+      setHtml($('lv-detail'), '');
+      return;
+    }
+    var f = full[c.id],
+      now = Math.floor(Date.now() / 1000),
+      h =
+        '<div class="dn">' +
+        lesc(c.name) +
+        '</div><div class="dg">' +
+        lesc(c.cats.join(', ')) +
+        '</div><div class="dg">' +
+        lesc(facts(c)) +
+        '</div>';
+    if (f && f.list && f.list.length) {
+      var p = f.list[0],
+        live = p[0] <= now;
+      h +=
+        '<div class="card"><div class="dt">' +
+        lesc(hm(p[0]) + ' – ' + hm(p[1])) +
+        '</div><div class="dp">' +
+        lesc(p[2]) +
+        '</div>' +
+        (p[3] ? '<div class="dd">' + lesc(p[3]) + '</div>' : '') +
+        (live ? '<div class="pbar"><i style="width:' + pct(p, now) + '%"></i></div>' : '') +
+        '</div>';
+      if (f.list.length > 1) {
+        h += '<h3>' + t('Later') + '</h3>';
+        for (var i = 1; i < Math.min(5, f.list.length); i++)
+          h += '<div class="up"><div class="tm">' + hm(f.list[i][0]) + '</div><div class="tt">' + lesc(f.list[i][2]) + '</div></div>';
+      }
+    } else h += '<div class="card"><div class="dt">' + lesc(f ? t('No guide data') : '…') + '</div></div>';
+    setHtml($('lv-detail'), h);
+  }
+  function fetchVisible() {
+    clearTimeout(fetchT);
+    fetchT = setTimeout(function () {
+      var cs = Math.max(0, Math.min(L.ci - 3, L.list.length - 7)),
+        ids = L.list
+          .slice(cs, cs + 7)
+          .map(function (c) {
+            return c.id;
+          })
+          .filter(function (i) {
+            return i && !epgNow[i];
+          });
+      if (ids.length)
+        loadEpg(ids, function () {
+          if (L.open) drawList();
+        });
+      var c = L.list[L.ci];
+      if (c && c.id && !full[c.id])
+        api(LIVE_API + '/epg?full=1&ids=' + encodeURIComponent(c.id))
+          .then(function (x) {
+            full[c.id] = x[c.id] || { list: [] };
+            if (L.open) drawDetail();
+          })
+          .catch(function () {});
+    }, 160);
+  }
+  function relist() {
+    L.list = listFor(L.g);
+    L.ci = 0;
+    drawList();
+    fetchVisible();
+  }
+
+  /* search: the TV's own keyboard types into an input; the list follows what is typed */
+  function startSearch() {
+    searching = true;
+    if (L.g > 2) {
+      L.g = 0;
+      L.list = listFor(0);
+      L.ci = 0;
+      drawList();
+    } /* a search looks through all channels, not one category */
+    var i = $('lv-search');
+    i.value = Q;
+    i.placeholder = t('Search...');
+    i.style.display = 'block';
+    i.focus();
+  }
+  function endSearch(keep) {
+    if (!searching) return;
+    searching = false;
+    var i = $('lv-search');
+    if (!keep) {
+      Q = '';
+      i.value = '';
+    }
+    i.style.display = 'none';
+    i.blur();
+    if (L.open) relist();
+  }
+  $('lv-search').addEventListener('input', function () {
+    Q = this.value.trim().toLowerCase();
+    if (L.open) relist();
+  });
+
+  /* filters */
+  function fvals(k) {
+    return [''].concat(fac[k]);
+  }
+  function filterRows() {
+    return [
+      { k: 'cc', label: t('Country'), val: F.cc ? cname(F.cc) : t('All') },
+      { k: 'lang', label: t('Language'), val: F.lang || t('All') },
+      { k: 'q', label: t('Quality'), val: F.q || t('All') },
+      { k: 'clear', label: t('Clear filters'), val: '' },
+    ];
+  }
+  function drawFilter() {
+    var r = filterRows(),
+      h = '<h3>' + lesc(t('Filters')) + '</h3>';
+    for (var i = 0; i < r.length; i++)
+      h +=
+        '<div class="mrow' +
+        (i === FP.i ? ' f' : '') +
+        '" data-i="' +
+        i +
+        '"><div class="ml">' +
+        lesc(r[i].label) +
+        '</div><div class="mv">' +
+        (r[i].k === 'clear' ? '' : '‹ ') +
+        lesc(r[i].val) +
+        (r[i].k === 'clear' ? '' : ' ›') +
+        '</div></div>';
+    setHtml($('lv-filter'), h);
+  }
+  function stepFilter(k, d) {
+    var v = fvals(k),
+      i = v.indexOf(F[k]);
+    i = (i + d + v.length) % v.length;
+    F[k] = v[i];
+    relist();
+    drawFilter();
+  }
+  function filterKey(k) {
+    if (k === 38) {
+      if (FP.i > 0) FP.i--;
+    } else if (k === 40) {
+      if (FP.i < 3) FP.i++;
+    } else if (k === 37 || k === 39) {
+      var r = filterRows()[FP.i];
+      if (r.k !== 'clear') stepFilter(r.k, k === 37 ? -1 : 1);
+      return;
+    } else if (k === 13) {
+      var r2 = filterRows()[FP.i];
+      if (r2.k === 'clear') {
+        F = { cc: '', lang: '', q: '' };
+        relist();
+      } else FP.open = false;
+    } else if (k === 405 || k === 461 || k === 27 || k === 8) {
+      FP.open = false;
+    }
+    if (!FP.open) {
+      layer('lv-filter', false);
+      drawList();
+      return;
+    }
+    drawFilter();
+  }
+
+  /* the player menu (Yellow while watching) */
+  function menuItems() {
+    var c = byNum[cur],
+      it = [
+        {
+          label: t('Favourite'),
+          sub: t(isFav(c) ? 'On' : 'Off'),
+          fn: function () {
+            toggleFav(c);
+            drawMenu();
+          },
+        },
+      ];
+    if (streams.length > 1)
+      streams.forEach(function (s, i) {
+        it.push({
+          label: t('Stream') + ' ' + (i + 1) + (s.q ? '  ' + s.q : ''),
+          sub: i === si ? '✓' : '',
+          fn: function () {
+            M.open = false;
+            layer('lv-menu', false);
+            pickStream(i);
+          },
+        });
+      });
+    it.push({
+      label: t('Statistics'),
+      sub: t(stats ? 'On' : 'Off'),
+      fn: function () {
+        setStats(!stats);
+        drawMenu();
+      },
+    });
+    it.push({
+      label: t('Close'),
+      sub: '',
+      fn: function () {
+        M.open = false;
+        layer('lv-menu', false);
+      },
+    });
+    return it;
+  }
+  function drawMenu() {
+    M.items = menuItems();
+    if (M.i >= M.items.length) M.i = M.items.length - 1;
+    var h = '<h3>' + lesc(byNum[cur].name) + '</h3>';
+    for (var i = 0; i < M.items.length; i++)
+      h +=
+        '<div class="mrow' +
+        (i === M.i ? ' f' : '') +
+        '" data-i="' +
+        i +
+        '"><div class="ml">' +
+        lesc(M.items[i].label) +
+        '</div><div class="mv">' +
+        lesc(M.items[i].sub) +
+        '</div></div>';
+    setHtml($('lv-menu'), h);
+  }
+  function openMenu() {
+    M.open = true;
+    M.i = 0;
+    drawMenu();
+    layer('lv-menu', true);
+  }
+  function menuKey(k) {
+    if (k === 38) {
+      if (M.i > 0) M.i--;
+    } else if (k === 40) {
+      if (M.i < M.items.length - 1) M.i++;
+    } else if (k === 13) {
+      M.items[M.i].fn();
+      return;
+    } else if (k === 405 || k === 461 || k === 27 || k === 8) {
+      M.open = false;
+      layer('lv-menu', false);
+      return;
+    }
+    drawMenu();
+  }
+
+  /* statistics (Blue while watching): what the TV tells a web page about the picture */
+  function statsText() {
+    var v = video;
+    if (!v) return '';
+    var q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : null,
+      ahead = 0;
+    try {
+      if (v.buffered && v.buffered.length) ahead = v.buffered.end(v.buffered.length - 1) - v.currentTime;
+    } catch (e) {}
+    return (
+      (v.videoWidth ? v.videoWidth + '×' + v.videoHeight : 'no picture') +
+      '\n' +
+      t('buffer') +
+      ' ' +
+      ahead.toFixed(1) +
+      ' s\n' +
+      (q ? t('frames') + ' ' + q.totalVideoFrames + ', ' + t('dropped') + ' ' + q.droppedVideoFrames + '\n' : '') +
+      t('Stream') +
+      ' ' +
+      (si + 1) +
+      '/' +
+      streams.length +
+      (reloads ? '  (' + t('reloaded') + ')' : '')
+    );
+  }
+  function setStats(on) {
+    stats = on;
+    clearInterval(statsT);
+    layer('lv-stats', on);
+    if (on) {
+      $('lv-stats').textContent = statsText();
+      statsT = setInterval(function () {
+        $('lv-stats').textContent = statsText();
+      }, 1000);
+    }
+  }
+
+  function digit(d) {
+    numBuf += d;
+    if (numBuf.length > 5) numBuf = numBuf.slice(-5);
+    $('lv-numin').textContent = numBuf;
+    layer('lv-numin', true);
+    clearTimeout(numT);
+    numT = setTimeout(function () {
+      var n = parseInt(numBuf, 10);
+      numBuf = '';
+      layer('lv-numin', false);
+      if (byNum[n]) play(n);
+      else showOsd();
+    }, 1800);
+  }
+  function setup() {
+    api(LIVE_API + '/pair', {}).then(function (p) {
+      msg(
+        '<b>' +
+          t('Set up Live TV') +
+          '</b><div>' +
+          t('Open this address on your phone or computer:') +
+          '</div><b>' +
+          lesc(p.url) +
+          '</b><div>' +
+          t('and enter this code:') +
+          '</div><b>' +
+          lesc(p.code) +
+          '</b><div class="small">' +
+          t('Then paste your M3U playlist address. This page closes by itself.') +
+          '</div>' +
+          '<div class="small">' +
+          t('This plays your own playlist, not the TV\u2019s tuner. For antenna or cable, add a TV button in Customise.') +
+          '</div>'
+      );
+      clearInterval(setupT);
+      setupT = setInterval(function () {
+        if (!o.on) {
+          clearInterval(setupT);
+          return;
+        }
+        api(LIVE_API + '/status').then(function (s) {
+          if (s.configured) {
+            clearInterval(setupT);
+            boot();
+          }
+        });
+      }, 2500);
+    });
+  }
+  function facets() {
+    function top(k) {
+      var n = {};
+      chans.forEach(function (c) {
+        if (c[k]) n[c[k]] = (n[c[k]] || 0) + 1;
+      });
+      return Object.keys(n)
+        .sort(function (a, b) {
+          return n[b] - n[a] || (a < b ? -1 : 1);
+        })
+        .slice(0, 40);
+    }
+    fac = {
+      cc: top('cc'),
+      lang: top('lang'),
+      q: ['SD', 'HD', 'FHD', '4K'].filter(function (q) {
+        return chans.some(function (c) {
+          return c.q === q;
+        });
+      }),
+    };
+  }
+  function boot() {
+    msg('<div>' + t('Loading channels...') + '</div>');
+    api(LIVE_API + '/status')
+      .then(function (s) {
+        if (!s.configured) {
+          setup();
+          return;
+        }
+        var tries = 0;
+        (function load() {
+          if (!o.on) return;
+          api(LIVE_API + '/channels').then(function (x) {
+            if (!x.channels.length) {
+              if (++tries > 40) {
+                msg('<div>' + lesc(s.error || 'No channels') + '</div>');
+                return;
+              }
+              setTimeout(load, 2000);
+              return;
+            }
+            groups = x.groups;
+            chans = x.channels.map(function (r) {
+              return {
+                num: r[0],
+                id: r[1],
+                name: r[2],
+                group: r[3],
+                logo: r[4],
+                url: r[5],
+                key: r[6] || '',
+                cc: r[7] || '',
+                lang: r[8] || '',
+                q: r[9] || '',
+                fl: r[10] || 0,
+                cats: r[11] || (r[3] ? [r[3]] : []),
+                alt: (r[12] || []).map(function (a) {
+                  return { url: a[0], q: a[1] };
+                }),
+              };
+            });
+            byNum = {};
+            byKey = {};
+            chans.forEach(function (c) {
+              byNum[c.num] = c;
+              if (c.key) byKey[c.key] = c;
+            });
+            loaded = true;
+            facets();
+            var last = 0;
+            try {
+              last = parseInt(localStorage.getItem('live.last'), 10);
+            } catch (e) {}
+            api(LIVE_API + '/state')
+              .then(
+                function (st) {
+                  S = { fav: st.fav || [], recent: st.recent || [], failed: st.failed || {} };
+                },
+                function () {}
+              )
+              .then(function () {
+                layer('lv-msg', false);
+                var first = firstPlayable(last);
+                if (first) play(first);
+                /* nothing to play (a guide of channels the add-on opens): the guide is all there is to show */
+                if (guideNext || !first) {
+                  guideNext = false;
+                  openList();
+                }
+              });
+          });
+        })();
+      })
+      .catch(function () {
+        msg('<div>' + t('The helper is not reachable.') + '</div>');
+        setTimeout(function () {
+          if (o.on) boot();
+        }, 3000);
+      });
+  }
+  function step(d) {
+    var i = chans.indexOf(byNum[cur]),
+      n = chans.length;
+    /* Up and Down zap through the channels that have a stream */
+    for (var k = 0; k < n; k++) {
+      i = (i + d + n) % n;
+      if (chans[i].url) {
+        play(chans[i].num, false, 180);
+        return;
+      }
+    }
+  }
+  var guideNext = false;
+  o.enter = function (guide) {
+    o.on = true;
+    guideNext = !!guide;
+    $('lv').classList.add('on');
+    if (loaded && byNum[cur]) {
+      play(cur);
+      if (guideNext) {
+        guideNext = false;
+        openList();
+      }
+    } else boot();
+  };
+  /* playback the TV paused while it hid the window for a moment (see liveGuard in input.js) */
+  o.resume = function () {
+    if (o.on && video && video.paused) {
+      try {
+        var r = video.play();
+        if (r && r.catch) r.catch(function () {});
+      } catch (e) {}
+    }
+  };
+  o.toggleGuide = function () {
+    if (!loaded) return;
+    if (L.open) closeList();
+    else {
+      M.open = false;
+      layer('lv-menu', false);
+      openList();
+    }
+  };
+  o.exit = function () {
+    o.on = false;
+    closeList();
+    M.open = false;
+    layer('lv-menu', false);
+    setStats(false);
+    full = {};
+    release();
+    clearTimeout(osdT);
+    clearTimeout(numT);
+    clearTimeout(toastT);
+    clearInterval(setupT);
+    layer('lv-osd', false);
+    layer('lv-numin', false);
+    layer('lv-msg', false);
+    layer('lv-spin', false);
+    layer('lv-tune', false);
+    layer('lv-toast', false);
+    $('lv').classList.remove('on');
+    if (o.leave) o.leave(); /* the page asks the launcher to close its frame (js/start.js) */
+  };
+  o.key = function (e) {
+    var k = e.keyCode;
+    if (searching) {
+      /* the input has the keys; only Enter and Back are ours */
+      if (k === 13) {
+        e.preventDefault();
+        endSearch(true);
+      } else if (k === 461 || k === 27) {
+        e.preventDefault();
+        if (Q) endSearch(false);
+        else endSearch(true);
+      }
+      return;
+    }
+    e.preventDefault();
+    if (!loaded) {
+      if (k === 461 || k === 27 || k === 8) o.exit();
+      return;
+    }
+    if (FP.open) {
+      filterKey(k);
+      return;
+    }
+    if (M.open) {
+      menuKey(k);
+      return;
+    }
+    if (L.open) {
+      var n7 = 7;
+      if (k === 38) {
+        if (L.ci > 0) L.ci--;
+      } else if (k === 40) {
+        if (L.ci < L.list.length - 1) L.ci++;
+      } else if (k === 33 || k === 427) {
+        L.ci = Math.max(0, L.ci - n7);
+      } else if (k === 34 || k === 428) {
+        L.ci = Math.min(L.list.length - 1, L.ci + n7);
+      } else if (k === 37) {
+        if (L.g > 0) {
+          L.g--;
+          L.list = listFor(L.g);
+          L.ci = 0;
+        }
+      } else if (k === 39) {
+        if (L.g < groups.length + 2) {
+          L.g++;
+          L.list = listFor(L.g);
+          L.ci = 0;
+        }
+      } else if (k === 13) {
+        if (L.list[L.ci]) {
+          var n = L.list[L.ci].num;
+          closeList();
+          play(n);
+          return;
+        }
+      } else if (k === 458) {
+        closeList();
+        return;
+      } else if (k === 404) {
+        toggleFav(L.list[L.ci]);
+        return;
+      } else if (k === 405) {
+        FP.open = true;
+        FP.i = 0;
+        drawFilter();
+        layer('lv-filter', true);
+        return;
+      } else if (k === 403) {
+        startSearch();
+        return;
+      } else if (k === 461 || k === 27 || k === 8) {
+        if (Q || F.cc || F.lang || F.q) {
+          Q = '';
+          F = { cc: '', lang: '', q: '' };
+          relist();
+          return;
+        }
+        closeList();
+        return;
+      } else if (k >= 48 && k <= 57) {
+        closeList();
+        digit(k - 48);
+        return;
+      } else return;
+      drawList();
+      fetchVisible();
+      return;
+    }
+    if (k === 13) {
+      if (failed) play(cur);
+      else openList();
+    } else if (k === 404) toggleFav(byNum[cur]);
+    else if (k === 405) openMenu();
+    else if (k === 406) setStats(!stats);
+    else if (k === 38 || k === 33 || k === 427) step(1);
+    else if (k === 40 || k === 34 || k === 428) step(-1);
+    else if (k === 458) openList();
+    else if (k === 457 || k === 37 || k === 39) showOsd();
+    else if (k >= 48 && k <= 57) digit(k - 48);
+    else if (k >= 96 && k <= 105) digit(k - 96);
+    else if (k === 461 || k === 27 || k === 8) o.exit();
+  };
+
+  /* ---- the pointer (Magic Remote): the same actions as the keys, on every screen ----
+     hover selects, a click opens or picks, the wheel scrolls (or zaps while watching), holding a click is the options: a channel's
+     favourite in the guide, the player menu on the picture. A click outside a panel closes it. */
+  var lvEl = $('lv'),
+    holdP = 0,
+    heldP = false,
+    wheelAt = 0,
+    pX = -1,
+    pY = -1;
+  function near(ev, sel) {
+    return ev.target && ev.target.closest ? ev.target.closest(sel) : null;
+  }
+  function num(el, a) {
+    return +el.getAttribute(a);
+  }
+  lvEl.addEventListener('mousemove', function (ev) {
+    if (!o.on || !loaded || searching || Date.now() - lastKey < 1500) return;
+    if (pX < 0) {
+      pX = ev.clientX;
+      pY = ev.clientY;
+      return;
+    }
+    if (Math.abs(ev.clientX - pX) + Math.abs(ev.clientY - pY) < 24) return; // real movement only, as on the home screen
+    pX = ev.clientX;
+    pY = ev.clientY;
+    var el;
+    if (FP.open) {
+      el = near(ev, '#lv-filter .mrow');
+      if (el && num(el, 'data-i') !== FP.i) {
+        FP.i = num(el, 'data-i');
+        drawFilter();
+      }
+    } else if (M.open) {
+      el = near(ev, '#lv-menu .mrow');
+      if (el && num(el, 'data-i') !== M.i) {
+        M.i = num(el, 'data-i');
+        drawMenu();
+      }
+    } else if (L.open) {
+      el = near(ev, '.crow');
+      if (el && num(el, 'data-j') !== L.ci) {
+        L.ci = num(el, 'data-j');
+        drawList(true);
+        fetchVisible();
+      }
+    } else showOsd();
+  });
+  lvEl.addEventListener('mousedown', function (ev) {
+    heldP = false;
+    clearTimeout(holdP);
+    if (!o.on || !loaded || searching || FP.open || M.open) return;
+    var el = L.open ? near(ev, '.crow') : null;
+    if (L.open && !el) return;
+    holdP = setTimeout(function () {
+      heldP = true;
+      if (el) toggleFav(L.list[num(el, 'data-j')]);
+      else openMenu();
+    }, 650);
+  });
+  lvEl.addEventListener('mouseup', function () {
+    clearTimeout(holdP);
+  });
+  lvEl.addEventListener('click', function (ev) {
+    if (heldP) {
+      heldP = false;
+      return;
+    }
+    if (!o.on) return;
+    if (searching) {
+      if (ev.target.id !== 'lv-search') endSearch(true);
+      return;
+    }
+    if (!loaded) return;
+    var el;
+    if (FP.open) {
+      el = near(ev, '#lv-filter .mrow');
+      if (!el) {
+        FP.open = false;
+        layer('lv-filter', false);
+        drawList();
+        return;
+      }
+      FP.i = num(el, 'data-i');
+      var r = filterRows()[FP.i];
+      if (r.k === 'clear') {
+        F = { cc: '', lang: '', q: '' };
+        relist();
+        drawFilter();
+      } else stepFilter(r.k, 1);
+      return;
+    }
+    if (M.open) {
+      el = near(ev, '#lv-menu .mrow');
+      if (!el) {
+        M.open = false;
+        layer('lv-menu', false);
+        return;
+      }
+      M.i = num(el, 'data-i');
+      M.items[M.i].fn();
+      return;
+    }
+    if (L.open) {
+      el = near(ev, '.crow');
+      if (el) {
+        var ch = L.list[num(el, 'data-j')];
+        if (ch) {
+          closeList();
+          play(ch.num);
+        }
+        return;
+      }
+      el = near(ev, '.ctab');
+      if (el && el.hasAttribute('data-g')) {
+        L.g = num(el, 'data-g');
+        L.list = listFor(L.g);
+        L.ci = 0;
+        drawList();
+        fetchVisible();
+      } else if (el && el.classList.contains('f')) {
+        FP.open = true;
+        FP.i = 0;
+        drawFilter();
+        layer('lv-filter', true);
+      }
+      return;
+    }
+    if (failed) play(cur);
+    else openList();
+  });
+  lvEl.addEventListener(
+    'wheel',
+    function (ev) {
+      if (!o.on || searching || !ev.deltaY) return;
+      ev.preventDefault();
+      lastKey = Date.now(); // lastKey also keeps the pointer from taking the selection back while rows slide under it
+      var now = lastKey,
+        d = ev.deltaY > 0 ? 1 : -1;
+      if (FP.open) {
+        if (now - wheelAt < 90) return;
+        wheelAt = now;
+        FP.i = Math.max(0, Math.min(3, FP.i + d));
+        drawFilter();
+        return;
+      }
+      if (M.open) {
+        if (now - wheelAt < 90) return;
+        wheelAt = now;
+        M.i = Math.max(0, Math.min(M.items.length - 1, M.i + d));
+        drawMenu();
+        return;
+      }
+      if (L.open) {
+        if (now - wheelAt < 70) return;
+        wheelAt = now;
+        L.ci = Math.max(0, Math.min(L.list.length - 1, L.ci + d));
+        drawList();
+        fetchVisible();
+        return;
+      }
+      if (!loaded || now - wheelAt < 300) return;
+      wheelAt = now;
+      step(d > 0 ? -1 : 1);
+    },
+    { passive: false }
+  );
+  return o;
+})();
+/* ---------- the launcher's messages ---------- */
+function tellLauncher(what) {
+  try {
+    parent.postMessage({ cytvAddon: what, id: ADDON }, '*');
+  } catch (e) {}
+}
+window.addEventListener('message', function (ev) {
+  var d = ev.data || {};
+  if (d.cytv === 'init') {
+    var v = d.vars || {};
+    for (var k in v) if (v[k]) document.documentElement.style.setProperty('--' + k, v[k]);
+  } else if (d.cytv === 'guide') LIVE.toggleGuide();
+  else if (d.cytv === 'resume') LIVE.resume();
+  else if (d.cytv === 'key')
+    /* a key the launcher got while it had the focus */
+    LIVE.key({
+      keyCode: d.keyCode,
+      preventDefault: function () {},
+    });
+});
+document.addEventListener('keydown', function (e) {
+  lastKey = Date.now();
+  LIVE.key(e);
+});
+LIVE.leave = function () {
+  tellLauncher('close');
+};
+LIVE.enter(Q.guide === '1');
+</script>
+</body></html>
