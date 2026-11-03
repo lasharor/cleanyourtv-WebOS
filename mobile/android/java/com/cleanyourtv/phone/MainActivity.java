@@ -97,7 +97,7 @@ public class MainActivity extends Activity {
         else start();
     }
 
-    /** cytv://add?host=192.168.1.50:8794&code=123456 (the code the TV shows): returns true when the link was for this app. A link is a
+    /** cytv://add?host=192.168.1.50:8798&code=123456 (the code the TV shows): returns true when the link was for this app. A link is a
      *  browsable intent, so any web page can send one: the address must be a literal one on the local network (Store.clean), and when the
      *  app already has a TV the new address is only taken after the user says so. The pairing code is kept for the page only once the
      *  address is accepted. */

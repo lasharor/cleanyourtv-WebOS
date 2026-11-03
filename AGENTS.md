@@ -28,7 +28,7 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 | An app that opens on an Android box over ADB (input switch, ADB start) | the bundled add-on androidbox: `helper/addons-bundled/androidbox/service.js`, `adbclient.js` (the ADB protocol), `page.js` (phone page); the hook in `/api/launch` in `helper/apps.js`, `docs/android-box.md` |
 | Remote key remapping (a button opens an app, input, Live TV, Home) | `helper/remap.js`, `helper/keynames.js` (the name of a button), `scripts/remapkey.sh`, the binds in `helper/inputhook.js`, `manager/src/js/remap.js`, `docs/key-remap.md` |
 | Phone remote (pairing, tokens, WebSocket, keys into the TV) | `helper/phoneremote.js`, `helper/ws.js` (RFC 6455 server and client for Node 8), `helper/remotekeys.js` (the key adapter: pointer socket, ime, audio), `helper/phoneremotepage.js` (phone page), `manager/src/js/remote.js`, `docs/phone-remote.md` |
-| Turning the TV on from the phone (Wake-on-LAN) and the phone remote as an Android app | `mobile/` (a WebView around the TV's own page, plus the wake packet and a start page; `mobile/android/build.ps1` builds it, and the TV hands it out at `:8794/app.apk`), the `window.CYTV_APP` hook and the on/off button in `helper/phoneremotepage.js`, `mobile/README.md` |
+| Turning the TV on from the phone (Wake-on-LAN) and the phone remote as an Android app | `mobile/` (a WebView around the TV's own page, plus the wake packet and a start page; `mobile/android/build.ps1` builds it, and the TV hands it out at `:8798/app.apk`), the `window.CYTV_APP` hook and the on/off button in `helper/phoneremotepage.js`, `mobile/README.md` |
 | Picture notifications | `notify/app/`, `helper/notify.js`, `helper/notifyapi.js` |
 | Voice (Moonshine, OpenRouter, Home Assistant) | `helper/voice.js` (microphone, recogniser), `helper/answers.js` (Assist, OpenRouter, your server), `voice/` |
 | Themes | `helper/themeschema.js` (the schema), `helper/theme.js` (downloads), `themes/` (read from GitHub), `docs/themes.md` |
@@ -47,7 +47,7 @@ disk, and a reboot without the boot scripts brings LG's Home back.
   `/tmp/cleanyourtv-helper.log` (service log), `/tmp/lginput-hook-lginput2.log` (input hook).
 - Root SSH works with a key (`ssh root@<tv-ip>`). `luna-send` must have stdin redirected: `luna-send -n 1 -w 5000 -f <uri> '<json>' </dev/null`.
 - The service listens on `127.0.0.1:8765` (use `curl` on the TV). Other ports: 8766 Live TV pairing, 8767 network notifications (opt-in),
-  8768+ share log, 8769 voice setup, 8791-8793 wallpapers/cards/Android box pages, 8794 phone remote. The last four are short-lived or off by default.
+  8768+ share log, 8769 voice setup, 8791-8793 wallpapers/cards/Android box pages, 8798 phone remote. The last four are short-lived or off by default.
 - Going back to LG's Home: manager app > CleanYourTV as Home off, or `sh /media/developer/cleanyourtv/undo-home.sh`. If a boot crashes,
   the Homebrew Channel's failsafe mode skips the boot scripts.
 - A TV in **deep** standby answers nothing over TCP. With Quick Start+ (the default) the system stays partly up while the screen is off, and

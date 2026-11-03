@@ -52,7 +52,7 @@ class Store {
         if (v.length() > 0) p.edit().putString("mac", v).apply();
     }
 
-    /** "192.168.1.50", "http://192.168.1.50:8794/" -> "192.168.1.50:8794" (the phone remote is always on 8794 unless given); "" when it is not
+    /** "192.168.1.50", "http://192.168.1.50:8798/" -> "192.168.1.50:8798" (the phone remote is always on 8798 unless given); "" when it is not
      *  a literal address on the local network: see Addr. Every way an address gets in (typed, linked, bridge, search) goes through here. */
     static String clean(String v) {
         return Addr.clean(v);

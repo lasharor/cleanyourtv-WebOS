@@ -14,13 +14,13 @@ local network on request, and an optional notification endpoint is off by defaul
 | 8769 | Voice setup page | Ten minutes, at a random 128-bit address, closed after saving |
 | 8791 | Wallpapers page | While the QR screen is open in the manager app: a 6-digit code shown on the TV, at most an hour; see [Wallpapers](wallpapers.md) |
 | 8793 | Android box page | Ten minutes while its QR screen is open in the manager app: a 6-digit code shown on the TV; see [Android box](android-box.md) |
-| 8794 | Phone remote | Only while the phone remote is switched on in the manager app **and** a phone is paired or its QR screen is open; every phone needs a token from a one-time code; see [Phone remote](phone-remote.md) |
 | 8792 | Cards page | The same, for the options of the cards on Home; see [Cards](launcher.md#cards) |
 | 8794 | App icons page | The same, for choosing a picture for an app; see [Your own icon](launcher.md#your-own-icon) |
 | 8795 | Immich page | The same, for the Immich add-on (address, API key, albums); see [Wallpapers](wallpapers.md#immich-add-on) |
 | 8796 | Unsplash page | The same, for the Unsplash add-on (Access Key, search words); see [Wallpapers](wallpapers.md#unsplash-add-on) |
 | 8797 | Spotify page | The same, for the Spotify add-on (the Client ID of your own Spotify app, the sign-in); see [Spotify now playing](#spotify-now-playing) |
 | 8798 | Jellyfin page | The same, for the Jellyfin add-on (server address, user name and password; the TV keeps only the access token); see [Cards](launcher.md#cards) |
+| 8798 | Phone remote | Only while the phone remote is switched on in the manager app **and** a phone is paired or its QR screen is open; every phone needs a token from a one-time code; see [Phone remote](phone-remote.md) |
 
 What the setup changes on the TV is listed in [What it changes on the TV](tv-changes.md).
 
@@ -104,7 +104,7 @@ the package and launcher names the updater already expects.
 
 ## Phone remote
 
-A phone that pairs can press the TV's remote keys, so the pairing is strict. Off until switched on in the manager app; the port (8794)
+A phone that pairs can press the TV's remote keys, so the pairing is strict. Off until switched on in the manager app; the port (8798)
 listens on the network only while a phone is paired or the QR screen is open. Pairing needs the 6-digit code shown on the TV (the QR code
 carries it in its address, so a phone that scans the screen pairs without typing; that is the same information as the digits, and a
 photograph of the screen already gave it away): it works
