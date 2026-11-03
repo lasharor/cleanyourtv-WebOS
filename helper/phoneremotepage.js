@@ -107,7 +107,7 @@ var pnoteT=0;
 function pnote(s,k,ms){var e=$('pnote');clearTimeout(pnoteT);e.textContent=s;e.setAttribute('role',k==='warn'?'alert':'status');e.className=k||'';void e.offsetWidth;e.className=(k||'')+' on';pnoteT=setTimeout(function(){e.className=k||''},ms||3000)}
 function showPair(s,k){tok='';ready=false;show('pairbox');if(s)pnote(s,k||'warn',10000)}
 function pair(){var x=new XMLHttpRequest();x.open('POST','/api/pair');x.setRequestHeader('content-type','application/json');
- x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(e){}if(j.token){clearTimeout(pnoteT);$('pnote').className='';store(j.token);tok=j.token;blocked=false;delay=1000;tidy();show('remote');connect()}else pnote(j.error||t('Wrong code.'),'warn',10000)};
+ x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(e){}if(j.token){clearTimeout(pnoteT);$('pnote').className='';store(j.token);tok=j.token;blocked=false;delay=1000;tidy();show('remote');connect()}else pnote(j.error||t('That code is not right. Check the 6 digits on the TV screen.'),'warn',10000)};
  x.onerror=function(){pnote(t('The TV did not answer. Check the phone is on the same Wi-Fi as the TV.'),'warn',10000)};
  x.send(JSON.stringify({code:$('code').value.trim(),name:$('pname').value.trim()}))}
 function ask(){if(!(ws&&ws.readyState===1))return;lastAsk=Date.now();try{ws.send(JSON.stringify({t:'power'}))}catch(e){}}
@@ -592,8 +592,9 @@ textarea:focus{border:1.5px solid #ff8a5b;box-shadow:0 0 0 4px rgba(255,138,91,.
 #pairbox .eyebrow{font-size:13px;font-weight:600;letter-spacing:.02em;color:#7b8092;margin:0 0 8px;min-height:20px}
 #pairbox h1{font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.02em;margin:0 0 8px}#pairbox .sub{font-size:16px;line-height:1.5;color:#a3a8b8;margin:0 0 24px}
 .steps{margin:0 0 24px;padding:16px;border-radius:20px;background:#14161c;border:1px solid #23262f}.steps>div{display:flex;align-items:flex-start;font-size:15px;line-height:1.5;color:#dde0ea}.steps>div+div{margin-top:16px}
+.steps b{color:#fff}
 .steps i{flex:none;width:28px;height:28px;border-radius:50%;background:rgba(255,138,91,.14);display:flex;align-items:center;justify-content:center;font:800 14px system-ui;color:#ff8a5b;font-style:normal;margin-right:12px}
-#pairbox label{display:block;font-size:14px;font-weight:600;color:#a3a8b8;margin:0 0 8px}
+#pairbox label{display:block;font-size:14px;line-height:1.5;font-weight:600;color:#a3a8b8;margin:0 0 8px}
 .cellwrap{position:relative;margin:0 0 24px}.cells{display:flex}
 .cell{flex:1;min-width:0;max-width:56px;height:64px;margin-left:8px;border-radius:16px;background:#14161c;border:1.5px solid #646b82;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700}.cell:first-child{margin-left:0}.cell:nth-child(4){margin-left:20px}.cell.cur{border-color:#ff8a5b;box-shadow:0 0 0 3px rgba(255,138,91,.2)}
 #pairbox .cellwrap input{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;padding:0;opacity:0;border:0;font-size:16px}
@@ -669,7 +670,7 @@ function phonePage(lang, preCode, hint) {
 <meta http-equiv=pragma content=no-cache><title>${T('Phone remote')}</title>
 <style>${STYLE}</style>
 <div id=pairbox class=hide><div class=glow></div><p class=eyebrow id=eb data-app="${T('Step 2 of 2')}">&nbsp;</p><h1>${T('Enter the code')}</h1><p class=sub id=psub data-app="${T('The 6-digit code is on the TV screen.')}">${T('Use this device as a remote for your TV. You only do this once.')}</p>
-<div class=steps id=steps><div><i>1</i><span>${T('On the TV, open the manager app: Features > Phone remote > Pair a phone. It shows a QR code and a 6-digit code.')}</span></div><div><i>2</i><span>${T('Type the 6-digit code below.')}</span></div></div>
+<div class=steps id=steps><div><i>1</i><span>${T('On the TV, open the manager app:')} <b>${T('Features > Phone remote > Pair a phone')}</b>. ${T('It shows a QR code and a 6-digit code.')}</span></div><div><i>2</i><span>${T('Type the 6-digit code below.')}</span></div></div>
 <label for=code>${T('Code from the TV')}</label><div class=cellwrap><div class=cells>${cellHtml}</div><input id=code inputmode=numeric maxlength=6 autocomplete=one-time-code autofocus value="${pre}"></div>
 <label for=pname>${T('Name of this device')}</label><input id=pname maxlength=30>
 <div class=actions><button class=pri id=go>${T('Pair this device')}</button>
