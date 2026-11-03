@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- The app's colours are the icon's: the dark tile of assets/icon.svg, so the splash, the window and the page have no white flash. -->
-<resources>
-    <color name="bg">#101218</color>
-</resources>

@@ -93,7 +93,7 @@ function closeShare() {
     pop();
     return;
   }
-  if (shareMode === 'remote' || shareMode === 'app') {
+  if (shareMode === 'remote') {
     api('/api/phoneremote/pair', { stop: true }).catch(function () {});
     pop();
     prRefresh();
