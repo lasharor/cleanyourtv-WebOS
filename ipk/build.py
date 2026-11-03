@@ -34,7 +34,7 @@ def add_dir(files, arc_root, src, mode_for=None, skip=(), skip_dirs=()):
             if n in skip or n.startswith('.'):
                 continue
             p = os.path.join(root, n)
-            rel = os.path.relpath(p, src).replace(os.sep, '/')   # an archive path has no backslash, whatever the system building it
+            rel = os.path.relpath(p, src)
             mode = 0o755 if (n.endswith('.sh') or n in ('ezinject', '10-cleanyourtv-home', '15-cleanyourtv-debloat')) else 0o644
             body = open(p, 'rb').read()
             add(files, arc_root + '/' + rel, body, mode)

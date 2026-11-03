@@ -28,9 +28,9 @@ function stored(){try{return localStorage.getItem(KEY)||''}catch(e){return ''}}
 window.cytvPair=function(code){code=String(code||'').replace(/\\D/g,'');if(code.length!==6||ready)return false;
  tok='';blocked=false;show('pairbox');$('code').value=code;cells();
  setTimeout(function(){var n=$('pname');try{n.focus();n.select()}catch(e){}cells()},120);return true};
-/* The app (mobile/) sends the wake packet itself: it asks this page for the TV's address (setMac) and this page asks it to wake (wake).
+/* An app that wraps this page (window.CYTV_APP) can send the wake packet itself: it asks this page for the TV's address (setMac) and this page asks it to wake (wake).
    In a browser window.CYTV_APP does not exist, and a page cannot send UDP, so a browser can only show the address: the Power sheet does
-   that, and points at the app. The TV's address is kept here too, for that sheet. */
+   that, and points at an app that can. The TV's address is kept here too, for that sheet. */
 function native(){return !!(window.CYTV_APP&&window.CYTV_APP.wake)}
 function waking(){offAt=0;power(false);status('off','');drop();delay=1000;retry(2500)} /* no banner: the header button and its status line show the wait */
 function wakeNow(){if(!native())return;var ok=false;try{ok=window.CYTV_APP.wake()}catch(e){}

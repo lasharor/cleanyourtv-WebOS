@@ -1,7 +1,6 @@
 // Device names for the pairing screen (the phoneremote add-on's devicename.js and the guess in its page.js): the router's name is used only when
 // it is a name, a number is added when another phone has the same name, and the page falls back from the app to the router to the browser.
-const fs = require('fs'),
-  path = require('path');
+const path = require('path');
 const { ok, root, run } = require('./lib');
 const dn = require(path.join(root, 'helper', 'addons-bundled', 'phoneremote', 'devicename'));
 const { phonePage } = require(path.join(root, 'helper', 'addons-bundled', 'phoneremote', 'page'));
@@ -146,14 +145,4 @@ run(async () => {
     'the page carries the hint, or an empty one'
   );
   ok(!/var HINT=[^;]*</.test(phonePage('en', '', 'a<b')), 'a < in the hint is escaped');
-
-  // ---- the Android app ----
-  const java = fs.readFileSync(path.join(root, 'mobile', 'android', 'java', 'com', 'cleanyourtv', 'phone', 'MainActivity.java'), 'utf8');
-  ok(
-    /@JavascriptInterface\s+public String deviceName\(\)/.test(java) &&
-      /"device_name"/.test(java) &&
-      /Build\.MANUFACTURER/.test(java) &&
-      /Build\.MODEL/.test(java),
-    'the app gives the name set in Android settings, else the maker and the model'
-  );
 });

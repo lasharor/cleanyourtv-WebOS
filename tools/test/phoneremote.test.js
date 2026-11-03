@@ -4,7 +4,7 @@
 const http = require('http'),
   fs = require('fs'),
   path = require('path');
-const { ok, call, memoryConfig, run, sleep, tmp, root } = require('./lib');
+const { ok, call, memoryConfig, run, sleep, root } = require('./lib');
 const tvname = require('../../helper/addons-bundled/phoneremote/tvname');
 const ws = require('../../helper/addons-bundled/phoneremote/ws');
 
@@ -155,9 +155,7 @@ run(async () => {
   launcher.logo = api + '/logo.png';
   const rev = { name: '' }; // what the stand-in router answers for the phone's address
   const reverse = (a, cb) => cb(rev.name ? null : new Error('ENOTFOUND'), rev.name ? [rev.name] : []);
-  const APK_PATH = path.join(tmp, 'tv-remote.apk'); // the app: not there until a test puts it there
-  const make = () =>
-    PR.create({ config }, { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna, reverse, apk: APK_PATH, liveWaitMs: 40 });
+  const make = () => PR.create({ config }, { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna, reverse, liveWaitMs: 40 });
   let pr = make();
   pr.start();
   let r = await call(pr, '/api/phoneremote');
@@ -456,38 +454,6 @@ run(async () => {
   ok(r.code === 200, 'the page is served again');
   r = await post(port2, '/api/pair', { code: '123456', name: 'x' });
   ok(r.code === 403, 'with no pairing window, pairing is refused');
-
-  // ---- the app for the manager's QR code: the TV serves the package file itself ----
-  r = await call(pr, '/api/phoneremote');
-  ok(
-    r.j.app && r.j.app.available === false && /\/app\.apk$/.test(r.j.app.url),
-    'a build without the app says so, and its address is ready'
-  );
-  r = await get(port2, '/app.apk');
-  ok(r.code === 404, 'and then there is no file to download');
-  const apk = Buffer.from('PK\u0003\u0004 this is not really an app');
-  fs.writeFileSync(APK_PATH, apk);
-  r = await call(pr, '/api/phoneremote');
-  ok(r.j.app.available === true && r.j.app.size === apk.length, 'with the app in the build, the manager is told its size');
-  ok(!r.j.app.qr, 'with no pairing window there is no code, so the manager gets no address for its QR code');
-  // the same code as the rest of this page: the QR carries it in the address, because a download has no page to send a header
-  r = await call(pr, '/api/phoneremote/pair', 'POST', {});
-  const apkCode = r.j.pairing.code;
-  ok(/\/app\.apk\?code=\d{6}$/.test(r.j.app.qr), 'the QR address for the app carries the code shown on the TV');
-  r = await get(port2, '/app.apk');
-  ok(r.code === 403, 'without the code the file is not handed out');
-  r = await get(port2, '/app.apk?code=' + (apkCode === '111111' ? '222222' : '111111'));
-  ok(r.code === 403, 'and a wrong code is refused too');
-  r = await get(port2, '/app.apk?code=' + apkCode);
-  ok(
-    r.code === 200 &&
-      r.text === apk.toString('utf8') &&
-      r.headers['content-type'] === 'application/vnd.android.package-archive' &&
-      r.headers['content-disposition'].indexOf('TV Remote.apk') > 0,
-    'with the code, the phone downloads the app from the TV itself (the QR code points at this)'
-  );
-  r = await call(pr, '/api/phoneremote');
-  ok(r.j.app.downloads === 1 && r.j.app.last > 0, 'the TV saw the phone take the app: that is what moves the manager on to pairing');
 
   // ---- revoke ----
   await call(pr, '/api/phoneremote/pair', 'POST', {}); // a window keeps the port open to try the revoked token
@@ -1206,16 +1172,6 @@ run(async () => {
       /#pairbox \.actions\{margin-top:auto/.test(pg),
     'the pairing screen has no icon at the top and no spacer: the title sits on a fixed line, 72px from the top, and the actions are at the bottom of the window'
   );
-  {
-    const start = fs.readFileSync(path.join(__dirname, '..', '..', 'mobile', 'web', 'start.html'), 'utf8');
-    ok(
-      !/class=logo/.test(start) &&
-        /<div class=glow><\/div>/.test(start) &&
-        /#wrap\{[^}]*min-height:100vh;[^}]*padding:72px 20px 24px/.test(start) &&
-        /\.actions\{margin-top:auto/.test(start),
-      "the app's start page looks like the pairing screen: no icon, the glow in the corner, the title on the same fixed line and the actions at the bottom"
-    );
-  }
   // a page refreshed from an address that still has the QR code in it must not unseat the phone that is already paired
   ok(
     /function tidy\(\)\{try\{history\.replaceState\(null,'','\/'\)\}/.test(pg) &&
@@ -1254,7 +1210,7 @@ run(async () => {
     /onclose=function\(e\)/.test(pg) && /why===4401/.test(pg) && /why===4403/.test(pg),
     'a connection the TV closes with 4401 (removed) or 4403 (blocked) is handled by its code: pairing screen, or wait'
   );
-  // in the Android app (mobile/) the phone sends the packet itself: the page hands it the TV's address and calls the bridge
+  // in an app that wraps the page the phone sends the packet itself: the page hands it the TV's address and calls the bridge
   ok(
     /window\.CYTV_APP/.test(pg) && /CYTV_APP\.setMac\(mac\)/.test(pg) && /CYTV_APP\.wake\(\)/.test(pg),
     'the page hands the TV address to the app and lets the app send the wake packet itself'
@@ -1364,40 +1320,8 @@ run(async () => {
     /lst\.forEach/.test(listView) && /label: 'Remove all phones'/.test(listView) && /confirm-pr-all/.test(listView),
     'that screen lists every phone, and holds Remove all phones (with its confirmation)'
   );
-  // the app's code is for the flow that started at "Install the app" only: the ordinary pairing screen keeps the page address
   const mgr = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'remote.js'), 'utf8');
-  ok(
-    /var app = prApp/.test(mgr) && /prApp = false;/.test(mgr) && /prApp = true;/.test(mgr),
-    'only the pairing screen that follows the app download shows the cytv code; the ordinary one shows the page address'
-  );
-  ok(/if \(a\.downloads > prDl\)/.test(mgr), 'and a download from before that screen opened does not count');
-  // the install screen and the pairing screen after the download read as two parts of one flow, and the second names both ways to pair
   const en = JSON.parse(fs.readFileSync(path.join(root, 'i18n', 'en.json'), 'utf8'));
-  const partA = mgr.slice(mgr.indexOf("tr('Install the app (Android)')"), mgr.indexOf('prWatchApp(true)'));
-  const partB = mgr.slice(
-    mgr.indexOf("tr('Part 2: pair the app')"),
-    mgr.indexOf('prWatch(true);', mgr.indexOf("tr('Part 2: pair the app')"))
-  );
-  ok(
-    /Part 1 of 2/.test(partA) && /Part 2<\/b> comes next/.test(partA),
-    'the install screen says it is part 1 of 2 and that part 2 comes next'
-  );
-  ok(
-    /<b>Scan<\/b>/.test(partB) && /Pair this device/.test(partB) && /Find my TV/.test(partB) && /<b>type<\/b> the code/.test(partB),
-    'the pairing screen after the download offers both ways: scan the code, or open the app and type it'
-  );
-  ok(!/paired already/.test(mgr), 'and it no longer claims the app is paired before the user has paired it');
-  // the literals the two screens pass to tr(): the same list String.matchAll gives, but with exec (Node 8.12 has no matchAll)
-  const strings = [];
-  {
-    const re = /tr\(\s*'((?:[^'\\]|\\.)*)'/g;
-    let m;
-    while ((m = re.exec(mgr))) strings.push(m[1]);
-  }
-  ok(
-    strings.filter(s => /Part 2|part 2|Part 1/.test(s)).every(s => s in en),
-    'every new string of the two screens is in the English list'
-  );
   // the phone remote is an add-on: its Features row is there only while the add-on answers, and the add-on's own screen leads to the same settings
   const stat = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'status.js'), 'utf8');
   ok(
@@ -1434,33 +1358,26 @@ run(async () => {
   // ---- the manager's phone screens: the busy port, the retries, and the English they build ----
   {
     ok(
-      (mgr.match(/if \(r\.listenError\)/g) || []).length >= 3 &&
+      (mgr.match(/if \(r\.listenError\)/g) || []).length >= 2 &&
         /if \(r\.listenError\) banner\(tr\(r\.listenError\), 'err'\)/.test(mgr) &&
         /if \(r\.listenError !== prListenShown\) \{/.test(mgr) /* the poll says it once, not every 2.5 seconds */ &&
         /if \(r\.listenError\) \$\('sharemsg'\)\.textContent = tr\(r\.listenError\)/.test(mgr) &&
-        (mgr.match(/if \(r\.error\)/g) || []).length >= 3,
+        (mgr.match(/if \(r\.error\)/g) || []).length >= 2,
       'every phone screen reads listenError (a port that could not be opened) and still treats a failed request (r.error) as a failure'
     );
     // a screen that is still open keeps asking after a failed poll; before, the first refusal stopped it until it was reopened
     ok(
-      /if \(r\.error\) \{\s*\$\('sharemsg'\)\.textContent = tr\(r\.error\);\s*setTimeout\(prWatch, 2000\);[^\n]*\n\s*return;/.test(mgr) &&
-        /if \(r\.error\) \{\s*\$\('sharemsg'\)\.textContent = tr\(r\.error\);\s*setTimeout\(prWatchApp, 2000\);[^\n]*\n\s*return;/.test(
-          mgr
-        ),
+      /if \(r\.error\) \{\s*\$\('sharemsg'\)\.textContent = tr\(r\.error\);\s*setTimeout\(prWatch, 2000\);[^\n]*\n\s*return;/.test(mgr),
       'a refused pairing poll asks again in two seconds instead of leaving the QR screen frozen'
     );
     ok(
-      /function \(\) \{\s*\$\('sharemsg'\)\.textContent = tr\('The service did not answer\.'\);\s*setTimeout\(prWatch, 2000\);/.test(mgr) &&
-        /function \(\) \{\s*\$\('sharemsg'\)\.textContent = tr\('The service did not answer\.'\);\s*setTimeout\(prWatchApp, 2000\);/.test(
-          mgr
-        ),
+      /function \(\) \{\s*\$\('sharemsg'\)\.textContent = tr\('The service did not answer\.'\);\s*setTimeout\(prWatch, 2000\);/.test(mgr),
       'and a request that never arrived is tried again too'
     );
     // switching the remote on from a QR screen used to recurse whether or not the reply said it was on, which never ended if it was not
     ok(
-      (mgr.match(/if \(r && r\.enabled\)/g) || []).length === 2 &&
+      (mgr.match(/if \(r && r\.enabled\)/g) || []).length === 1 &&
         /if \(r && r\.enabled\) \{\s*pr = r;\s*openPrPair\(\);/.test(mgr) &&
-        /if \(r && r\.enabled\) \{\s*pr = r;\s*openPrApp\(\);/.test(mgr) &&
         /banner\(\(r && r\.error\) \|\| 'The service did not answer', 'err'\)/.test(mgr),
       'opening a QR screen goes on only when the reply says the phone remote is on, and says why when it is not (no endless retry)'
     );
@@ -1472,10 +1389,10 @@ run(async () => {
     const share = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'share.js'), 'utf8');
     const closeShare = share.slice(share.indexOf('function closeShare()'));
     ok(
-      /shareMode === 'remote' \|\| shareMode === 'app'/.test(closeShare) &&
+      /if \(shareMode === 'remote'\) \{\s*api\('\/api\/phoneremote\/pair'/.test(closeShare) &&
         (closeShare.match(/api\('\/api\/phoneremote\/pair', \{ stop: true \}\)/g) || []).length === 1 &&
-        !/if \(shareMode === 'remote'\)/.test(closeShare),
-      'closing either phone pairing screen stops the window in one and the same branch (the app screen used to leave it open)'
+        true,
+      'closing the phone pairing screen stops the window'
     );
     ok(
       /if \(r\.error\) \{[\s\S]{0,400}?banner\(r\.error, 'err'\);\s*loadAddons\(\);\s*return;\s*\}/.test(scr) &&

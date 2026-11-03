@@ -27,10 +27,6 @@ const web = require('../../web'),
   page = require('./page'),
   devicename = require('./devicename');
 
-// The app, when this build ships one (it is in this add-on's folder, built from mobile/): the manager screen shows a QR code for it and
-// the phone downloads it from here, so no computer is needed to install it.
-const APK_FILE = path.join(__dirname, 'tv-remote.apk');
-
 const PORT = 8799, // after the Android box page (8793)
   IDLE_MS = 3 * 60 * 1000, // the pairing window closes this long after the manager last asked for it ...
   MAX_PAIR_MS = 30 * 60 * 1000, // ... and at the latest this long after it opened
@@ -59,7 +55,6 @@ const cleanName = n =>
 function create(ctx, opts) {
   const o = opts || {};
   const API = String(o.api || 'http://127.0.0.1:8765');
-  const APK = o.apk || APK_FILE; // tests hand in their own file
   const config = ctx.config;
   const keys = o.keys || require('./remotekeys').create(ctx);
   const L = o.luna || luna; // the TV's IPC (tests hand in a fake)
@@ -149,18 +144,6 @@ function create(ctx, opts) {
   const ownOrigin = (origin, host) => !origin || origin === 'http://' + host;
   const ip = req => String((req.socket && req.socket.remoteAddress) || '');
 
-  // the app this build ships, if any: what the manager's QR code points at and what the phone downloads
-  function apkFile() {
-    try {
-      const s = fs.statSync(APK);
-      if (s.isFile() && s.size > 0) return { path: APK, size: s.size };
-    } catch (_) {}
-    return null;
-  }
-
-  // every time the phone takes the app: the manager moves on to the pairing screen when this has happened (in memory: a restart forgets it)
-  const took = { n: 0, last: 0 };
-
   function onRequest(req, res) {
     const send = (code, body, type) => {
       res.writeHead(code, {
@@ -199,29 +182,6 @@ function create(ctx, opts) {
       if (u === '/api/live') return liveList().then(list => send(200, { channels: list }, 'application/json'));
       if (u.indexOf('/api/logo/') === 0) return logo(res, parseInt(u.slice('/api/logo/'.length), 10), send);
       return appIcon(res, u.slice('/icon/'.length), send);
-    }
-    if (req.method === 'GET' && u === '/app.apk') {
-      const f = apkFile();
-      if (!f) return send(404, { error: 'this build has no app', text: 'This build of CleanYourTV has no app in it.' }, 'application/json');
-      // the same code as the rest of this page: the QR carries it (?code=...), so only someone looking at the TV can take the file. A
-      // download has no page to send the header the other phone pages use, so the code travels in the address
-      const m = /(?:^|&)code=([^&]*)/.exec(String(req.url.split('?')[1] || ''));
-      if (!pair || !same(m ? m[1] : '', pair.code)) {
-        if (pair && ++pair.wrong >= WRONG_MAX) closePair();
-        return send(403, { error: 'wrong code', text: 'The app needs the code shown on the TV.' }, 'application/json');
-      }
-      took.n++; // the phone started taking the app: the manager can move on to the pairing screen
-      took.last = Date.now();
-      res.writeHead(200, {
-        'content-type': 'application/vnd.android.package-archive',
-        'content-length': f.size,
-        'content-disposition': 'attachment; filename="TV Remote.apk"',
-        'cache-control': 'no-store',
-      });
-      return fs
-        .createReadStream(f.path)
-        .on('error', () => res.end())
-        .pipe(res);
     }
     if (req.method === 'POST' && u === '/api/pair') {
       if (!ownOrigin(req.headers.origin, req.headers.host)) return send(403, { error: 'forbidden' });
@@ -790,23 +750,12 @@ function create(ctx, opts) {
     const now = Date.now();
     const online = {};
     clients.forEach(c => c.id && (online[c.id] = true));
-    const apk = apkFile();
     return {
       enabled: cfg().enabled,
       expireDays: expireDays(),
       listening: !!(srv && srv.listening),
       port: port(),
       listenError: listenError,
-      // the app, for the manager's QR code: the phone downloads it from this port, so no computer is needed. downloads/last tell the
-      // manager that the phone has taken it, so it can move on to pairing
-      app: {
-        available: !!apk,
-        size: apk ? apk.size : 0,
-        url: lan() + '/app.apk',
-        qr: pair ? lan() + '/app.apk?code=' + pair.code : '', // what the manager's QR code points at: the file and the code
-        downloads: took.n,
-        last: took.last,
-      },
       pairing: pair
         ? {
             code: pair.code,

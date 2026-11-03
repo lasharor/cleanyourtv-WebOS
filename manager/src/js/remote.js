@@ -150,7 +150,6 @@ function openPrPair() {
     return;
   }
   shareMode = 'remote';
-  prApp = false; // the ordinary flow: the code opens the page in the phone's browser
   prSeen = 0;
   qrShown = '';
   push('share');
@@ -164,7 +163,7 @@ function openPrPair() {
   $('sharemsg').textContent = tr('Preparing…');
   prWatch(true);
 }
-/* draw the code when what it points at has changed: the pairing code changes after every pairing, and the app link carries it */
+/* draw the code when what it points at has changed: the pairing code changes after every pairing, */
 function showQr(text) {
   if (text === qrShown) return;
   qrShown = text;
@@ -184,9 +183,7 @@ function prWatch(first) {
       pr = r;
       var p = r.pairing;
       if (p) {
-        // the phone took the app just now: the same code should open the app and pair it, not the browser page
-        var app = prApp; // only the screen that came from the install flow carries the app's code
-        showQr(app ? 'cytv://add?host=' + appHost(p.url) + '&code=' + p.code : p.qr);
+        showQr(p.qr);
         $('shareurl').textContent = tr(p.url + '   code ' + p.code);
         if (first) prSeen = p.paired ? p.paired.at : 0; /* a phone paired before this screen opened does not count */
         if (p.paired && p.paired.at > prSeen) {
@@ -199,9 +196,7 @@ function prWatch(first) {
           }, 5000);
           return;
         } else if (first)
-          $('sharemsg').textContent = app
-            ? tr('Scan it with the camera: the app opens with the code filled in.')
-            : tr('The code works once. The page is not encrypted: what you type travels over your Wi-Fi.');
+          $('sharemsg').textContent = tr('The code works once. The page is not encrypted: what you type travels over your Wi-Fi.');
       } else $('sharemsg').textContent = tr('The pairing window closed. Press Back and open it again.');
       /* the port 8799 could not be opened (another program has it): say why, and still follow the window and show the code */
       if (r.listenError) $('sharemsg').textContent = tr(r.listenError);
@@ -210,93 +205,6 @@ function prWatch(first) {
     function () {
       $('sharemsg').textContent = tr('The service did not answer.');
       setTimeout(prWatch, 2000); /* a request that never arrived is tried again too */
-    }
-  );
-}
-
-/* The app: one code, the download. The file is served by the same port as the phone remote, so the pairing window (which is what opens
-   the port) is asked for again every few seconds. As soon as the phone takes the file, this screen is the pairing screen: scanning it then
-   opens the app with the code filled in, so the next step is right there. */
-function appHost(url) {
-  return String(url || '')
-    .replace(/^https?:\/\//, '')
-    .replace(/\/.*$/, '');
-}
-function openPrApp() {
-  if (!pr || !pr.enabled) {
-    api('/api/phoneremote', { enabled: true }).then(
-      function (r) {
-        /* go on only when the remote really is on: a reply without "enabled" would post again for ever */
-        if (r && r.enabled) {
-          pr = r;
-          openPrApp();
-          return;
-        }
-        banner((r && r.error) || 'The service did not answer', 'err');
-      },
-      function () {
-        banner('The service did not answer', 'err');
-      }
-    );
-    return;
-  }
-  shareMode = 'app';
-  prApp = false;
-  prDl = -1;
-  qrShown = '';
-  push('share');
-  $('share').style.display = 'block';
-  $('shareurl').textContent = '';
-  $('qrbox').style.visibility = 'hidden';
-  $('share').querySelector('h2').textContent = tr('Install the app (Android)');
-  $('share').querySelector('ol').innerHTML = tr(
-    '<li><b>Part 1 of 2.</b> Scan this code with the camera of an Android phone.</li><li>Open the download and install <b>TV Remote</b> (let the browser install apps).</li><li><b>Part 2</b> comes next: this screen then shows the pairing code.</li>'
-  );
-  $('sharemsg').textContent = tr('Preparing…');
-  prWatchApp(true);
-}
-function prWatchApp(first) {
-  if (view !== 'share' || shareMode !== 'app') return;
-  api('/api/phoneremote/pair', {}).then(
-    function (r) {
-      if (view !== 'share' || shareMode !== 'app') return;
-      if (r.error) {
-        $('sharemsg').textContent = tr(r.error);
-        setTimeout(prWatchApp, 2000); /* the screen is still open: ask again instead of stopping here */
-        return;
-      }
-      pr = r;
-      var a = r.app || {};
-      if (!a.available) {
-        $('sharemsg').textContent = tr('This build has no app in it.');
-        return;
-      }
-      if (prDl < 0) prDl = a.downloads; // a download from before this screen does not count
-      if (a.downloads > prDl) {
-        /* the phone has the file: no second screen to find, this one becomes the pairing screen */
-        shareMode = 'remote';
-        prApp = true;
-        prSeen = 0;
-        qrShown = '';
-        $('share').querySelector('h2').textContent = tr('Part 2: pair the app');
-        $('share').querySelector('ol').innerHTML = tr(
-          '<li>Keep the phone on the <b>same Wi-Fi</b> as the TV.</li><li><b>Scan</b> the code with the phone camera, then tap Pair this device.</li><li>Or open TV Remote, tap Find my TV, and <b>type</b> the code below.</li>'
-        );
-        $('sharemsg').textContent = tr('The app is on the phone. Pair it once, by scanning or typing the code.');
-        banner(tr('The app is on the phone. Pair it once, by scanning or typing the code.'), 'ok');
-        prWatch(true);
-        return;
-      }
-      showQr(a.qr || a.url);
-      $('shareurl').textContent = a.qr || a.url; // with the code in it, so it can also be typed
-      if (first) $('sharemsg').textContent = tr('The phone downloads the app from the TV, then this screen moves on to part 2 by itself.');
-      /* the port 8799 could not be opened (another program has it): say why, and still follow the download */
-      if (r.listenError) $('sharemsg').textContent = tr(r.listenError);
-      setTimeout(prWatchApp, 2000);
-    },
-    function () {
-      $('sharemsg').textContent = tr('The service did not answer.');
-      setTimeout(prWatchApp, 2000); /* a request that never arrived is tried again too */
     }
   );
 }

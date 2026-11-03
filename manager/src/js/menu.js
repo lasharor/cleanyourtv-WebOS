@@ -1214,16 +1214,6 @@ function build() {
       info: { t: 'Pair a phone', d: 'Shows a QR code. Scan it with the phone, then type the 6-digit code on the phone.' },
       fn: openPrPair,
     });
-    rows.push({
-      label: 'Install the app (Android)',
-      sub: q.app && q.app.available ? 'Android only' : 'not in this build',
-      info: {
-        t: 'Install the app (Android)',
-        d: 'The best way to use the phone remote on Android. It can turn the TV on from standby and remembers the TV. Scanning the pairing QR code opens the app with the code filled in. Other phones use the browser page.',
-      },
-      dim: !(q.app && q.app.available),
-      fn: openPrApp,
-    });
     rows.push({ sep: true });
     rows.push({
       label: 'Remove unused phones',

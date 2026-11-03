@@ -2,8 +2,8 @@
 
 Use a phone on your Wi-Fi as the TV's remote control: arrows and OK, Back, Home, volume, mute, channel, play/pause, the colour keys,
 number keys, a touchpad (swipe to move around, tap for OK, tap with two fingers for Back) and a text box that types into the field open on
-the TV. A phone has to **pair once** with a code shown on the TV; after that it reconnects by itself whenever its browser is awake. The app for the phone (Android)
-turns the TV **on** again after standby: see [Turning the TV on](#turning-the-tv-on).
+the TV. A phone has to **pair once** with a code shown on the TV; after that it reconnects by itself whenever its browser is awake. Turning the TV **on** again after standby
+depends on how far it went down: see [Turning the TV on](#turning-the-tv-on).
 
 !!! note "What was checked on a real TV"
     On an LG 65UR91006LB (webOS 10) all 34 buttons were accepted by the TV, and the effect was seen for the arrows, Back, Menu, Mute and
@@ -12,7 +12,7 @@ turns the TV **on** again after standby: see [Turning the TV on](#turning-the-tv
     nothing, `curl -X POST localhost:8765/api/phoneremote/key -d '{"key":"HOME"}'` (and the status `keys` field of `/api/phoneremote`) say which
     step failed; please report it in an issue with the Share log.
     The wake packet was tried on this TV as well: in standby, with every port closed, a packet brought it back in about a second, with the
-    same boot (Quick Start+). The packet came from a computer on the network; the app sending it from a phone has **not** been tried.
+    same boot (Quick Start+). The packet came from a computer on the network.
     The power drawer was tried on this TV, one row at a time: **Screen off** left it in `Screen Off` with every port still open, **Standby**
     left it in `Active Standby` (Quick Start+ keeps the network up, and the `POWER` key woke it in a couple of seconds), **Restart** put it
     in `Reboot` and it was back on, awake, about a minute later with its uptime reset, and **Shut down** switched it off completely: after
@@ -43,7 +43,7 @@ your router; if the address changes, pair again.
 The pairing page starts with a name in **Name of this device**; it can be changed before pairing, and it is what the manager app lists. The first
 guess, best source first:
 
-1. **The Android app:** the name set in Android settings, or the maker and model (for example `Samsung SM-S918B`).
+1. **An app around the page** (see [Other clients](#other-clients)): the name set in Android settings, or the maker and model (for example `Samsung SM-S918B`).
 2. **The router's name for the phone.** The TV looks up the address the page was opened from (a reverse lookup, from the router's list of
    devices), so a computer shows its own name. It is used only when it is a name: nothing, an address, a MAC address, `wlan0` and
    `android-` followed by random characters are thrown away, and the domain after the name (`.lan`) is cut off. Phones that use a private
@@ -115,56 +115,19 @@ Turning it off (**Never remove**) asks first, and the screen says what it means:
 
 **Turn off** sends the TV's power key: standby, so Quick Start+ and Wake-on-LAN keep working. Turning it **on** again depends on how far the
 TV went down: with Quick Start+ the system stays partly up with the screen off, the page still reaches it, and the same POWER key brings the
-screen back — from the app *and* from a browser. Only when the TV stops answering altogether (deep standby) is a Wake-on-LAN packet needed,
-and a page in a browser cannot send one
-— its service, the app manager and telnet are all asleep with the panel. Only the network chip listens, and only for a **Wake-on-LAN
-packet**.
+screen back. Only when the TV stops answering altogether (deep standby) is a Wake-on-LAN packet needed: its service, the app manager and
+telnet are all asleep with the panel, and only the network chip listens, and only for a **Wake-on-LAN packet**.
 
-The app for the phone sends that packet itself, so it turns the TV on with nothing else on the network. In a browser the page can only show
-the TV's address: send the packet from Home Assistant, a router, an app or a Shortcut instead (below).
+A page in a browser cannot send that packet (a page cannot send UDP), so without a client that can, the page presses POWER only while the
+TV answers. It shows the TV's address, and `ready.mac` and `ready.wol` (the TV's network card address, and whether Wake-on-LAN is on) are
+there for a client that can send the packet. Send it from Home Assistant, a router, a Wake-on-LAN app or a Shortcut (below), or from an
+app that wraps the page (see [Other clients](#other-clients)).
 
-### The setup screens
+### Other clients
 
-The screens before the remote follow one set of rules (one column, the title on the same line, the main button at the bottom in reach of the thumb, the same cards, fields and messages), in the app and in a browser:
-
-| Screen | Where | What it does |
-|---|---|---|
-| **Find your TV** (Step 1 of 2) | the app, first run | **Find my TV** looks for the TV on the network. **Type the address instead** shows the address field and **Continue**; it also stops a search that is running, and **Find the TV instead** goes back. |
-| **Enter the code** (Step 2 of 2) | the app, after the TV is found | The TV's own page: the 6-digit code, the name of the phone, **Pair this device**. The steps are not repeated, the app already did step 1. |
-| **Enter the code** | a browser, the first screen | The same page. There is no find step in a browser, so there is no step label and one short card says where the code is on the TV. |
-| **Can't reach your TV** | the app, a known TV that does not answer | **Check again**, or **Use a different TV**. |
-| **The TV is off** | the app, when the TV's page does not load | **Turn on the TV** (the wake packet), **Check again**, **Use a different TV**. The remote opens by itself when the TV answers. |
-
-Every message on these screens is a toast over the top of the page, never text in the page, so nothing moves: green for three seconds when something was done, plain for three and a half seconds while something is going on, amber for ten seconds when the person has to do something next (a warning is also read out by a screen reader as an alert). The remote itself is not part of this.
-
-### The app (Android)
-
-`mobile/` is the same page as an app, plus the two things a browser cannot do: it sends the wake packet, and it opens at all while the TV
-is off (it shows the last copy of the page it kept on the phone, or an off screen with **Turn on the TV** when it never loaded one). The button in the page's header carries the TV's state — **On** or **Off** —
-and tapping it does the other thing, with nothing to choose: it turns the TV off when it is on, and on (wake) when it is off.
-
-Pair once with the TV on; the page hands the app the TV's network address when it connects, so there is nothing else to set up. In the app a
-key press answers with a short vibration (the app holds the `VIBRATE` permission for it, and its own bridge does it — a WebView has no
-`navigator.vibrate`, so in a browser most phones stay still).
-
-The app is in the package, so the phone installs it from the TV: **Phone remote › Install the app (Android)** shows one QR code,
-`http://<tv>:8799/app.apk?code=…` — scan it, open the download, install. The file is only handed out with the code shown on the TV, like
-the rest of this page (a download has no page to send a header, so the code travels in the address).
-
-The two screens are two parts of one flow: the install screen says **Part 1 of 2**, and as soon as the phone takes the file the TV notices and
-that screen becomes **Part 2: pair the app** by itself. Its code now carries the TV's
-address and the pairing code (`cytv://add?host=<tv>:8799&code=…`), so scanning it with the phone's camera opens the app, fills the address in and
-puts the code in, and you only pick a name for the phone and tap **Pair this device**. The screen offers the other way too: open the app, tap **Find my TV**
-and type the code shown on the TV. (A browser scanning the same screen before the app was downloaded gets the page's own
-address, as usual.) Without a camera, the app finds the TV for you (**Find my TV**) or takes the address typed in (**Type the address instead**); the TV's page then asks
-for the code it shows, as in a browser. The address has to be a private or link-local IPv4 address such as `192.168.1.50` (a port is
-optional): names like `lgwebostv.local`, public addresses and IPv6 are refused. If a scanned code names another TV than the one the app
-already has, the app asks **Connect to `<address>`?** and saves nothing until you tap **Connect**. When the TV's page does not load, the app
-retries after 0, 1, 2, 4 and 8 seconds, then every 10 seconds.
-
-`mobile/README.md` has the build (`powershell -ExecutionPolicy Bypass -File mobile/android/build.ps1`, with the Android SDK's own tools: no
-Gradle, nothing downloaded, a 25 KB APK), the install and the limits — Android only, signed with a local key. The package carries the file
-only so the TV can hand it out; it is not a TV app and nothing of it runs on the TV.
+The phone page is the main client. A native app can wrap it in a WebView and add what a browser cannot do, such as sending the
+Wake-on-LAN packet; the page looks for an object called `window.CYTV_APP` and uses it when it is there (`wake`, `setMac`, `deviceName`,
+`buzz`, `up`, `forget`). A browser has none of these and the page works without them. No app is part of this project.
 
 ### If you already have something that wakes machines
 
@@ -186,7 +149,8 @@ Any of these sends the same packet to the TV:
 - The TV takes a few seconds. The power button shows a ring and **Turning on** or **Turning off** until the TV's own state matches, and the
   keys dim meanwhile. After 8 seconds the status line says it is slow. After 45 seconds the page
   stops waiting and says **Can't reach the TV** for a few seconds; it does not claim the TV is off. A second tap while it waits does nothing.
-- The TV's address changes when it moves between cable and Wi-Fi: use the app once with the TV on and it learns the new one.
+- The TV's network card address changes when it moves between cable and Wi-Fi: a client that sends the packet has to learn the new one
+  (`ready.mac`) while the TV is on.
 
 ## How it works
 
@@ -236,6 +200,6 @@ The keys: `UP DOWN LEFT RIGHT ENTER BACK HOME MENU EXIT INFO VOLUMEUP VOLUMEDOWN
 - **Connected, but keys do nothing:** the TV refused the way in. In the service log (Share log) lines start with `phoneremote:`. Try the
   `curl` above; the reply has the failing step. Tell us the result and your TV model.
 - **"The TV did not answer":** the address changed, the TV is off, or the service restarted. The page retries by itself, and **Turn on**
-  wakes the TV again through the app ([Turning the TV on](#turning-the-tv-on)).
+  wakes the TV again when it still answers; from deep standby it needs a Wake-on-LAN packet ([Turning the TV on](#turning-the-tv-on)).
 
-To undo everything: switch **Phone remote** off, or **Remove all phones**. Uninstalling removes the settings with `config.json`; the app is separate (uninstall it on the phone).
+To undo everything: switch **Phone remote** off, or **Remove all phones**. Uninstalling removes the settings with `config.json`.
