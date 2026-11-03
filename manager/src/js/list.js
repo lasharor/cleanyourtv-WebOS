@@ -203,7 +203,31 @@ function drawAbout(r, ie) {
   var b = document.createElement('b');
   b.textContent = r.label;
   ie.appendChild(b);
-  ie.appendChild(document.createTextNode(tr(r.about)));
+  var box = document.createElement('div'),
+    txt = document.createElement('div');
+  box.className = 'abt' + (r.pv || r.pvu ? '' : ' tall');
+  txt.className = 'abi';
+  txt.textContent = tr(r.about);
+  box.appendChild(txt);
+  ie.appendChild(box);
+  aboutScroll(box, txt);
+}
+/* a text longer than its box (the remote has no way to scroll it) drifts up after a pause, rests at the end, then starts over */
+var abTimer = 0;
+function aboutScroll(box, txt) {
+  clearTimeout(abTimer);
+  var over = txt.offsetHeight - box.clientHeight;
+  if (over <= 2) return;
+  box.className += ' ov';
+  var step = function (to, wait) {
+    abTimer = setTimeout(function () {
+      if (!box.parentNode) return;
+      txt.style.transition = to ? 'transform ' + (over / 28).toFixed(1) + 's linear' : 'none';
+      txt.style.transform = 'translateY(' + -to + 'px)';
+      step(to ? 0 : over, to ? over * 36 + 2500 : 2500);
+    }, wait);
+  };
+  step(over, 2500);
 }
 /* the tab bar: every screen shows it, the one you are in marked; inside a sub-screen it only tells where you are */
 function drawTabs() {

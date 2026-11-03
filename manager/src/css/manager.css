@@ -97,6 +97,21 @@ body {
   line-height: 1.2;
   color: var(--ink);
 }
+/* an add-on's text: six lines under the picture; longer text drifts up by itself (aboutScroll in list.js), with a fade at the cut edge */
+#info .abt {
+  max-height: 270px;
+  overflow: hidden;
+}
+#info .abt.tall {
+  max-height: 560px;
+}
+#info .abt.ov {
+  -webkit-mask-image: linear-gradient(#000 82%, transparent);
+  mask-image: linear-gradient(#000 82%, transparent);
+}
+#info .abi {
+  will-change: transform;
+}
 #panel {
   position: absolute;
   left: 820px;

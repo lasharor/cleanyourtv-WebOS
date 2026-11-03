@@ -6,7 +6,7 @@ another tab, Up and Down move through its rows, and the left side of the screen 
 
 - **Updates & Home**: Launcher, Service, Check for updates, Update channel, Go back to launcher, CleanYourTV as Home, Input key, Share log.
 - **Features**: Live TV, Wallpapers, App icons, Cards, Android box, Home Assistant, Voice, Network notifications.
-- **Add-ons**: the installed and available add-ons, and the page strip.
+- **Add-ons**: the installed and available add-ons, and the page strip. The picture and text of the add-on in focus show on the left; a text longer than its six lines drifts up by itself, rests at its end and starts over.
 - **Debloat**: the four groups and the apps LG preloads at boot.
 - **System**: Language, Experimental, Reset Home customisation, Uninstall.
 
