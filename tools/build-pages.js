@@ -17,6 +17,7 @@ const PAGES = [
   ['manager/src', 'manager/app/index.html'],
   ['helper/addons-bundled/iptv/src', 'helper/addons-bundled/iptv/page/index.html'], // Live TV: the page of the iptv add-on
   ['picker/app/index.html', 'picker/app/index.html'],
+  ['guide/app/index.html', 'guide/app/index.html'], // the tuner guide (like the picker, one hand-written file)
 ];
 // the manager shows the service's own messages (update steps, sync errors): it carries the translations of texts in helper/ too
 const EXTRA = { 'manager/src': ['helper'] };

@@ -40,6 +40,17 @@ run(async () => {
     delete process.env.CYTV_LUNA_STDIN;
     await luna('luna://example/query', {}, { keepStdinOpen: true });
     ok(calls[3].cmd === 'luna-send' && calls[3].opts.timeout === 8000, 'a per-call opt-in retains the default deadline');
+    delete process.env.CYTV_LUNA_STDIN;
+    await luna('luna://example/query', { a: 1 }, { appId: 'com.webos.service.iepg' });
+    const as = calls[calls.length - 1];
+    ok(
+      as.cmd === '/bin/sh' && as.args.indexOf('-a') > 0 && as.args[as.args.indexOf('-a') + 1] === 'com.webos.service.iepg',
+      'appId is passed as luna-send -a'
+    );
+    ok(
+      as.args[as.args.length - 1] === JSON.stringify({ a: 1 }) && as.args[1] === 'luna-send "$@" </dev/null',
+      'the payload stays a separate argument with closed stdin'
+    );
     exec.run = async () => ({ out: 'not JSON', error: 'test failure' });
     const bad = await luna('luna://example/query', {}, { keepStdinOpen: true });
     ok(bad.returnValue === false && typeof bad.errorText === 'string', 'invalid replies still resolve to a structured error');

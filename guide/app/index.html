@@ -1,0 +1,432 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Guide</title>
+<style>
+*{box-sizing:border-box;margin:0}
+:root{--ink:#f5f6f8;--ink2:rgba(245,246,248,.66);--font:"LG Smart UI","Helvetica Neue",Helvetica,Arial,sans-serif;--panel:#1a1c22;--panel2:#262932;--acc:#f5f6f8;--acc-ink:#0b0c10;--now:#ef4f5f}
+html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;color:var(--ink);font-family:var(--font)}
+/* the picture of the channel stays visible in the top part; the guide sits on a dark foot */
+#dim{position:absolute;left:0;top:0;width:1920px;height:1080px;opacity:0;background:linear-gradient(to bottom,rgba(8,9,13,0) 0,rgba(8,9,13,.55) 230px,rgba(8,9,13,.95) 400px,rgba(8,9,13,.97) 100%)}
+#ui{position:absolute;left:0;top:0;width:1920px;height:1080px;opacity:0}
+.on #dim,.on #ui{opacity:1}
+#info{position:absolute;left:96px;top:236px;width:1500px;height:200px}
+#ititle{font-size:46px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#imeta{margin-top:8px;font-size:27px;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#idesc{margin-top:12px;font-size:26px;line-height:1.3;color:var(--ink2);height:68px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+#head{position:absolute;left:96px;top:458px;width:1728px;height:48px}
+.tick{position:absolute;top:0;height:48px;font-size:26px;font-weight:600;color:var(--ink2);line-height:48px;padding-left:12px;border-left:2px solid rgba(255,255,255,.14);white-space:nowrap}
+#day{position:absolute;left:0;top:0;width:280px;height:48px;font-size:26px;font-weight:700;line-height:48px;color:var(--ink)}
+#grid{position:absolute;left:96px;top:512px;width:1728px;height:518px;overflow:hidden}
+#rows{position:absolute;left:0;top:0;width:1728px;height:518px}
+.row{position:absolute;left:0;width:1728px;height:70px}
+.cell{position:absolute;left:0;top:0;width:276px;height:66px;padding:0 18px;border-radius:12px;background:var(--panel2);display:flex;align-items:center;overflow:hidden}
+.cell .n{flex:none;width:62px;font-size:28px;font-weight:700;color:var(--ink2)}
+.cell .nm{flex:1 1 auto;min-width:0;font-size:28px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.sel .cell{background:var(--acc);color:var(--acc-ink)}.row.sel .cell .n{color:var(--acc-ink);opacity:.7}
+.prog{position:absolute;top:0;height:66px;padding:7px 14px 0;border-radius:12px;background:var(--panel);overflow:hidden;white-space:nowrap;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+.prog .t{font-size:27px;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.prog .h{font-size:20px;font-weight:500;color:var(--ink2);margin-top:1px;overflow:hidden;text-overflow:ellipsis}
+.prog.cur{background:#2c3040}
+.prog.nod{background:transparent;box-shadow:none;color:var(--ink2)}
+.prog.f{background:var(--acc);color:var(--acc-ink);box-shadow:0 0 0 4px var(--acc-ink),0 0 0 7px var(--acc)}
+.prog.f .h{color:var(--acc-ink);opacity:.7}
+#nowline{position:absolute;top:458px;width:3px;height:572px;background:var(--now);opacity:.85}
+#msg{position:absolute;left:96px;top:700px;width:1728px;text-align:center;font-size:34px;font-weight:600;color:var(--ink)}
+#msg:empty{display:none}
+#dial{position:absolute;right:96px;top:226px;font-size:84px;font-weight:700;letter-spacing:.04em;color:var(--ink)}
+#dial:empty{display:none}
+</style></head><body>
+<div id="dim"></div>
+<div id="ui">
+  <div id="info"><div id="ititle"></div><div id="imeta"></div><div id="idesc"></div></div>
+  <div id="head"></div>
+  <div id="grid"><div id="rows"></div></div>
+  <div id="nowline" style="display:none"></div>
+  <div id="dial"></div>
+  <div id="msg"></div>
+</div>
+<script>
+/* The tuner guide of CleanYourTV, shown over LG's own Live TV by the Guide key (scripts/guidekey.sh): channels down the left, time
+   across, three hours at a time. A transparent overlay app like the Inputs picker, so the picture stays visible above. It is started
+   when the key is pressed and closes after use. The data comes from the service (helper/tunerguide.js, /api/tuner/*): the channel list
+   once, the schedule of the channels in view only. Only the visible rows exist in the page; moving swaps them for new ones. */
+/* @i18n */
+var I18N = {"ar":{"_name":"العربية","_dir":"rtl","_pct":87,"%d channels":{"zero":"%d قناة","one":"%d قناة","two":"%d قناتان","few":"%d قنوات","many":"%d قناة","other":"%d قناة"},"%d of %d":"%d من %d","%d of %d on":"%d من %d مفعّل","Back":"رجوع","Guide":"الدليل","Input":"Input","Inputs":"المداخل","Live TV":"البث المباشر","No guide data":"لا بيانات في الدليل","On":"تشغيل","selected":"محدد","Service":"الخدمة","Text":"نص","The service did not answer":"لم تستجب الخدمة"},"ca":{"_name":"Català","_dir":"ltr","_pct":87,"%d channels":{"one":"%d canal","other":"%d canals"},"%d of %d":"%d de %d","%d of %d on":"%d de %d d'activats","Back":"Enrere","Guide":"Guia","Input":"Entrada","Inputs":"Entrades","Live TV":"TV en directe","No guide data":"No hi ha dades de la guia","On":"Activat","selected":"seleccionat","Service":"Servei","Text":"Text","The service did not answer":"El servei no ha respost"},"de":{"_name":"Deutsch","_dir":"ltr","_pct":94,"%d channels":{"one":"%d Sender","other":"%d Sender"},"%d of %d":"%d von %d","%d of %d on":"%d von %d an","Back":"Zurück","Guide":"Guide","Input":"Input","Inputs":"Eingänge","Live TV":"Live-TV","No guide data":"Keine Programmdaten","On":"An","selected":"ausgewählt","Service":"Dienst","Text":"Text","The service did not answer":"Der Dienst hat nicht geantwortet","TV":"TV","System":"System"},"es":{"_name":"Español","_dir":"ltr","_pct":87,"%d channels":{"one":"%d canal","other":"%d canales"},"%d of %d":"%d de %d","%d of %d on":"%d de %d activados","Back":"Atrás","Guide":"Guide","Input":"Input","Inputs":"Entradas","Live TV":"TV en directo","No guide data":"Sin guía","On":"Activado","selected":"elegido","Service":"Servicio","Text":"Texto","The service did not answer":"El servicio no respondió","System":"Sistema"},"fr":{"_name":"Français","_dir":"ltr","_pct":87,"%d channels":{"one":"%d chaîne","other":"%d chaînes"},"%d of %d":"%d sur %d","%d of %d on":"%d sur %d activés","Back":"Retour","Guide":"Guide","Input":"Input","Inputs":"Entrées","Live TV":"TV en direct","No guide data":"Pas de guide","On":"Activé","selected":"choisi","Service":"Service","Text":"Texte","The service did not answer":"Le service n’a pas répondu","System":"Système"},"hu":{"_name":"Magyar","_dir":"ltr","_pct":95,"%d channels":{"one":"%d csatorna","other":"%d csatorna"},"%d of %d":"%d / %d","%d of %d on":"%d / %d be","Back":"Vissza","Guide":"Műsorújság","Input":"Bemenet","Inputs":"Bemenetek","Live TV":"Élő TV","No guide data":"Nincs műsorújság-adat","On":"Be","selected":"kiválasztva","Service":"Szolgáltatás","Text":"Szöveg","The service did not answer":"A szolgáltatás nem válaszolt","TV":"Tévé","Change":"Módosítás","System":"Rendszer"},"it":{"_name":"Italiano","_dir":"ltr","_pct":92,"%d channels":{"one":"%d canale","other":"%d canali"},"%d of %d":"%d di %d","%d of %d on":"%d di %d attivi","Back":"Indietro","Guide":"Guida","Input":"Ingressi","Inputs":"Ingressi","Live TV":"Live TV","No guide data":"Nessun dato guida","On":"On","selected":"selezionato","Service":"Servizio","Text":"Testo","The service did not answer":"Il servizio non ha risposto","TV":"TV"},"nl":{"_name":"Nederlands","_dir":"ltr","_pct":93,"%d channels":{"one":"%d zender","other":"%d zenders"},"%d of %d":"%d van %d","%d of %d on":"%d van %d aan","Back":"Terug","Guide":"Guide","Input":"Input","Inputs":"Ingangen","Live TV":"Live TV","No guide data":"Geen programmagegevens","On":"Aan","selected":"gekozen","Service":"Service","Text":"Tekst","The service did not answer":"De service antwoordde niet","System":"Systeem"},"pl":{"_name":"Polski","_dir":"ltr","_pct":92,"%d channels":{"one":"%d kanał","few":"%d kanały","many":"%d kanałów","other":"%d kanałów"},"%d of %d":"%d z %d","%d of %d on":"%d z %d włączonych","Back":"Wstecz","Guide":"Przewodnik","Input":"Wejście","Inputs":"Wejścia","Live TV":"Telewizja na żywo","No guide data":"Brak danych przewodnika","On":"Wł.","selected":"wybrano","Service":"Usługa","Text":"Tekst","The service did not answer":"Usługa nie odpowiedziała","TV":"TV"},"pt":{"_name":"Português (Brasil)","_dir":"ltr","_pct":83,"%d channels":{"one":"%d canal","other":"%d canais"},"%d of %d":"%d de %d","%d of %d on":"%d de %d ativado","Back":"Voltar","Guide":"Guia","Input":"Input","Inputs":"Entradas","Live TV":"TV ao vivo","No guide data":"Sem dados de guia","On":"Ativado","selected":"selecionado","Service":"Serviço","Text":"Texto","The service did not answer":"O serviço não respondeu"},"ru":{"_name":"Русский","_dir":"ltr","_pct":87,"%d channels":{"one":"%d канал","few":"%d канала","many":"%d каналов","other":"%d канала"},"%d of %d":"%d из %d","%d of %d on":"%d из %d включено","Back":"Назад","Guide":"Guide","Input":"Input","Inputs":"Входы","Live TV":"Прямой эфир","No guide data":"Нет данных программы","On":"Вкл.","selected":"выбрано","Service":"Служба","Text":"Текст","The service did not answer":"Служба не ответила"},"tr":{"_name":"Türkçe","_dir":"ltr","_pct":87,"%d channels":"%d kanal","%d of %d":"%d / %d","%d of %d on":"%d / %d açık","Back":"Geri","Guide":"Rehber","Input":"Input","Inputs":"Girişler","Live TV":"Canlı TV","No guide data":"Rehber bilgisi yok","On":"Açık","selected":"seçili","Service":"Hizmet","Text":"Metin","The service did not answer":"Hizmet yanıt vermedi"},"vi":{"_name":"Tiếng Việt","_dir":"ltr","_pct":90,"%d channels":{"one":"%d kênh","other":"%d kênh"},"%d of %d":"%d trên %d","%d of %d on":"%d trên %d đang bật","Back":"Quay lại","Guide":"Hướng dẫn chương trình","Input":"Đầu vào","Inputs":"Các đầu vào","Live TV":"Truyền hình trực tiếp","No guide data":"Không có dữ liệu hướng dẫn chương trình","On":"Bật","selected":"đã chọn","Service":"Dịch vụ","Text":"Văn bản","The service did not answer":"Dịch vụ không phản hồi","TV":"TV"},"en":{"%d channels":{"one":"%d channel","other":"%d channels"}}};
+/* ---------- language: the pages are written in English and translated where text is shown ----------
+   I18N holds the translations this page uses, from i18n/<language>.json, put in by tools/build-pages.js ({language: {English: text}}).
+   The language is the TV's, unless the manager's Language setting chose another (setLang). t() looks a text up whole, then the parts
+   of a text joined by line breaks or " · ", and fills in templates: "%s" is any text, "%d" a number ("Launcher %s", "%d photos").
+   A text without a translation stays English. A translation can have plural forms, {"one": "%d foto", "other": "%d foto's"}: the
+   form follows the first number in the text, by the language's plural rules (Unicode CLDR: zero, one, two, few, many, other). The
+   English plural forms are in I18N.en. */
+var LANG_TV = String((window.webOSSystem && window.webOSSystem.locale) || navigator.language || 'en')
+    .slice(0, 2)
+    .toLowerCase(),
+  LANG = 'en',
+  LT = null,
+  LTPL = null;
+/* '' or undefined: the TV's language; a language without translations here falls back to English */
+function setLang(code) {
+  var c = code || LANG_TV;
+  LANG = I18N[c] && (c === 'en' || I18N[c]._name) ? c : 'en';
+  LT = I18N[LANG] || null;
+  LTPL = null;
+  if (document.documentElement) {
+    document.documentElement.lang = LANG;
+    /* a right-to-left language (_dir "rtl": Arabic, Hebrew) mirrors the layout; the pages' CSS has the [dir="rtl"] rules */
+    document.documentElement.dir = LT && LT._dir === 'rtl' ? 'rtl' : 'ltr';
+  }
+}
+/* left and right swap places in a right-to-left layout: the arrow keys follow what the eye sees */
+function rtl() {
+  return !!(LT && LT._dir === 'rtl');
+}
+/* the plural form of n in the current language: the browser's rules, or a small table of the same rules for older engines */
+function pluralForm(n) {
+  try {
+    if (window.Intl && Intl.PluralRules) return new Intl.PluralRules(LANG).select(n);
+  } catch (e) {}
+  var i = Math.floor(Math.abs(n)),
+    m10 = i % 10,
+    m100 = i % 100;
+  if (/^(ja|zh|ko|th|vi|id|ms|tr)$/.test(LANG)) return 'other';
+  if (/^(fr|pt)$/.test(LANG)) return i < 2 ? 'one' : 'other';
+  if (/^(ru|uk|be)$/.test(LANG))
+    return m10 === 1 && m100 !== 11 ? 'one' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'few' : 'many';
+  if (LANG === 'pl') return i === 1 ? 'one' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'few' : 'many';
+  if (/^(cs|sk)$/.test(LANG)) return i === 1 ? 'one' : i >= 2 && i <= 4 ? 'few' : 'other';
+  if (LANG === 'ar')
+    return i === 0 ? 'zero' : i === 1 ? 'one' : i === 2 ? 'two' : m100 >= 3 && m100 <= 10 ? 'few' : m100 >= 11 ? 'many' : 'other';
+  if (LANG === 'he') return i === 1 ? 'one' : i === 2 ? 'two' : 'other';
+  return n === 1 ? 'one' : 'other';
+}
+/* a translation, with its plural form picked for n when it has forms */
+function tForm(v, n) {
+  if (typeof v === 'string') return v;
+  if (!v) return '';
+  return (n !== undefined && v[pluralForm(+String(n).replace(',', '.'))]) || v.other || '';
+}
+setLang('');
+/* which capture of a template holds its first number (the plural form follows it) */
+function firstNum(key) {
+  var k = 0,
+    re = /%[sd]/g,
+    x;
+  while ((x = re.exec(key))) {
+    k++;
+    if (x[0] === '%d') return k;
+  }
+  return 1;
+}
+function tTemplates() {
+  if (LTPL) return LTPL;
+  LTPL = [];
+  for (var k in LT)
+    if (k.charAt(0) !== '_' && /%[sd]/.test(k))
+      LTPL.push([
+        new RegExp(
+          '^' +
+            k
+              .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              .replace(/%s/g, '([\\s\\S]+?)')
+              .replace(/%d/g, '([0-9][0-9.,]*)') +
+            '$'
+        ),
+        k,
+        /\n| · /.test(k),
+      ]);
+  LTPL.sort(function (a, b) {
+    return b[1].length - a[1].length;
+  });
+  return LTPL;
+}
+function tTpl(s, joined) {
+  var tp = tTemplates();
+  for (var i = 0; i < tp.length; i++) {
+    if (tp[i][2] !== joined) continue;
+    var m = tp[i][0].exec(s);
+    if (m) {
+      var j = 1,
+        num = /%d/.test(tp[i][1]) ? m[firstNum(tp[i][1])] : undefined;
+      return tForm(LT[tp[i][1]], num).replace(/%[sd]/g, function () {
+        return t(m[j++]);
+      });
+    }
+  }
+  return null;
+}
+function t(s) {
+  if (!LT || s === null || s === undefined || s === '') return s;
+  s = String(s);
+  if (Object.prototype.hasOwnProperty.call(LT, s)) return tForm(LT[s]);
+  var r = tTpl(s, true);
+  if (r !== null) return r;
+  if (s.indexOf('\n') >= 0) return s.split('\n').map(t).join('\n');
+  if (s.indexOf(' · ') >= 0) return s.split(' · ').map(t).join(' · ');
+  r = tTpl(s, false);
+  return r !== null ? r : s;
+}
+/* the manager calls it tr: its code has local variables named t */
+function tr(s) {
+  return t(s);
+}
+/* the languages for the manager's Language list: English and every language this page has, with how complete it is */
+function languages() {
+  var out = [{ code: 'en', name: 'English', pct: 100 }];
+  for (var c in I18N) if (c !== 'en') out.push({ code: c, name: I18N[c]._name || c, pct: I18N[c]._pct || 0 });
+  return out;
+}
+/* @i18n end */
+var API = 'http://127.0.0.1:8765', KEY = 'cytv.guide.v1';
+var ROWS = 7, ROW_H = 74, WIN = 3 * 3600, PPS = 1440 / WIN, LEFT = 288, FETCH_BEFORE = 2 * 3600, FETCH_AFTER = 48 * 3600, STEP = 1800;
+var chs = [], idx = 0, first = 0, ct = 0, ws = 0, epg = {}, pend = {}, shown = false, shownAt = 0, fetchedAt = 0, failed = '';
+var idleT = 0, fetchT = 0, tickT = 0, holdT = 0;
+function $(i) { return document.getElementById(i); }
+function log(m) { try { var x = new XMLHttpRequest(); x.open('GET', API + '/api/log?m=' + encodeURIComponent('guide ' + m)); x.send(); } catch (e) {} }
+function params() { var p = {}; try { p = JSON.parse(webOSSystem.launchParams || '{}'); } catch (e) {} return p || {}; }
+function now() { return Math.floor(Date.now() / 1000); }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function hm(s) { var d = new Date(s * 1000); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function dayOf(s) {
+  var d = new Date(s * 1000);
+  if (d.toDateString() === new Date().toDateString()) return t('Today');
+  try { return d.toLocaleDateString(LANG, { weekday: 'short', day: 'numeric' }); } catch (e) { return String(d.getDate()); }
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function get(path, ok, bad) {
+  var x = new XMLHttpRequest();
+  x.open('GET', API + path);
+  x.timeout = 20000;
+  x.onload = function () { var j = null; try { j = JSON.parse(x.responseText); } catch (e) {} if (x.status === 200 && j) ok(j); else bad(); };
+  x.onerror = x.ontimeout = bad;
+  x.send();
+}
+function store() { try { localStorage.setItem(KEY, JSON.stringify({ chs: chs, last: chs[idx] ? chs[idx].id : '' })); } catch (e) {} }
+function restore() {
+  try {
+    var c = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (c && c.chs && c.chs.length) { chs = c.chs; for (var i = 0; i < chs.length; i++) if (chs[i].id === c.last) idx = i; return true; }
+  } catch (e) {}
+  return false;
+}
+function progAt(i, s) {
+  var l = chs[i] && epg[chs[i].id];
+  if (!l) return null;
+  for (var k = 0; k < l.length; k++) if (l[k][0] <= s && s < l[k][1]) return l[k];
+  return null;
+}
+/* the schedule of the rows in view and a few around them, in one call */
+function need() {
+  var ids = [], i, c;
+  for (i = first - 3; i < first + ROWS + 3; i++) {
+    c = chs[((i % chs.length) + chs.length) % chs.length];
+    if (c && !epg[c.id] && !pend[c.id] && ids.indexOf(c.id) < 0) ids.push(c.id);
+  }
+  if (!ids.length) return;
+  var n = now(), k;
+  for (k = 0; k < ids.length; k++) pend[ids[k]] = 1;
+  get('/api/tuner/epg?ids=' + ids.join(',') + '&from=' + (n - FETCH_BEFORE) + '&to=' + (n + FETCH_AFTER), function (j) {
+    fetchedAt = Date.now();
+    failed = j.error || '';
+    for (var q = 0; q < ids.length; q++) { epg[ids[q]] = (j.epg && j.epg[ids[q]]) || []; delete pend[ids[q]]; }
+    if (shown) paint();
+  }, function () {
+    for (var q = 0; q < ids.length; q++) delete pend[ids[q]];
+    failed = t('The service did not answer');
+    if (shown) paint();
+  });
+}
+function soon() { clearTimeout(fetchT); fetchT = setTimeout(need, 120); }
+function xOf(s) { return Math.round((s - ws) * PPS); }
+function build() {
+  var f = document.createDocumentFragment(), r, c, i, k, l, p, e, w, a, b, el;
+  var n = now();
+  for (r = 0; r < ROWS && chs.length; r++) {
+    i = (((first + r) % chs.length) + chs.length) % chs.length;
+    c = chs[i];
+    el = document.createElement('div');
+    el.className = 'row' + (i === idx ? ' sel' : '');
+    el.style.top = r * ROW_H + 'px';
+    var h = '<div class="cell" data-i="' + i + '"><span class="n">' + esc(c.n) + '</span><span class="nm">' + esc(c.name) + '</span></div>';
+    l = epg[c.id];
+    if (!l) h += '<div class="prog nod" style="left:' + LEFT + 'px;width:300px"><div class="t">' + (pend[c.id] ? '…' : '') + '</div></div>';
+    else if (!l.length) h += '<div class="prog nod" style="left:' + LEFT + 'px;width:600px"><div class="t">' + esc(t('No guide data')) + '</div></div>';
+    else
+      for (k = 0; k < l.length; k++) {
+        p = l[k];
+        if (p[1] <= ws || p[0] >= ws + WIN) continue;
+        a = Math.max(p[0], ws); b = Math.min(p[1], ws + WIN);
+        w = Math.round((b - a) * PPS) - 6;
+        if (w < 12) continue;
+        var cls = 'prog' + (p[0] <= n && n < p[1] ? ' cur' : '') + (i === idx && p[0] <= ct && ct < p[1] ? ' f' : '');
+        h += '<div class="' + cls + '" data-i="' + i + '" data-s="' + p[0] + '" style="left:' + (LEFT + xOf(a)) + 'px;width:' + w + 'px"><div class="t">' + esc(p[2]) + '</div>' +
+          (w > 150 ? '<div class="h">' + hm(p[0]) + ' – ' + hm(p[1]) + '</div>' : '') + '</div>';
+      }
+    el.innerHTML = h;
+    f.appendChild(el);
+  }
+  return f;
+}
+function paint() {
+  /* the rows are swapped for new ones, not rewritten: webOS 5 can keep old text in the compositor when a list is redrawn */
+  var old = $('rows'), nu = document.createElement('div');
+  nu.id = 'rows';
+  nu.appendChild(build());
+  old.parentNode.replaceChild(nu, old);
+  var hd = $('head'), h = '<div id="day">' + esc(dayOf(ws)) + '</div>', s;
+  for (s = ws; s < ws + WIN; s += STEP) h += '<div class="tick" style="left:' + (LEFT + xOf(s)) + 'px">' + hm(s) + '</div>';
+  hd.innerHTML = h;
+  var n = now(), nl = $('nowline');
+  if (n >= ws && n < ws + WIN) { nl.style.left = 96 + LEFT + xOf(n) + 'px'; nl.style.display = 'block'; } else nl.style.display = 'none';
+  var c = chs[idx], p = c && progAt(idx, ct);
+  $('ititle').textContent = p ? p[2] : c ? c.name : '';
+  $('imeta').textContent = c ? (c.n ? c.n + '  ' : '') + c.name + (p ? '  ·  ' + hm(p[0]) + ' – ' + hm(p[1]) + (p[4] ? '  ·  ' + p[4] : '') : '') : '';
+  $('idesc').textContent = p ? p[3] : '';
+  $('msg').textContent = !chs.length ? (failed || t('Loading…')) : failed && !epg[c && c.id] ? failed : '';
+}
+function fit() {
+  /* keep the selected time in the window */
+  if (ct < ws || ct >= ws + WIN) ws = Math.floor(ct / STEP) * STEP - STEP * (ct < ws ? 4 : 1);
+}
+/* the first row to draw so that channel i is in view, in the middle when there is room */
+function firstFor(i) { return Math.max(0, Math.min(i - 3, chs.length - ROWS)); }
+function limit() { var n = now(); ct = Math.max(n - FETCH_BEFORE, Math.min(n + FETCH_AFTER - 60, ct)); }
+function moveRow(d) {
+  if (!chs.length) return;
+  idx = (((idx + d) % chs.length) + chs.length) % chs.length;
+  var dd = (((idx - first) % chs.length) + chs.length) % chs.length;
+  if (dd >= ROWS) first = d > 0 ? idx - ROWS + 1 : idx;
+  first = ((first % chs.length) + chs.length) % chs.length;
+  paint(); soon();
+}
+/* the number buttons dial a channel: each digit moves the selection to the channel with that number (or the first one that starts
+   with it); the typed number is shown at the top right and forgotten after a moment. OK then tunes it. */
+var dialBuf = '', dialT = 0;
+function dialFind(s) {
+  var i;
+  for (i = 0; i < chs.length; i++) if (chs[i].n === s) return i;
+  for (i = 0; i < chs.length; i++) if (chs[i].n.indexOf(s) === 0) return i;
+  for (i = 0; i < chs.length; i++) if (String(chs[i].major) === s) return i;
+  return -1;
+}
+function dial(d) {
+  if (!chs.length) return;
+  dialBuf = dialBuf.length >= 4 ? d : dialBuf + d;
+  $('dial').textContent = dialBuf;
+  var i = dialFind(dialBuf);
+  if (i >= 0) {
+    idx = i;
+    first = firstFor(i);
+    paint(); soon();
+  }
+  clearTimeout(dialT);
+  dialT = setTimeout(function () { dialBuf = ''; $('dial').textContent = ''; }, 1800);
+}
+function moveTime(d) {
+  var p = progAt(idx, ct);
+  if (d > 0) ct = p ? p[1] : ct + STEP;
+  else { ct = p ? p[0] - 1 : ct - STEP; }
+  limit(); fit(); paint();
+}
+/* LG's own Live TV changes channel when it is started with these parameters (what LG's guide does) */
+function tune() {
+  var c = chs[idx];
+  if (!c) return;
+  log('tune ' + c.n + ' ' + c.name);
+  store();
+  var launch = { id: 'com.webos.app.livetv', params: { id: 'channelChange', channelId: c.cid, sender: 'livemenu' } };
+  var x = new XMLHttpRequest(), done = false;
+  /* the service launches it; if it does not answer, the system's own bridge does (as the Inputs picker does) */
+  function finish(viaSystem) {
+    if (done) return;
+    done = true;
+    if (viaSystem) {
+      log('tune: the service did not answer, using the system');
+      try { var b = new PalmServiceBridge(); b.onservicecallback = function () {}; b.call('luna://com.webos.applicationManager/launch', JSON.stringify(launch)); } catch (e) {}
+    }
+    setTimeout(closeGuide, viaSystem ? 300 : 0);
+  }
+  x.open('POST', API + '/api/launch');
+  x.timeout = 5000;
+  x.onload = function () { finish(x.status !== 200); };
+  x.onerror = x.ontimeout = function () { finish(true); };
+  x.send(JSON.stringify(launch));
+}
+function closeGuide() {
+  log('close');
+  shown = false;
+  clearTimeout(idleT); clearInterval(tickT);
+  document.body.classList.remove('on');
+  try { if (window.webOS && webOS.platformBack) webOS.platformBack(); } catch (e) {}
+  try { window.close(); } catch (e) {}
+}
+function idle() { clearTimeout(idleT); idleT = setTimeout(function () { if (shown) closeGuide(); }, 60000); }
+function show() {
+  shown = true; shownAt = Date.now();
+  var n = now();
+  ct = n; ws = Math.floor(n / STEP) * STEP - STEP;
+  if (chs.length) first = firstFor(idx);
+  document.body.classList.add('on');
+  fit(); paint(); need();
+  idle();
+  clearInterval(tickT);
+  tickT = setInterval(function () { if (shown) paint(); }, 60000);
+}
+document.addEventListener('keydown', function (e) {
+  if (!shown) return;
+  idle();
+  var k = e.keyCode;
+  if ((k >= 48 && k <= 57) || (k >= 96 && k <= 105)) dial(String(k >= 96 ? k - 96 : k - 48));
+  else if (k === 38) moveRow(-1);
+  else if (k === 40) moveRow(1);
+  else if (k === 37) moveTime(-1);
+  else if (k === 39) moveTime(1);
+  else if (k === 428 || k === 34 || k === 33 || k === 427) moveRow((k === 428 || k === 34 ? 1 : -1) * ROWS);
+  else if (k === 13) tune();
+  else if (k === 461 || k === 27 || k === 8 || k === 10009 || k === 458) closeGuide();
+  e.preventDefault();
+});
+document.addEventListener('click', function (e) {
+  if (!shown) return;
+  idle();
+  var r = e.target.closest && e.target.closest('[data-i]');
+  if (!r) { closeGuide(); return; }
+  idx = +r.getAttribute('data-i');
+  var s = r.getAttribute('data-s');
+  if (s) ct = +s;
+  tune();
+});
+var lastWheel = 0;
+document.addEventListener('wheel', function (e) {
+  if (!shown || !e.deltaY) return;
+  e.preventDefault();
+  var n = Date.now();
+  if (n - lastWheel < 90) return;
+  lastWheel = n; idle(); moveRow(e.deltaY > 0 ? 1 : -1);
+}, { passive: false });
+/* the Guide key pressed again while the guide is open closes it */
+document.addEventListener('webOSRelaunch', function () {
+  log('relaunch shown=' + shown);
+  if (shown && Date.now() - shownAt > 700) closeGuide();
+  else if (!shown) { show(); load(); }
+});
+/* the channel list, and which channel is on now (the service asks the TV): that one is selected, with the programme on now */
+function load() {
+  get('/api/tuner/channels', function (j) {
+    failed = j.error || '';
+    if (j.channels && j.channels.length) {
+      var want = j.current || (chs[idx] ? chs[idx].id : ''), i;
+      chs = j.channels; idx = 0;
+      for (i = 0; i < chs.length; i++) if (chs[i].id === want) idx = i;
+      first = firstFor(idx);
+      store();
+    }
+    if (!shown) show(); else { var n = now(); ct = n; ws = Math.floor(n / STEP) * STEP - STEP; paint(); need(); }
+  }, function () {
+    failed = t('The service did not answer');
+    if (!shown) show(); else paint();
+  });
+}
+setLang();
+if (restore()) show();
+load();
+</script></body></html>

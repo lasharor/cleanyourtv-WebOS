@@ -156,6 +156,10 @@ function draw() {
     $('sub').textContent = tr('Input key');
     return;
   }
+  if (view === 'guidekey') {
+    $('sub').textContent = tr('Guide key');
+    return;
+  }
   if (view === 'volumebar') {
     $('sub').textContent = tr('Volume bar');
     return;

@@ -175,6 +175,7 @@ const CALLS = [
   ['a web page is refused', 'GET', '/api/apps', undefined, 'http://evil.example'],
   ['preflight from our app', 'OPTIONS', '/api/apps', undefined, 'null'],
   ['webOS 6 app origin', 'GET', '/api/version', undefined, 'file://com.webos.app.home-webos'],
+  ['the guide app origin', 'GET', '/api/version', undefined, 'file://com.cleanyourtv.guide-webos'],
   ['webOS 4 app origin', 'GET', '/api/version', undefined, 'file://'],
   ['another app origin is refused', 'GET', '/api/version', undefined, 'file://com.other.app-webos'],
   [
@@ -293,6 +294,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       'zram',
       'fstrim',
       'addons',
+      'tunerguide', // the guide of LG's own tuner (helper/tunerguide.js)
     ];
     const okTv = tv.sdk === '10.2.2' && tv.pickerMode === 'overlay' && tv.notifyWindow === 'topui';
     const okSv = JSON.stringify(sv.features) === JSON.stringify(want) && !Object.keys(sv.failed).length;

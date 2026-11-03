@@ -14,6 +14,7 @@ module.exports = {
   TV: D + '/tv.json', // what tvprofile.js found out about this TV
   DISABLE: D + '/DISABLE', // present while LG's Home is chosen
   PICKER_MODE: D + '/picker-mode', // read by scripts/inputkey.sh
+  TUNER_GUIDE: D + '/tuner-guide', // 'on' while the Guide key opens the tuner guide (guide/app); read by scripts/guidekey.sh
   CHANNEL: D + '/channel', // the update channel ('dev' for the dev builds)
   SOURCE: D + '/source', // "owner/repo [branch]": another repository, for testing
   LIVE: env.CYTV_LIVE_DIR || D + '/live',

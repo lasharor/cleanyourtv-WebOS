@@ -86,6 +86,10 @@ var INFO = {
   'Remove voice': 'Deletes the downloaded engine and model. The rest of CleanYourTV is not affected.',
   'Input key':
     'The remote\u2019s Input button opens our Inputs list over the running app instead of LG\u2019s picker. Open this screen to switch it off or to learn the button.',
+  'Guide key':
+    'The remote’s Guide button. Open this screen to learn the button and to switch on CleanYourTV’s guide for LG’s own Live TV (the antenna or cable tuner): a lighter guide shown over the picture instead of LG’s.',
+  'Guide for LG’s own Live TV':
+    'On: the Guide button opens CleanYourTV’s guide of the tuner while LG’s own Live TV is in front (or Live TV, the playlist, is off). Off: the Guide button works as before. Needs the Guide key learned.',
   'Share log':
     'Shows a QR code. Scan it with a phone on the same Wi-Fi to copy a report for a bug report. Addresses and URL paths are masked; the page closes after ten minutes.',
   'Uninstall': 'Removes the apps, the boot scripts and your settings, then restarts the TV so LG\u2019s Home comes back.',
@@ -106,7 +110,7 @@ var INFO = {
   'Remove the playlist': 'Deletes the playlist address, the channel list, the guide and your favourites from the TV.',
   'Yes, remove the playlist': 'Deletes the playlist and everything stored for it on the TV. You can set it up again.',
   'Learn the Guide key':
-    'Records the Guide button\u2019s code. Afterwards it opens the Live TV channel guide over whatever is running (only while Live TV is on). Clear it to get LG\u2019s guide back.',
+    'Records the Guide button\u2019s code. Afterwards it opens CleanYourTV\u2019s guide over whatever is running: the Live TV playlist guide, or the guide of LG\u2019s own Live TV when that is switched on. Clear it to get LG\u2019s guide back.',
   'Input key shows':
     'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher\u2019s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.',
   'Learn the Home key': 'Optional. Records the Home button\u2019s code. The Home key keeps working exactly as before.',

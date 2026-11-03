@@ -91,7 +91,7 @@ function kStep(n) {
     );
   if (n === 'guide')
     return kShow(
-      'The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens the Live TV channel guide instead of LG\u2019s guide. Clear it to get LG\u2019s guide back.',
+      'The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens CleanYourTV\u2019s guide (the Live TV playlist guide, or the guide of LG\u2019s own Live TV when that is switched on) instead of LG\u2019s guide. Clear it to get LG\u2019s guide back.',
       [
         {
           label: 'Start',

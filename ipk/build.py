@@ -69,7 +69,7 @@ write('frontend-%s.tgz' % fe, tgz(fl))
 
 # ---- the package ----
 data = []
-for app_id, src in (('com.cleanyourtv.manager', 'manager/app'), ('com.cleanyourtv.picker', 'picker/app'), ('com.cleanyourtv.notify', 'notify/app')):
+for app_id, src in (('com.cleanyourtv.manager', 'manager/app'), ('com.cleanyourtv.picker', 'picker/app'), ('com.cleanyourtv.guide', 'guide/app'), ('com.cleanyourtv.notify', 'notify/app')):
     d = '/usr/palm/applications/' + app_id
     for root, _, names in os.walk(P(src)):
         for n in sorted(names):

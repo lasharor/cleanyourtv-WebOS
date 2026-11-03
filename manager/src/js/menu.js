@@ -488,7 +488,8 @@ function build() {
   if (view === 'livetv') {
     var lo = st.options.liveTv !== false,
       l2 = lv || {},
-      gk = (st.keys && st.keys.guide) || '';
+      gk = (st.keys && st.keys.guide) || '',
+      tg = !!st.options.tunerGuide;
     rows.push({
       label: 'Show Live TV',
       sub: onoff(lo),
@@ -501,6 +502,13 @@ function build() {
       sub: onoff(st.options.tuner !== false),
       fn: function () {
         opt({ tuner: st.options.tuner === false });
+      },
+    });
+    rows.push({
+      label: 'Guide for LG’s own Live TV',
+      sub: onoff(tg),
+      fn: function () {
+        opt({ tunerGuide: !tg });
       },
     });
     rows.push({
@@ -533,10 +541,15 @@ function build() {
     });
     rows.push({
       label: 'Learn the Guide key',
-      sub: lo ? (gk ? 'now: ' + gk : 'not learned \u00B7 LG\u2019s guide stays') : 'Live TV is off',
-      dim: !lo,
+      sub:
+        lo || tg
+          ? gk
+            ? 'now: ' + gk
+            : 'not learned \u00B7 LG\u2019s guide stays'
+          : 'Live TV and the guide for LG\u2019s own Live TV are off',
+      dim: !(lo || tg),
       fn: function () {
-        if (lo) openKeys('guide');
+        if (lo || tg) openKeys('guide');
       },
     });
     rows.push({ sep: true });
@@ -606,6 +619,26 @@ function build() {
           opt({ volumeTheme: t.id });
         },
       });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'guidekey') {
+    var gk2 = (st.keys && st.keys.guide) || '';
+    rows.push({
+      label: 'Guide for LG’s own Live TV',
+      sub: onoff(!!st.options.tunerGuide),
+      fn: function () {
+        opt({ tunerGuide: !st.options.tunerGuide });
+      },
+    });
+    rows.push({
+      label: 'Learn the Guide key',
+      sub: gk2 ? 'now: ' + gk2 : 'not learned · LG’s guide stays',
+      fn: function () {
+        openKeys('guide');
+      },
     });
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
@@ -1172,6 +1205,13 @@ function build() {
       sub: st.inputhook && st.inputhook.hook && !st.inputhook.hook.attached ? 'not available' : onoff(st.options.inputKey),
       fn: function () {
         push('inputkey');
+      },
+    });
+    rows.push({
+      label: 'Guide key',
+      sub: st.keys && st.keys.guide ? 'learned: ' + st.keys.guide : 'not learned',
+      fn: function () {
+        push('guidekey');
       },
     });
     rows.push({ sep: true });

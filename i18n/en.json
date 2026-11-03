@@ -814,5 +814,14 @@
  "paused until %s": "paused until %s",
  "that does not look like an Unsplash Access Key": "that does not look like an Unsplash Access Key",
  "a new photo at most every 3 minutes": "a new photo at most every 3 minutes",
- "paused for the hourly limit": "paused for the hourly limit"
+ "paused for the hourly limit": "paused for the hourly limit",
+ "Guide for LG’s own Live TV": "Guide for LG’s own Live TV",
+ "Live TV and the guide for LG’s own Live TV are off": "Live TV and the guide for LG’s own Live TV are off",
+ "Today": "Today",
+ "Loading…": "Loading…",
+ "Guide key": "Guide key",
+ "The remote’s Guide button. Open this screen to learn the button and to switch on CleanYourTV’s guide for LG’s own Live TV (the antenna or cable tuner): a lighter guide shown over the picture instead of LG’s.": "The remote’s Guide button. Open this screen to learn the button and to switch on CleanYourTV’s guide for LG’s own Live TV (the antenna or cable tuner): a lighter guide shown over the picture instead of LG’s.",
+ "On: the Guide button opens CleanYourTV’s guide of the tuner while LG’s own Live TV is in front (or Live TV, the playlist, is off). Off: the Guide button works as before. Needs the Guide key learned.": "On: the Guide button opens CleanYourTV’s guide of the tuner while LG’s own Live TV is in front (or Live TV, the playlist, is off). Off: the Guide button works as before. Needs the Guide key learned.",
+ "Records the Guide button’s code. Afterwards it opens CleanYourTV’s guide over whatever is running: the Live TV playlist guide, or the guide of LG’s own Live TV when that is switched on. Clear it to get LG’s guide back.": "Records the Guide button’s code. Afterwards it opens CleanYourTV’s guide over whatever is running: the Live TV playlist guide, or the guide of LG’s own Live TV when that is switched on. Clear it to get LG’s guide back.",
+ "The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens CleanYourTV’s guide (the Live TV playlist guide, or the guide of LG’s own Live TV when that is switched on) instead of LG’s guide. Clear it to get LG’s guide back.": "The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens CleanYourTV’s guide (the Live TV playlist guide, or the guide of LG’s own Live TV when that is switched on) instead of LG’s guide. Clear it to get LG’s guide back."
 }

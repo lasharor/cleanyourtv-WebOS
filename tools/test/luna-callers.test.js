@@ -20,8 +20,8 @@ run(async () => {
   try {
     const report = req('sharelog').report();
     ok(
-      calls.length === 5 && calls[0].payload.keys[0] === 'modelName',
-      'Share log routes all five Luna calls through the shared synchronous wrapper'
+      calls.length === 6 && calls[0].payload.keys[0] === 'modelName',
+      'Share log routes all six Luna calls through the shared synchronous wrapper'
     );
     ok(
       calls.slice(1).every(c => c.opts.wait === 4000) && /registered/.test(report),

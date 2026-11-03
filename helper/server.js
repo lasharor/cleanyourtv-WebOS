@@ -8,7 +8,7 @@ const web = require('./web');
 
 // Who may call: our own apps (local files; their requests carry Origin "null", "file://<app id>-webos" on webOS 6, or a bare
 // "file://" on webOS 4, whose Chromium 53 names no app, so it is no more specific than "null") and programs
-const OUR_APPS = /^file:\/\/((com\.webos\.app\.home|com\.cleanyourtv\.(manager|picker|notify|live))-webos)?$/;
+const OUR_APPS = /^file:\/\/((com\.webos\.app\.home|com\.cleanyourtv\.(manager|picker|guide|notify|live))-webos)?$/;
 
 // An add-on's page is served by this service (http://127.0.0.1:8765/addon/<id>/...), so its own requests carry that address as their
 // origin. They are accepted only for /addon/ and for the page's own API (/api/addons/<id>/..., and only when the Referer is that

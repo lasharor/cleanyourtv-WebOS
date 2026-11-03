@@ -157,7 +157,7 @@ boot_scripts() {
 # apps when it restarts. Restart it once if they are missing (the screen blinks).
 ensure_apps() {
   missing=0
-  for id in com.cleanyourtv.picker com.cleanyourtv.notify; do
+  for id in com.cleanyourtv.picker com.cleanyourtv.guide com.cleanyourtv.notify; do
     [ -d $MD/apps/usr/palm/applications/$id ] && ! luna com.webos.applicationManager/getAppInfo "{\"id\":\"$id\"}" | grep -q '"returnValue": true' && missing=1
   done
   [ $NOTIFY_CHANGED = 1 ] && missing=1

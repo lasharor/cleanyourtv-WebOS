@@ -27,7 +27,7 @@ step('lint of the service, scripts and tools (eslint)', bin('eslint'), ['helper'
 // (written to .lint-pages, inside the project so ESLint's config applies; git ignores it)
 const tmp = path.join(root, '.lint-pages');
 cp.spawnSync('mkdir', ['-p', tmp]);
-const pages = ['app', 'manager/app', 'picker/app', 'notify/app', 'helper/addons-bundled/iptv/page'];
+const pages = ['app', 'manager/app', 'picker/app', 'guide/app', 'notify/app', 'helper/addons-bundled/iptv/page'];
 for (const p of pages) {
   const html = fs.readFileSync(path.join(root, p, 'index.html'), 'utf8');
   const scripts = [];

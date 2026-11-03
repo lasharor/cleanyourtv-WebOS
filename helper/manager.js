@@ -79,7 +79,7 @@ function create(ctx) {
   async function setOptions(o) {
     const cur = config.options();
     const next = Object.assign({}, cur);
-    for (const k of ['debloat', 'inputKey', 'liveTv', 'tuner']) if (typeof o[k] === 'boolean') next[k] = o[k];
+    for (const k of ['debloat', 'inputKey', 'liveTv', 'tuner', 'tunerGuide']) if (typeof o[k] === 'boolean') next[k] = o[k];
     if (require('./audio').THEMES.indexOf(o.volumeTheme) >= 0) next.volumeTheme = o.volumeTheme;
     if (Array.isArray(o.debloatOff)) next.debloatOff = debloat.cleanOff(o.debloatOff);
     if (Array.isArray(o.closePreloaded)) next.closePreloaded = require('./preload').clean(o.closePreloaded);

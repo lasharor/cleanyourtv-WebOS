@@ -11,7 +11,7 @@ INITD=/var/lib/webosbrew/init.d
 [ "$(id -u)" = 0 ] || { echo "run as root"; exit 1; }
 rm -f $INITD/10-cleanyourtv-home $INITD/15-cleanyourtv-debloat
 # our apps must not be what the TV tries to come back to: close them and point the boot's "last app" at LG's Home
-for id in com.cleanyourtv.manager com.cleanyourtv.picker com.cleanyourtv.notify; do
+for id in com.cleanyourtv.manager com.cleanyourtv.picker com.cleanyourtv.guide com.cleanyourtv.notify; do
   luna_send -n 1 -w 3000 luna://com.webos.applicationManager/closeByAppId "{\"id\":\"$id\"}" >/dev/null 2>&1
 done
 [ -f $D/volume-osd-restore.sh ] && sh $D/volume-osd-restore.sh </dev/null   # LG's own volume bar, if a custom one switched it off
@@ -28,7 +28,7 @@ case " $* " in *" --no-reboot "*)
 ;; esac
 KEEP=0; case " $* " in *" --keep-config "*) KEEP=1 ;; esac
 if [ $KEEP = 1 ]; then mkdir -p /media/developer/cytv-keep; cp $D/config.json $D/usage.json /media/developer/cytv-keep/ 2>/dev/null; fi
-for id in com.cleanyourtv.picker com.cleanyourtv.notify com.cleanyourtv.live com.cleanyourtv.manager; do
+for id in com.cleanyourtv.picker com.cleanyourtv.guide com.cleanyourtv.notify com.cleanyourtv.live com.cleanyourtv.manager; do
   luna_send -n 1 -w 20000 -f luna://com.webos.appInstallService/dev/remove "{\"id\":\"$id\",\"subscribe\":false}" >/dev/null 2>&1
   rm -rf /media/developer/apps/usr/palm/packages/$id /media/developer/apps/usr/palm/applications/$id
 done

@@ -6,7 +6,7 @@ luna_send() { command luna-send "$@" </dev/null; }
 L=/media/developer/cleanyourtv
 [ "$1" = temp ] || touch /media/developer/cleanyourtv/DISABLE /media/developer/cleanyourtv/DISABLE-DEBLOAT
 # our apps must not be what the TV tries to come back to: close them and point the boot's "last app" at LG's Home
-for id in com.cleanyourtv.manager com.cleanyourtv.picker com.cleanyourtv.notify; do
+for id in com.cleanyourtv.manager com.cleanyourtv.picker com.cleanyourtv.guide com.cleanyourtv.notify; do
   luna_send -n 1 -w 3000 luna://com.webos.applicationManager/closeByAppId "{\"id\":\"$id\"}" >/dev/null 2>&1
 done
 LASTAPP=/var/luna/preferences/bootd_last_foreground_app_id.json

@@ -83,7 +83,13 @@ function report() {
     sh("grep -E 'com.webos.app.home|InputPicker' /proc/mounts | cut -c1-120 | head -5") + '\n' + sh('ls ' + P.INITD + ' 2>&1')
   );
   let apps = '';
-  for (const id of ['com.cleanyourtv.manager', 'com.cleanyourtv.picker', 'com.cleanyourtv.notify', 'com.webos.app.home'])
+  for (const id of [
+    'com.cleanyourtv.manager',
+    'com.cleanyourtv.picker',
+    'com.cleanyourtv.guide',
+    'com.cleanyourtv.notify',
+    'com.webos.app.home',
+  ])
     apps +=
       id +
       ': ' +

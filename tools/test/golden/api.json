@@ -222,6 +222,14 @@
   "status": 200,
   "type": "application/json"
  },
+ "the guide app origin": {
+  "body": {
+   "version": "<version>"
+  },
+  "cors": "*",
+  "status": 200,
+  "type": "application/json"
+ },
  "webOS 4 app origin": {
   "body": {
    "version": "<version>"
@@ -443,6 +451,7 @@
     "inputKey": false,
     "liveTv": true,
     "tuner": true,
+    "tunerGuide": false,
     "volumeTheme": "system"
    },
    "picker": {
@@ -527,6 +536,7 @@
     "inputKey": false,
     "liveTv": true,
     "tuner": true,
+    "tunerGuide": false,
     "volumeTheme": "system"
    },
    "picker": {
@@ -629,6 +639,7 @@
     "inputKey": false,
     "liveTv": false,
     "tuner": true,
+    "tunerGuide": false,
     "volumeTheme": "system"
    },
    "picker": {
@@ -869,6 +880,7 @@
    "inputKey": false,
    "liveTv": false,
    "tuner": true,
+   "tunerGuide": false,
    "volumeTheme": "system"
   },
   "sort": "alpha",

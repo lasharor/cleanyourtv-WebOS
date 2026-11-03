@@ -1,6 +1,6 @@
 // The settings in config.json, for every part of the service. Read and change them only through this module:
 //   config.get()                 a copy of everything
-//   config.options()             {debloat, inputKey, liveTv, tuner} with their defaults (and debloatOff, the debloat groups switched off)
+//   config.options()             {debloat, inputKey, liveTv, tuner, tunerGuide} with their defaults (and debloatOff, the debloat groups switched off)
 //   config.keys()                the learned remote buttons with their defaults
 //   config.update(source, fn)    fn changes a copy, which is then written at once (atomically). The read, the change and the write
 //                                happen in one go, so two parts of the service can never overwrite each other's settings.
@@ -9,7 +9,7 @@
 const fs = require('fs');
 const P = require('./paths');
 
-const OPTIONS = { debloat: true, inputKey: true, liveTv: true, tuner: true, volumeTheme: 'system' };
+const OPTIONS = { debloat: true, inputKey: true, liveTv: true, tuner: true, tunerGuide: false, volumeTheme: 'system' };
 const KEYS = { input: '', home: '', voice: '', guide: '', learned: false };
 // what the launcher saves with POST /api/config; everything else belongs to the service and the manager
 const LAUNCHER_KEYS = ['dock', 'hidden', 'sort', 'order', 'clock', 'topbar', 'runDots', 'wall', 'cards', 'shelfShow'];

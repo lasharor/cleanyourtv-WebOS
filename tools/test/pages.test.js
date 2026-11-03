@@ -5,7 +5,7 @@ const fs = require('fs'),
 const { root, ok, run } = require('./lib');
 
 run(async () => {
-  const pages = ['app', 'manager/app', 'picker/app', 'notify/app', 'helper/addons-bundled/iptv/page'].map(d =>
+  const pages = ['app', 'manager/app', 'picker/app', 'guide/app', 'notify/app', 'helper/addons-bundled/iptv/page'].map(d =>
     path.join(root, d, 'index.html')
   );
   // the cards that bring a page of their own run on the TV too

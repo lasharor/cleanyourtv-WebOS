@@ -57,8 +57,27 @@ quality; search matches names across all channels.
 
 By default the remote's Guide button belongs to LG. In the manager app, **Live TV** > **Learn the Guide key** records the
 button's code; afterwards it opens the Live TV channel guide over whatever is running, and closes it again when Live TV is open.
-**Clear** gives LG's guide back. The button is only taken over while Live TV is on and a code is learned. It uses the same hook as
-the [Input key](input-key.md).
+**Clear** gives LG's guide back. The button is only taken over while Live TV or the guide for LG's own Live TV (below) is on and a code
+is learned. It uses the same hook as the [Input key](input-key.md).
+
+### A faster guide for LG's own Live TV (the tuner)
+
+LG's own guide for the antenna or cable tuner is slow on budget TVs (about 1 GB of memory). **Live TV** > **Guide for LG's own Live TV**
+replaces it with a lighter one, shown over the picture: the Guide button opens `com.cleanyourtv.guide`, a transparent app like the
+Inputs list, with the channels down the left and three hours of programmes across.
+
+- It needs the Guide key learned (above) and is **off by default**. It is used while LG's own Live TV is in front, or when Live TV (the
+  playlist) is off; with the playlist's Live TV in front, the Guide button still opens that guide.
+- It reads what LG's guide reads: the channels from LG's channel service and the programmes from its guide database. Nothing is
+  downloaded, and nothing is read until the guide is opened. It asks for the programmes of the channels in view only, not for all
+  30000 programmes of a TV at once.
+- It opens on the channel that is on now, with the programme that is on now selected.
+- Keys: Up and Down change channel (CH+ and CH- jump a page), Left and Right move between programmes, OK tunes the channel, Back or the
+  Guide button again closes it. The number buttons dial: type 7 or 1 2 and the guide jumps to that channel number (the number shows at
+  the top right and is forgotten after a moment); OK then tunes it. With the pointer: the wheel scrolls, a click tunes.
+- Tuning starts LG's Live TV with the channel (the way LG's own guide does), so the picture and sound are LG's.
+- Tested on one TV with a cable tuner (webOS 5.6.2). Not tried with ATSC/QAM (US cable), which may name its channels differently.
+
 
 ## With the pointer
 

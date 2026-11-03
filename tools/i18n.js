@@ -105,7 +105,9 @@ if (require.main === module) {
             .map(f => fs.readFileSync(path.join(root, d, f), 'utf8'))
             .join('\n')
         )
-        .join('\n') + fs.readFileSync(path.join(root, 'picker/app/index.html'), 'utf8')
+        .join('\n') +
+        fs.readFileSync(path.join(root, 'picker/app/index.html'), 'utf8') +
+        fs.readFileSync(path.join(root, 'guide/app/index.html'), 'utf8')
     );
     const re = /\btr?\('((?:[^'\\]|\\.)+)'\)/g;
     let m;

@@ -59,6 +59,16 @@ run(async () => {
   ok(r.j.options.tuner === false, 'only a boolean changes the tuner option');
   r = await ask('options', 'POST', { tuner: true });
   ok(r.j.options.tuner === true, "Show LG's own Live TV can be switched on again");
+  ok(r.j.options.tunerGuide === false, 'the guide for the tuner is off by default');
+  r = await ask('options', 'POST', { tunerGuide: true });
+  ok(
+    r.j.options.tunerGuide === true && conf.get().options.tunerGuide === true && r.j.options.liveTv === false,
+    'the guide for the tuner is its own option'
+  );
+  r = await ask('options', 'POST', { tunerGuide: 'yes' });
+  ok(r.j.options.tunerGuide === true, 'only a boolean changes the tuner guide option');
+  r = await ask('options', 'POST', { tunerGuide: false });
+  ok(r.j.options.tunerGuide === false, 'the guide for the tuner can be switched off again');
   r = await ask('options', 'POST', { liveTv: 'no' });
   ok(r.j.options.liveTv === false, 'only a boolean changes an option');
   r = await ask('options', 'POST', { inputKey: false });
