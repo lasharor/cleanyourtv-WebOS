@@ -27,7 +27,7 @@ launcher draws it from its template, like the Text card, so a card cannot run an
 - `options`: at most 10, typed on the phone page (**Cards** > **Set up from your phone**). `kind` is `text`, `long` (several lines),
   `choice` (with `choices: [[value, label], ...]`) or `place` (a place searched by name, like the weather card's; the key must be `place`, and
   the card gets `{{opt.place}}`, `{{opt.lat}}` and `{{opt.lon}}`). `default` is used until something is filled in; a choice without a default starts at its first choice.
-- `template`: at most 1500 characters (a card has a `template` or a `page`, see below). What the Text card knows: `{{greeting}}`, `{{time}}`, `{{date}}`, `{{weekday}}`,
+- `template`: at most 1500 characters (a card has a `template` or a `page`, see below). What the Text card knows: `{{greeting}}` (and `{{greeting.name}}`, the greeting with the card's option `name`, kept apart from the sentence so a Hebrew or Arabic name reads right; the plain greeting when it is empty), `{{time}}`, `{{date}}`, `{{weekday}}`,
   `{{weather.temp}}` and `{{weather.text}}` (with a weather card on Home); `**bold**`, `*italic*` and a line starting with `#` for a heading.
   And for downloaded cards: `{{opt.<key>}}` (what was filled in), `{{year}}`, `{{year.percent}}`, `{{year.left}}`, and the filters
   `{{opt.date|days}}` (days until a date, `YYYY-MM-DD`), `|ago` (days since), `|upper` and `|lower`.

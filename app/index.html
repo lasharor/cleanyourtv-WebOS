@@ -3132,6 +3132,17 @@ function cardMarkup(src, opt) {
     'year.percent': String(Math.round(((yr - y0) / (y1 - y0)) * 100)),
     'year.left': String(Math.ceil((y1 - yr) / 86400000)),
     greeting: greetText(''),
+    /* the greeting with the name of the card's option "name", kept apart from the sentence by Unicode isolates so a Hebrew or Arabic
+       name reads right in an English greeting; the plain greeting when none was typed */
+    'greeting.name': greetText(
+      opt && opt.name
+        ? '\u2068' +
+            String(opt.name)
+              .replace(/[\u0000-\u001f\u202a-\u202e\u2066-\u2069]/g, '')
+              .slice(0, 30) +
+            '\u2069'
+        : ''
+    ),
     time: timeText(),
     date: dateText(),
     weekday: dateText({ weekday: 'long' }),
