@@ -166,4 +166,10 @@ run(async () => {
       /#info \.abt\.ov \{\s*-webkit-mask-image/.test(mcss),
     "an add-on's long text on the Add-ons tab stays in its box and scrolls by itself"
   );
+  // Experimental > Preloaded apps: the State row steps only through the modes this TV uses (PR 149)
+  const mm = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'menu.js'), 'utf8');
+  ok(
+    /var states = \['off'\]\.concat\(\s*pr\.modes\.filter\(function \(m\) \{\s*return seen\[m\];/.test(mm),
+    'the preload State row offers only the modes the TV itself uses'
+  );
 });

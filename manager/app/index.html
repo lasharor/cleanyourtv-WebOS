@@ -1216,7 +1216,19 @@ function build() {
       pop();
       return;
     }
-    var states = ['off'].concat(pr.modes);
+    /* only the modes this TV itself uses for some app (now, or when it started) and this app's own: criu or full are not offered where
+       LG uses neither, since the row steps through them one by one and a TV without that kernel support could be left with a mode it cannot run */
+    var seen = {};
+    (pr.apps || []).forEach(function (x) {
+      seen[x.mode] = true;
+      if (x.base) seen[x.base.mode] = true;
+    });
+    seen[pa.mode] = true;
+    var states = ['off'].concat(
+      pr.modes.filter(function (m) {
+        return seen[m];
+      })
+    );
     rows.push({
       label: preloadName(pa.id),
       sub: pa.id + ' · LG preloads it only while ' + pa.memory + ' MB of memory is free (LG’s own figure)',
