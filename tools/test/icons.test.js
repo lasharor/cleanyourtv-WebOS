@@ -116,10 +116,13 @@ run(async () => {
   ok(p.code === 403, 'the API needs the code');
   p = await phone('GET', '/api/state', undefined, code);
   ok(
-    p.j.apps.length === 1 && p.j.apps[0].id === 'com.example.app' && p.j.apps[0].custom === false,
-    'the page lists the apps, not the inputs'
+    p.j.apps.length === 2 && p.j.apps[0].id === 'com.example.app' && p.j.apps[0].custom === false && p.j.apps[1].id === '__live',
+    "the page lists the apps, not the inputs, and Home's Live TV tile: " + JSON.stringify(p.j.apps.map(x => x.id))
   );
   ok(p.j.sizes && p.j.sizes.tile.w === 472, 'the page gets the sizes too');
+  p = await phone('POST', '/api/upload/__live', PNG, code, 'image/png');
+  ok(p.code === 200 && /__live\.png$/.test(I.find('__live')) && I.versions().__live, 'the Live TV tile can get a picture of its own');
+  I.remove('__live');
   p = await phone('GET', '/api/icon/com.example.app', undefined, code);
   ok(p.code === 200, "without a picture the page shows the app's own icon");
   p = await phone('POST', '/api/upload/com.other.app', PNG, code, 'image/png');

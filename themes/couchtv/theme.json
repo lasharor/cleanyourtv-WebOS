@@ -80,7 +80,8 @@
     "glow": 0,
     "speed": 1,
     "scenes": "couch",
-    "sceneSecs": 20
+    "sceneSecs": 20,
+    "seasonal": "on"
   },
   "cards": {
     "style": "glass"

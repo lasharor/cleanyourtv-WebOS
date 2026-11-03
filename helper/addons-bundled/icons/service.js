@@ -24,6 +24,7 @@ const DIR = P.D + '/icons',
 const LIMITS = { file: 1024 * 1024, icons: 300 };
 const PAIR_PORT = 8794, // after the Android box page (8793)
   PAIR_MS = 15 * 60 * 1000;
+const LIVE = '__live';
 const ID = /^[\w-][\w.-]{0,127}$/; // an app id, as apps.js checks it: never starting with a dot
 const TYPES = ['png', 'jpg', 'webp'];
 const MIME = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
@@ -95,7 +96,10 @@ function create(ctx) {
   async function apps() {
     const a = ctx.feature && ctx.feature('apps');
     const list = a ? await a.apps() : [];
-    return list.filter(x => !x.input).sort((p, q) => String(p.title).localeCompare(String(q.title)));
+    const out = list.filter(x => !x.input);
+    // Home's Live TV tile (the id __live) can have a picture of its own too, while Live TV is on
+    if (!(config.options && config.options().liveTv === false)) out.push({ id: LIVE, title: 'Live TV' });
+    return out.sort((p, q) => String(p.title).localeCompare(String(q.title)));
   }
   // the picture an app shows now: its custom one, else its own
   function sendIcon(res, a) {

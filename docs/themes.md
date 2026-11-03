@@ -243,6 +243,7 @@ when the focus moves down into it (Back or Up closes it); a dock at the top leav
 | `effects.wallpaperDim` | 0 to 0.9 | `0.4` | How far the wallpaper is darkened with the background colour. |
 | `effects.scenes` | `off`, `couch`, `custom` | `off` | `couch`: five landscapes shipped with the launcher take turns behind Home (Night, Golden hour, Waterline, Fog, Dawn); with `clock.style` glass the scenery stands in front of the clock. Takes the place of the wallpaper and of Wallpapers. `custom`: the theme brings its own scenes as a `"scenes"` array in `theme.json`. |
 | `effects.sceneSecs` | 10 to 600 | `20` | Seconds each scene stays (`effects.scenes`). |
+| `effects.seasonal` | `off`, `on` | `off` | With `effects.scenes` `couch`: `on` shows photos for the time of year in place of the five landscapes: Christmas lights from 6 to 27 December, fireworks until 2 January, then five photos of the season (winter, spring, summer, autumn). Two of each set ship with the launcher; the other three are loaded from Unsplash when shown. |
 | **cards** | | | |
 | `cards.style` | `flat`, `glass` | `flat` | `glass`: the weather and Home Assistant cards sit on frosted glass (a blurred copy of the scene behind them, no live blur). |
 <!-- schema:end -->
@@ -258,6 +259,18 @@ in Waterline the clock sits on the water with a reflection under it. Each scene 
 10 pm the scenes dim a little. Everything is drawn once a minute; only opacity animates. The scenes and the clock come from
 [couch-tv](https://github.com/Seagey/couch-tv) (MIT; the scenes were generated for that project and are free to use, the typeface is
 Antonio under the SIL Open Font License, see `THIRD-PARTY.md`).
+
+`effects.seasonal` `on` follows the calendar, in place of the five landscapes. From 6 to 27 December the scenes are five photos of
+Christmas lights and snowy villages, from 28 December to 2 January five photos of fireworks; the rest of the year five photos of the
+season (winter from 21 December, spring from 20 March, summer from 21 June, autumn from 23 September). The TV's country setting
+(else the region of its language) counts: south of the equator (Australia, New Zealand, South Africa, Argentina, Chile, Brazil, ...)
+the seasons are the other way round, while Christmas and New Year stay; spring shows three tulip fields more only in the Netherlands
+and Belgium. The photos are from
+[Unsplash](https://unsplash.com) (free to use under the Unsplash License), and the photographer shows in the bottom corner. The first
+two of each set ship with the launcher (`app/season-<set>-<n>.jpg` with a blurred `-glass.jpg`, about 5 MB for all twelve), so they
+always show; the other three are loaded from Unsplash's image host, 1920 x 1080, when they are shown, are never stored on the TV, and
+are skipped without network (tried again every hour). The photos have no cut-out, so the clock sits in front of them, with a darker
+shade at the top. The list is in `app/src/js/scenes.js` (`SEASONAL`).
 
 `effects.scenes` `custom` lets a theme bring its own landscape images instead of the five built-in ones. Add a `"scenes"` array to
 `theme.json` and put the image files in the theme folder:

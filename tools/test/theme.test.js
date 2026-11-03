@@ -114,6 +114,62 @@ run(async () => {
     couch.attrs.cstyle === 'glass' && couch.attrs.cards === 'glass' && couch.scenes.set === 'couch' && couch.scenes.secs === 10,
     'the glass clock, the scenes (seconds clamped to 10 or more) and glass cards reach the launcher'
   );
+  ok(!('seasonal' in couch.scenes), 'the seasonal photos are off unless the theme asks for them');
+  const seasonal = themeMod.resolve(themeMod.normalize({ effects: { scenes: 'couch', seasonal: 'on' } }, 'seasonal'));
+  const seasonalCustom = themeMod.resolve(themeMod.normalize({ effects: { scenes: 'off', seasonal: 'on' } }, 'seasonal-off'));
+  ok(
+    seasonal.scenes.seasonal === true && !seasonalCustom.scenes,
+    'effects.seasonal reaches the launcher with the couch scenes, and alone it turns nothing on'
+  );
+  // which photos a day gets (scenes.js seasonOf): the holidays first, then the season
+  const sj = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'scenes.js'), 'utf8');
+  const seasonOf = new Function(sj.slice(sj.indexOf('function seasonOf'), sj.indexOf('function seasonalLib')) + 'return seasonOf;')();
+  const on = (m, d, south) => seasonOf(new Date(2026, m - 1, d), south);
+  ok(
+    on(12, 5) === 'autumn' &&
+      on(12, 6) === 'christmas' &&
+      on(12, 27) === 'christmas' &&
+      on(12, 28) === 'newyear' &&
+      on(1, 1) === 'newyear' &&
+      on(1, 3) === 'winter' &&
+      on(3, 19) === 'winter' &&
+      on(3, 20) === 'spring' &&
+      on(6, 21) === 'summer' &&
+      on(9, 22) === 'summer' &&
+      on(9, 23) === 'autumn' &&
+      on(11, 3) === 'autumn',
+    'Christmas from 6 to 27 December, New Year until 2 January, then the seasons'
+  );
+  ok(
+    on(1, 15, true) === 'summer' && on(7, 1, true) === 'winter' && on(4, 1, true) === 'autumn' && on(12, 24, true) === 'christmas',
+    'south of the equator the seasons turn around, Christmas stays'
+  );
+  const ids = (sj.match(/p: '(\d{10,13}-[0-9a-f]{12})'/g) || []).length;
+  ok(ids === 31, 'six sets of photos, each an Unsplash photo id: ' + ids);
+  // which photos a country gets (scenes.js seasonalLib): the tulip fields only in the Netherlands and Belgium
+  const libSrc = sj.slice(sj.indexOf('var TULIPS'), sj.indexOf('var season ='));
+  const L = new Function('window', 'navigator', libSrc + 'return { seasonalLib: seasonalLib, region: region };')(
+    { webOSSystem: { country: '{"country":"NLD","smartServiceCountry":"NLD"}' } },
+    {}
+  );
+  ok(L.region() === 'NLD', "the TV's country setting is read: " + L.region());
+  ok(
+    L.seasonalLib('spring', 'NLD').length === 6 && L.seasonalLib('spring', 'US').length === 3 && L.seasonalLib('autumn', 'US').length === 5,
+    'tulips in spring only in the Netherlands and Belgium; the other sets everywhere'
+  );
+  ok(
+    L.seasonalLib('spring', 'US').every((x, i) => i < 2 === x.local) && L.seasonalLib('spring', 'US')[0].url === 'season-spring-1',
+    'the two photos that ship with the launcher are shown everywhere'
+  );
+  const shipped = [];
+  ['christmas', 'newyear', 'winter', 'spring', 'summer', 'autumn'].forEach(k =>
+    [1, 2].forEach(n => ['', '-glass'].forEach(g => shipped.push('season-' + k + '-' + n + g + '.jpg')))
+  );
+  const missing = shipped.filter(f => !fs.existsSync(path.join(root, 'app', f)));
+  ok(
+    !missing.length,
+    'the first two photos of each set ship with the launcher, with their glass: ' + (missing.join(' ') || 'all 24 files')
+  );
   const odd = themeMod.resolve(themeMod.normalize({ clock: { style: 'neon' }, effects: { scenes: 'beach' } }, 'odd'));
   ok(
     !('cstyle' in plain.attrs) && !('cards' in plain.attrs) && !('scenes' in plain) && !('cstyle' in odd.attrs) && !('scenes' in odd),
