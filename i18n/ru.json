@@ -741,5 +741,13 @@
  "Pressure": "Давление",
  "Air quality": "Качество воздуха",
  "Sunrise": "Восход",
- "Sunset": "Закат"
+ "Sunset": "Закат",
+ "Connect": "Подключить",
+ "Connected to Spotify.": "Подключено к Spotify.",
+ "Disconnect Spotify": "Отключить Spotify",
+ "Open Spotify sign-in": "Открыть вход в Spotify",
+ "Pasted address": "Вставленный адрес",
+ "Prepare sign-in": "Подготовить вход",
+ "Sign in to Spotify again.": "Войдите в Spotify снова.",
+ "Spotify now playing": "Spotify сейчас играет"
 }

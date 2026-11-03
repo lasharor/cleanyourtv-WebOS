@@ -83,9 +83,14 @@ function closeShare() {
     return;
   }
   if (shareMode === 'wallsrc') {
-    api('/api/wallpapers/source/' + wallSrc + '/settings', { stop: true }).catch(function () {});
+    api(pairPath, { stop: true }).catch(function () {});
     pop();
     wallRefresh();
+    return;
+  }
+  if (shareMode === 'addonpair') {
+    api(pairPath, { stop: true }).catch(function () {});
+    pop();
     return;
   }
   if (shareMode === 'abox') {

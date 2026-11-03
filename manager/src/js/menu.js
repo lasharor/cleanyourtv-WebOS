@@ -466,6 +466,13 @@ function build() {
         });
       }
     }
+    if (a1.settings)
+      rows.push({
+        label: 'Set up from your phone',
+        fn: function () {
+          openAddonPair(a1.id, a1.name);
+        },
+      });
     rows.push({
       label: a1.enabled ? 'Switch off' : 'Switch on',
       sub: a1.enabled ? 'on' : 'off',

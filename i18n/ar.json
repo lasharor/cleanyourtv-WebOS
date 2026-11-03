@@ -761,5 +761,13 @@
   "UV index": "مؤشر الأشعة فوق البنفسجية",
   "Pressure": "الضغط",
   "Air quality": "جودة الهواء",
-  "Sunset": "الغروب"
+  "Sunset": "الغروب",
+  "Connect": "اتصال",
+  "Connected to Spotify.": "متصل بـ Spotify.",
+  "Disconnect Spotify": "قطع الاتصال بـ Spotify",
+  "Open Spotify sign-in": "فتح تسجيل الدخول إلى Spotify",
+  "Pasted address": "العنوان الملصق",
+  "Prepare sign-in": "تجهيز تسجيل الدخول",
+  "Sign in to Spotify again.": "سجّل الدخول إلى Spotify مرة أخرى.",
+  "Spotify now playing": "Spotify يُشغَّل الآن"
 }

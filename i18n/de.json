@@ -785,5 +785,13 @@
  "Pressure": "Luftdruck",
  "Air quality": "Luftqualität",
  "Sunrise": "Sonnenaufgang",
- "Sunset": "Sonnenuntergang"
+ "Sunset": "Sonnenuntergang",
+ "Connect": "Verbinden",
+ "Connected to Spotify.": "Mit Spotify verbunden.",
+ "Disconnect Spotify": "Spotify trennen",
+ "Open Spotify sign-in": "Spotify-Anmeldung öffnen",
+ "Pasted address": "Eingefügte Adresse",
+ "Prepare sign-in": "Anmeldung vorbereiten",
+ "Sign in to Spotify again.": "Bei Spotify erneut anmelden.",
+ "Spotify now playing": "Spotify läuft gerade"
 }
