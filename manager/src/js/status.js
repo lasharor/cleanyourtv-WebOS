@@ -80,7 +80,7 @@ function load(keep) {
       );
       api('/api/phoneremote').then(
         function (r) {
-          pr = r;
+          pr = r && r.phones ? r : null; /* the add-on answers /api/phoneremote only while it runs */
           if (view === 'main') {
             build();
             draw();

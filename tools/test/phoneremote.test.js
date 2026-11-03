@@ -1115,6 +1115,22 @@ run(async () => {
     strings.filter(s => /Part 2|part 2|Part 1/.test(s)).every(s => s in en),
     'every new string of the two screens is in the English list'
   );
+  // the phone remote is an add-on: its Features row is there only while the add-on answers, and the add-on's own screen leads to the same settings
+  const stat = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'status.js'), 'utf8');
+  ok(
+    /pr = r && r\.phones \? r : null/.test(stat),
+    'a service that does not answer /api/phoneremote (the add-on is off) leaves no phone remote state'
+  );
+  ok(
+    / if \(pr\)\s+rows\.push\(\{\s+label: 'Phone remote',/.test(menu),
+    'so Features shows the Phone remote row only while the add-on runs'
+  );
+  ok(
+    /a1\.id === 'phoneremote' && a1\.status === 'running'\)\s+rows\.push\(\{ label: 'Phone remote settings'[^}]*fn: openPhoneRemote/.test(
+      menu
+    ),
+    "and the add-on's screen in Add-ons has a Phone remote settings row (while it runs) that opens the same screens"
+  );
   // a right-to-left language must not mirror the remote
   const he = require('../../helper/addons-bundled/phoneremote/page').phonePage('ar');
   ok(

@@ -546,6 +546,9 @@ function build() {
           openKeys('guide');
         },
       });
+    /* the phone remote's settings are the same screens as on Features, which shows them only while this add-on runs */
+    if (a1.id === 'phoneremote' && a1.status === 'running')
+      rows.push({ label: 'Phone remote settings', sub: 'pair a phone, the app, paired phones', fn: openPhoneRemote });
     if (a1.settings)
       rows.push({
         label: 'Set up from your phone',
@@ -1568,15 +1571,17 @@ function build() {
       sub: ab && ab.configured ? ab.settings.host : ab ? 'off' : '',
       fn: openAndroidBox,
     });
-    rows.push({
-      label: 'Phone remote',
-      sub: pr ? (pr.enabled ? prCount(pr.phones.length) + ' paired' : onoff(false)) : '',
-      info: {
-        t: 'Phone remote',
-        d: 'Use a phone as the TV remote over your Wi-Fi. Pair it once with a QR code and a 6-digit code, then use the web page or the Android app. Each phone can be blocked or removed, and unused ones are removed by themselves.',
-      },
-      fn: openPhoneRemote,
-    });
+    /* the phone remote is an add-on: no add-on running, no row (pr stays empty then) */
+    if (pr)
+      rows.push({
+        label: 'Phone remote',
+        sub: pr ? (pr.enabled ? prCount(pr.phones.length) + ' paired' : onoff(false)) : '',
+        info: {
+          t: 'Phone remote',
+          d: 'Use a phone as the TV remote over your Wi-Fi. Pair it once with a QR code and a 6-digit code, then use the web page or the Android app. Each phone can be blocked or removed, and unused ones are removed by themselves.',
+        },
+        fn: openPhoneRemote,
+      });
     rows.push({ label: 'Home Assistant', sub: st.voice && st.voice.ha ? 'set up' : 'not set up', fn: openHa });
     rows.push({
       label: 'Voice',
