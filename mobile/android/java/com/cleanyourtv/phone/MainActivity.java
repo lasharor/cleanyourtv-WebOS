@@ -381,7 +381,7 @@ public class MainActivity extends Activity {
                         });
                         return;
                     }
-                    js("if(window.cytvOff)cytvOff('The TV did not wake up. Check Wake-on-LAN on the TV.');");
+                    js("if(window.cytvOff)cytvOff('The TV did not wake up. Check that TV On With Mobile is on in the TV settings.');");
                 }
             }).start();
             return true;

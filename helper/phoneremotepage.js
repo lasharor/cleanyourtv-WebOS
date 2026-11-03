@@ -34,7 +34,7 @@ function native(){return !!(window.CYTV_APP&&window.CYTV_APP.wake)}
 function waking(){offAt=0;power(false);status('off','');drop();delay=1000;retry(2500)} /* no banner: the header button and its status line show the wait */
 function wakeNow(){if(!native())return;var ok=false;try{ok=window.CYTV_APP.wake()}catch(e){}
  if(!ok){say(t('No TV saved yet. Connect once.'),'warn',5000);return}
- if(wol===false)say(t('Wake-on-LAN is off on the TV'),'warn',5000);
+ if(wol===false)say(t('Wake-on-LAN is off. Turn on TV On With Mobile in the TV settings.'),'warn',5000);
  buzz();pendStart('on');waking()}
 /* the on/off button of the app: it says what the TV is doing and does the other thing when it is tapped, with nothing to choose */
 /* POWER is the TV's own toggle: from standby with Quick Start+ the screen comes back, and from on it goes to standby */
@@ -653,7 +653,7 @@ function phonePage(lang, preCode) {
 <meta http-equiv=pragma content=no-cache><title>${T('Phone remote')}</title>
 <style>${STYLE}</style>
 <div id=pairbox class=hide><div class=glow></div><h1>${T('Pair a device')}</h1><p>${T('Use this device as a remote for your TV. You only do this once.')}</p>
-<div class=steps><div><i>1</i><span>${T('On the TV, open the pairing screen. It shows a QR code and a 6-digit code.')}</span></div><div><i>2</i><span>${T('Type the 6-digit code shown on the TV screen.')}</span></div></div>
+<div class=steps><div><i>1</i><span>${T('On the TV, in the manager app, open Features > Phone remote > Pair a phone. It shows a QR code and a 6-digit code.')}</span></div><div><i>2</i><span>${T('Type the 6-digit code shown on the TV screen.')}</span></div></div>
 <label for=code>${T('Code from the TV')}</label><div class=cellwrap><div class=cells>${cellHtml}</div><input id=code inputmode=numeric maxlength=6 autocomplete=one-time-code autofocus value="${pre}"></div>
 <label for=pname>${T('Name of this device')}</label><input id=pname maxlength=30>
 <p id=pmsg></p><button class=pri id=go>${T('Pair this device')}</button>
