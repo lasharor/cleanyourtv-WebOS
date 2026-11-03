@@ -67,7 +67,7 @@ input{width:100%;height:56px;padding:0 16px;font-size:17px;margin:0 0 8px;backgr
 var A=window.CYTV_APP||null,host='',typing=false,searching=false;
 function $(i){return document.getElementById(i)}
 function call(n,d){try{return A&&typeof A[n]==='function'?A[n]():d}catch(e){return d}}
-/* "192.168.1.50", "http://192.168.1.50:8798/" -> "192.168.1.50:8798"; '' unless it is a literal address on the local network (10.x, 172.16-31.x,
+/* "192.168.1.50", "http://192.168.1.50:8799/" -> "192.168.1.50:8799"; '' unless it is a literal address on the local network (10.x, 172.16-31.x,
    192.168.x, 169.254.x). The app checks again (Addr.java): this only gives the answer before anything is stored or opened. */
 function clean(v){
   v=String(v||'').replace(/^\s+|\s+$/g,'').replace(/^http:\/\//i,'');
@@ -80,7 +80,7 @@ function clean(v){
     o.push(parseInt(m[i],10));
     if(o[i-1]>255)return '';
   }
-  var port=m[5]?parseInt(m[5],10):8798;
+  var port=m[5]?parseInt(m[5],10):8799;
   if(port<1||port>65535)return '';
   var priv=o[0]===10||(o[0]===172&&o[1]>=16&&o[1]<=31)||(o[0]===192&&o[1]===168)||(o[0]===169&&o[1]===254);
   return priv?o.join('.')+':'+port:'';

@@ -9,10 +9,10 @@
 //   POST /api/phoneremote/key      {key} presses one remote button as a phone would (to try the key adapter from the TV: curl)
 // The settings are config.json "phoneRemote": {enabled, phones: [{id, name, hash, created, seen, blocked}]}. A phone's token is
 // "<id>.<secret>": the phone keeps it, the TV keeps only the SHA-256 of the secret, and it is never logged.
-// The LAN listener (port 8798) runs only while the phone remote is on AND a phone is paired or the pairing window is open. It serves the
+// The LAN listener (port 8799) runs only while the phone remote is on AND a phone is paired or the pairing window is open. It serves the
 // page, accepts a pairing (the code, five tries a minute per address, the window closes after eight wrong ones) and the WebSocket at /ws,
 // where the first message must be {t:'hello', token}. The keys themselves are remotekeys.js. The listener's own failure is separate from a
-// request that failed: GET /api/phoneremote reports it as listenError (a port that cannot be bound, say 8798 busy), so the manager can tell
+// request that failed: GET /api/phoneremote reports it as listenError (a port that cannot be bound, say 8799 busy), so the manager can tell
 // the two apart.
 const http = require('http'),
   fs = require('fs'),
@@ -31,7 +31,7 @@ const web = require('../../web'),
 // the phone downloads it from here, so no computer is needed to install it.
 const APK_FILE = path.join(__dirname, 'tv-remote.apk');
 
-const PORT = 8798, // after the Android box page (8793)
+const PORT = 8799, // after the Android box page (8793)
   IDLE_MS = 3 * 60 * 1000, // the pairing window closes this long after the manager last asked for it ...
   MAX_PAIR_MS = 30 * 60 * 1000, // ... and at the latest this long after it opened
   MAX_PHONES = 10,
@@ -117,7 +117,7 @@ function create(ctx, opts) {
     clearTimeout(pair.timer);
     pair = null;
   }
-  // Binding the LAN port can fail on its own (8798 taken by another program): that is not a failed request, so it is kept in listenError
+  // Binding the LAN port can fail on its own (8799 taken by another program): that is not a failed request, so it is kept in listenError
   // and reported by status() under that very name, for the manager to show as a busy port.
   function listen() {
     const s = http.createServer(onRequest);

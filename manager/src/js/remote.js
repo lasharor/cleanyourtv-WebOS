@@ -49,7 +49,7 @@ function prLiveTick() {
     function (r) {
       prLiveBusy = false;
       if (!r || r.error || !prIsPhoneView()) return;
-      /* the port 8798 could not be opened: say why once (not on every poll, which would hide other messages), and still follow the list */
+      /* the port 8799 could not be opened: say why once (not on every poll, which would hide other messages), and still follow the list */
       if (r.listenError !== prListenShown) {
         prListenShown = r.listenError || '';
         if (prListenShown) banner(tr(prListenShown), 'err');
@@ -203,7 +203,7 @@ function prWatch(first) {
             ? tr('Scan it with the camera: the app opens with the code filled in.')
             : tr('The code works once. The page is not encrypted: what you type travels over your Wi-Fi.');
       } else $('sharemsg').textContent = tr('The pairing window closed. Press Back and open it again.');
-      /* the port 8798 could not be opened (another program has it): say why, and still follow the window and show the code */
+      /* the port 8799 could not be opened (another program has it): say why, and still follow the window and show the code */
       if (r.listenError) $('sharemsg').textContent = tr(r.listenError);
       setTimeout(prWatch, 2000);
     },
@@ -290,7 +290,7 @@ function prWatchApp(first) {
       showQr(a.qr || a.url);
       $('shareurl').textContent = a.qr || a.url; // with the code in it, so it can also be typed
       if (first) $('sharemsg').textContent = tr('The phone downloads the app from the TV, then this screen moves on to part 2 by itself.');
-      /* the port 8798 could not be opened (another program has it): say why, and still follow the download */
+      /* the port 8799 could not be opened (another program has it): say why, and still follow the download */
       if (r.listenError) $('sharemsg').textContent = tr(r.listenError);
       setTimeout(prWatchApp, 2000);
     },

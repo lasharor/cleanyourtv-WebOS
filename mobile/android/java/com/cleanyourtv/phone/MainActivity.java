@@ -100,7 +100,7 @@ public class MainActivity extends Activity {
         else start();
     }
 
-    /** cytv://add?host=192.168.1.50:8798&code=123456 (the code the TV shows): returns true when the link was for this app. A link is a
+    /** cytv://add?host=192.168.1.50:8799&code=123456 (the code the TV shows): returns true when the link was for this app. A link is a
      *  browsable intent, so any web page can send one: the address must be a literal one on the local network (Store.clean), and when the
      *  app already has a TV the new address is only taken after the user says so. The pairing code is kept for the page only once the
      *  address is accepted. */
@@ -278,7 +278,7 @@ public class MainActivity extends Activity {
         return p < 0 ? 80 : p;
     }
 
-    /** Is this URL the TV's own page? The answer comes from the parsed URI, never from the text: "http://<tv>:8798@evil.example/" begins
+    /** Is this URL the TV's own page? The answer comes from the parsed URI, never from the text: "http://<tv>:8799@evil.example/" begins
      *  with the TV's address, but its host is evil.example, and whatever the WebView loads has the CYTV_APP bridge. So it must be http, the
      *  host must be the stored TV's, and the effective port must be the same (80 when the URL names none). Any thread. */
     private boolean isTv(String url) {
