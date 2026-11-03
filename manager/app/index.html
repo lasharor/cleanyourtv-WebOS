@@ -3973,7 +3973,9 @@ function rmResume() {
     if (l.state !== 'got' || !l.resume || l.name !== 'remap') return;
     api('/api/remap').then(function (r) {
       rm = r;
+      /* the same levels as after rmLearn, so that Back returns to the list of buttons */
       push('remap');
+      push('remaplearn');
       rmCode = String(l.code);
       rmKey = l.key || '';
       rmBtn = l.button || '';

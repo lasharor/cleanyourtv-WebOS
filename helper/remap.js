@@ -199,12 +199,20 @@ function create(ctx) {
         const l = learnState();
         if (l.state === 'got') {
           resume = true;
-          // LG's app starts a moment after the press: come back after it, and again in case it was slow
-          for (const ms of [1200, 4000])
-            setTimeout(
-              () => luna('luna://com.webos.applicationManager/launch', { id: MANAGER, params: { open: 'remaplearned' } }).catch(() => {}),
-              ms
-            );
+          // LG's app starts a moment after the press: come back after it (the first time whatever is in front), and look again in case it
+          // was slow: the manager is opened again only when something else is in front, so it is not reset under the person's hands
+          const COME_BACK = ctx.comeBack || [1200, 4000, 8000];
+          COME_BACK.forEach((ms, i) =>
+            setTimeout(async () => {
+              try {
+                if (i > 0) {
+                  const fg = await luna('luna://com.webos.applicationManager/getForegroundAppInfo', {});
+                  if (fg && fg.appId === MANAGER) return;
+                }
+                await luna('luna://com.webos.applicationManager/launch', { id: MANAGER, params: { open: 'remaplearned' } });
+              } catch (_) {}
+            }, ms)
+          );
         } else if (l.state === 'waiting' && Date.now() - t0 < 50000) tick();
       }, 500);
     })();

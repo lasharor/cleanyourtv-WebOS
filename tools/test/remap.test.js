@@ -33,9 +33,10 @@ run(async () => {
   // ---- the feature ----
   const conf = memoryConfig({ remap: {}, keys: { input: '', home: '777', voice: '', guide: '' } });
   const launched = [];
+  let front = ''; // the app in front, as the app manager says
   const luna = async (uri, payload) => {
     launched.push(uri.split('/').pop() + ' ' + JSON.stringify(payload));
-    return { returnValue: true };
+    return /getForegroundAppInfo/.test(uri) ? { returnValue: true, appId: front } : { returnValue: true };
   };
   let ensured = 0;
   const boxApps = {},
@@ -43,6 +44,7 @@ run(async () => {
   const f = mod.create({
     config: conf,
     luna,
+    comeBack: [100, 300, 500],
     inputhook: hook,
     /* the shape the service gives: the Input key module, and the add-ons loader (the Android box is a bundled add-on, not a feature) */
     feature: n => {
@@ -206,13 +208,22 @@ run(async () => {
   ok(r.j.state === 'got' && r.j.code === '403' && r.j.existing === null, 'the next button that is not an arrow, OK or Back is learned');
   ok(!conf.get().keys['403'] && conf.get().keys.input === '', 'a learned remap button is not saved as the Input, Home, voice or Guide key');
   // the button's own action covers the manager: the service brings it back, and the code is kept for it
-  await sleep(2000);
-  ok(
-    launched.some(l => l.indexOf('launch {"id":"com.cleanyourtv.manager","params":{"open":"remaplearned"}}') === 0),
-    'the manager is opened again once a button is learned'
-  );
+  await sleep(900);
+  const back = () =>
+    launched.filter(l => l.indexOf('launch {"id":"com.cleanyourtv.manager","params":{"open":"remaplearned"}}') === 0).length;
+  ok(back() === 3, 'the manager is opened again once a button is learned, and again while something else is in front: ' + back());
   r = await call(f, '/api/remap/learn-state');
   ok(r.j.resume === true && r.j.code === '403', 'the learned button waits for the manager to resume');
+  // when the manager is already in front it is not opened again (it would be reset under the person's hands)
+  front = 'com.cleanyourtv.manager';
+  launched.length = 0;
+  await call(f, '/api/remap/learn', 'POST', {});
+  await sleep(1300);
+  fs.appendFileSync(process.env.CYTV_HOOK_LOG, 'keyid=7, state=1 uinput_code=404\n');
+  await call(f, '/api/remap/learn-state');
+  await sleep(900);
+  ok(back() === 1, 'the later looks leave the manager alone when it is in front: ' + back());
+  front = '';
 
   // ---- the name of a button ----
   const kn = req('keynames');
