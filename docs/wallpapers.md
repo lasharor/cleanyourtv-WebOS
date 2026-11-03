@@ -58,6 +58,14 @@ The sync runs every six hours, and with **Sync now**. Shortly after the TV start
 day old. When Immich cannot be reached the photos already on the TV stay, and the error is shown. Showing a photo never needs
 Immich.
 
+## More photo sources (add-ons)
+
+Other sources of photos are add-ons that provide wallpapers (see [add-ons](development/addons.md#providing-something-to-the-service-photo-sources)).
+Each shows as a row on the manager's **Wallpapers** screen with one line about it, and opens its own settings page on your phone. Their
+photos are mixed with your uploads. A *live* source shows a new photo now and then without keeping it on the TV, and Home shows a small
+credit line in the bottom right corner for such a photo (the photographer). Core only supplies the rotation, the dimming and the picture
+size.
+
 ## Limits and storage
 
 | | |

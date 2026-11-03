@@ -1020,6 +1020,17 @@ function build() {
           : im.photos + ' photos \u00B7 synced ' + ago(im.lastSync) + (im.error ? ' \u00B7 ' + im.error : ''),
       fn: openWallPair,
     });
+    (w.sources || []).forEach(function (s) {
+      rows.push({
+        label: s.label,
+        sub: (s.error || s.summary || s.photos + ' photos') + (s.live ? ' \u00B7 a new photo now and then' : ''),
+        fn: s.settings
+          ? function () {
+              openSourcePair(s.id, s.label);
+            }
+          : null,
+      });
+    });
     rows.push({
       label: 'Total',
       sub: w.total + ' photos \u00B7 ' + Math.round(w.bytes / 1048576) + ' of 150 MB',

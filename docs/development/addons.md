@@ -82,6 +82,25 @@ manager's status has `icons` for its **App icons** row. Switched off, every app 
 - **A launcher with Live TV as a page needs a service that serves add-on pages.** At release, `app/version.json` must name that
   service version as `minService`.
 
+## Providing something to the service: photo sources
+
+A service add-on can plug into a part of the service. The manifest says what with `"provides": ["wallpapers"]`; the add-on returns the
+matching object from `create()`. For wallpapers, `helper/wallpapers.js` asks every running, switched-on add-on that provides it. The
+object is `wallpapers` on the module `create()` returns:
+
+| Member | What it does |
+|---|---|
+| `label` | The name in the manager (**Wallpapers**). |
+| `list()` | Ids of the photos it has now (letters, digits, `-`, `_`, `.`; at most 500). Each is a file it can hand out. |
+| `file(id)` | The absolute path of that photo: a JPEG, PNG or WebP. Core serves it at `/api/wallpapers/photo/s/<add-on>/<id>`. |
+| `live: true`, `next()` | A live source keeps nothing on the TV. Home asks `next()` each time it shows that entry and gets `{url, credit}`: a plain `https://` address of the picture (it goes into a CSS `url()`, so quotes, brackets and spaces are refused) and a line Home shows in the bottom right corner, such as the photographer. The source decides how often it asks its server. |
+| `status()` | `{summary, error}`: one line for the manager (photos, last sync, what went wrong). |
+| `settings(o)` | Starts a short-lived page on the LAN for the source's settings and returns `{url, code, qr, seconds}`; `o.stop` closes it. The manager shows the code. A source with its own settings keeps secrets (an API key) in its own settings, never in a reply. |
+
+Core merges the photos with the uploads: `s/<add-on>/<id>` for a file and `l/<add-on>` for a live source. A source that throws offers
+nothing and is logged once. `GET /api/wallpapers/status` has a `sources` list only when an add-on provides photos. Core still does the
+rotation, the dimming and the Picture size setting; a source only supplies photos.
+
 ## Pages: Home is page 1 of a book
 
 A page add-on is served at `http://127.0.0.1:8765/addon/<id>/...` while it runs, with a content security policy that lets it load
