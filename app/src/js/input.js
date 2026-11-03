@@ -52,7 +52,7 @@ document.addEventListener('mousemove', function (ev) {
   if (Math.abs(ev.clientX - lastMX) + Math.abs(ev.clientY - lastMY) < 24) return;
   lastMX = ev.clientX;
   lastMY = ev.clientY;
-  var el = ev.target.closest ? ev.target.closest('.tile,.pill') : null,
+  var el = ev.target.closest ? ev.target.closest('.tile,.pill,.card-btn') : null,
     p = el && posOf(el);
   if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
 });

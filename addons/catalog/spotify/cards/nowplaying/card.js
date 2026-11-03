@@ -13,7 +13,7 @@ var ICON = {
 var BUTTONS = ['prev', 'toggle', 'next', 'output'],
   MAXH = 250 /* the tallest the card gets, and the width of a pill */,
   MAXW = 720,
-  GAP = 28;
+  GAP = 60;
 var M = null,
   D = null,
   rcv = 0,
@@ -194,14 +194,20 @@ function tell() {
   var W = window.innerWidth || 1,
     H = window.innerHeight || 1,
     out = [],
+    /* the focus ring is drawn outside the target and the frame cuts it off: a target at the edge of the frame is drawn a little inside */
+    edge = Math.min(6, Math.floor(H / 8)),
     add = function (n, e, look, radius) {
-      var r = e.getBoundingClientRect();
+      var r = e.getBoundingClientRect(),
+        l = Math.max(r.left, edge),
+        t = Math.max(r.top, edge),
+        rt = Math.min(r.right, W - edge),
+        bt = Math.min(r.bottom, H - edge);
       out.push({
         name: n,
-        x: (r.left / W) * 100,
-        y: (r.top / H) * 100,
-        w: (r.width / W) * 100,
-        h: (r.height / H) * 100,
+        x: (l / W) * 100,
+        y: (t / H) * 100,
+        w: (Math.max(rt - l, 1) / W) * 100,
+        h: (Math.max(bt - t, 1) / H) * 100,
         r: radius,
         look: look,
       });

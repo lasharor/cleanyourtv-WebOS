@@ -1329,3 +1329,18 @@ body.scenes-on {
   box-shadow: none;
   transform: scale(1.1);
 }
+/* the pointer (Magic Remote, mouse, touchpad) over a button shows the same as the focus does */
+.card-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9);
+}
+.card-btn-ring:hover {
+  background: none;
+  box-shadow: 0 0 0 4px var(--focus);
+  transform: scale(1.04);
+}
+.card-btn-fill:hover {
+  background: var(--acc);
+  box-shadow: none;
+  transform: scale(1.1);
+}
