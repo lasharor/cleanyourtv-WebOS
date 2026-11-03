@@ -82,7 +82,7 @@
         "luna"
       ],
       "files": {
-        "addon.json": "a056ead7d1e80ad1c0926944cb282647d9cc41b0702c4ffacf1cff0698cf85b8",
+        "addon.json": "59870d7b02a11fd24e91bd5673a558c72c533472971e32241effe689b41615be",
         "cards/nowplaying/card.css": "dda495fdc8ff99886284a7eadf3893b237e24c0ea497da048a21a56847665843",
         "cards/nowplaying/card.html": "d58e43f0b0e52be39c5abd1e6875ccb08de280372486e56ed85543938f96b557",
         "cards/nowplaying/card.js": "340919481bbcdd0123d2d541b3cc6a321464cddb77f51206bf78fc7cfc04b845",

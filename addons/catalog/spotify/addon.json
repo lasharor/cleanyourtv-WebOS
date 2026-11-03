@@ -9,7 +9,7 @@
   "permissions": ["net.fetch", "luna"],
   "luna": [{ "uri": "luna://com.webos.applicationManager/launch" }],
   "provides": ["cards"],
-  "minService": "1.6.16",
+  "minService": "1.6.17",
   "cards": [
     {
       "id": "nowplaying",
