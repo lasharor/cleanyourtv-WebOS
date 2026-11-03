@@ -8,7 +8,7 @@
 //   POST /api/phoneremote/key      {key} presses one remote button as a phone would (to try the key adapter from the TV: curl)
 // The settings are config.json "phoneRemote": {enabled, phones: [{id, name, hash, created, seen, blocked}]}. A phone's token is
 // "<id>.<secret>": the phone keeps it, the TV keeps only the SHA-256 of the secret, and it is never logged.
-// The LAN listener (port 8794) runs only while the phone remote is on AND a phone is paired or the pairing window is open. It serves the
+// The LAN listener (port 8798) runs only while the phone remote is on AND a phone is paired or the pairing window is open. It serves the
 // page, accepts a pairing (the code, five tries a minute per address, the window closes after eight wrong ones) and the WebSocket at /ws,
 // where the first message must be {t:'hello', token}. The keys themselves are remotekeys.js.
 const http = require('http'),
@@ -29,7 +29,7 @@ const web = require('./web'),
 // the manager screen shows a QR code for it and the phone downloads it from here, so no computer is needed to install it.
 const APK = path.join(P.D, 'mobile', 'tv-remote.apk');
 
-const PORT = 8794, // after the Android box page (8793)
+const PORT = 8798, // after the Android box page (8793)
   IDLE_MS = 3 * 60 * 1000, // the pairing window closes this long after the manager last asked for it ...
   MAX_PAIR_MS = 30 * 60 * 1000, // ... and at the latest this long after it opened
   MAX_PHONES = 10,
@@ -466,7 +466,7 @@ function create(ctx, opts) {
       try {
         const payload = body ? JSON.stringify(body) : '';
         const headers = payload ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) } : {};
-        const r = http.request(API + path, { method, headers }, s => {
+        const r = nc.request(http, API + path, { method, headers }, s => {
           let data = '';
           s.on('data', c => (data += c));
           s.on('end', () => {

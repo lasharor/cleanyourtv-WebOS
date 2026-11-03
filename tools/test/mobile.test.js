@@ -182,32 +182,32 @@ run(async () => {
   // ---- a cytv:// link is browsable, so any web page can send one: only private IPv4 addresses are ever stored, and a new TV needs a yes ----
   const good = [
     '192.168.1.50',
-    '192.168.1.50:8794',
-    'http://192.168.1.50:8794/',
+    '192.168.1.50:8798',
+    'http://192.168.1.50:8798/',
     '10.0.0.5:9000',
     '172.16.3.4',
     '172.31.255.254',
     '169.254.1.1',
   ];
   const goodOut = [
-    '192.168.1.50:8794',
-    '192.168.1.50:8794',
-    '192.168.1.50:8794',
+    '192.168.1.50:8798',
+    '192.168.1.50:8798',
+    '192.168.1.50:8798',
     '10.0.0.5:9000',
-    '172.16.3.4:8794',
-    '172.31.255.254:8794',
-    '169.254.1.1:8794',
+    '172.16.3.4:8798',
+    '172.31.255.254:8798',
+    '169.254.1.1:8798',
   ];
   const badAddr = [
     'example.com',
     '8.8.8.8',
     '192.168.1.256',
-    'evil.com:8794',
+    'evil.com:8798',
     '192.168.1.50@evil.com',
     '',
     '   ',
     '::1',
-    '[fe80::1]:8794',
+    '[fe80::1]:8798',
     'fe80::1',
     '172.32.0.1',
     '172.15.0.1',
@@ -481,7 +481,7 @@ run(async () => {
     ok(box.toast.className === 'toast warn', 'and the toast goes away when its time is up');
     el('addr').value = '192.168.1.50';
     box.go.onclick();
-    ok(opened.length === 1 && opened[0] === 'http://192.168.1.50:8794/', 'a good address goes straight to the TV page');
+    ok(opened.length === 1 && opened[0] === 'http://192.168.1.50:8798/', 'a good address goes straight to the TV page');
     const sb2 = Object.assign({}, sb, { document: { getElementById: el } });
     sb2.window = sb2;
     sb2.window.CYTV_APP = { discover() {}, wake: () => false, getAddr: () => '', bye: () => 'removed' };

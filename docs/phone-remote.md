@@ -29,7 +29,7 @@ also in an Arabic or Hebrew phone, so the arrows do not swap sides.
 ## Set up
 
 1. In the manager app open **Features**, then **Phone remote**, and switch it **On**. Nothing listens on the network until then.
-2. Choose **Pair a phone**. The TV shows a QR code, the address (`http://<tv address>:8794`) and a 6-digit code.
+2. Choose **Pair a phone**. The TV shows a QR code, the address (`http://<tv address>:8798`) and a 6-digit code.
 3. On the phone (same Wi-Fi) scan the code, or type the address. The code it shows is in the address the QR carries, so scanning it
    pairs by itself; typed in, the same code is entered on the page. The code works once
    and expires a few minutes after you leave the screen; the TV then shows a new one for the next phone.
@@ -147,12 +147,12 @@ key press answers with a short vibration (the app holds the `VIBRATE` permission
 `navigator.vibrate`, so in a browser most phones stay still).
 
 The app is in the package, so the phone installs it from the TV: **Phone remote › Install the app (Android)** shows one QR code,
-`http://<tv>:8794/app.apk?code=…` — scan it, open the download, install. The file is only handed out with the code shown on the TV, like
+`http://<tv>:8798/app.apk?code=…` — scan it, open the download, install. The file is only handed out with the code shown on the TV, like
 the rest of this page (a download has no page to send a header, so the code travels in the address).
 
 The two screens are two parts of one flow: the install screen says **Part 1 of 2**, and as soon as the phone takes the file the TV notices and
 that screen becomes **Part 2: pair the app** by itself. Its code now carries the TV's
-address and the pairing code (`cytv://add?host=<tv>:8794&code=…`), so scanning it with the phone's camera opens the app, fills the address in and
+address and the pairing code (`cytv://add?host=<tv>:8798&code=…`), so scanning it with the phone's camera opens the app, fills the address in and
 puts the code in, and you only pick a name for the phone and tap **Pair this device**. The screen offers the other way too: open the app, tap **Find my TV**
 and type the code shown on the TV. (A browser scanning the same screen before the app was downloaded gets the page's own
 address, as usual.) Without a camera, the app finds the TV for you (**Find my TV**) or takes the address typed in (**Type the address instead**); the TV's page then asks
@@ -197,7 +197,7 @@ Any of these sends the same packet to the TV:
 - **Before pairing nothing is accepted.** A connection that does not start with `{"t":"hello","token":…}` within 5 seconds, or sends
   anything else first, is closed. Unknown tokens count against the address; too many and it is shut out for a minute. A phone can send
   about 40 messages a second (a burst of 60); past that the TV answers "slow down".
-- **The port.** 8794 listens on the local network **only** while the phone remote is On and a phone is paired or the pairing window is
+- **The port.** 8798 listens on the local network **only** while the phone remote is On and a phone is paired or the pairing window is
   open. It serves the phone page, the pairing call and the WebSocket (`/ws`), nothing else. It is plain HTTP; see [Security](security.md).
 - **Typing.** `text`, `del` and `enter` are handled one after another for each connection, in the order they arrive, so typed text, a
   delete and Enter cannot overtake each other; a call that hangs for 8 seconds is given up so the rest still goes. Other keys are not

@@ -1,7 +1,7 @@
 # The phone remote as an Android app
 
 `mobile/android` is the phone remote as an app, and almost all of it is not an app: the page, the pairing, the keys and the Power sheet
-are the TV's own page (`http://<tv>:8794/`), loaded in a WebView. The app adds exactly the two things a browser cannot do:
+are the TV's own page (`http://<tv>:8798/`), loaded in a WebView. The app adds exactly the two things a browser cannot do:
 
 - **send the Wake-on-LAN packet**, so "Turn on" works with the TV off — no extra device on the network;
 - **open at all while the TV is off**: the TV's page cannot load then, so the app shows the last copy of it that it kept on the phone (the
@@ -27,7 +27,7 @@ Needs Java 8+ (`javac`, `keytool`) and the Android SDK (`ANDROID_HOME`, or the u
 ## The TV hands the app out
 
 The package ships that APK (`ipk/build.py` puts it in `service/mobile/`, `scripts/bootstrap.sh` copies it next to the service), and the
-phone remote serves it on its own port: **`http://<tv>:8794/app.apk`**. In the manager app, **Features › Phone remote › Install the app (Android)**
+phone remote serves it on its own port: **`http://<tv>:8798/app.apk`**. In the manager app, **Features › Phone remote › Install the app (Android)**
 shows a QR code for exactly that address: scan it, open the download, install. No computer, no cable, and the phone never leaves the
 network the TV is on.
 
@@ -37,16 +37,16 @@ any change to the app, otherwise the TV keeps handing out the old one.
 ## Install and set up
 
 1. On the TV, in the manager app: **Features › Phone remote › Install the app (Android)**, and scan the code with the phone's camera. Open the download and install it
-   (allow the browser to install apps). The same file is `mobile/app/tv-remote.apk`, also reachable at `http://<tv>:8794/app.apk`,
+   (allow the browser to install apps). The same file is `mobile/app/tv-remote.apk`, also reachable at `http://<tv>:8798/app.apk`,
    so a phone without a camera app can just type that address; `adb install` works too.
-2. On the TV: **Features › Phone remote** must be on, with the pairing screen open (it shows the address, e.g. `http://192.168.1.50:8794`, and a
+2. On the TV: **Features › Phone remote** must be on, with the pairing screen open (it shows the address, e.g. `http://192.168.1.50:8798`, and a
    6-digit code).
 3. Open the app, tap **Find my TV** (or **Type the address instead** and type the TV's address), and the TV's page asks for the 6-digit code it shows. The
    other way round: scan the code on the TV with the **phone's camera** — the app opens itself with the address and the code already in
    place, so nothing has to be typed.
 
    The address must be written as numbers: a private or link-local IPv4 address (`10.x.x.x`, `172.16.x.x` to `172.31.x.x`, `192.168.x.x`,
-   `169.254.x.x`), with a port if it is not 8794. Names such as `lgwebostv.local`, public addresses and IPv6 are refused, with a message.
+   `169.254.x.x`), with a port if it is not 8798. Names such as `lgwebostv.local`, public addresses and IPv6 are refused, with a message.
    The page lets the app open nothing else, because the page has a bridge to the phone.
 
    If a scanned code names a TV other than the one the app already has, the app asks **Connect to `<address>`?** with **Connect** and
@@ -66,7 +66,7 @@ fails to load, the app tries again after 0, 1, 2, 4 and 8 seconds, then every 10
 
 | What | Where | Why |
 |---|---|---|
-| the TV's address (`192.168.1.50:8794`) | app settings (SharedPreferences) | to open the page and to check the TV came back |
+| the TV's address (`192.168.1.50:8798`) | app settings (SharedPreferences) | to open the page and to check the TV came back |
 | the TV's MAC address | app settings | for the Wake-on-LAN packet |
 | (nothing) | | the name set in Android settings, or the maker and model, is read only to fill the pairing page's name field (`deviceName()`); it can be changed there and is not stored by the app |
 | the phone remote's token | the WebView's `localStorage`, under the TV's own address | this is the browser's, not the app's: pairing lives in the page |
