@@ -223,7 +223,7 @@ run(async () => {
   ];
   // the page's own copy of the rule (the same answers, before anything is stored or opened)
   const pageClean = (() => {
-    const src = page.slice(page.indexOf('function clean('), page.indexOf('function msg('));
+    const src = page.slice(page.indexOf('function clean('), page.indexOf('/* every message is a toast'));
     const sb = {};
     vm.runInNewContext(src, sb);
     return sb.clean;
@@ -326,6 +326,102 @@ run(async () => {
     'the count starts again only when the TV itself served the page (not the saved copy, not an error page)'
   );
   ok(/private void off\(\) \{\s+cancelRetry\(\);/.test(bridge) && /web\.loadUrl\(OFF\)/.test(bridge), 'the off screen fallback is kept');
+
+  // ---- every message on the setup pages is a toast over the page that goes away by itself, never text written into the page ----
+  {
+    const offPage = read('mobile/web/off.html');
+    ok(
+      !/id=msg|id=st|id=pmsg/.test(page + offPage) && !/\$\('(msg|st)'\)/.test(page + offPage),
+      'neither the start page nor the "TV is off" page has a line of text for errors: no #msg, no #st'
+    );
+    ok(
+      /id=toast class=toast role=status/.test(page) &&
+        /id=toast class=toast role=status/.test(offPage) &&
+        /toastT=setTimeout/.test(page) &&
+        /toastT=setTimeout/.test(offPage) &&
+        /void e\.offsetWidth/.test(page),
+      'both have the toast, which slides in and goes away by itself'
+    );
+    ok(
+      page.indexOf('id=toast') > 0 && page.indexOf('id=toast') < page.indexOf('<div id=wrap>'),
+      'the toast sits outside the wrapper, whose rule (#wrap>* is relative) would otherwise pull it into the page instead of the top of the screen'
+    );
+    ok(
+      !/class=logo|\.logo\{/.test(offPage) &&
+        /#wrap\{[^}]*max-width:430px/.test(offPage) &&
+        /#wrap \.glow\{/.test(offPage) &&
+        /background:#101116/.test(offPage),
+      'the TV-off screen looks like the setup screens: the same 430 px column, background and top-left glow, and no icon'
+    );
+    {
+      // the TV's own pairing screen is the third setup screen: its fields and buttons are cut like the start page's
+      const pg =
+        require('../../helper/phoneremotepage').PHONE_JS +
+        require('fs').readFileSync(path.join(root, 'helper', 'phoneremotepage.js'), 'utf8');
+      ok(
+        /#pairbox #pname\{[^}]*border-radius:18px;border:1px solid #2e3140;font-weight:400/.test(pg) &&
+          /#pairbox \.pri\{[^}]*height:58px;border-radius:18px/.test(pg) &&
+          /input\{width:100%;height:56px;padding:0 16px;font-size:17px/.test(page) &&
+          /\.pri\{height:58px;border:0;background:#ff8a5b/.test(page) &&
+          /#pairbox\{[^}]*padding:26px 20px 26px/.test(pg) &&
+          /#wrap\{[^}]*padding:26px 20px 26px/.test(page),
+        'the pairing screen on the TV has the start page’s field, button and page padding'
+      );
+    }
+    // the start page's script against a stand-in page: each message becomes the toast, with its tone and its time
+    const box = {};
+    const el = id => box[id] || (box[id] = { id, className: '', textContent: '', value: '', style: {}, focus() {} });
+    const timers = [];
+    const sb = {
+      document: { getElementById: el },
+      location: { replace() {} },
+      setTimeout: (f, ms) => timers.push({ f, ms }) && timers.length,
+      clearTimeout() {},
+    };
+    sb.window = sb;
+    sb.window.CYTV_APP = { discover() {}, wake: () => false, getAddr: () => '', bye: () => '' };
+    vm.runInNewContext(page.slice(page.indexOf('<script>') + 8, page.lastIndexOf('</script>')), sb);
+    const shown = () => ({ t: box.toast.textContent, c: box.toast.className, ms: (timers[timers.length - 1] || {}).ms });
+    el('addr').value = 'banana';
+    box.go.onclick();
+    ok(
+      /not an address/.test(shown().t) && shown().c === 'toast warn on' && shown().ms === 7000,
+      'a bad address is a warning toast for 7 seconds'
+    );
+    box.find.onclick();
+    ok(
+      shown().t === 'Looking for the TV…' && shown().c === 'toast info on' && shown().ms === 3500 && box.find.disabled === true,
+      'searching is a short plain toast'
+    );
+    sb.cytvNotFound();
+    ok(
+      /No TV answered/.test(shown().t) && shown().c === 'toast warn on' && box.find.disabled === false,
+      'no TV found is a warning toast, and the button works again'
+    );
+    sb.cytvFound('8.8.8.8');
+    ok(/not on your local network/.test(shown().t) && shown().c === 'toast warn on', 'an address that is not local is a warning toast');
+    sb.cytvOff('The TV did not wake up.');
+    ok(
+      shown().t === 'The TV did not wake up.' && shown().c === 'toast warn on' && box.wake.textContent === 'Turn on the TV',
+      'a failed wake is a warning toast and the button says Turn on the TV again'
+    );
+    box.wake.onclick();
+    ok(/address is lost/.test(shown().t) && shown().c === 'toast warn on', 'turning on with no saved address is a warning toast');
+    timers[timers.length - 1].f();
+    ok(box.toast.className === 'toast warn', 'and the toast goes away when its time is up');
+    const sb2 = Object.assign({}, sb, { document: { getElementById: el } });
+    sb2.window = sb2;
+    sb2.window.CYTV_APP = { discover() {}, wake: () => false, getAddr: () => '', bye: () => 'removed' };
+    vm.runInNewContext(page.slice(page.indexOf('<script>') + 8, page.lastIndexOf('</script>')), sb2);
+    ok(
+      /Logged out\. This phone was removed/.test(shown().t) && shown().c === 'toast ok on' && shown().ms === 3000,
+      'after logging out it says so for 3 seconds'
+    );
+    ok(
+      /Features > Phone remote > Paired phones/.test(page),
+      'and when the TV could not be told, the toast names the screen where the phone can still be removed'
+    );
+  }
 
   // ---- the build keeps the page and the app in one piece ----
   const build = read('mobile/android/build.ps1');

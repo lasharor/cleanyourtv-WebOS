@@ -105,10 +105,10 @@ function guess(){var n='';try{if(window.CYTV_APP&&window.CYTV_APP.deviceName)n=p
  return n||(typeof HINT==='string'&&plain(HINT))||kind()}
 var pnoteT=0;
 function pnote(s,k,ms){var e=$('pnote');clearTimeout(pnoteT);e.textContent=s;e.className=k||'';void e.offsetWidth;e.className=(k||'')+' on';pnoteT=setTimeout(function(){e.className=k||''},ms||3000)}
-function showPair(s,k){tok='';ready=false;show('pairbox');$('pmsg').className=k||'';$('pmsg').textContent=s||''}
+function showPair(s,k){tok='';ready=false;show('pairbox');if(s)pnote(s,k||'warn',7000)}
 function pair(){var x=new XMLHttpRequest();x.open('POST','/api/pair');x.setRequestHeader('content-type','application/json');
- x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(e){}if(j.token){store(j.token);tok=j.token;blocked=false;delay=1000;tidy();show('remote');connect()}else $('pmsg').textContent=j.error||t('Wrong code.')};
- x.onerror=function(){$('pmsg').textContent=t('The TV did not answer. Is the phone on the same Wi-Fi?')};
+ x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(e){}if(j.token){store(j.token);tok=j.token;blocked=false;delay=1000;tidy();show('remote');connect()}else pnote(j.error||t('Wrong code.'),'warn',7000)};
+ x.onerror=function(){pnote(t('The TV did not answer. Is the phone on the same Wi-Fi?'),'warn',7000)};
  x.send(JSON.stringify({code:$('code').value.trim(),name:$('pname').value.trim()}))}
 function ask(){if(!(ws&&ws.readyState===1))return;lastAsk=Date.now();try{ws.send(JSON.stringify({t:'power'}))}catch(e){}}
 function retry(ms){clearTimeout(timer);timer=setTimeout(connect,ms||delay);delay=Math.min(delay*2,10000)}
@@ -594,10 +594,10 @@ textarea:focus{border:1.5px solid #ff8a5b;box-shadow:0 0 0 4px rgba(255,138,91,.
 .cellwrap{position:relative}.cells{display:flex;justify-content:space-between}
 .cell{width:48px;height:60px;border-radius:14px;background:#1a1c23;border:1.5px solid #2e3140;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700}.cell.cur{border-color:#ff8a5b;box-shadow:0 0 0 3px rgba(255,138,91,.2)}
 #pairbox .cellwrap input{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;padding:0;opacity:0;border:0;font-size:16px}
-#pairbox #pname{width:100%;padding:0 16px;height:56px;margin:0;border-radius:16px;border:1.5px solid #2e3140;font-weight:600;font-size:17px}
-#pairbox .pri{width:100%;height:58px;border-radius:20px;font-size:18px;margin-top:16px}
-#pairbox .note{display:flex;align-items:flex-start;font-size:13px;line-height:1.45;color:#a3a8b8;margin-top:12px}#pairbox .note .ic{width:18px;height:18px;margin:1px 10px 0 0}#pmsg{color:#f0a0a0;font-size:14px;margin:8px 0 0;min-height:18px}#pmsg.ok,#pmsg.warn{border-radius:14px;padding:12px 14px;margin:14px 0 0}#pnote{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:60;width:calc(100% - 32px);max-width:398px;margin:0;padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.45;text-align:left;pointer-events:none;opacity:0;transform:translate(-50%,-24px);transition:transform .25s ease,opacity .25s ease;box-shadow:0 12px 30px rgba(0,0,0,.45)}#pnote.ok{background:#1b2420;border:1px solid #2c4a3a;color:#bfe9cf}#pnote.warn{background:#241f16;border:1px solid #5a4a2b;color:#f0d9a8}#pnote.on{opacity:1;transform:translate(-50%,0)}@media (prefers-reduced-motion:reduce){#pnote{transition:none}}
-#pmsg.ok{background:#1b2420;border:1px solid #2c4a3a;color:#bfe9cf}#pmsg.warn{background:#241f16;border:1px solid #5a4a2b;color:#f0d9a8}
+#pairbox #pname{width:100%;padding:0 16px;height:56px;margin:0;border-radius:18px;border:1px solid #2e3140;font-weight:400;font-size:17px}
+#pairbox .pri{width:100%;height:58px;border-radius:18px;font-size:18px;margin-top:14px}
+#pairbox .note{display:flex;align-items:flex-start;font-size:13px;line-height:1.45;color:#a3a8b8;margin-top:12px}#pairbox .note .ic{width:18px;height:18px;margin:1px 10px 0 0}#pnote{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:60;width:calc(100% - 32px);max-width:398px;margin:0;padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.45;text-align:left;pointer-events:none;opacity:0;transform:translate(-50%,-24px);transition:transform .25s ease,opacity .25s ease;box-shadow:0 12px 30px rgba(0,0,0,.45)}#pnote.ok{background:#1b2420;border:1px solid #2c4a3a;color:#bfe9cf}#pnote.warn{background:#241f16;border:1px solid #5a4a2b;color:#f0d9a8}#pnote.on{opacity:1;transform:translate(-50%,0)}@media (prefers-reduced-motion:reduce){#pnote{transition:none}}
+
 /* the app's on/off button: it carries the state, so it is wider than a plain icon button */
 .pwr{position:relative;width:auto;min-width:80px;padding:0 14px;justify-content:center;overflow:hidden;transition:background-color .22s,border-color .22s,color .22s}
 .pwr #pwrlb{font-size:13px;font-weight:800;letter-spacing:.02em;margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:104px}.pwr #pwrlb.lbin{animation:plbin .22s ease-out both}
@@ -669,7 +669,7 @@ function phonePage(lang, preCode, hint) {
 <div class=steps><div><i>1</i><span>${T('On the TV, in the manager app, open Features > Phone remote > Pair a phone. It shows a QR code and a 6-digit code.')}</span></div><div><i>2</i><span>${T('Type the 6-digit code shown on the TV screen.')}</span></div></div>
 <label for=code>${T('Code from the TV')}</label><div class=cellwrap><div class=cells>${cellHtml}</div><input id=code inputmode=numeric maxlength=6 autocomplete=one-time-code autofocus value="${pre}"></div>
 <label for=pname>${T('Name of this device')}</label><input id=pname maxlength=30>
-<p id=pmsg></p><button class=pri id=go>${T('Pair this device')}</button>
+<button class=pri id=go>${T('Pair this device')}</button>
 <div class=note>${ic('lock')}<span>${T('Only devices you pair can control the TV. You can block or remove any device from the TV later.')}</span></div></div>
 <div id=remote class=hide>
 <div class=head><div class=who id=who role=button tabindex=0 aria-haspopup=dialog aria-label="${T('This remote')}"><div class=tvrow><div id=tvname>TV</div>${ic('chev')}</div><div class="st w" id=st><i></i><span id=stt>${T('Connecting…')}</span></div></div><button id=pwr class=info aria-label="${T('Power')}"><span class=pi>${ic('power')}<svg id=pwring class=hide viewBox="0 0 34 34" aria-hidden=true><circle cx=17 cy=17 r=15 stroke=currentColor stroke-width=2 stroke-linecap=round stroke-dasharray="70 100"></circle></svg><span id=pwpop class="pop hide"></span></span><span id=pwrlb class=hide></span></button></div>
