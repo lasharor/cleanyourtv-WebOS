@@ -776,5 +776,14 @@
  "paused until %s": "pausiert bis %s",
  "that does not look like an Unsplash Access Key": "das sieht nicht nach einem Unsplash Access Key aus",
  "a new photo at most every 3 minutes": "höchstens alle 3 Minuten ein neues Foto",
- "paused for the hourly limit": "pausiert wegen des Stundenlimits"
+ "paused for the hourly limit": "pausiert wegen des Stundenlimits",
+ "Hours": "Stunden",
+ "Days": "Tage",
+ "Humidity": "Luftfeuchte",
+ "Rain chance": "Regenrisiko",
+ "UV index": "UV-Index",
+ "Pressure": "Luftdruck",
+ "Air quality": "Luftqualität",
+ "Sunrise": "Sonnenaufgang",
+ "Sunset": "Sonnenuntergang"
 }

@@ -1,0 +1,53 @@
+{
+  "id": "weather",
+  "name": "Weather forecast",
+  "version": "1.0.0",
+  "description": "A weather card with the next hours and days, for any place on Home.",
+  "about": "A card for Home that shows the weather at a city you choose on the phone page (Cards > Set up from your phone): now, with the temperature, feels like, humidity, wind, rain chance, UV, air pressure, air quality and sunrise and sunset; the next hours; and the next days. The buttons on the card (Now, Hours, Days) are targets for the remote. The weather comes from Open-Meteo (free, no key, no account): only the coordinates of the city you chose leave the TV, at most every 30 minutes. The idea and the first version are from @Edenik (pull request 129).",
+  "kind": "service",
+  "entry": { "service": "service.js" },
+  "permissions": ["net.fetch"],
+  "provides": ["cards"],
+  "minService": "1.6.16",
+  "cards": [
+    {
+      "id": "forecast",
+      "name": "Weather forecast",
+      "version": "1.0.0",
+      "description": "The weather now, the next hours and the next days.",
+      "about": "The weather at a city you choose on the phone page, with buttons for the remote: Now, Hours and Days. From Open-Meteo, with no key and no account.",
+      "size": "medium",
+      "page": "card.html",
+      "poll": 60,
+      "actions": [
+        { "name": "now", "label": "Now" },
+        { "name": "hours", "label": "Hours" },
+        { "name": "days", "label": "Days" }
+      ],
+      "options": [
+        { "key": "place", "kind": "place", "label": "City" },
+        {
+          "key": "unit",
+          "kind": "choice",
+          "label": "Unit",
+          "default": "c",
+          "choices": [
+            ["c", "Celsius"],
+            ["f", "Fahrenheit"]
+          ]
+        },
+        {
+          "key": "size",
+          "kind": "choice",
+          "label": "Size",
+          "default": "medium",
+          "choices": [
+            ["medium", "Medium"],
+            ["small", "Small"],
+            ["large", "Large"]
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -69,6 +69,10 @@ run(async () => {
   fs.writeFileSync(path.join(dir, 'cards', 'demo-card', 'card.html'), '<b>demo</b>');
   fs.writeFileSync(path.join(dir, 'cards', 'demo-card', 'x.php'), 'nope');
   fs.writeFileSync(
+    path.join(dir, 'cards', 'demo-card', 'preview.jpg'),
+    Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(50, 3)])
+  );
+  fs.writeFileSync(
     path.join(dir, 'service.js'),
     `const seen = [];
 exports.create = () => ({
@@ -127,6 +131,13 @@ exports.create = () => ({
   ok((await get('/card/demo-card/x.php')).code === 404, 'a file of another type is not served');
   ok((await get('/card/demo-card/..%2Faddon.json')).code === 404, 'a path out of the card folder is not served');
   web.server.close();
+
+  // ---- its picture, from the add-on's folder ----
+  const pv = await new Promise(resolve => {
+    const x = require('./lib').fake('/api/cards/preview/demo-card', 'GET');
+    cards.handle(x.req, x.res, '/api/cards/preview/demo-card', async () => ({})).then(() => resolve(x.res));
+  });
+  ok(pv.code === 200 && pv.headers['content-type'] === 'image/jpeg', 'the picture of the card is read from the add-on folder');
 
   // ---- the feed ----
   r = await call(cards, '/api/cards/feed', 'POST', { slot: 'side' });

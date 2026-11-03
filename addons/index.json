@@ -77,6 +77,27 @@
         "phone.js": "d9f96764f349e821469a600bb1bf338057e4af1230f5367d939b05ede7d60a5e",
         "service.js": "feac5e89cddac3b6b9b5d6bb9b90606d237e71b12dde1ed6e83aca939e781fc3"
       }
+    },
+    {
+      "id": "weather",
+      "name": "Weather forecast",
+      "version": "1.0.0",
+      "description": "A weather card with the next hours and days, for any place on Home.",
+      "about": "A card for Home that shows the weather at a city you choose on the phone page (Cards > Set up from your phone): now, with the temperature, feels like, humidity, wind, rain chance, UV, air pressure, air quality and sunrise and sunset; the next hours; and the next days. The buttons on the card (Now, Hours, Days) are targets for the remote. The weather comes from Open-Meteo (free, no key, no account): only the coordinates of the city you chose leave the TV, at most every 30 minutes. The idea and the first version are from @Edenik (pull request 129).",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "files": {
+        "addon.json": "d8d519a8c1e5a69fccffebd4d818223948528877cdf4da517e0717c149469b8b",
+        "cards/forecast/card.css": "59aa0c3542fcf2b6359b2ef1e11398614d4d8f4b9727c2c779b02797e16127ac",
+        "cards/forecast/card.html": "bf2e0f388248ce30f18845c18c5996532ac3b1a9c48dde67770e945d4a9a06a9",
+        "cards/forecast/card.js": "a15b0b33a5be38c7824efa7f38dc0910dd1407dfac18ea138f809d22b614ac55",
+        "cards/forecast/preview.jpg": "8f718df9627e1a18ed7754cef71ad4cf5b81c101693dda6e39dcf461c415cbd1",
+        "service.js": "76559a4bc0a03b0528ff15ab51a34d856503dc74c88b7917818d2e4a5d6445f4",
+        "weather.js": "a0f80532ff74f5b272414c966297456b78bacb2a219639d31c11191d750c5821"
+      }
     }
   ]
 }
