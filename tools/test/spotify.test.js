@@ -552,7 +552,7 @@ run(async () => {
   // ---- the card as the service offers it ----
   const fs = require('fs');
   const man = JSON.parse(fs.readFileSync(path.join(addonDir, 'addon.json'), 'utf8'));
-  const chk = req('addons').check(man, '1.6.16');
+  const chk = req('addons').check(man, '1.6.17');
   ok(
     chk.manifest &&
       chk.manifest.provides.join() === 'cards' &&
@@ -560,7 +560,7 @@ run(async () => {
       chk.manifest.luna.length === 1,
     'the manifest is accepted and asks for the network and one luna call'
   );
-  ok(req('addons').check(man, '1.6.15').error, 'it needs the service that has cards for add-ons');
+  ok(req('addons').check(man, '1.6.16').error, 'it needs the service that has the luna permission');
   ok(
     chk.manifest.cards[0].id === 'nowplaying' &&
       chk.manifest.cards[0].actions.map(x => x.name).join() === 'prev,toggle,next,output,open,pick',
