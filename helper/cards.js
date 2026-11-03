@@ -188,7 +188,7 @@ function create(ctx) {
   // the downloaded cards as card types (x-<id>), their options as the fields of the form on the phone page
   /** @returns {any[]} */
   function packTypes() {
-    const have = packs.installed();
+    const have = packs.all();
     return Object.keys(have).map(id => ({
       type: 'x-' + id,
       name: have[id].name,
@@ -303,6 +303,66 @@ function create(ctx) {
     json({ error: 'not found' }, 404);
   }
 
+  // ---- cards of add-ons (addon.json "cards"): the launcher asks the add-on for the card's data and sends it the card's actions ----
+  const FEED_MAX = 128 * 1024; // a cover as a data: address fits; anything larger is refused
+  // the add-on behind the card in a slot: {opt} (the card's options as the add-on gets them: defaults filled in, a place with its
+  // coordinates) with the card and the add-on's service; {error} when the slot holds no such card
+  function addonCard(slot) {
+    const c = (config.get().cards || {})[slot];
+    const e =
+      c &&
+      typeof c.type === 'string' &&
+      /^x-/.test(c.type) &&
+      ctx
+        .feature('addons')
+        .cardsOf()
+        .filter(x => 'x-' + x.card.id === c.type)[0];
+    if (!e || !e.mod || !e.mod.cards) return { error: 'no such card' };
+    const opt = {};
+    for (const q of e.card.options) {
+      const v = c[q.key];
+      opt[q.key] = v !== undefined && v !== '' ? v : q.kind === 'choice' && !q.default ? q.choices[0][0] : q.default;
+      if (q.kind === 'place') {
+        opt.lat = c.lat;
+        opt.lon = c.lon;
+      }
+    }
+    return { e, opt };
+  }
+  // a call into the add-on that always ends: its answer, {error}, or {error} after 15 seconds
+  /** @param {() => any} fn */
+  function inAddon(fn) {
+    return new Promise(resolve => {
+      const t = setTimeout(() => resolve({ error: 'the add-on did not answer' }), 15000);
+      Promise.resolve()
+        .then(fn)
+        .then(
+          r => {
+            clearTimeout(t);
+            resolve(r && typeof r === 'object' && !Array.isArray(r) ? r : {});
+          },
+          err => {
+            clearTimeout(t);
+            resolve({ error: String((err && err.message) || err).slice(0, 160) });
+          }
+        );
+    });
+  }
+  async function addonFeed(slot) {
+    const a = addonCard(String(slot || ''));
+    if (a.error) return a;
+    if (typeof a.e.mod.cards.feed !== 'function') return {};
+    const r = await inAddon(() => a.e.mod.cards.feed(a.e.card.id, a.opt));
+    return JSON.stringify(r).length > FEED_MAX ? { error: 'the answer is too large' } : r;
+  }
+  async function addonAction(slot, name, arg) {
+    const a = addonCard(String(slot || ''));
+    if (a.error) return a;
+    if (!a.e.card.actions.some(x => x.name === name) || typeof a.e.mod.cards.action !== 'function') return { error: 'no such action' };
+    const v = typeof arg === 'string' ? arg.slice(0, 100) : typeof arg === 'number' && isFinite(arg) ? arg : '';
+    return inAddon(() => a.e.mod.cards.action(a.e.card.id, a.opt, name, v));
+  }
+
   async function handle(req, res, u, body) {
     // a Home Assistant camera's picture for the camera card (GET, so the launcher can use it as an image)
     if (u.indexOf('/card/') === 0) return packs.serve(req, res, u);
@@ -319,6 +379,9 @@ function create(ctx) {
     if (u === '/api/cards/pair') return web.json(res, b.stop ? (stopPair(), {}) : await startPair());
     // the manager's Cards screen: the theme's places with their cards, and a card type picked for one of them
     if (u === '/api/cards/status') return web.json(res, state(i18n.lang(req, config.get().lang)));
+    // a card of an add-on: {slot} -> its data; {slot, name, arg} -> an action of one of its buttons
+    if (u === '/api/cards/feed') return web.json(res, await addonFeed(b.slot));
+    if (u === '/api/cards/action') return web.json(res, await addonAction(b.slot, String(b.name || ''), b.arg));
     if (u === '/api/cards/set') return web.json(res, setType(String(b.slot || ''), String(b.type || '')));
     // the weather card: {lat, lon, unit} -> the weather there (Open-Meteo, at most every 30 minutes)
     if (u === '/api/cards/weather') return web.json(res, await weather.get(b.lat, b.lon, b.unit));
@@ -333,7 +396,7 @@ function create(ctx) {
     web.notFound(res);
   }
   // the files of a page card are under /card/<id>/ (cardcatalog.js)
-  return { name: 'cards', prefix: '/api/cards/', match: packs.match, handle, stop: stopPair, packs: () => packs.installed() };
+  return { name: 'cards', prefix: '/api/cards/', match: packs.match, handle, stop: stopPair, packs: () => packs.all() };
 }
 
 // the phone page: a form per slot (the card type, then its options), and all cards as JSON. Plain script for iOS Safari and Android

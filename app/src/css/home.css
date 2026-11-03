@@ -1292,3 +1292,15 @@ body.scenes-on {
 .scenes-on[data-cards="glass"] #scroll::before {
   display: none;
 }
+
+/* a button of a card of an add-on (its page says where): a target for the remote, drawn over the card's frame */
+.card-btn {
+  position: absolute;
+  border-radius: 12px;
+  cursor: pointer;
+  pointer-events: auto; /* #cards lets no pointer through; the Magic Remote needs the buttons */
+}
+.card-btn.f {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9);
+}
