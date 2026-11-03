@@ -204,7 +204,7 @@ run(async () => {
   );
 
   // ---- which page may stay in the WebView: the TV by its parsed URI, never by a prefix of its text ----
-  // "http://<tv>:8798@evil.example/" begins with the TV's address, but its host is evil.example and it would load with the bridge attached
+  // "http://<tv>:8799@evil.example/" begins with the TV's address, but its host is evil.example and it would load with the bridge attached
   ok(
     /private boolean isTv\(String url\)/.test(bridge) &&
       /Uri\.parse\(url\)/.test(bridge) &&
@@ -218,7 +218,7 @@ run(async () => {
     /if \(url\.startsWith\(START\) \|\| url\.startsWith\(OFF\)\) return false;/.test(bridge) &&
       /if \(isTv\(url\)\) return false;/.test(bridge) &&
       !/startsWith\("http:\/\/" \+ store\.addr\(\)/.test(bridge),
-    'every load decision is that URI test (shouldOverrideUrlLoading, onPageFinished, pair): no “the URL begins with the TV’s address”, which http://<tv>:8798@evil.example/ passes'
+    'every load decision is that URI test (shouldOverrideUrlLoading, onPageFinished, pair): no “the URL begins with the TV’s address”, which http://<tv>:8799@evil.example/ passes'
   );
   ok(
     /android:launchMode="singleTop"/.test(man) && /protected void onNewIntent\(Intent i\)/.test(bridge),
@@ -235,32 +235,32 @@ run(async () => {
   // ---- a cytv:// link is browsable, so any web page can send one: only private IPv4 addresses are ever stored, and a new TV needs a yes ----
   const good = [
     '192.168.1.50',
-    '192.168.1.50:8798',
-    'http://192.168.1.50:8798/',
+    '192.168.1.50:8799',
+    'http://192.168.1.50:8799/',
     '10.0.0.5:9000',
     '172.16.3.4',
     '172.31.255.254',
     '169.254.1.1',
   ];
   const goodOut = [
-    '192.168.1.50:8798',
-    '192.168.1.50:8798',
-    '192.168.1.50:8798',
+    '192.168.1.50:8799',
+    '192.168.1.50:8799',
+    '192.168.1.50:8799',
     '10.0.0.5:9000',
-    '172.16.3.4:8798',
-    '172.31.255.254:8798',
-    '169.254.1.1:8798',
+    '172.16.3.4:8799',
+    '172.31.255.254:8799',
+    '169.254.1.1:8799',
   ];
   const badAddr = [
     'example.com',
     '8.8.8.8',
     '192.168.1.256',
-    'evil.com:8798',
+    'evil.com:8799',
     '192.168.1.50@evil.com',
     '',
     '   ',
     '::1',
-    '[fe80::1]:8798',
+    '[fe80::1]:8799',
     'fe80::1',
     '172.32.0.1',
     '172.15.0.1',
@@ -525,7 +525,7 @@ run(async () => {
     );
     box.mode.onclick();
     box.go.onclick();
-    sb.cytvFound('192.168.1.50:8798');
+    sb.cytvFound('192.168.1.50:8799');
     ok(
       el('addr').value === '192.168.1.50' &&
         box.typed.className === '' &&
@@ -551,7 +551,7 @@ run(async () => {
     ok(box.toast.className === 'toast warn', 'and the toast goes away when its time is up');
     el('addr').value = '192.168.1.50';
     box.go.onclick();
-    ok(opened.length === 1 && opened[0] === 'http://192.168.1.50:8798/', 'a good address goes straight to the TV page');
+    ok(opened.length === 1 && opened[0] === 'http://192.168.1.50:8799/', 'a good address goes straight to the TV page');
     const sb2 = Object.assign({}, sb, { document: { getElementById: el } });
     sb2.window = sb2;
     sb2.window.CYTV_APP = { discover() {}, wake: () => false, getAddr: () => '', bye: () => 'removed' };

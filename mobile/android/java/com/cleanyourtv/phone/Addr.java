@@ -7,11 +7,11 @@ package com.cleanyourtv.phone;
  * pointed at a machine someone else controls.
  */
 final class Addr {
-    static final int PORT = 8798;
+    static final int PORT = 8799;
 
     private Addr() {}
 
-    /** "192.168.1.50", "http://192.168.1.50:8798/" -> "192.168.1.50:8798"; "" when it is not a private IPv4 address. */
+    /** "192.168.1.50", "http://192.168.1.50:8799/" -> "192.168.1.50:8799"; "" when it is not a private IPv4 address. */
     static String clean(String v) {
         String s = String.valueOf(v == null ? "" : v).trim();
         if (s.regionMatches(true, 0, "http://", 0, 7)) s = s.substring(7);
