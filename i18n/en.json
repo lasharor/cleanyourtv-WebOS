@@ -947,5 +947,6 @@
  "Sign out": "Sign out",
  "Do nothing": "Do nothing",
  "Does nothing": "Does nothing",
- "blocks the button's own action": "blocks the button's own action"
+ "blocks the button's own action": "blocks the button's own action",
+ "%s (in the background)": "%s (in the background)"
 }

@@ -42,8 +42,11 @@ home screen (along the dock, then the grid row by row) and up and down in every 
 Back on the home screen lists the apps that are open, as LG's Home does with its Recents on a second Back. OK closes an app,
 **Close all** closes every app in the list, and Back leaves it. Closing an app also removes it from LG's recent apps.
 
-It lists the apps the launcher knows, including the ones you hid from the grid; Home itself, CleanYourTV's own apps and the TV's
-system apps are never in it. The list is read when it opens and closes when you leave Home. Suggested and first built by
+It lists the apps the launcher knows, including the ones you hid from the grid, and the CleanYourTV manager; Home itself,
+CleanYourTV's Inputs picker and notifications, and the TV's system apps are never in it. An installed app's background service that
+runs (Stremio's streaming server, for example) is listed as "Stremio (in the background)": the TV does not count it as an open app,
+and it keeps running after you leave its app. OK stops it, and its app starts it again when it needs it. The services of the
+Homebrew Channel and of CleanYourTV are never listed. The list is read when it opens and closes when you leave Home. Suggested and first built by
 [Steefzar](https://github.com/lasharor/cleanyourtv-WebOS/issues/16).
 
 ![Running apps](screenshots/running.jpg)

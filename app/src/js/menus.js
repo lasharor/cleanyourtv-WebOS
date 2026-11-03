@@ -321,7 +321,7 @@ function runningItems(list) {
   if (!list.length) return [{ label: t('No apps are running'), dim: true }];
   var items = list.map(function (a) {
     return {
-      label: a.title,
+      label: a.background ? t('%s (in the background)').replace('%s', a.title) : a.title,
       sub: t('Close'),
       stay: true,
       fn: function () {
