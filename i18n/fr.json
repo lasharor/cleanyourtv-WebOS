@@ -792,5 +792,8 @@
  "Off. Switch it on to remap buttons.": "Désactivé. Activez-la pour réaffecter des touches.",
  "Up to 12 buttons can be used": "Jusqu’à 12 touches sont possibles",
  "Remove every remapped button?": "Retirer toutes les touches remappées ?",
- "No, keep them": "Non, les garder"
+ "No, keep them": "Non, les garder",
+ "Do nothing": "Ne rien faire",
+ "Does nothing": "Ne fait rien",
+ "blocks the button's own action": "bloque l'action propre du bouton"
 }

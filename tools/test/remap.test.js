@@ -55,7 +55,7 @@ run(async () => {
   });
   f.start();
   let r = await call(f, '/api/remap');
-  ok(r.code === 200 && JSON.stringify(r.j.keys) === '{}' && r.j.types.length === 5, 'nothing is remapped at first');
+  ok(r.code === 200 && JSON.stringify(r.j.keys) === '{}' && r.j.types.length === 6, 'nothing is remapped at first');
   ok(r.j.enabled === false, 'the feature is off until it is switched on');
 
   // ---- off: nothing runs, nothing is bound ----
@@ -153,7 +153,7 @@ run(async () => {
   ok(r.returnValue === false && /no such app/.test(r.error), 'an app that cannot start is reported');
   r = (await call(f, '/api/remap')).j;
   ok(
-    r.types.length === 5 && r.max === 12 && r.hook === false,
+    r.types.length === 6 && r.max === 12 && r.hook === false,
     'the manager gets the actions, the 12 limit and whether the hook is attached'
   );
 
@@ -264,6 +264,11 @@ run(async () => {
   );
   r = await call(f, '/api/remap', 'POST', { code: '555', type: 'picker' });
   ok(r.j.keys['555'].type === 'picker' && r.j.keys['555'].name === 'Disney+', 'changing what a button does keeps its name');
+  r = await call(f, '/api/remap', 'POST', { code: '557', type: 'none' });
+  ok(r.code === 200 && r.j.keys['557'].type === 'none', 'a button can be set to do nothing');
+  r = await call(f, '/api/remap/fire', 'POST', { code: '557' });
+  ok(r.code === 200 && r.j.returnValue === true, 'a button that does nothing is taken without an error');
+  await call(f, '/api/remap', 'POST', { code: '557', remove: true });
   r = await call(f, '/api/remap', 'POST', { code: '556', type: 'home', key: 'KEY_X; reboot' });
   ok(
     r.code === 200 && r.j.keys['556'].key === undefined && r.j.keys['556'].name === undefined,

@@ -944,5 +944,8 @@
  "User name": "User name",
  "Password": "Password",
  "Sign in": "Sign in",
- "Sign out": "Sign out"
+ "Sign out": "Sign out",
+ "Do nothing": "Do nothing",
+ "Does nothing": "Does nothing",
+ "blocks the button's own action": "blocks the button's own action"
 }

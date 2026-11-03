@@ -1,4 +1,4 @@
-/* Key remapping: a remote button (the Netflix or Prime key, a colour key, ...) opens an app, an input, Live TV, Home or the Inputs list.
+/* Key remapping: a remote button (the Netflix or Prime key, a colour key, ...) opens an app, an input, Live TV, Home or the Inputs list, or does nothing.
    The button's code is learned from the TV, never assumed (helper/remap.js). */
 var rm = null,
   rmCode = '',
@@ -15,6 +15,7 @@ function rmDescribe(e) {
   if (e.type === 'input') return 'Switches to ' + (e.label || e.id);
   if (e.type === 'live') return 'Opens Live TV';
   if (e.type === 'home') return 'Goes to Home';
+  if (e.type === 'none') return 'Does nothing';
   return 'Shows the Inputs list';
 }
 function openRemap() {
@@ -286,6 +287,13 @@ function rmRows() {
       label: 'Show the Inputs list',
       fn: function () {
         rmSave({ type: 'picker' });
+      },
+    });
+    rows.push({
+      label: 'Do nothing',
+      sub: "blocks the button's own action",
+      fn: function () {
+        rmSave({ type: 'none' });
       },
     });
     rows.push({ sep: true });

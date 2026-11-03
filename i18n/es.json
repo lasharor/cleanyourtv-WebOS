@@ -792,5 +792,8 @@
  "Off. Switch it on to remap buttons.": "Desactivado. Actívalo para reasignar botones.",
  "Up to 12 buttons can be used": "Se pueden usar hasta 12 botones",
  "Remove every remapped button?": "¿Quitar todos los botones reasignados?",
- "No, keep them": "No, mantenerlos"
+ "No, keep them": "No, mantenerlos",
+ "Do nothing": "No hacer nada",
+ "Does nothing": "No hace nada",
+ "blocks the button's own action": "bloquea la acción propia del botón"
 }

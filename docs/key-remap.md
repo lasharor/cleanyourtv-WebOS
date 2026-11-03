@@ -1,6 +1,6 @@
 # Key remapping
 
-A button on the remote can open something of your choice: an app, an input, Live TV, Home or the Inputs list. Use it for the buttons
+A button on the remote can open something of your choice: an app, an input, Live TV, Home or the Inputs list, or nothing at all. Use it for the buttons
 you never press (the Netflix, Prime or other shortcut keys, the colour keys) or for any spare button.
 
 Set it up in the manager app: **Key remapping**. It is **off** until you switch it on with the first row of that screen. While it is off
@@ -10,7 +10,7 @@ switching it on again brings them back.
 | Step | What happens |
 |---|---|
 | **Add a button** | Press the button on your remote. The TV reports which code the button sent, and that code is saved. Nothing about the code is assumed: remotes and firmware differ. |
-| Choose what it does | **Open an app** (the apps on the TV), **Switch to an input** (the HDMI inputs, as the Inputs list shows them), **Open Live TV**, **Go to Home** or **Show the Inputs list**. |
+| Choose what it does | **Open an app** (the apps on the TV), **Switch to an input** (the HDMI inputs, as the Inputs list shows them), **Open Live TV**, **Go to Home**, **Show the Inputs list** or **Do nothing** (the press is taken away from LG and nothing happens, for a button you never want). |
 | Pressing it | The button does that, over whatever is running. LG's own action for the button does not happen. |
 
 The list shows each button by name when the TV tells us it ("Prime Video button", "Red button"), and by its number otherwise

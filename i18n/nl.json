@@ -852,5 +852,8 @@
  "User name": "Gebruikersnaam",
  "Password": "Wachtwoord",
  "Sign in": "Aanmelden",
- "Sign out": "Afmelden"
+ "Sign out": "Afmelden",
+ "Do nothing": "Niets doen",
+ "Does nothing": "Doet niets",
+ "blocks the button's own action": "blokkeert de eigen actie van de knop"
 }

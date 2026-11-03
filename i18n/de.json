@@ -835,5 +835,8 @@
  "Off. Switch it on to remap buttons.": "Aus. Schalte es ein, um Tasten umzubelegen.",
  "Up to 12 buttons can be used": "Bis zu 12 Tasten sind möglich",
  "Remove every remapped button?": "Alle umbelegten Tasten entfernen?",
- "No, keep them": "Nein, behalten"
+ "No, keep them": "Nein, behalten",
+ "Do nothing": "Nichts tun",
+ "Does nothing": "Tut nichts",
+ "blocks the button's own action": "blockiert die eigene Aktion der Taste"
 }
