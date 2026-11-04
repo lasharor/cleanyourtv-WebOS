@@ -161,6 +161,12 @@ A service that has a `settings(o)` function (the same contract as a photo source
 for `{stop: true}`) gets a **Set up from your phone** row on its screen in the manager's Add-ons (`POST /api/addons/<id>/settings`, `settings: true` in the add-on's entry of
 `GET /api/addons`). The weather add-on needs none (the city is an option on the Cards page); the Spotify add-on uses it for the sign-in.
 
+## The Guide key
+
+An add-on with the permission `key.guide` in its manifest is a guide of its own (the TV guide for LG's tuner is one): while it is running and switched on, the learned
+Guide key opens its page, with Live TV (IPTV) on or off, and its screen in the manager's Add-ons has a **Learn the Guide key** row. Without such an add-on the key opens the
+Live TV guide, as before.
+
 ## Permissions for LG's services
 
 A service add-on has no access to LG's services unless its manifest asks: `"permissions": ["luna"]` and a list of the calls it may make, each

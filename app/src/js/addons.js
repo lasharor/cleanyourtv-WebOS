@@ -13,7 +13,7 @@ var PAGER = {
   id: '',
   busy: 0,
   load: function () {
-    api('/api/addons').then(
+    return api('/api/addons').then(
       function (x) {
         var pages = [],
           bar = [],
@@ -25,7 +25,14 @@ var PAGER = {
           })
           .forEach(function (a) {
             if (a.status !== 'running' || !a.enabled || !a.page || !a.tile || !a.inBook) return;
-            pages.push({ id: a.id, label: a.tile.label || a.name, icon: a.tile.icon || 'addon', page: a.page, claims: a.claims || [] });
+            pages.push({
+              id: a.id,
+              label: a.tile.label || a.name,
+              icon: a.tile.icon || 'addon',
+              page: a.page,
+              claims: a.claims || [],
+              guide: (a.permissions || []).indexOf('key.guide') >= 0,
+            });
             if (a.tile.placement === 'topbar')
               bar.push({ label: a.tile.label || a.name, icon: a.tile.icon || 'addon', action: 'addon', addon: a.id, fixed: true });
           });
@@ -133,7 +140,7 @@ var PAGER = {
     return document.querySelector('#pages iframe.pgframe');
   },
   /* turn to a page ('' is Home); params are added to its address (Live TV: guide=1) */
-  go: function (id, params) {
+  go: function (id, params, instant) {
     if (id === PAGER.id) {
       if (id && params) PAGER.send({ cytv: 'guide' });
       return;
@@ -152,7 +159,8 @@ var PAGER = {
       nf.className = 'pgframe';
       nf.setAttribute('sandbox', 'allow-scripts allow-same-origin');
       nf.setAttribute('allow', 'autoplay');
-      nf.style.transform = 'translate3d(' + (fwd ? 1920 : -1920) + 'px,0,0)';
+      nf.style.transform = instant ? 'none' : 'translate3d(' + (fwd ? 1920 : -1920) + 'px,0,0)';
+      if (instant) nf.style.transition = 'none';
       nf.src = PAGER.url(PAGES[to - 1], params);
       nf.onload = function () {
         try {
@@ -166,6 +174,7 @@ var PAGER = {
     } else {
       home.style.visibility = 'visible';
     }
+    if (instant && id) home.style.visibility = 'hidden';
     PAGER.on = !!id;
     PAGER.id = id;
     PAGER.draw();
@@ -248,6 +257,11 @@ var PAGER = {
 window.addEventListener('message', function (ev) {
   var d = ev.data;
   if (!PAGER.on || !d || d.id !== PAGER.id) return;
-  if (d.cytvAddon === 'close') PAGER.home();
-  else if (d.cytvAddon === 'pagekey') PAGER.pageKey({ keyCode: d.keyCode, preventDefault: function () {} });
+  if (d.cytvAddon === 'close') {
+    var back = guideFrom && d.id === guidePage() ? guideFrom : '';
+    logLine('guide closed, back to ' + (back || 'home'));
+    guideFrom = '';
+    PAGER.home();
+    if (back) launch(back); /* Back in the guide goes to what was playing */
+  } else if (d.cytvAddon === 'pagekey') PAGER.pageKey({ keyCode: d.keyCode, preventDefault: function () {} });
 });

@@ -6584,21 +6584,37 @@ function guarded() {
   return LIVE.on && Date.now() < liveGuard;
 }
 /* the Guide button goes to the TV guide add-on (LG tuner) when it is on, else to Live TV's guide: the two do not depend on each other */
+/* the app that was in front when the Guide button was pressed (guidekey.sh passes it as "from"): Back in the guide returns to it */
+var guideFrom = '';
+function noteGuideFrom(p) {
+  guideFrom = p && /^[A-Za-z0-9._-]{3,80}$/.test(p.from || '') && p.from !== 'com.webos.app.home' ? p.from : '';
+}
 function guidePage() {
-  return PAGER.index('tuner') > 0 ? 'tuner' : '';
+  for (var i = 0; i < PAGES.length; i++) if (PAGES[i].guide) return PAGES[i].id;
+  return '';
 }
 /* launching Home with {inputs:true} opens the Inputs list */
-function wantInputs() {
+function wantInputs(pages) {
   var p = {};
   try {
     p = JSON.parse(webOSSystem.launchParams || '{}');
   } catch (e) {}
+  /* the Guide button: which page has the guide is known once the add-on pages are loaded */
+  if (p && p.guide && !p.inputs && pages) {
+    $('homepage').style.visibility = 'hidden'; /* no flash of the dashboard on the way to the guide */
+    pages.then(function () {
+      wantInputs();
+      if (!PAGER.on) $('homepage').style.visibility = 'visible';
+    });
+    return;
+  }
   if (p && p.inputs) {
     closeMenus();
     inputsMenu();
   } else if (p && p.guide && guidePage()) {
+    noteGuideFrom(p);
     closeMenus();
-    PAGER.go(guidePage());
+    PAGER.go(guidePage(), null, true);
   } else if (p && p.live && liveOn()) {
     closeMenus();
     liveGuard = Date.now() + 5000;
@@ -6613,6 +6629,7 @@ document.addEventListener('webOSRelaunch', function () {
   } catch (e) {}
   logLine('launcher relaunch ' + JSON.stringify(p).slice(0, 120) + (LIVE.on ? ' (live on)' : ''));
   if (p && p.guide && guidePage() && PAGER.on && PAGER.id === guidePage()) {
+    noteGuideFrom(p);
     PAGER.send({ cytv: 'guide' });
     return;
   } /* the Guide button while the TV guide is open */
@@ -6628,8 +6645,7 @@ document.addEventListener('webOSRelaunch', function () {
   if (PAGER.on && !(p && p.live)) PAGER.home(); /* Home pressed: back to the first page */
   load();
   refreshSoon();
-  PAGER.load();
-  wantInputs();
+  wantInputs(PAGER.load());
 });
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) {
@@ -6717,7 +6733,7 @@ var PAGER = {
   id: '',
   busy: 0,
   load: function () {
-    api('/api/addons').then(
+    return api('/api/addons').then(
       function (x) {
         var pages = [],
           bar = [],
@@ -6729,7 +6745,14 @@ var PAGER = {
           })
           .forEach(function (a) {
             if (a.status !== 'running' || !a.enabled || !a.page || !a.tile || !a.inBook) return;
-            pages.push({ id: a.id, label: a.tile.label || a.name, icon: a.tile.icon || 'addon', page: a.page, claims: a.claims || [] });
+            pages.push({
+              id: a.id,
+              label: a.tile.label || a.name,
+              icon: a.tile.icon || 'addon',
+              page: a.page,
+              claims: a.claims || [],
+              guide: (a.permissions || []).indexOf('key.guide') >= 0,
+            });
             if (a.tile.placement === 'topbar')
               bar.push({ label: a.tile.label || a.name, icon: a.tile.icon || 'addon', action: 'addon', addon: a.id, fixed: true });
           });
@@ -6837,7 +6860,7 @@ var PAGER = {
     return document.querySelector('#pages iframe.pgframe');
   },
   /* turn to a page ('' is Home); params are added to its address (Live TV: guide=1) */
-  go: function (id, params) {
+  go: function (id, params, instant) {
     if (id === PAGER.id) {
       if (id && params) PAGER.send({ cytv: 'guide' });
       return;
@@ -6856,7 +6879,8 @@ var PAGER = {
       nf.className = 'pgframe';
       nf.setAttribute('sandbox', 'allow-scripts allow-same-origin');
       nf.setAttribute('allow', 'autoplay');
-      nf.style.transform = 'translate3d(' + (fwd ? 1920 : -1920) + 'px,0,0)';
+      nf.style.transform = instant ? 'none' : 'translate3d(' + (fwd ? 1920 : -1920) + 'px,0,0)';
+      if (instant) nf.style.transition = 'none';
       nf.src = PAGER.url(PAGES[to - 1], params);
       nf.onload = function () {
         try {
@@ -6870,6 +6894,7 @@ var PAGER = {
     } else {
       home.style.visibility = 'visible';
     }
+    if (instant && id) home.style.visibility = 'hidden';
     PAGER.on = !!id;
     PAGER.id = id;
     PAGER.draw();
@@ -6952,8 +6977,13 @@ var PAGER = {
 window.addEventListener('message', function (ev) {
   var d = ev.data;
   if (!PAGER.on || !d || d.id !== PAGER.id) return;
-  if (d.cytvAddon === 'close') PAGER.home();
-  else if (d.cytvAddon === 'pagekey') PAGER.pageKey({ keyCode: d.keyCode, preventDefault: function () {} });
+  if (d.cytvAddon === 'close') {
+    var back = guideFrom && d.id === guidePage() ? guideFrom : '';
+    logLine('guide closed, back to ' + (back || 'home'));
+    guideFrom = '';
+    PAGER.home();
+    if (back) launch(back); /* Back in the guide goes to what was playing */
+  } else if (d.cytvAddon === 'pagekey') PAGER.pageKey({ keyCode: d.keyCode, preventDefault: function () {} });
 });
 /* first paint straight from the last known layout, then refresh from the helper */
 try {
@@ -6970,8 +7000,8 @@ try {
   }
 } catch (e) {}
 load();
-PAGER.load();
+var pagesLoaded = PAGER.load();
 refreshSoon();
-wantInputs();
+wantInputs(pagesLoaded);
 api('/api/frontend-ok', { version: VERSION }).catch(function () {}); // lets the manager know an updated launcher started
 </script></body></html>

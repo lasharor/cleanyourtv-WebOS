@@ -20,12 +20,12 @@ function create(ctx) {
     const voice = ctx.feature('voice');
     return v.enabled && voice && voice.installed() ? String(config.keys().voice || '') : '';
   };
-  // the TV guide add-on (LG tuner) is a guide of its own: it takes the key whether Live TV is on or not
-  const tunerOn = () => {
+  // an add-on with the permission key.guide (the TV guide for LG's tuner) is a guide of its own: it takes the key whether Live TV is on or not
+  const guideAddon = () => {
     const ad = ctx.feature && ctx.feature('addons');
-    return !!ad && ad.list().some(a => a.id === 'tuner' && a.enabled && a.status === 'running');
+    return !!ad && ad.list().some(a => a.enabled && a.status === 'running' && (a.permissions || []).indexOf('key.guide') >= 0);
   };
-  const guideKey = () => (config.options().liveTv !== false || tunerOn() ? String(config.keys().guide || '') : '');
+  const guideKey = () => (config.options().liveTv !== false || guideAddon() ? String(config.keys().guide || '') : '');
   // overlay, ondemand or launcher: the manager's choice, else this TV's default (tvprofile.js)
   const mode = () => picker.modeOf(config.get().picker || {}, profile.get().pickerMode);
   // with the launcher's list as the target, CleanYourTV has to be the Home: while LG's Home is chosen the key stays with LG

@@ -18,7 +18,7 @@ run(async () => {
     f.start();
     return conf;
   };
-  const tuner = (enabled, status) => [{ id: 'tuner', enabled, status }];
+  const tuner = (enabled, status) => [{ id: 'tuner', enabled, status, permissions: ['luna', 'key.guide'] }];
 
   const conf = make({ liveTv: true });
   ok(setter() === '362', 'Live TV on: the learned Guide key is ours');
@@ -34,4 +34,16 @@ run(async () => {
   addons = tuner(true, 'running');
   ok(setter() === '', 'no learned key: nothing is bound');
   ok(conf.get().keys.guide === '' && conf.get().options.liveTv === false, 'nothing was changed in the settings');
+
+  // Back in the guide returns to what was playing: the script says what was in front, the launcher goes back to it
+  const fs = require('fs'),
+    path = require('path'),
+    { root } = require('./lib');
+  const sh = fs.readFileSync(path.join(root, 'scripts', 'guidekey.sh'), 'utf8');
+  ok(/getForegroundAppInfo/.test(sh) && /\\"from\\"/.test(sh), 'the Guide key script passes the app that was in front');
+  const page = fs.readFileSync(path.join(root, 'app', 'index.html'), 'utf8');
+  ok(
+    /function noteGuideFrom/.test(page) && page.indexOf('launch(back)') > 0,
+    'the launcher goes back to that app when the guide is closed'
+  );
 });

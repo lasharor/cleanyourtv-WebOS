@@ -470,6 +470,14 @@ function build() {
         });
       }
     }
+    if ((a1.permissions || []).indexOf('key.guide') >= 0)
+      rows.push({
+        label: 'Learn the Guide key',
+        sub: st.keys && st.keys.guide ? 'now: ' + st.keys.guide : 'not learned \u00B7 LG\u2019s guide stays',
+        fn: function () {
+          openKeys('guide');
+        },
+      });
     if (a1.settings)
       rows.push({
         label: 'Set up from your phone',
