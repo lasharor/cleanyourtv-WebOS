@@ -46,6 +46,19 @@ run(async () => {
   ok(rsb.f({ drawer: null, settings: null }, 'open') === 'addon', 'no drawer and no settings: the add-on gets it');
   ok(rsb.f(null, 'open') === 'addon', 'no pack: the add-on gets it');
 
+  const mr = csrc.match(/function cardBtnRemap[\s\S]*?\n\}\r?\n/);
+  ok(!!mr, 'cards.js has cardBtnRemap');
+  const rmb = {};
+  vm.runInNewContext(mr[0] + ';this.f = cardBtnRemap;', rmb);
+  const bx = () => [{ x: 0, y: 0, w: 100, h: 100 }];
+  const same = rmb.f({ left: 0, top: 0, width: 100, height: 260 }, { left: 0, top: 0, width: 100, height: 260 }, bx());
+  ok(same[0].x === 0 && same[0].y === 0 && same[0].w === 100 && same[0].h === 100, 'a frame equal to the card leaves the buttons');
+  const mid = rmb.f({ left: 0, top: 100, width: 100, height: 60 }, { left: 0, top: 0, width: 100, height: 260 }, bx());
+  ok(Math.abs(mid[0].y - 38.4615) < 0.01 && Math.abs(mid[0].h - 23.0769) < 0.01 && mid[0].x === 0 && mid[0].w === 100, 'a centred smaller frame moves the buttons into it: ' + JSON.stringify(mid));
+  const sc = rmb.f({ left: 20, top: 200, width: 100, height: 120 }, { left: 20, top: 100, width: 200, height: 240 }, [{ x: 50, y: 50, w: 50, h: 50 }]);
+  ok(Math.abs(sc[0].y - 66.667) < 0.01 && Math.abs(sc[0].x - 25) < 0.01 && Math.abs(sc[0].w - 25) < 0.01, 'rectangles on the screen work at any offset: ' + JSON.stringify(sc));
+  ok(!/offsetTop/.test(csrc.slice(csrc.indexOf('function cardButtons'), csrc.indexOf('function cardButtons') + 3000)), 'cardButtons no longer uses offsetTop');
+
   const place = { key: 'place', kind: 'place', def: '', label: 'City', choices: [] },
     unit = { key: 'unit', kind: 'choice', def: 'c', label: 'Unit', choices: [['c', 'C'], ['f', 'F']] };
   ok(P.csUnset({}, { options: [place, unit] }) === place, 'an empty place is the unset option');

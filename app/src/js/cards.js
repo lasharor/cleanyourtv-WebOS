@@ -651,6 +651,21 @@ window.addEventListener('message', function (e) {
   )
     cardButtons(el, e.data.buttons);
 });
+/* the buttons say percent of the card's frame; the frame can sit inside the card (glass cards, centred by a transform, which offsetTop ignores), so
+   the two rectangles as the browser draws them (both with the transform) move the percentages to the card. Changes the buttons and returns them. */
+function cardBtnRemap(fr, cr, btns) {
+  if (!fr || !cr || !fr.width || !cr.width || !cr.height) return btns;
+  var l = fr.left - cr.left,
+    tp = fr.top - cr.top;
+  if (Math.abs(l) < 0.5 && Math.abs(tp) < 0.5 && Math.abs(fr.width - cr.width) < 0.5 && Math.abs(fr.height - cr.height) < 0.5) return btns;
+  btns.forEach(function (b) {
+    b.x = ((l + (b.x * fr.width) / 100) / cr.width) * 100;
+    b.y = ((tp + (b.y * fr.height) / 100) / cr.height) * 100;
+    b.w = ((b.w * fr.width) / 100 / cr.width) * 100;
+    b.h = ((b.h * fr.height) / 100 / cr.height) * 100;
+  });
+  return btns;
+}
 /* the buttons of a card of an add-on: made again only when they changed, and the top row of the remote follows */
 function cardButtons(el, list) {
   var ok = [],
@@ -678,16 +693,8 @@ function cardButtons(el, list) {
     });
   });
   /* the page says percent of its frame; the frame can sit inside the card's margins (glass cards), so the targets are moved there */
-  var f = el._f,
-    cw = el.offsetWidth,
-    ch = el.offsetHeight;
-  if (f && cw && ch && f.offsetWidth && (f.offsetLeft || f.offsetTop || f.offsetWidth !== cw || f.offsetHeight !== ch))
-    ok.forEach(function (b) {
-      b.x = ((f.offsetLeft + (b.x * f.offsetWidth) / 100) / cw) * 100;
-      b.y = ((f.offsetTop + (b.y * f.offsetHeight) / 100) / ch) * 100;
-      b.w = ((b.w * f.offsetWidth) / 100 / cw) * 100;
-      b.h = ((b.h * f.offsetHeight) / 100 / ch) * 100;
-    });
+  var f = el._f;
+  if (f) cardBtnRemap(f.getBoundingClientRect(), el.getBoundingClientRect(), ok);
   var key = JSON.stringify(ok);
   if (el._bk === key) return;
   el._bk = key;
