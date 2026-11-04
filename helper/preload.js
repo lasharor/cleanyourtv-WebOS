@@ -71,7 +71,7 @@ function create(ctx) {
   };
 
   // what each app had before the service changed anything: the file kept by the first reading ever (or the older one of /tmp). It is
-  // marked with the firmware it was read on ("@firmware", not an app id); after a firmware update it is dropped, so the next reading takes
+  // marked with the firmware it was read on (the key "@firmware" is a mark, never an id); after a firmware update it is dropped, so the next reading takes
   // LG's new policy and Reset does not go back to the old values.
   function base(apps) {
     const load = f => {
