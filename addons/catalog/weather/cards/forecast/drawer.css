@@ -256,7 +256,7 @@ body {
   position: absolute;
   left: 30px;
   right: 30px;
-  bottom: 32px;
+  bottom: 24px;
   height: 6px;
   border-radius: 3px;
   background: linear-gradient(90deg, #7cc4ff, #8be28b, #ffd36b, #ff7a5c);
