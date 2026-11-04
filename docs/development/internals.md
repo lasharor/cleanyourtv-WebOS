@@ -72,7 +72,8 @@ card are small and stay single files.
       The way and LG's Home program are kept in `home-takeover` (`standin /usr/bin/com.webos.app.home`). At the next boot, when that
       file is newer than LG's Home as it came, `tvprofile.js` and `home-method` and the launcher is staged, the stand-in is mounted
       as the first step, before the service and the five Node.js starts of the steps above, so the Home key opens LG's Home for a
-      shorter time after a boot (issue 125); the rest follows as before. The boot log says `known from an earlier boot` then, and its
+      shorter time after a boot (issue 125); the rest follows as before. `stage-home.sh` copies only the launcher files that
+      changed, so a boot does not write the launcher (with the photos of the seasons, several MB) again while the TV is still busy. The boot log says `known from an earlier boot` then, and its
       first line `boot script started` shows when the Homebrew Channel ran the script.
       `bootstrap.sh verify` does the same once: when the launcher does not come up after a stand-in setup (a TV with CRIU never runs
       the stand-in, issues 72 and 84; `criu` in `tvprofile.js` records it but does not decide), it writes `home-method` `mount`, runs the boot

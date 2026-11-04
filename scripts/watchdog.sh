@@ -45,7 +45,8 @@
     w=$(sed -n 's/^SwapFree: *\([0-9]*\).*/\1/p' /proc/meminfo 2>/dev/null)
     l=$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null)
     f=$(echo "$1" | sed -n 's/.*"appId" *: *"\([^"]*\)".*/\1/p')
-    t=$(top -b -n 1 2>/dev/null | sed -n '5,7p' | tr -s ' ' | cut -c1-90 | tr '\n' '|')
+    # the three lines after the column header (busybox and procps top differ in what comes before it)
+    t=$(top -b -n 1 2>/dev/null | sed -n '/PID/{n;p;n;p;n;p;q;}' | tr -s ' ' | cut -c1-90 | tr '\n' '|')
     echo "$(up) mem=${m:-?}k swap=${w:-?}k load=${l:-?} fg=${f:-${2:-?}} top=${t:-?}" >>"$BB" 2>/dev/null
     if [ "$(wc -c <"$BB" 2>/dev/null)" -gt 65536 ]; then tail -c 32768 "$BB" | sed 1d >"$BB.tmp" && mv "$BB.tmp" "$BB"; fi
   }
