@@ -100,6 +100,14 @@ function draw() {
     $('sub').textContent = tr('Add-on');
     return;
   }
+  if (view === 'addonrepos' || view === 'addonrepo') {
+    $('sub').textContent = tr('Add-on repositories');
+    return;
+  }
+  if (view === 'confirm-addon') {
+    $('sub').textContent = tr('Code from outside the project');
+    return;
+  }
   if (view === 'livetv') {
     $('sub').textContent = tr('Live TV: your own playlist');
     return;

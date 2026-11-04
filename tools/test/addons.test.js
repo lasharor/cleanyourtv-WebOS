@@ -2,7 +2,7 @@
 const fs = require('fs'),
   path = require('path');
 const crypto = require('crypto');
-const { ok, call, req, run, tmp, serve } = require('./lib');
+const { ok, call, fake, req, run, tmp, serve } = require('./lib');
 
 run(async () => {
   // paths.js reads these when it first loads (with the loader below)
@@ -536,7 +536,7 @@ run(async () => {
   );
   r = await call(a, '/api/addons/preview/hello');
   ok(r.code === 200 && Buffer.isBuffer(r.out) && r.out.equals(JPG), 'the picture of a catalog add-on is read from the catalog');
-  fs.unlinkSync(path.join(dir, '.previews', 'hello.img'));
+  fs.unlinkSync(path.join(dir, '.previews', '__hello.img'));
   pictureOk = false;
   r = await call(a, '/api/addons/preview/hello');
   ok(r.code === 404, 'a catalog picture that is not an image is not served');
@@ -582,6 +582,247 @@ run(async () => {
     r.code === 200 && !fs.existsSync(path.join(dir, 'hello')) && !a.list().some(x => x.id === 'hello'),
     'an installed add-on can be removed'
   );
+  // the repository template: a repository on its own, its index is current, its sample add-on is a good one and make-index.js agrees with the tool
+  const tpl = path.join(__dirname, '..', '..', 'addons', 'template');
+  ok(
+    require('../addon-index').build(tpl) === fs.readFileSync(path.join(tpl, 'index.json'), 'utf8'),
+    'addons/template/index.json is current (run node make-index.js in addons/template)'
+  );
+  ok(
+    require('child_process').spawnSync(process.execPath, [path.join(tpl, 'make-index.js'), '--check']).status === 0,
+    "the template's own make-index.js agrees with its index"
+  );
+  const tplIdx = JSON.parse(fs.readFileSync(path.join(tpl, 'index.json'), 'utf8'));
+  ok(addons.cleanIndex(tplIdx).length === tplIdx.addons.length && tplIdx.addons.length === 1, 'the template index is clean');
+  const tplM = addons.check(JSON.parse(fs.readFileSync(path.join(tpl, 'catalog', 'hello', 'addon.json'), 'utf8')), SVC);
+  ok(tplM.manifest && tplM.manifest.id === 'hello' && tplM.manifest.kind === 'service', 'the sample add-on has a valid manifest');
+  const hello = require(path.join(tpl, 'catalog', 'hello', 'service.js')).create({
+    settings: { get: () => ({ hits: 4 }), set: o => (hello.saved = o) },
+  });
+  const hx = fake('/hit', 'POST');
+  await hello.handle(hx.req, hx.res, '/hit', async () => ({}));
+  ok(JSON.parse(hx.res.out).hits === 5 && hello.saved.hits === 5, 'the sample add-on service counts');
+
+  // ---- repositories: the list, the confirm, where an add-on came from, updates from that repository ----
+  const rp = req('addonrepos');
+  const sp = s => rp.parseSpec(s);
+  ok(sp('alice/addons').url === 'https://raw.githubusercontent.com/alice/addons/main', 'owner/repo is a GitHub repository on main');
+  ok(sp('alice/addons@dev/pk/x').url === 'https://raw.githubusercontent.com/alice/addons/dev/pk/x', 'owner/repo@branch/folder');
+  ok(sp('https://github.com/alice/addons/tree/v1/pk').url.endsWith('/alice/addons/v1/pk'), 'a github.com tree address');
+  ok(sp('https://example.com/cytv/index.json/').url === 'https://example.com/cytv', 'any https folder, with or without index.json');
+  ok(
+    sp('http://example.com/x').error && sp('alice/addons@..').error && sp('a b').error && sp('').error,
+    'http and odd addresses are refused'
+  );
+  ok(
+    rp.list({}).length === 1 && rp.list({}).every(x => x.name === 'official' && !x.url),
+    'a TV that never set the list has the official repository'
+  );
+  ok(rp.list({ addonRepos: [] }).length === 0, 'an emptied list stays empty');
+  ok(
+    rp.list({ addonRepos: [{ name: 'official', url: 'https://evil.example/x' }] }).length === 0,
+    'a custom repository cannot take the name official'
+  );
+
+  process.env.CYTV_REPOS_ALLOW_HTTP = '1';
+  const mk = (ver, bad) => {
+    const f = {
+      'addon.json': JSON.stringify({ id: 'extra', name: 'Extra', version: ver, kind: 'page', entry: { page: 'index.html' } }),
+      'index.html': '<b>extra ' + ver + '</b>',
+    };
+    const h = {};
+    Object.keys(f).forEach(k => (h[k] = sha(bad ? 'other' : f[k])));
+    return { f, h };
+  };
+  let cur = mk('1.0.0');
+  const gx = await serve((q, s) => {
+    if (q.url === '/index.json')
+      return s.end(
+        JSON.stringify({
+          addons: [
+            {
+              id: 'extra',
+              name: 'Extra',
+              version: cur.f['addon.json'] && JSON.parse(cur.f['addon.json']).version,
+              kind: 'page',
+              files: cur.h,
+            },
+          ],
+        })
+      );
+    const m = /^\/catalog\/extra\/(.+)$/.exec(q.url);
+    if (m && cur.f[m[1]] !== undefined) return s.end(cur.f[m[1]]);
+    s.writeHead(404);
+    s.end();
+  });
+  r = await call(a, '/api/addons/repos');
+  ok(
+    r.code === 200 && r.j.repos.length === 1 && r.j.repos[0].name === 'official' && r.j.repos[0].official,
+    'the list starts with the official repository'
+  );
+  r = await call(a, '/api/addons/repos', 'POST', { add: gx.url });
+  ok(r.code === 400 && r.j.confirm === true, 'a repository is not added without the confirm');
+  r = await call(a, '/api/addons/repos', 'POST', { add: gx.url, name: 'mine', confirm: true });
+  ok(r.code === 200 && r.j.repos.length === 2 && r.j.repos[1].name === 'mine', 'a repository is added with the confirm');
+  ok(cfg.get().addonRepos.length === 2, 'the list is kept in config.json (addonRepos)');
+  r = await call(a, '/api/addons/repos', 'POST', { add: gx.url, name: 'again', confirm: true });
+  ok(r.code === 400 && /already/.test(r.j.error), 'the same address twice is refused');
+  r = await call(a, '/api/addons/repos', 'POST', { add: 'alice/addons', name: 'mine', confirm: true });
+  ok(r.code === 400 && /named mine/.test(r.j.error), 'the same name twice is refused');
+  r = await call(a, '/api/addons/repos', 'POST', { add: 'bob/none', name: 'official', confirm: true });
+  ok(r.code === 400, 'the name official is kept for the project repository');
+  // a repository that does not answer does not hide the others
+  r = await call(a, '/api/addons/repos', 'POST', { add: 'http://127.0.0.1:9/', name: 'dead', confirm: true });
+  r = await call(a, '/api/addons/catalog');
+  ok(
+    r.j.addons.some(x => x.id === 'extra' && x.repo === 'mine' && !x.official) &&
+      r.j.addons.some(x => x.id === 'hello' && x.repo === 'official') &&
+      r.j.errors.length === 1 &&
+      r.j.errors[0].repo === 'dead',
+    'the catalog joins the repositories and names the one that failed: ' + JSON.stringify(r.j.errors)
+  );
+  r = await call(a, '/api/addons/repos', 'POST', { remove: 'dead' });
+  r = await call(a, '/api/addons/install', 'POST', { id: 'extra' });
+  ok(
+    r.code === 400 && r.j.confirm === true && !fs.existsSync(path.join(dir, 'extra')),
+    'an add-on from another repository needs the confirm'
+  );
+  cur = mk('1.0.0', true);
+  r = await call(a, '/api/addons/install', 'POST', { id: 'extra', repo: 'mine', confirm: true });
+  ok(
+    r.code === 400 && /does not match/.test(r.j.error) && !fs.existsSync(path.join(dir, 'extra')),
+    'its files are checked against its own index'
+  );
+  cur = mk('1.0.0');
+  r = await call(a, '/api/addons/install', 'POST', { id: 'extra', repo: 'mine', confirm: true });
+  ok(
+    r.code === 200 && r.j.repo === 'mine' && fs.existsSync(path.join(dir, 'extra', 'index.html')),
+    'it installs from the named repository'
+  );
+  ok(JSON.parse(fs.readFileSync(path.join(dir, '.sources', 'extra.json'), 'utf8')).repo === 'mine', 'the add-on remembers its repository');
+  r = await call(a, '/api/addons/preview/extra');
+  ok(r.code === 404, 'no picture is no picture');
+  cur = mk('1.1.0');
+  r = await call(a, '/api/addons/catalog');
+  ok(r.j.addons.filter(x => x.id === 'extra')[0].update === true, 'a newer version in its repository is an update');
+  r = await call(a, '/api/addons/update', 'POST', {});
+  ok(r.code === 400 && r.j.confirm === true, 'updating also needs the confirm');
+  r = await call(a, '/api/addons/update', 'POST', { confirm: true });
+  ok(
+    r.code === 200 &&
+      r.j.updated.length === 1 &&
+      r.j.updated[0].version === '1.1.0' &&
+      fs.readFileSync(path.join(dir, 'extra', 'index.html'), 'utf8') === '<b>extra 1.1.0</b>',
+    'update installs the newer version from the same repository: ' + r.out
+  );
+  r = await call(a, '/api/addons/repos', 'POST', { remove: 'mine' });
+  ok(
+    r.code === 200 && r.j.repos.length === 1 && fs.existsSync(path.join(dir, 'extra')),
+    'removing a repository leaves what was installed from it'
+  );
+  r = await call(a, '/api/addons/repos', 'POST', { remove: 'mine' });
+  ok(r.code === 400, 'removing a repository that is not there is refused');
+  r = await call(a, '/api/addons/remove', 'POST', { id: 'extra' });
+  ok(r.code === 200 && !fs.existsSync(path.join(dir, '.sources', 'extra.json')), 'removing an add-on removes its record');
+  // the phone page: the code is needed, adding needs the box ticked
+  r = await call(a, '/api/addons/repos/phone', 'POST', {});
+  ok(
+    r.code === 200 && /^\d{6}$/.test(r.j.code) && /:8799$/.test(r.j.url) && r.j.qr.endsWith('#' + r.j.code),
+    'the phone page opens with a code'
+  );
+  const ph = (method, p, code, b) =>
+    new Promise(resolve => {
+      const q = require('http').request(
+        { host: '127.0.0.1', port: 8799, method, path: p, headers: { 'x-code': code, 'content-type': 'application/json' } },
+        s => {
+          let t = '';
+          s.on('data', d => (t += d));
+          s.on('end', () => {
+            let j = null;
+            try {
+              j = JSON.parse(t);
+            } catch (_) {}
+            resolve({ code: s.statusCode, j, t });
+          });
+        }
+      );
+      q.on('error', () => resolve({ code: 0, j: null, t: '' }));
+      q.end(b ? JSON.stringify(b) : '');
+    });
+  const pcode = r.j.code;
+  ok((await ph('GET', '/', '')).t.indexOf('Add-on repositories') > 0, 'the phone page is served without the code');
+  ok((await ph('GET', '/api/repos', '000000')).code === 403, 'its data needs the code');
+  const p1 = await ph('POST', '/api/add', pcode, { add: gx.url, name: 'phoned' });
+  ok(p1.code === 400 && p1.j.confirm === true, 'adding from the phone needs the box ticked');
+  const p2 = await ph('POST', '/api/add', pcode, { add: gx.url, name: 'phoned', confirm: true });
+  ok(p2.code === 200 && p2.j.repos.some(x => x.name === 'phoned'), 'adding from the phone works');
+  ok((await ph('POST', '/api/remove', pcode, { name: 'phoned' })).code === 200, 'and so does removing');
+  await call(a, '/api/addons/repos/phone', 'POST', { stop: true });
+  ok((await ph('GET', '/', '').catch(() => ({ code: 0 }))).code !== 200, 'the phone page closes');
+
+  // the shell tool (scripts/cytv-addons.js) against the real handler
+  const bridge = await serve((q, s) => {
+    let raw = '';
+    q.on('data', c => (raw += c));
+    q.on('end', () => {
+      let b = {};
+      try {
+        b = JSON.parse(raw || '{}');
+      } catch (_) {}
+      a.handle(q, s, q.url.split('?')[0], async () => b);
+    });
+  });
+  const cli = (args, input) =>
+    new Promise(resolve => {
+      const c = require('child_process').execFile(
+        process.execPath,
+        [path.join(__dirname, '..', '..', 'scripts', 'cytv-addons.js')].concat(args),
+        { env: Object.assign({}, process.env, { CYTV_PORT: String(bridge.server.address().port) }) },
+        (err, out, errOut) => resolve({ code: err ? err.code : 0, out: String(out), err: String(errOut) })
+      );
+      c.stdin.end(input || '');
+    });
+  let c = await cli(['repo-add', gx.url, 'viacli'], 'n\n');
+  ok(
+    c.code === 1 && /Cancelled/.test(c.err) && !rp.list(cfg.get()).some(x => x.name === 'viacli'),
+    'cytv-addons asks before adding a repository, no cancels'
+  );
+  c = await cli(['repo-add', gx.url, 'viacli', '-y']);
+  ok(c.code === 0 && /Added viacli/.test(c.out), 'cytv-addons repo-add -y adds it: ' + c.out + c.err);
+  c = await cli(['list', 'viacli']);
+  ok(c.code === 0 && /^extra\s+1\.1\.0\s+viacli/m.test(c.out), 'cytv-addons list shows what a repository offers: ' + c.out);
+  c = await cli(['install', 'extra', 'viacli'], 'yes\n');
+  ok(c.code === 0 && /Installed extra 1\.1\.0 from viacli/.test(c.out), 'cytv-addons install asks, yes installs: ' + c.out + c.err);
+  cur = mk('1.2.0');
+  c = await cli(['update', '-y']);
+  ok(c.code === 0 && /Updated extra to 1\.2\.0/.test(c.out), 'cytv-addons update: ' + c.out + c.err);
+  c = await cli(['remove', 'extra']);
+  ok(c.code === 0 && /Removed extra/.test(c.out), 'cytv-addons remove: ' + c.out);
+  c = await cli(['repo-rm', 'viacli']);
+  ok(c.code === 0, 'cytv-addons repo-rm: ' + c.out + c.err);
+  c = await cli(['bogus']);
+  ok(c.code === 1 && /repo-add/.test(c.out), 'cytv-addons prints its usage');
+  const home = path.join(tmp, 'home');
+  c = await new Promise(resolve =>
+    require('child_process').execFile(
+      process.execPath,
+      [path.join(__dirname, '..', '..', 'scripts', 'cytv-addons.js'), 'shortcut'],
+      { env: Object.assign({}, process.env, { HOME: home }) },
+      (err, out) => resolve({ code: err ? err.code : 0, out: String(out) })
+    )
+  );
+  const sc = path.join(home, '.local', 'bin', 'cytv-addons');
+  ok(
+    c.code === 0 && fs.existsSync(sc) && /^#!\/bin\/sh\nexec node ".*cytv-addons\.js" "\$@"/.test(fs.readFileSync(sc, 'utf8')),
+    'cytv-addons shortcut writes the command to ~/.local/bin'
+  );
+  bridge.server.close();
+  r = await call(a, '/api/addons/repos', 'POST', { remove: 'official' });
+  ok(r.code === 200 && r.j.repos.length === 0, 'the official repository can be removed');
+  r = await call(a, '/api/addons/catalog');
+  ok(r.j.addons.length === 0 && !r.j.error, 'with no repositories the catalog is empty');
+  delete process.env.CYTV_REPOS_ALLOW_HTTP;
+  gx.server.close();
   gh.server.close();
   delete process.env.CYTV_ADDONS_URL;
 });

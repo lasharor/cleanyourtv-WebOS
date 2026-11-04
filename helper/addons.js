@@ -24,6 +24,7 @@ const P = require('./paths'),
   fetch = require('./fetch'),
   version = require('./version');
 const { imageType } = require('./wallpapers');
+const repos = require('./addonrepos');
 
 const KINDS = ['page', 'service'];
 // luna: calls to LG's own services, only the ones the manifest lists ("luna": [{uri, as}]); see addonCtx
@@ -37,7 +38,7 @@ const PROVIDES = ['wallpapers', 'cards'];
 const POSITIONS = ['', 'top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
 const ID = /^[a-z][a-z0-9-]{1,31}$/;
 const MIME_IMG = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
-const RESERVED = ['catalog', 'install', 'remove', 'sdk', 'book', 'preview'];
+const RESERVED = ['catalog', 'install', 'remove', 'sdk', 'book', 'preview', 'repos', 'update'];
 const MAX_PREVIEW = 600 * 1024, // the picture of an add-on (preview.jpg), as for themes
   MAX_FILE = 2 << 20,
   MAX_FILES = 60;
@@ -388,12 +389,22 @@ function create(ctx) {
     return out;
   };
 
-  // ---- the catalog ----
-  const catalogBase = () => {
+  // ---- the repositories and their catalogs ----
+  // A repository is a folder with index.json and catalog/<id>/<files>; the list is config.json "addonRepos" (helper/addonrepos.js).
+  // "official" is the project's own, on the branch of the update channel. An installed add-on remembers its repository in
+  // addons/.sources/<id>.json; one without a record (put there by hand, or installed before repositories) counts as official.
+  const repoList = () => repos.list(config.get());
+  const officialUrl = () => {
     if (process.env.CYTV_ADDONS_URL) return process.env.CYTV_ADDONS_URL;
     const updates = require('./updates');
-    const ref = updates.catalogRef();
-    return 'https://raw.githubusercontent.com/' + updates.repo() + '/' + ref + '/addons';
+    return 'https://raw.githubusercontent.com/' + updates.repo() + '/' + updates.catalogRef() + '/addons';
+  };
+  const baseOf = r => r.url || officialUrl();
+  const repoByName = name => repoList().filter(r => r.name === name)[0];
+  const sourceFile = id => path.join(P.ADDONS, '.sources', id + '.json');
+  const sourceOf = id => {
+    const j = readJson(sourceFile(id));
+    return j && repos.NAME.test(j.repo || '') ? j.repo : repos.OFFICIAL;
   };
   const get = (url, max) =>
     fetch
@@ -403,24 +414,40 @@ function create(ctx) {
         totalMs: 30000,
         idleMs: 10000,
         redirects: 3,
-        allowHttp: () => !!process.env.CYTV_ADDONS_URL,
-        statusText: st => (st === 404 ? 'not found on GitHub' : 'GitHub answered ' + st),
+        // plain http only for the tests' stand-in servers
+        allowHttp: () =>
+          process.env.CYTV_REPOS_ALLOW_HTTP === '1' || (!!process.env.CYTV_ADDONS_URL && url.indexOf(process.env.CYTV_ADDONS_URL) === 0),
+        statusText: st => (st === 404 ? 'not found (404)' : 'the server answered ' + st),
       })
       .then(r => r.body);
-  async function index() {
-    return cleanIndex(JSON.parse((await get(catalogBase() + '/index.json', 256 * 1024)).toString('utf8')));
+  async function index(r) {
+    return cleanIndex(JSON.parse((await get(baseOf(r) + '/index.json', 256 * 1024)).toString('utf8')));
   }
+  const errText = e => String((e && e.message) || e).slice(0, 160);
+
+  // the given repositories, read at the same time: [{repo, entries} | {repo, error}]
+  const indexes = rs =>
+    Promise.all(
+      rs.map(r =>
+        index(r).then(
+          entries => ({ repo: r, entries }),
+          e => ({ repo: r, error: errText(e) })
+        )
+      )
+    );
+
   async function catalog() {
-    let entries;
-    try {
-      entries = await index();
-    } catch (e) {
-      return { addons: [], error: String((e && e.message) || e).slice(0, 160) };
-    }
-    return {
-      addons: entries.map(e => {
-        const a = find(e.id);
-        return {
+    const out = [],
+      errors = [];
+    for (const x of await indexes(repoList())) {
+      if (x.error) {
+        errors.push({ repo: x.repo.name, error: x.error });
+        continue;
+      }
+      for (const e of x.entries) {
+        const a = find(e.id),
+          mine = !!(a && !a.bundled && sourceOf(e.id) === x.repo.name);
+        out.push({
           id: e.id,
           name: e.name,
           version: e.version,
@@ -429,16 +456,38 @@ function create(ctx) {
           preview: !!e.preview,
           kind: e.kind,
           permissions: e.permissions,
+          repo: x.repo.name,
+          official: x.repo.name === repos.OFFICIAL,
           installed: a && a.manifest ? a.manifest.version : '',
           bundled: !!(a && a.bundled),
-          update: !!(a && a.manifest && !a.bundled && version.cmp(e.version, a.manifest.version) > 0),
-        };
-      }),
-    };
+          // an update comes from the repository the add-on was installed from
+          update: !!(mine && a.manifest && version.cmp(e.version, a.manifest.version) > 0),
+        });
+      }
+    }
+    return { addons: out, error: errors.map(x => x.repo + ': ' + x.error).join('; '), errors };
   }
 
-  // the picture of an add-on: from its folder when it is on the TV, else from the catalog on GitHub, kept in add-ons/.previews for a day
-  async function preview(id) {
+  // the repository an install or a picture comes from: the one named, else the one the add-on is installed from, else the first that has it
+  async function entryFor(id, repoName) {
+    const rs = repoName ? [repoByName(repoName)].filter(Boolean) : repoList();
+    if (!rs.length) return { error: repoName ? 'no such repository: ' + repoName : 'no repositories' };
+    const src = !repoName && find(id) ? sourceOf(id) : '';
+    if (src) rs.sort((a, b) => Number(b.name === src) - Number(a.name === src));
+    let lastErr = '';
+    for (const x of await indexes(rs)) {
+      if (x.error) {
+        lastErr = x.repo.name + ': ' + x.error;
+        continue;
+      }
+      const e = x.entries.filter(y => y.id === id)[0];
+      if (e) return { repo: x.repo, entry: e };
+    }
+    return { error: lastErr || 'not in the catalog' };
+  }
+
+  // the picture of an add-on: from its folder when it is on the TV, else from its repository, kept in add-ons/.previews for a day
+  async function preview(id, repoName) {
     const a = find(id),
       own = a && a.dir ? previewFile(a) : '';
     if (own) {
@@ -446,16 +495,16 @@ function create(ctx) {
       return b.length <= MAX_PREVIEW && imageType(b) ? b : null;
     }
     const pd = path.join(P.ADDONS, '.previews'),
-      f = path.join(pd, id + '.img');
+      f = path.join(pd, (repoName || '') + '__' + id + '.img');
     let st = null;
     try {
       st = fs.statSync(f);
     } catch (_) {}
     if (st && Date.now() - st.mtimeMs < 86400000) return fs.readFileSync(f);
     try {
-      const e = (await index()).filter(x => x.id === id)[0];
-      if (!e || !e.preview) throw new Error('no picture');
-      const b = await get(catalogBase() + '/catalog/' + id + '/' + e.preview, MAX_PREVIEW);
+      const r = await entryFor(id, repoName || '');
+      if (r.error || !r.entry.preview) throw new Error('no picture');
+      const b = await get(baseOf(r.repo) + '/catalog/' + id + '/' + r.entry.preview, MAX_PREVIEW);
       if (!imageType(b)) throw new Error('the picture is not an image');
       nc.mkdirp(pd);
       fs.writeFileSync(f + '.part', b);
@@ -466,11 +515,21 @@ function create(ctx) {
     }
   }
 
-  async function install(id) {
+  // body.confirm: the person was told that an add-on from outside the project is code that runs as root on the TV (the manager and
+  // cytv-addons ask first); the service refuses without it so no screen or script can forget to
+  const NEED_CONFIRM = {
+    error: 'confirm first: an add-on from this repository is code that runs as root on your TV',
+    confirm: true,
+  };
+
+  async function install(id, repoName, confirm) {
     const a0 = find(id);
     if (a0 && a0.bundled) return { error: 'this add-on ships with CleanYourTV' };
-    const e = (await index()).filter(x => x.id === id)[0];
-    if (!e) return { error: 'not in the catalog' };
+    const found = await entryFor(id, repoName);
+    if (found.error) return { error: found.error };
+    const e = found.entry,
+      base = baseOf(found.repo);
+    if (found.repo.name !== repos.OFFICIAL && confirm !== true) return NEED_CONFIRM;
     const stage = path.join(P.ADDONS, '.staging-' + id),
       old = path.join(P.ADDONS, '.old-' + id),
       dest = path.join(P.ADDONS, id);
@@ -478,7 +537,7 @@ function create(ctx) {
     rmrf(old);
     try {
       for (const f of Object.keys(e.files)) {
-        const buf = await get(catalogBase() + '/catalog/' + id + '/' + f, MAX_FILE);
+        const buf = await get(base + '/catalog/' + id + '/' + f, MAX_FILE);
         if (sha256(buf) !== e.files[f]) throw new Error(f + ' does not match the catalog (nothing was installed)');
         nc.mkdirp(path.dirname(path.join(stage, f)));
         fs.writeFileSync(path.join(stage, f), buf);
@@ -490,9 +549,11 @@ function create(ctx) {
         throw new Error('the service file is missing');
     } catch (err) {
       rmrf(stage);
-      return { error: String((err && err.message) || err).slice(0, 200) };
+      return { error: errText(err) };
     }
     nc.mkdirp(P.ADDONS);
+    nc.mkdirp(path.dirname(sourceFile(id)));
+    fs.writeFileSync(sourceFile(id), JSON.stringify({ repo: found.repo.name, version: e.version }));
     const had = fs.existsSync(dest);
     if (had) fs.renameSync(dest, old);
     fs.renameSync(stage, dest);
@@ -504,9 +565,9 @@ function create(ctx) {
         list.splice(list.indexOf(a), 1);
         const n = scanOne(dest, id, false);
         if (n) activate(n);
-        return { id, version: e.version, restartNeeded: false };
+        return { id, version: e.version, repo: found.repo.name, restartNeeded: false };
       }
-      return { id, version: e.version, restartNeeded: true };
+      return { id, version: e.version, repo: found.repo.name, restartNeeded: true };
     }
     const n = scanOne(dest, id, false);
     if (n) {
@@ -514,7 +575,57 @@ function create(ctx) {
       startOne(n);
       handOver();
     }
-    return { id, version: e.version, restartNeeded: false };
+    return { id, version: e.version, repo: found.repo.name, restartNeeded: false };
+  }
+
+  // install the newer version of what is installed (one add-on, or all), each from the repository it came from
+  async function updateAll(only, confirm) {
+    const c = await catalog(),
+      done = [],
+      failed = [];
+    let restartNeeded = false;
+    for (const e of c.addons.filter(x => x.update && (!only || x.id === only))) {
+      const r = await install(e.id, e.repo, confirm);
+      if (r.confirm) return r;
+      if (r.error) failed.push({ id: e.id, error: r.error });
+      else {
+        done.push({ id: e.id, version: r.version });
+        restartNeeded = restartNeeded || r.restartNeeded;
+      }
+    }
+    return { updated: done, failed, restartNeeded, errors: c.errors };
+  }
+
+  // ---- the list of repositories ----
+  const repoInfo = r => ({ name: r.name, url: baseOf(r), official: r.name === repos.OFFICIAL });
+  const phone = require('./addonrepophone').create({
+    list: () => repoList().map(repoInfo),
+    add: (spec, name, confirm) => addRepo(spec, name, confirm),
+    remove: name => removeRepo(name),
+    lanIp: web.lanIp,
+  });
+  function addRepo(spec, name, confirm) {
+    const p = repos.parseSpec(spec);
+    if (p.error) return { error: p.error };
+    if (confirm !== true) return NEED_CONFIRM;
+    const nm = name === undefined || name === '' ? p.name : String(name);
+    if (!repos.NAME.test(nm) || nm === repos.OFFICIAL) return { error: 'the name is lower case letters, digits, . _ - (at most 40)' };
+    const cur = repoList();
+    if (cur.some(r => r.name === nm)) return { error: 'a repository named ' + nm + ' is already in the list' };
+    if (cur.some(r => r.url === p.url)) return { error: 'that repository is already in the list' };
+    config.update('addon-repos', cfg => {
+      cfg.addonRepos = cur.concat([{ name: nm, url: p.url }]);
+    });
+    return { repos: repoList().map(repoInfo), added: nm };
+  }
+  function removeRepo(name) {
+    const cur = repoList();
+    if (!cur.some(r => r.name === name)) return { error: 'no such repository: ' + name };
+    config.update('addon-repos', cfg => {
+      cfg.addonRepos = cur.filter(r => r.name !== name);
+    });
+    // what was installed from it stays installed (and keeps its record: it can be removed, not updated)
+    return { repos: repoList().map(repoInfo), removed: name };
   }
 
   function remove(id) {
@@ -522,6 +633,9 @@ function create(ctx) {
     if (!a) return { error: 'not installed' };
     if (a.bundled) return { error: 'this add-on ships with CleanYourTV; switch it off instead' };
     rmrf(a.dir);
+    try {
+      fs.unlinkSync(sourceFile(id));
+    } catch (_) {}
     const wasService = !!a.mod;
     list.splice(list.indexOf(a), 1);
     return { id, restartNeeded: wasService };
@@ -604,9 +718,31 @@ function create(ctx) {
       return web.json(res, { book: bookOf() });
     }
     if (u === '/api/addons/catalog' && req.method === 'GET') return web.json(res, await catalog());
+    if (u === '/api/addons/repos' && req.method === 'GET') return web.json(res, { repos: repoList().map(repoInfo) });
+    // the phone page for adding a repository (port 8799): {url, code, qr, seconds}, or {stop: true} to close it
+    if (u === '/api/addons/repos/phone' && req.method === 'POST') {
+      const b = await body(req);
+      return web.json(res, await phone.start(b && typeof b === 'object' ? b : {}));
+    }
+    if (u === '/api/addons/repos' && req.method === 'POST') {
+      const b = await body(req);
+      const r =
+        typeof b.add === 'string'
+          ? addRepo(b.add, b.name, b.confirm)
+          : typeof b.remove === 'string'
+            ? removeRepo(b.remove)
+            : { error: 'add or remove' };
+      return web.json(res, r, r.error ? 400 : 200);
+    }
+    if (u === '/api/addons/update' && req.method === 'POST') {
+      const b = await body(req);
+      if (b.id !== undefined && !ID.test(b.id || '')) return web.json(res, { error: 'bad id' }, 400);
+      const r = await updateAll(b.id, b.confirm);
+      return web.json(res, r, r.error ? 400 : 200);
+    }
     const pm = /^\/api\/addons\/preview\/([a-z][a-z0-9-]*)$/.exec(u);
     if (pm && req.method === 'GET') {
-      const b = await preview(pm[1]);
+      const b = await preview(pm[1], (/[?&]repo=([a-z0-9._-]+)/.exec(req.url || '') || [])[1]);
       if (!b) return web.notFound(res);
       res.writeHead(200, { 'content-type': MIME_IMG[imageType(b)], 'cache-control': 'max-age=600', 'x-content-type-options': 'nosniff' });
       return res.end(b);
@@ -614,7 +750,7 @@ function create(ctx) {
     if ((u === '/api/addons/install' || u === '/api/addons/remove') && req.method === 'POST') {
       const b = await body(req);
       if (!ID.test(b.id || '')) return web.json(res, { error: 'bad id' }, 400);
-      const r = u === '/api/addons/install' ? await install(b.id) : remove(b.id);
+      const r = u === '/api/addons/install' ? await install(b.id, typeof b.repo === 'string' ? b.repo : '', b.confirm) : remove(b.id);
       return web.json(res, r, r.error ? 400 : 200);
     }
     const m = /^\/api\/addons\/([a-z][a-z0-9-]*)(\/.*)?$/.exec(u);

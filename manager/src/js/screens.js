@@ -50,14 +50,16 @@ function openNotifyQr() {
 }
 /* Add-ons (helper/addons.js): the ones on the TV and the project's catalog */
 function loadAddons() {
-  Promise.all([api('/api/addons'), api('/api/addons/catalog')]).then(
+  Promise.all([api('/api/addons'), api('/api/addons/catalog'), api('/api/addons/repos')]).then(
     function (r) {
       ad.installed = (r[0] && r[0].addons) || [];
       ad.catalog = (r[1] && r[1].addons) || [];
       ad.error = (r[1] && r[1].error) || '';
+      ad.repos = (r[2] && r[2].repos) || [];
       ad.paused = !!(r[0] && r[0].paused);
       ad.book = (r[0] && r[0].book) || ad.book;
       if (view === 'addon' && !addonSel()) pop();
+      if (view === 'addonrepo' && !repoSel()) pop();
       build();
       if (idx >= rows.length) idx = Math.max(0, rows.length - 1);
       draw();
@@ -66,6 +68,14 @@ function loadAddons() {
       banner('The service did not answer', 'err');
     }
   );
+}
+function repoSel() {
+  for (var i = 0; i < ad.repos.length; i++) if (ad.repos[i].name === ad.repoSel) return ad.repos[i];
+  return null;
+}
+/* Add-ons > Repositories > Add from your phone: the address is typed on the phone (a page on port 8799) */
+function openRepoPair() {
+  pairScreen('addonpair', 'repos', 'Add a repository', '/api/addons/repos/phone');
 }
 function addonSel() {
   for (var i = 0; i < ad.installed.length; i++) if (ad.installed[i].id === ad.sel) return ad.installed[i];

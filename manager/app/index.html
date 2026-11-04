@@ -482,7 +482,7 @@ var kFlow = 'input',
   API = 'http://127.0.0.1:8765',
   SVC = '/media/developer/apps/usr/palm/services/com.cleanyourtv.manager.service';
 var napi = null,
-  ad = { installed: [], catalog: [], error: '', sel: '', book: { order: [], hidden: [], strip: true } },
+  ad = { installed: [], catalog: [], repos: [], repoSel: '', pend: null, error: '', sel: '', book: { order: [], hidden: [], strip: true } },
   lv = null,
   wp = null,
   ab = null,
@@ -1006,6 +1006,58 @@ function build() {
               : 'Switching to LG’s Home… the TV restarts in a moment.',
           'work'
         );
+      },
+    });
+    return;
+  }
+  if (view === 'addonrepos') {
+    ad.repos.forEach(function (x) {
+      rows.push({
+        label: x.name,
+        sub: x.url + (x.official ? ' · the project’s own' : ''),
+        fn: function () {
+          ad.repoSel = x.name;
+          push('addonrepo');
+        },
+      });
+    });
+    if (!ad.repos.length) rows.push({ label: 'No repositories', sub: 'add one to get add-ons', dim: true, fn: function () {} });
+    rows.push({ sep: true });
+    rows.push({ label: 'Add from your phone', sub: 'user/repo, or the address of a folder with an index.json', fn: openRepoPair });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'addonrepo') {
+    var rp = repoSel() || {};
+    rows.push({ label: rp.name || '', sub: rp.url || '', fn: function () {} });
+    rows.push({
+      label: 'Remove this repository',
+      sub: 'what you installed from it stays installed',
+      fn: function () {
+        addonDo('/api/addons/repos', { remove: rp.name }, rp.name + ' removed');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'confirm-addon') {
+    var pe = ad.pend || {};
+    rows.push({
+      label: 'This code runs as root on your TV',
+      sub: 'from ' + (pe.repo || 'other repositories'),
+      dim: true,
+      fn: function () {},
+    });
+    rows.push({ label: 'Only continue if you trust its author', dim: true, fn: function () {} });
+    rows.push({ sep: true });
+    rows.push({ label: 'Cancel', fn: pop });
+    rows.push({
+      label: pe.all ? 'Yes, update them' : 'Yes, install ' + (pe.name || ''),
+      fn: function () {
+        pop();
+        if (pe.all) addonDo('/api/addons/update', { confirm: true }, 'Add-ons updated');
+        else addonDo('/api/addons/install', { id: pe.id, repo: pe.repo, confirm: true }, pe.name + ' installed');
       },
     });
     return;
@@ -1978,12 +2030,40 @@ function addonRows() {
     rows.push({
       label: e.name,
       pv: e.preview ? e.id : '',
+      pvu: e.preview && !e.official ? '/api/addons/preview/' + e.id + '?repo=' + e.repo : '',
       about: e.about || e.description,
-      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version,
+      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version + (e.official ? '' : ' \u00B7 from ' + e.repo),
       fn: function () {
-        addonDo('/api/addons/install', { id: e.id }, e.name + ' installed');
+        if (e.official) return addonDo('/api/addons/install', { id: e.id, repo: e.repo }, e.name + ' installed');
+        ad.pend = { id: e.id, repo: e.repo, name: e.name };
+        push('confirm-addon');
       },
     });
+  });
+  if (
+    ad.catalog.some(function (e) {
+      return e.update;
+    })
+  )
+    rows.push({
+      label: 'Update all add-ons',
+      sub: 'each from the repository it was installed from',
+      fn: function () {
+        var other = ad.catalog.filter(function (e) {
+          return e.update && !e.official;
+        })[0];
+        if (!other) return addonDo('/api/addons/update', {}, 'Add-ons updated');
+        ad.pend = { all: true, repo: 'repositories other than the project\u2019s' };
+        push('confirm-addon');
+      },
+    });
+  rows.push({ sep: true });
+  rows.push({
+    label: 'Repositories',
+    sub: ad.repos.length + (ad.repos.length === 1 ? ' source of add-ons' : ' sources of add-ons') + ' \u00B7 add your own',
+    fn: function () {
+      push('addonrepos');
+    },
   });
   if (bookPages().length) {
     rows.push({ sep: true });
@@ -2328,7 +2408,9 @@ var INFO = {
   'Learn the Input key':
     'Reads the code of your remote\u2019s Input button from the hook, then tests that our list opens. The default is 241. Clear goes back to it.',
   'Add-ons':
-    'Features that are installed on their own: Live TV ships with CleanYourTV, others come from the project\u2019s catalog. Each file is checked against the catalog before it is installed. Install, switch off or remove them here.',
+    'Features that are installed on their own: Live TV ships with CleanYourTV, others come from repositories: the project\u2019s own and any you add (Repositories). Each file is checked against the repository\u2019s index before it is installed, and add-ons from other repositories ask first because they run as root. Install, switch off or remove them here.',
+  Repositories:
+    'The places add-ons come from. The project\u2019s own is the first; add your own or someone else\u2019s with the address user/repo (GitHub) or an https folder. Adding one is typed on your phone.',
   'Live TV': 'Settings for Live TV: switch it on or off, set up or remove your playlist, refresh the guide and learn the Guide key.',
   'Show Live TV':
     'On: the launcher has a Live TV button and tile, the Inputs list has Live TV, and the Guide key can open the channel guide. Off: all of that is hidden and LG\u2019s own player and guide are used. Your playlist is kept.',
@@ -2475,6 +2557,14 @@ function draw() {
   }
   if (view === 'addon') {
     $('sub').textContent = tr('Add-on');
+    return;
+  }
+  if (view === 'addonrepos' || view === 'addonrepo') {
+    $('sub').textContent = tr('Add-on repositories');
+    return;
+  }
+  if (view === 'confirm-addon') {
+    $('sub').textContent = tr('Code from outside the project');
     return;
   }
   if (view === 'livetv') {
@@ -2695,14 +2785,16 @@ function openNotifyQr() {
 }
 /* Add-ons (helper/addons.js): the ones on the TV and the project's catalog */
 function loadAddons() {
-  Promise.all([api('/api/addons'), api('/api/addons/catalog')]).then(
+  Promise.all([api('/api/addons'), api('/api/addons/catalog'), api('/api/addons/repos')]).then(
     function (r) {
       ad.installed = (r[0] && r[0].addons) || [];
       ad.catalog = (r[1] && r[1].addons) || [];
       ad.error = (r[1] && r[1].error) || '';
+      ad.repos = (r[2] && r[2].repos) || [];
       ad.paused = !!(r[0] && r[0].paused);
       ad.book = (r[0] && r[0].book) || ad.book;
       if (view === 'addon' && !addonSel()) pop();
+      if (view === 'addonrepo' && !repoSel()) pop();
       build();
       if (idx >= rows.length) idx = Math.max(0, rows.length - 1);
       draw();
@@ -2711,6 +2803,14 @@ function loadAddons() {
       banner('The service did not answer', 'err');
     }
   );
+}
+function repoSel() {
+  for (var i = 0; i < ad.repos.length; i++) if (ad.repos[i].name === ad.repoSel) return ad.repos[i];
+  return null;
+}
+/* Add-ons > Repositories > Add from your phone: the address is typed on the phone (a page on port 8799) */
+function openRepoPair() {
+  pairScreen('addonpair', 'repos', 'Add a repository', '/api/addons/repos/phone');
 }
 function addonSel() {
   for (var i = 0; i < ad.installed.length; i++) if (ad.installed[i].id === ad.sel) return ad.installed[i];
@@ -4354,6 +4454,7 @@ function closeShare() {
   if (shareMode === 'addonpair') {
     api(pairPath, { stop: true }).catch(function () {});
     pop();
+    if (view === 'addonrepos') loadAddons();
     return;
   }
   if (shareMode === 'abox') {

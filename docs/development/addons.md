@@ -2,7 +2,7 @@
 
 An add-on is a feature that is loaded, installed and removed on its own. Live TV and the Android box are bundled add-ons: they ship in the package (`helper/addons-bundled/iptv/` and
 `helper/addons-bundled/androidbox/`) and still answer their old paths (`/api/live/...`, `/api/androidbox...`), so the launcher and the
-manager did not change for them. A bundled add-on gets the service's own ctx as well as its add-on fields. Every add-on, bundled or not, also gets `util` (`lanIp`, `randomInt`, `mkdirp`, `i18n`) and `env` (`lang()`: the Language setting, or while that follows the TV the language Home is shown in, as the launcher says with the requests of the cards; `wallpaperSize()`). Other add-ons come from a catalog in this repository and are installed from the manager (**Add-ons**).
+manager did not change for them. A bundled add-on gets the service's own ctx as well as its add-on fields. Every add-on, bundled or not, also gets `util` (`lanIp`, `randomInt`, `mkdirp`, `i18n`) and `env` (`lang()`: the Language setting, or while that follows the TV the language Home is shown in, as the launcher says with the requests of the cards; `wallpaperSize()`). Other add-ons come from **repositories** (the project's own catalog in this repository is the first; anyone can publish one, see [Add-on repositories](addon-repos.md)) and are installed from the manager (**Add-ons**) or with `cytv-addons`.
 
 What is done, and what is not:
 
@@ -223,10 +223,14 @@ left out stays installed and running but has no button.
 | Request | Reply |
 |---|---|
 | `GET /api/addons` | `{addons: [{id, name, version, kind, description, about, preview, permissions, enabled, status, error, bundled, tile, page}], paused}`; `status` is `running`, `off`, `paused` or `failed` |
-| `GET /api/addons/preview/<id>` | The add-on's picture (`image/jpeg`, `png` or `webp`): from its folder when it is on the TV, else from the catalog; 404 without one |
-| `GET /api/addons/catalog` | `{addons: [{id, name, version, description, about, preview, kind, permissions, installed, bundled, update}], error}` |
+| `GET /api/addons/preview/<id>[?repo=<name>]` | The add-on's picture (`image/jpeg`, `png` or `webp`): from its folder when it is on the TV, else from its repository; 404 without one |
+| `GET /api/addons/catalog` | `{addons: [{id, name, version, description, about, preview, kind, permissions, repo, official, installed, bundled, update}], error, errors: [{repo, error}]}`: what every repository offers; `update` only when the add-on was installed from that repository |
+| `GET /api/addons/repos` | `{repos: [{name, url, official}]}` |
+| `POST /api/addons/repos {add, name?, confirm}` or `{remove}` | Adds a repository (`user/repo`, `user/repo@branch/folder` or an https folder) or removes one. Adding needs `confirm: true`, else `400 {error, confirm: true}`. `{repos, added}` or `{repos, removed}` |
+| `POST /api/addons/repos/phone {}` or `{stop: true}` | Opens the phone page for adding a repository (port 8799): `{url, code, qr, seconds}` |
+| `POST /api/addons/update {id?, confirm}` | Installs newer versions of what is installed (one add-on or all), each from the repository it came from. `{updated, failed, restartNeeded, errors}` |
 | `POST /api/addons/book {order, hidden, strip, position}` | The pages of the launcher's book: ids in order, ids left out, whether the strip shows and where (`''`, `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center`, `bottom-right`). Unknown ids and places are dropped. `{book}` |
-| `POST /api/addons/install {id}` | Downloads each file named in the index, refuses the whole install if one does not match its hash, then moves the folder in. `{id, version, restartNeeded}` |
+| `POST /api/addons/install {id, repo?, confirm?}` | Downloads each file named in the repository's index, refuses the whole install if one does not match its hash, then moves the folder in. Without `repo` the repository it was installed from, else the first that has it. A repository other than `official` needs `confirm: true`. `{id, version, repo, restartNeeded}` |
 | `POST /api/addons/remove {id}` | Deletes an installed add-on. `restartNeeded` when its service part was loaded. |
 | `POST /api/addons/<id>/enable {enabled}` | Stored in `config.json` (or, for an add-on with `enabledOption`, in that option). A page add-on follows at once, a service add-on at the next start. |
 | `/api/addons/<id>/...` | Answered by the add-on's `service.js`. |
@@ -251,7 +255,9 @@ left out stays installed and running but has no button.
 A launcher that shows add-on pages needs a service that serves them: `app/version.json` names the oldest service it works with
 (`minService`), and the manager offers the service update first. Raise it when the launcher starts to need something new from the service.
 
-## Adding a catalog add-on
+## Adding a catalog add-on (the project's own repository)
+
+For your own add-ons make a [repository](addon-repos.md) instead; this is for add-ons that ship in the project's `official` repository.
 
 1. Put it in `addons/catalog/<id>/` with an `addon.json`.
 2. `node tools/addon-index.js`, and commit the new `addons/index.json`.
