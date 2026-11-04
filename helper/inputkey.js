@@ -14,13 +14,18 @@ function create(ctx) {
   let pickerShownAt = 0;
 
   const keyCode = () => String(config.keys().input || '241');
-  // the voice key belongs to us only while voice is installed and on; the Guide key only while Live TV is on and a key was learned
+  // the voice key belongs to us only while voice is installed and on; the Guide key only while Live TV or the TV guide (LG tuner) is on and a key was learned
   const voiceKey = () => {
     const v = config.get().voice || {};
     const voice = ctx.feature('voice');
     return v.enabled && voice && voice.installed() ? String(config.keys().voice || '') : '';
   };
-  const guideKey = () => (config.options().liveTv !== false ? String(config.keys().guide || '') : '');
+  // the TV guide add-on (LG tuner) is a guide of its own: it takes the key whether Live TV is on or not
+  const tunerOn = () => {
+    const ad = ctx.feature && ctx.feature('addons');
+    return !!ad && ad.list().some(a => a.id === 'tuner' && a.enabled && a.status === 'running');
+  };
+  const guideKey = () => (config.options().liveTv !== false || tunerOn() ? String(config.keys().guide || '') : '');
   // overlay, ondemand or launcher: the manager's choice, else this TV's default (tvprofile.js)
   const mode = () => picker.modeOf(config.get().picker || {}, profile.get().pickerMode);
   // with the launcher's list as the target, CleanYourTV has to be the Home: while LG's Home is chosen the key stays with LG

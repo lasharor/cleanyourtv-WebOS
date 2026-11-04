@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run by the inputhook when the Guide button is pressed (and Live TV is on): open the Live TV channel guide over whatever is running.
+# Run by the inputhook when the Guide button is pressed (and the TV guide or Live TV is on): open the guide over whatever is running.
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
 luna_send() { command luna-send "$@" </dev/null; }
 [ ! -r /media/developer/cleanyourtv/luna-compat.sh ] || . /media/developer/cleanyourtv/luna-compat.sh

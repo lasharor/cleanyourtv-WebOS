@@ -544,10 +544,9 @@ function build() {
     });
     rows.push({
       label: 'Learn the Guide key',
-      sub: lo ? (gk ? 'now: ' + gk : 'not learned \u00B7 LG\u2019s guide stays') : 'Live TV is off',
-      dim: !lo,
+      sub: gk ? 'now: ' + gk : 'not learned \u00B7 LG\u2019s guide stays',
       fn: function () {
-        if (lo) openKeys('guide');
+        openKeys('guide');
       },
     });
     rows.push({ sep: true });
@@ -721,6 +720,13 @@ function build() {
       sub: st.keys && st.keys.inputIsDefault ? 'default (' + st.keys.input + ')' : 'learned: ' + (st.keys && st.keys.input),
       fn: function () {
         openKeys('input');
+      },
+    });
+    rows.push({
+      label: 'Learn the Guide key',
+      sub: st.keys && st.keys.guide ? 'now: ' + st.keys.guide : 'not learned \u00B7 LG\u2019s guide stays',
+      fn: function () {
+        openKeys('guide');
       },
     });
     var pk = st.picker || {},

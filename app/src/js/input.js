@@ -187,6 +187,10 @@ var liveGuard = 0,
 function guarded() {
   return LIVE.on && Date.now() < liveGuard;
 }
+/* the Guide button goes to the TV guide add-on (LG tuner) when it is on, else to Live TV's guide: the two do not depend on each other */
+function guidePage() {
+  return PAGER.index('tuner') > 0 ? 'tuner' : '';
+}
 /* launching Home with {inputs:true} opens the Inputs list */
 function wantInputs() {
   var p = {};
@@ -196,6 +200,9 @@ function wantInputs() {
   if (p && p.inputs) {
     closeMenus();
     inputsMenu();
+  } else if (p && p.guide && guidePage()) {
+    closeMenus();
+    PAGER.go(guidePage());
   } else if (p && p.live && liveOn()) {
     closeMenus();
     liveGuard = Date.now() + 5000;
@@ -209,6 +216,10 @@ document.addEventListener('webOSRelaunch', function () {
     p = JSON.parse(webOSSystem.launchParams || '{}');
   } catch (e) {}
   logLine('launcher relaunch ' + JSON.stringify(p).slice(0, 120) + (LIVE.on ? ' (live on)' : ''));
+  if (p && p.guide && guidePage() && PAGER.on && PAGER.id === guidePage()) {
+    PAGER.send({ cytv: 'guide' });
+    return;
+  } /* the Guide button while the TV guide is open */
   if (LIVE.on && p && p.guide && liveOn()) {
     LIVE.toggleGuide();
     return;
