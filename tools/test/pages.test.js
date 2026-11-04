@@ -183,30 +183,17 @@ run(async () => {
     winput = rd('app/src/js/input.js'),
     wmgr = rd('manager/src/js/input.js');
   ok(
-    /CARD_PACKS\.forecast\.actions\.length\s*\? \{ label: t\('Weather'\)/.test(wmenus) &&
-      /label: t\('Look'\)[\s\S]{0,200}look: c\.look === 'rich' \? 'minimal' : 'rich'/.test(wmenus) &&
-      /'\/api\/cards\/options', \{ type: WX_TYPE, set: set \}/.test(wmenus) &&
-      /'\/api\/cards\/places', \{ q: v \}/.test(wmenus) &&
-      /label: t\('City'\)/.test(wmenus) &&
-      !/label: t\('Place'\)/.test(wmenus),
-    'Customise > Top & cards has Weather (a city, not a place) once the forecast card is there'
+    /function cardBtnRoute/.test(wcards) && /csSettings\(/.test(wcards) && /csOpen\(el\)/.test(wcards) && /CS\.on/.test(winput),
+    'the declared settings and drawer actions of a card open the generic panel and sheet (cardBtnRoute)'
   );
   ok(
-    /function cardBtnRoute/.test(wcards) && /csSettings\(/.test(wcards) && !/wxMenu\(/.test(wcards),
-    'the declared settings action of a card opens the launcher panel (cardBtnRoute), not a weather-specific menu'
-  );
-  const wdr = rd('app/src/js/wxdrawer.js');
-  ok(
-    /cardBtnRoute\(pk, name\)/.test(wcards) &&
-      /csOpen\(el\)/.test(wcards) &&
-      !/wxdOpen\(/.test(wcards) &&
-      /function wxdOpen/.test(wdr) &&
-      /WXD\.on/.test(winput),
-    'OK or a click on the declared drawer action opens the sheet (the old weather drawer file is unchanged)'
-  );
-  ok(
-    /id === 'wxq'/.test(winput) && /wxFind\(e\.target\.value\)/.test(winput),
-    'the city is typed with the TV keyboard; OK searches, Back closes'
+    !fs.existsSync(path.join(root, 'app', 'src', 'js', 'wxdrawer.js')) &&
+      !/x-forecast|\bwx[A-Z]\w*|\bWXD\b|wxdrawer|wxd\b|wxq/.test(
+        ['js/cards.js', 'js/menus.js', 'js/input.js', 'js/cardsheet.js', 'js/cardsettings.js', 'css/cardsheet.css']
+          .map(p => rd('app/src/' + p))
+          .join('\n')
+      ),
+    'the launcher has no code of the weather add-on (no wxdrawer, no x-forecast, no wx names)'
   );
   ok(
     /p\.open === 'cardspair'/.test(wmgr) && /openCardsPair\(\)/.test(wmgr),

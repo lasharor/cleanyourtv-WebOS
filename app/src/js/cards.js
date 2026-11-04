@@ -35,7 +35,7 @@ var WX_ICON = {
   storm: '<path d="M7 15h10.5a4 4 0 0 0 .4-8 6 6 0 0 0-11.6 1.5A3.3 3.3 0 0 0 7 15z"/><path d="M12.5 15l-2 4h3l-2 4"/>',
 };
 /* WMO weather codes as Open-Meteo gives them: an icon and a word */
-function wxKind(code, day) {
+function wthKind(code, day) {
   if (code === 0) return [day === false ? 'moon' : 'sun', t('Clear')];
   if (code <= 2) return ['part', t('Partly cloudy')];
   if (code === 3) return ['cloud', t('Cloudy')];
@@ -54,14 +54,14 @@ function lineSvg(p) {
     '</svg>'
   );
 }
-function wxSvg(k) {
+function wthSvg(k) {
   return lineSvg(WX_ICON[k]);
 }
-function wxText(w) {
-  return w && w.now ? w.now.temp + '° · ' + wxKind(w.now.code, w.now.day)[1] : '';
+function wthText(w) {
+  return w && w.now ? w.now.temp + '° · ' + wthKind(w.now.code, w.now.day)[1] : '';
 }
 /* the weather of a card's place: what is known now (or null), asking the service when it is older than ten minutes */
-function wxFor(o) {
+function wthFor(o) {
   var lat = +o.lat,
     lon = +o.lon,
     unit = o.unit === 'f' ? 'f' : 'c';
@@ -275,7 +275,7 @@ function cardMarkup(src, opt) {
     date: dateText(),
     weekday: dateText({ weekday: 'long' }),
     'weather.temp': WX_LAST && WX_LAST.now ? WX_LAST.now.temp + '\u00B0' : '',
-    'weather.text': WX_LAST && WX_LAST.now ? wxKind(WX_LAST.now.code, WX_LAST.now.day)[1] : '',
+    'weather.text': WX_LAST && WX_LAST.now ? wthKind(WX_LAST.now.code, WX_LAST.now.day)[1] : '',
   };
   /* what was filled in for a downloaded card, as {{opt.<key>}} */
   for (var k0 in opt || {}) vars['opt.' + k0] = String(opt[k0]);
@@ -325,7 +325,7 @@ var CARD_TYPES = {
     },
     draw: function (el, o) {
       var s = greetText(String(o.name || '').slice(0, 40)),
-        l2 = o.line === 'date' ? dateText() : o.line === 'weather' ? wxText(WX_LAST) : '',
+        l2 = o.line === 'date' ? dateText() : o.line === 'weather' ? wthText(WX_LAST) : '',
         key = s + '|' + l2;
       if (el._k === key) return;
       el._k = key;
@@ -340,15 +340,15 @@ var CARD_TYPES = {
       return t('Weather');
     },
     draw: function (el, o) {
-      var w = wxFor(o),
+      var w = wthFor(o),
         place = String(o.place || '').slice(0, 40),
         h;
       if (!w) h = '<div class="wx-none"></div>';
       else {
-        var k = wxKind(w.now.code, w.now.day);
+        var k = wthKind(w.now.code, w.now.day);
         h =
           '<div class="wx-now"><span class="wx-i">' +
-          wxSvg(k[0]) +
+          wthSvg(k[0]) +
           '</span><span class="wx-t">' +
           w.now.temp +
           '°</span></div><div class="wx-p"></div>';
@@ -366,7 +366,7 @@ var CARD_TYPES = {
                   '<div><span>' +
                   wd +
                   '</span>' +
-                  wxSvg(wxKind(d.code, true)[0]) +
+                  wthSvg(wthKind(d.code, true)[0]) +
                   '<b>' +
                   d.max +
                   '°</b> <small>' +
@@ -383,7 +383,7 @@ var CARD_TYPES = {
       el.innerHTML = h;
       var p = el.querySelector('.wx-p') || el.querySelector('.wx-none');
       p.textContent = w
-        ? (place ? place + ' · ' : '') + wxKind(w.now.code, w.now.day)[1]
+        ? (place ? place + ' · ' : '') + wthKind(w.now.code, w.now.day)[1]
         : o.lat === undefined
           ? t('Choose a place from your phone')
           : place;
@@ -537,7 +537,7 @@ var CARD_TYPES = {
       if (w.now.wind !== null) facts.push(Math.round(w.now.wind) + (w.now.windUnit ? ' ' + w.now.windUnit : ''));
       h =
         '<div class="hw-now"><div class="hw-top"><span class="wx-i">' +
-        wxSvg(k[0]) +
+        wthSvg(k[0]) +
         '</span><span class="hw-t">' +
         hawNum(w.now.temp) +
         unit +
@@ -566,7 +566,7 @@ var CARD_TYPES = {
                 '<div><span class="hw-d">' +
                 lab +
                 '</span>' +
-                wxSvg(hawKind(f.cond)[0]) +
+                wthSvg(hawKind(f.cond)[0]) +
                 '<b>' +
                 hawNum(f.hi) +
                 '\u00B0</b>' +

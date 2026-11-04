@@ -165,8 +165,7 @@
   white-space: normal;
 }
 
-/* the city typed for the weather (menus.js, wxSearch) above the menu; the TV's keyboard types into it */
-#wxq,
+/* the city typed in a card's settings (cardsettings.js) above the sheet; the TV's keyboard types into it */
 #csq {
   display: none;
   position: absolute;

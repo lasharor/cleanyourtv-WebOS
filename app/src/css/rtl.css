@@ -119,39 +119,3 @@
 [dir="rtl"] #cs.in .pn {
   transform: none;
 }
-/* the weather drawer comes from the left; its icons move to the other side of their text (its bars keep their left-to-right scale) */
-[dir="rtl"] #wxd .pn {
-  right: auto;
-  left: 0;
-  border-radius: 0 40px 40px 0;
-  box-shadow: inset -1px 0 0 var(--ring);
-  transform: translateX(-100%);
-}
-[dir="rtl"] #wxd.in .pn {
-  transform: none;
-}
-[dir="rtl"] #wxd .bt {
-  margin-left: 0;
-  margin-right: auto;
-}
-[dir="rtl"] #wxd .pill {
-  margin-left: 0;
-  margin-right: 12px;
-}
-[dir="rtl"] #wxd .pill .ic,
-[dir="rtl"] #wxd .verdict .ic,
-[dir="rtl"] #wxd .hrow .ic,
-[dir="rtl"] #wxd .drow .ic,
-[dir="rtl"] #wxd .hero .ic {
-  margin-right: 0;
-  margin-left: 14px;
-}
-[dir="rtl"] #wxd .hero .hx,
-[dir="rtl"] #wxd .wtile .v small {
-  margin-left: 0;
-  margin-right: 20px;
-}
-[dir="rtl"] #wxd .hrow .rp,
-[dir="rtl"] #wxd .drow .lo {
-  text-align: left;
-}
