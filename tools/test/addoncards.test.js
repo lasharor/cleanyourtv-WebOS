@@ -132,7 +132,7 @@ run(async () => {
 exports.create = () => ({
   cards: {
     feed: (id, opt) => (opt.title === 'boom' ? Promise.reject(new Error('it broke')) : opt.title === 'big' ? { x: 'y'.repeat(200000) } : { id, title: opt.title, n: seen.length }),
-    places: (q, lang) => q === 'boom' ? Promise.reject(new Error('down')) : { places: q === 'many' ? Array.from({ length: 15 }, (_, i) => ({ name: 'P' + i, area: '', lat: 1, lon: 2 })) : [{ name: 'Paris', area: 'France', lat: 48.85, lon: 2.35, lang }] },
+    places: (q, lang) => q === 'boom' ? Promise.reject(new Error('down')) : q === 'dirty' ? { places: [null, 'Rome', 7, { name: 'NaNville', lat: NaN, lon: 1 }, { name: 'Far', lat: 200, lon: 1 }, { name: 'Wide', lat: 1, lon: 181 }, { name: 'L'.repeat(90), area: 'A'.repeat(200), lat: 1.234, lon: 2.345 }, { name: '<b>Oslo</b>' + String.fromCharCode(7), area: '<i>No</i>', lat: 59.914, lon: 10.756 }, { name: 'Str', lat: '1', lon: 2 }] } : { places: q === 'many' ? Array.from({ length: 15 }, (_, i) => ({ name: 'P' + i, area: '', lat: 1, lon: 2 })) : [{ name: 'Paris', area: 'France', lat: 48.85, lon: 2.35, lang }] },
     action: (id, opt, name, arg) => { seen.push([id, opt.title, name, arg]); return { ok: true, seen: seen.length }; },
   },
   handle: (q, r) => r.end('{}'),
@@ -210,6 +210,16 @@ exports.create = () => ({
   ok(r.j.places.length === 0, 'one letter is not searched');
   r = await call(cards, '/api/cards/places', 'POST', { type: 'x-demo-card', q: 'many' });
   ok(r.j.places.length === 10, 'at most ten places');
+  r = await call(cards, '/api/cards/places', 'POST', { type: 'x-demo-card', q: 'dirty' });
+  ok(
+    r.j.places.length === 2 &&
+      r.j.places[0].name.length === 40 &&
+      r.j.places[0].area.length === 80 &&
+      r.j.places[0].lat === 1.23 &&
+      r.j.places[0].lon === 2.35,
+    'a long name and area are cut, coordinates rounded; null, string, NaN, out-of-range and non-number entries are dropped: ' + r.out
+  );
+  ok(r.j.places[1].name === 'bOslo/b' && r.j.places[1].area === 'iNo/i' && r.j.places[1].lat === 59.91, 'markup and control characters are taken out of a place: ' + r.out);
   r = await call(cards, '/api/cards/places', 'POST', { type: 'x-demo-card', q: 'boom' });
   ok(r.j.error === 'City search is not available now.' && r.j.places.length === 0, 'a search that fails says so: ' + r.out);
 
@@ -230,12 +240,29 @@ exports.create = () => ({
   r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { place: '<b>Rome</b>', lat: 41.9, lon: 12.5 } });
   ok(
     config.get().cards.side.place === 'bRome/b',
-    'markup and control characters are taken out of a city: ' + config.get().cards.side.place
+    'angle brackets are stripped from a city name when it is set: ' + config.get().cards.side.place
   );
   r = await call(cards, '/api/cards/options', 'POST', { type: 'x-nothing', set: { unit: 'f' } });
   ok(r.j.error === 'unknown card type', 'an unknown card type is refused');
   r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { secret: 'x' } });
   ok(!r.j.error && config.get().cards.side.secret === undefined, 'an option the card does not declare is dropped');
+  // only a card of an add-on that declares settings can be changed from the launcher's panel
+  req('netcompat').mkdirp(path.join(tmp, 'cardpacks', 'dl-card'));
+  fs.writeFileSync(
+    path.join(tmp, 'cardpacks', 'dl-card', 'card.json'),
+    JSON.stringify({ id: 'dl-card', name: 'Downloaded', version: '1.0.0', template: '# {{opt.who}}', options: [{ key: 'who', kind: 'text', label: 'Who', default: 'W' }] })
+  );
+  const config2 = memoryConfig({ cards: { a: { type: 'x-dl-card', who: 'W' }, b: { type: 'x-plain-card', who: 'W' } } });
+  const plainCard = Object.assign({}, card, { id: 'plain-card', drawer: null, settings: null, options: [{ key: 'who', kind: 'text', label: 'Who', default: 'W' }] });
+  const cards2 = req('cards').create({
+    config: config2,
+    feature: n => (n === 'addons' ? { cardsOf: () => [{ addon: 'demo', dir: tmp, mod: null, card: plainCard }] } : null),
+    version: '1.6.15',
+  });
+  r = await call(cards2, '/api/cards/options', 'POST', { type: 'x-dl-card', set: { who: 'Hacked' } });
+  ok(r.j.error === 'this card has no settings' && config2.get().cards.a.who === 'W', 'a downloaded card is not changed through the panel: ' + r.out);
+  r = await call(cards2, '/api/cards/options', 'POST', { type: 'x-plain-card', set: { who: 'Hacked' } });
+  ok(r.j.error === 'this card has no settings' && config2.get().cards.b.who === 'W', 'a card of an add-on without settings is not changed: ' + r.out);
   r = await call(cards, '/api/cards/remove', 'POST', { id: 'demo-card' });
   ok(r.code === 400 && /add-on/.test(r.j.error), 'a card of an add-on is not removed as a downloaded one: ' + r.out);
 

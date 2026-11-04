@@ -181,6 +181,30 @@ const SLOT_NAMES = {
 const PAIR_PORT = 8792, // after the Wallpapers page (8791)
   PAIR_MS = 10 * 60 * 1000;
 
+// what an add-on says about places is data for the launcher's list: text without control characters or angle brackets, coordinates in range
+function cleanPlaces(list) {
+  const text = (v, n) =>
+    typeof v === 'string'
+      ? Array.from(v)
+          .filter(ch => ch.charCodeAt(0) > 31 && ch.charCodeAt(0) !== 127 && ch !== '<' && ch !== '>')
+          .join('')
+          .trim()
+          .slice(0, n)
+      : '';
+  const out = [];
+  for (const p of Array.isArray(list) ? list : []) {
+    if (out.length >= 10) break;
+    if (!p || typeof p !== 'object') continue;
+    const lat = p.lat,
+      lon = p.lon,
+      name = text(p.name, 40);
+    if (!name || typeof lat !== 'number' || typeof lon !== 'number' || !isFinite(lat) || !isFinite(lon)) continue;
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
+    out.push({ name, area: text(p.area, 80), lat: Math.round(lat * 100) / 100, lon: Math.round(lon * 100) / 100 });
+  }
+  return out;
+}
+
 function create(ctx) {
   const config = ctx.config,
     weather = require('./weather').create({ path: require('./paths').WEATHER }),
@@ -250,6 +274,8 @@ function create(ctx) {
   function setOptions(type, set) {
     const ty = packTypes().filter(x => x.type === type)[0];
     if (!ty) return { error: 'unknown card type' };
+    // only a card of an add-on that declares settings has a panel; a downloaded card or one without settings is not changed from here
+    if (!ty.pack || !ty.pack.addon || !ty.pack.settings) return { error: 'this card has no settings' };
     if (!set || typeof set !== 'object' || Array.isArray(set)) return { error: 'no options' };
     const patch = {};
     for (const f of ty.fields) {
@@ -455,7 +481,7 @@ function create(ctx) {
         res,
         r.error
           ? { error: 'City search is not available now.', places: [] }
-          : { places: Array.isArray(r.places) ? r.places.slice(0, 10) : [] }
+          : { places: cleanPlaces(r.places) }
       );
     }
     // the weather card: {lat, lon, unit} -> the weather there (Open-Meteo, at most every 30 minutes)
