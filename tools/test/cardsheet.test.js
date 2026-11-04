@@ -46,8 +46,8 @@ run(async () => {
   ok(rsb.f({ drawer: null, settings: null }, 'open') === 'addon', 'no drawer and no settings: the add-on gets it');
   ok(rsb.f(null, 'open') === 'addon', 'no pack: the add-on gets it');
 
-  const place = { key: 'place', kind: 'place', default: '' },
-    unit = { key: 'unit', kind: 'choice', default: 'c' };
+  const place = { key: 'place', kind: 'place', def: '', label: 'City', choices: [] },
+    unit = { key: 'unit', kind: 'choice', def: 'c', label: 'Unit', choices: [['c', 'C'], ['f', 'F']] };
   ok(P.csUnset({}, { options: [place, unit] }) === place, 'an empty place is the unset option');
   ok(P.csUnset({ place: 'Paris' }, { options: [place, unit] }) === null, 'a filled place leaves nothing unset');
   ok(P.csUnset({}, { options: [unit] }) === null, 'a choice with a default is never unset');
@@ -68,9 +68,9 @@ run(async () => {
       demo: {
         settings: { action: 'settings', title: 'Demo' },
         options: [
-          { key: 'place', kind: 'place', label: 'City', default: '' },
-          { key: 'unit', kind: 'choice', label: 'Unit', default: 'c', choices: [['c', '°C'], ['f', '°F']] },
-          { key: 'note', kind: 'text', label: 'Note' },
+          { key: 'place', kind: 'place', label: 'City', def: '', choices: [] },
+          { key: 'unit', kind: 'choice', label: 'Unit', def: 'c', choices: [['c', '°C'], ['f', '°F']] },
+          { key: 'note', kind: 'text', label: 'Note', def: '', choices: [] },
         ],
       },
     },

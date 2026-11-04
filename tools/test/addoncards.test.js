@@ -186,6 +186,15 @@ exports.create = () => ({
       ar.j.cardPacks['demo-card'].drawer.action === 'open',
     '/api/apps tells the launcher the drawer page of the card: ' + JSON.stringify(ar.j.cardPacks)
   );
+  // the launcher's settings panel and csUnset read exactly these fields of an option
+  const ops = ar.j.cardPacks['demo-card'].options;
+  ok(
+    ops.length > 0 &&
+      ops.every(o => typeof o.key === 'string' && typeof o.kind === 'string' && 'def' in o && typeof o.label === 'string' && Array.isArray(o.choices)),
+    '/api/apps options carry key, kind, def, label and choices: ' + JSON.stringify(ops)
+  );
+  const uo = ops.filter(o => o.kind === 'choice')[0];
+  ok(!uo || (uo.choices.length > 0 && uo.def === uo.choices[0][0]), 'a choice has its raw [value, label] pairs and a default');
   r = await call(cards, '/api/cards/set', 'POST', { slot: 'side', type: 'x-demo-card' });
   ok(r.j.ok === true, 'it can be chosen for a place');
 

@@ -35,7 +35,7 @@ var CS_PURE = (function () {
     var opts = (pk && pk.options) || [];
     for (var i = 0; i < opts.length; i++) {
       var o = opts[i];
-      if (o.kind !== 'place' && o['default'] !== '') continue;
+      if (o.kind !== 'place' && o.def !== '') continue;
       var v = card ? card[o.key] : undefined;
       if (v === undefined || v === null || v === '') return o;
     }

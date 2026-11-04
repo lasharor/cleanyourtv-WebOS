@@ -52,7 +52,7 @@ function csSettings(type) {
       skipped = false;
     if (!csCards(type).length) rows.push({ note: t('This card is not on Home yet. Choose it for a place in Cards.') });
     (pack.options || []).forEach(function (o) {
-      var v = c[o.key] !== undefined && c[o.key] !== null ? c[o.key] : o.default;
+      var v = c[o.key] !== undefined && c[o.key] !== null ? c[o.key] : o.def;
       if (o.kind === 'place') {
         rows.push({ label: t(o.label), sub: v || t('Not set'), stay: true, fn: function () { csSearch(type); } });
       } else if (o.kind === 'choice' && o.choices && o.choices.length) {

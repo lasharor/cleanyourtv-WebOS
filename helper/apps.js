@@ -467,6 +467,9 @@ function create(ctx) {
               key: o.key,
               kind: o.kind,
               def: o.kind === 'choice' && !o.default ? o.choices[0][0] : o.default,
+              // raw, as the card declares them: the launcher translates with t()
+              label: o.label,
+              choices: o.choices || [],
             })),
           };
       }
