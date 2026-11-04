@@ -61,7 +61,18 @@ function create(ctx) {
     };
   }
 
-  // what each app had before the service changed anything: the file kept by the first reading ever (or the older one of /tmp)
+  // the firmware of this TV (tv.json, read by the TV profile): a firmware update may change LG's own policy
+  const firmware = () => {
+    try {
+      return String((ctx.profile && ctx.profile.get().firmware) || '');
+    } catch (_) {
+      return '';
+    }
+  };
+
+  // what each app had before the service changed anything: the file kept by the first reading ever (or the older one of /tmp). It is
+  // marked with the firmware it was read on ("@firmware", not an app id); after a firmware update it is dropped, so the next reading takes
+  // LG's new policy and Reset does not go back to the old values.
   function base(apps) {
     const load = f => {
       try {
@@ -71,20 +82,36 @@ function create(ctx) {
         return null;
       }
     };
-    let b = load(baseFile);
-    if (b) return b;
-    b = load(oldFile);
-    if (b) {
+    const save = b => {
       try {
         fs.writeFileSync(baseFile, JSON.stringify(b));
       } catch (_) {}
+    };
+    const fw = firmware();
+    let b = load(baseFile),
+      stale = false;
+    if (b && fw && b['@firmware'] && b['@firmware'] !== fw) {
+      console.log('preload: the firmware changed (' + b['@firmware'] + ' to ' + fw + "), LG's policy is read again");
+      try {
+        fs.unlinkSync(baseFile);
+      } catch (_) {}
+      b = null;
+      stale = true; // the older file of /tmp is as old as the dropped one
+    }
+    if (b) {
+      if (fw && !b['@firmware']) save(Object.assign({}, b, { '@firmware': fw })); // a file from before the mark: this firmware
+      return b;
+    }
+    b = stale ? null : load(oldFile);
+    if (b) {
+      if (fw) b['@firmware'] = fw;
+      save(b);
       return b;
     }
     b = {};
     apps.forEach(a => (b[a.id] = { enabled: a.enabled, mode: a.mode, type: a.type }));
-    try {
-      fs.writeFileSync(baseFile, JSON.stringify(b));
-    } catch (_) {}
+    if (fw) b['@firmware'] = fw;
+    save(b);
     return b;
   }
 
@@ -214,6 +241,7 @@ function create(ctx) {
       if (!w.enabled) await close([b.id]);
       return '';
     });
+    syncTick();
     web.json(res, await status(result));
   }
 
@@ -221,7 +249,10 @@ function create(ctx) {
   // A TV in standby is suspended and Node's timers do not count that time, so the 5 minute check above comes 5 awake minutes after a
   // wake, while LG sets its own policy again at the wake. A jump of the wall clock is a wake: set the choices at once, and once more
   // when LG has finished.
-  let last = 0;
+  // The check runs only while at least one app has a saved choice (a choice made or reset in the manager starts or stops it at once), so a
+  // TV with no choices has no extra timer.
+  let last = 0,
+    ticker = null;
   function tick(now) {
     const woke = last && now - last > WAKE;
     last = now;
@@ -232,12 +263,25 @@ function create(ctx) {
     if (t.unref) t.unref();
     return true;
   }
+  function syncTick() {
+    if (Object.keys(saved()).length) {
+      if (ticker) return;
+      last = Date.now();
+      ticker = setInterval(() => tick(Date.now()), TICK);
+      if (ticker.unref) ticker.unref();
+    } else if (ticker) {
+      clearInterval(ticker);
+      ticker = null;
+      last = 0;
+    }
+  }
   const start = () => {
     for (const t of [setTimeout(run(false), 20000), setTimeout(run(true), DELAY)]) if (t.unref) t.unref();
-    for (const i of [setInterval(run(false), EVERY), setInterval(() => tick(Date.now()), TICK)]) if (i.unref) i.unref();
-    tick(Date.now());
+    const every = setInterval(run(false), EVERY);
+    if (every.unref) every.unref();
+    syncTick();
   };
-  return { name: 'preload', paths: ['/api/preload'], handle, start, apply, status, tick };
+  return { name: 'preload', paths: ['/api/preload'], handle, start, apply, status, tick, ticking: () => !!ticker };
 }
 
 module.exports = { create, clean, MODES, TYPES };
