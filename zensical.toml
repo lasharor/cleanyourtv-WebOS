@@ -24,6 +24,7 @@ nav = [
     { "Live TV" = "live-tv.md" },
     { "Android box" = "android-box.md" },
     { "Phone remote" = "phone-remote.md" },
+    { "Phone remote protocol" = "phone-remote-api.md" },
     { "The Input key" = "input-key.md" },
     { "Key remapping" = "key-remap.md" },
     { "Picture notifications" = "notifications.md" },
