@@ -146,4 +146,19 @@ run(async () => {
   ok(pre.tick(20000000) === true, 'wake: a long gap is a wake');
   await new Promise(r => setTimeout(r, 50));
   ok(get(t, 'netflix').isEnabled === false, 'wake: the saved choice is set again at once');
+
+  // the baseline of LG's policy is taken over from the older file in /tmp, then kept in its own file
+  t = tv();
+  const oldF = path.join(tmp, 'old-base.json'),
+    newF = path.join(tmp, 'new-base.json');
+  require('fs').writeFileSync(oldF, JSON.stringify({ netflix: { enabled: true, mode: 'partial', type: 'periodic' } }));
+  pre = P.create({ config: memoryConfig(), luna: t.luna, baseFile: newF, oldBaseFile: oldF });
+  x = await call(pre, '/api/preload');
+  ok(
+    x.j.apps.filter(a => a.id === 'netflix')[0].base.enabled === true && require('fs').existsSync(newF),
+    'baseline: the older file of /tmp is taken over'
+  );
+  require('fs').unlinkSync(oldF);
+  x = await call(pre, '/api/preload');
+  ok(x.j.apps.filter(a => a.id === 'netflix')[0].base.enabled === true, 'baseline: kept after the older file is gone');
 });

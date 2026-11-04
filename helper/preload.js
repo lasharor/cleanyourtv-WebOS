@@ -17,6 +17,7 @@ const fs = require('fs'),
   os = require('os'),
   path = require('path');
 const web = require('./web');
+const paths = require('./paths');
 
 const SVC = 'luna://com.webos.service.preloadmanager/';
 const AM = 'luna://com.webos.applicationManager/';
@@ -33,10 +34,13 @@ const isId = id => typeof id === 'string' && /^[A-Za-z0-9._-]{1,80}$/.test(id);
 // the ids from a request: strings that look like app ids, once each, never one of SAFE
 const clean = list => (Array.isArray(list) ? list : []).filter((id, i, a) => isId(id) && !SAFE.test(id) && a.indexOf(id) === i);
 
-// ctx.baseFile: where the policy of the TV's boot is kept (in /tmp: a reboot starts a new one)
+// ctx.baseFile: where LG's own policy is kept, written once at the first reading, before the service changed anything. It lives in the
+// service folder, so it stays over reboots, standby and updates (it was in /tmp, which a restart of the service or a reboot loses and
+// the next reading would then record what the service had set). The file of /tmp is taken over once.
 function create(ctx) {
   const { luna, config } = ctx;
-  const baseFile = ctx.baseFile || path.join(os.tmpdir(), 'cytv-preload-base.json');
+  const baseFile = ctx.baseFile || paths.PRELOAD_BASE;
+  const oldFile = ctx.oldBaseFile || path.join(os.tmpdir(), 'cytv-preload-base.json');
 
   // the policy as the TV has it: {apps: [{id, enabled, allowed, mode, type, memory, managed}]}, or {error}
   async function read() {
@@ -59,11 +63,23 @@ function create(ctx) {
 
   // what each app had when the TV booted: the first reading after the boot, before the service changed anything
   function base(apps) {
-    let b = {};
-    try {
-      b = JSON.parse(fs.readFileSync(baseFile, 'utf8'));
-    } catch (_) {}
-    if (b && typeof b === 'object' && Object.keys(b).length) return b;
+    const read = f => {
+      try {
+        const x = JSON.parse(fs.readFileSync(f, 'utf8'));
+        return x && typeof x === 'object' && Object.keys(x).length ? x : null;
+      } catch (_) {
+        return null;
+      }
+    };
+    let b = read(baseFile);
+    if (b) return b;
+    b = read(oldFile);
+    if (b) {
+      try {
+        fs.writeFileSync(baseFile, JSON.stringify(b));
+      } catch (_) {}
+      return b;
+    }
     b = {};
     apps.forEach(a => (b[a.id] = { enabled: a.enabled, mode: a.mode, type: a.type }));
     try {
