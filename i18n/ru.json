@@ -784,5 +784,20 @@
  "Weather & sun": "Погода и солнце",
  "Offline, data from %s": "Нет сети, данные от %s",
  "Updated %s": "Обновлено в %s",
- "Weather data by Open-Meteo.com": "Данные о погоде: Open-Meteo.com"
+ "Weather data by Open-Meteo.com": "Данные о погоде: Open-Meteo.com",
+ "This card is not on Home yet. Choose it for a place in Cards.": "Этой карточки ещё нет на Home. Выберите её для места в разделе «Карточки».",
+ "More on your phone": "Больше на телефоне",
+ "Cards > Set up from your phone": "Карточки > Настроить с телефона",
+ "Weather and city search by Open-Meteo. Only the city you type and its coordinates are sent. No account.": "Погода и поиск города — Open-Meteo. Отправляются только введённый город и его координаты. Без аккаунта.",
+ "Type at least two letters.": "Введите не менее двух букв.",
+ "No city found.": "Город не найден.",
+ "City search is not available now.": "Поиск города сейчас недоступен.",
+ "Choose a city": "Выберите город",
+ "Select to set it on the TV": "Выберите, чтобы задать на телевизоре",
+ "Rich": "Подробная",
+ "Minimal": "Минимальная",
+ "Warmer than it is": "Теплее, чем есть",
+ "Cooler than it is": "Прохладнее, чем есть",
+ "As it is": "Как есть",
+ "%s of daylight": "%s светового дня"
 }

@@ -830,5 +830,20 @@
  "Weather & sun": "Tiempo y sol",
  "Offline, data from %s": "Sin conexión, datos de %s",
  "Updated %s": "Actualizado a las %s",
- "Weather data by Open-Meteo.com": "Datos del tiempo de Open-Meteo.com"
+ "Weather data by Open-Meteo.com": "Datos del tiempo de Open-Meteo.com",
+ "This card is not on Home yet. Choose it for a place in Cards.": "Esta tarjeta aún no está en Home. Elígela para un lugar en Tarjetas.",
+ "More on your phone": "Más en tu móvil",
+ "Cards > Set up from your phone": "Tarjetas > Configurar desde tu móvil",
+ "Weather and city search by Open-Meteo. Only the city you type and its coordinates are sent. No account.": "El tiempo y la búsqueda de ciudades son de Open-Meteo. Solo se envían la ciudad que escribes y sus coordenadas. Sin cuenta.",
+ "Type at least two letters.": "Escribe al menos dos letras.",
+ "No city found.": "No se encontró ninguna ciudad.",
+ "City search is not available now.": "La búsqueda de ciudades no está disponible ahora.",
+ "Choose a city": "Elige una ciudad",
+ "Select to set it on the TV": "Selecciona para fijarla en el televisor",
+ "Rich": "Completa",
+ "Minimal": "Mínima",
+ "Warmer than it is": "Más cálido de lo que es",
+ "Cooler than it is": "Más fresco de lo que es",
+ "As it is": "Tal como es",
+ "%s of daylight": "%s de luz diurna"
 }

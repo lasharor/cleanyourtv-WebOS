@@ -891,5 +891,20 @@
  "Weather & sun": "Weer & zon",
  "Offline, data from %s": "Offline, gegevens van %s",
  "Updated %s": "Bijgewerkt om %s",
- "Weather data by Open-Meteo.com": "Weergegevens van Open-Meteo.com"
+ "Weather data by Open-Meteo.com": "Weergegevens van Open-Meteo.com",
+ "This card is not on Home yet. Choose it for a place in Cards.": "Deze kaart staat nog niet op Home. Kies hem voor een plek bij Kaarten.",
+ "More on your phone": "Meer op je telefoon",
+ "Cards > Set up from your phone": "Kaarten > Instellen met je telefoon",
+ "Weather and city search by Open-Meteo. Only the city you type and its coordinates are sent. No account.": "Weer en plaatszoeken via Open-Meteo. Alleen de plaats die je typt en de coördinaten ervan worden verstuurd. Geen account.",
+ "Type at least two letters.": "Typ minstens twee letters.",
+ "No city found.": "Geen plaats gevonden.",
+ "City search is not available now.": "Plaatszoeken is nu niet beschikbaar.",
+ "Choose a city": "Kies een plaats",
+ "Select to set it on the TV": "Selecteer om het op de tv in te stellen",
+ "Rich": "Uitgebreid",
+ "Minimal": "Minimaal",
+ "Warmer than it is": "Warmer dan het is",
+ "Cooler than it is": "Koeler dan het is",
+ "As it is": "Zoals het is",
+ "%s of daylight": "%s daglicht"
 }

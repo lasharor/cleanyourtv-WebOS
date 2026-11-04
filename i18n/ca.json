@@ -777,5 +777,20 @@
  "Weather & sun": "Temps i sol",
  "Offline, data from %s": "Sense connexió, dades de %s",
  "Updated %s": "Actualitzat a les %s",
- "Weather data by Open-Meteo.com": "Dades meteorològiques d'Open-Meteo.com"
+ "Weather data by Open-Meteo.com": "Dades meteorològiques d'Open-Meteo.com",
+ "This card is not on Home yet. Choose it for a place in Cards.": "Aquesta targeta encara no és a Inici. Tria-la per a un lloc a Targetes.",
+ "More on your phone": "Més al telèfon",
+ "Cards > Set up from your phone": "Targetes > Configura-ho des del telèfon",
+ "Weather and city search by Open-Meteo. Only the city you type and its coordinates are sent. No account.": "El temps i la cerca de ciutats són d'Open-Meteo. Només s'envien la ciutat que escrius i les seves coordenades. Sense compte.",
+ "Type at least two letters.": "Escriu almenys dues lletres.",
+ "No city found.": "No s'ha trobat cap ciutat.",
+ "City search is not available now.": "La cerca de ciutats no està disponible ara.",
+ "Choose a city": "Tria una ciutat",
+ "Select to set it on the TV": "Selecciona per definir-la al televisor",
+ "Rich": "Completa",
+ "Minimal": "Mínima",
+ "Warmer than it is": "Més càlid del que és",
+ "Cooler than it is": "Més fresc del que és",
+ "As it is": "Tal com és",
+ "%s of daylight": "%s de llum del dia"
 }

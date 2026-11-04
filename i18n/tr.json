@@ -759,5 +759,20 @@
  "Weather & sun": "Hava ve güneş",
  "Offline, data from %s": "Çevrimdışı, %s verileri",
  "Updated %s": "Güncellendi: %s",
- "Weather data by Open-Meteo.com": "Hava verileri: Open-Meteo.com"
+ "Weather data by Open-Meteo.com": "Hava verileri: Open-Meteo.com",
+ "This card is not on Home yet. Choose it for a place in Cards.": "Bu kart henüz Home'da değil. Kartlar içinde bir yer için seçin.",
+ "More on your phone": "Telefonda daha fazlası",
+ "Cards > Set up from your phone": "Kartlar > Telefonla ayarla",
+ "Weather and city search by Open-Meteo. Only the city you type and its coordinates are sent. No account.": "Hava durumu ve şehir araması Open-Meteo'dan. Yalnızca yazdığınız şehir ve koordinatları gönderilir. Hesap gerekmez.",
+ "Type at least two letters.": "En az iki harf yazın.",
+ "No city found.": "Şehir bulunamadı.",
+ "City search is not available now.": "Şehir araması şu anda kullanılamıyor.",
+ "Choose a city": "Şehir seçin",
+ "Select to set it on the TV": "TV'de ayarlamak için seçin",
+ "Rich": "Zengin",
+ "Minimal": "Minimal",
+ "Warmer than it is": "Olduğundan sıcak",
+ "Cooler than it is": "Olduğundan serin",
+ "As it is": "Olduğu gibi",
+ "%s of daylight": "%s gün ışığı"
 }

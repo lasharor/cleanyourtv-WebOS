@@ -804,5 +804,20 @@
  "Weather & sun": "الطقس والشمس",
  "Offline, data from %s": "غير متصل، بيانات من %s",
  "Updated %s": "تم التحديث %s",
- "Weather data by Open-Meteo.com": "بيانات الطقس من Open-Meteo.com"
+ "Weather data by Open-Meteo.com": "بيانات الطقس من Open-Meteo.com",
+ "This card is not on Home yet. Choose it for a place in Cards.": "هذه البطاقة ليست في الشاشة الرئيسية بعد. اخترها لمكان في البطاقات.",
+ "More on your phone": "المزيد على هاتفك",
+ "Cards > Set up from your phone": "البطاقات > الإعداد من الهاتف",
+ "Weather and city search by Open-Meteo. Only the city you type and its coordinates are sent. No account.": "الطقس والبحث عن المدن من Open-Meteo. يُرسل فقط اسم المدينة التي تكتبها وإحداثياتها. بدون حساب.",
+ "Type at least two letters.": "اكتب حرفين على الأقل.",
+ "No city found.": "لم يتم العثور على مدينة.",
+ "City search is not available now.": "البحث عن المدن غير متاح الآن.",
+ "Choose a city": "اختر مدينة",
+ "Select to set it on the TV": "اختر لتعيينها على التلفاز",
+ "Rich": "غنية",
+ "Minimal": "مبسّطة",
+ "Warmer than it is": "أدفأ مما هو عليه",
+ "Cooler than it is": "أبرد مما هو عليه",
+ "As it is": "كما هو",
+ "%s of daylight": "%s من ضوء النهار"
 }
