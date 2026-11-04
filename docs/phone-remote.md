@@ -125,6 +125,8 @@ app that wraps the page (see [Other clients](#other-clients)).
 
 ### Other clients
 
+The protocol a client speaks (pairing, the WebSocket, every message, the limits) is written down in [Phone remote protocol](phone-remote-api.md).
+
 The phone page is the main client. A native app can wrap it in a WebView and add what a browser cannot do, such as sending the
 Wake-on-LAN packet; the page looks for an object called `window.CYTV_APP` and uses it when it is there (`wake`, `setMac`, `deviceName`,
 `buzz`, `up`, `forget`). A browser has none of these and the page works without them. No app is part of this project.
