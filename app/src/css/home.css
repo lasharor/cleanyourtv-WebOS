@@ -655,7 +655,8 @@ body.wpon {
   background-image: none;
 }
 /* the credit a photo source asks for (Unsplash: the photographer), small, in the bottom right corner */
-#wpc {
+#wpc,
+#scredit {
   position: absolute;
   right: 40px;
   bottom: 24px;
@@ -1175,6 +1176,10 @@ body.scenes-on {
 }
 .s-dawn .gclock {
   top: 230px;
+}
+/* a scene of an add-on (scenes.js): a photo without a cut-out, darker at the top for the clock and the date, a little at the bottom */
+.s-addon .shade {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.08) 45%, rgba(0, 0, 0, 0) 65%, rgba(0, 0, 0, 0.28) 100%);
 }
 /* Custom theme scenes: clock and date position come from CSS variables set per-scene by scenes.js */
 .s-custom .gclock {

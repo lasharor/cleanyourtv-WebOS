@@ -856,5 +856,6 @@
  "Sign out": "Afmelden",
  "Do nothing": "Niets doen",
  "Does nothing": "Doet niets",
- "blocks the button's own action": "blokkeert de eigen actie van de knop"
+ "blocks the button's own action": "blokkeert de eigen actie van de knop",
+ "Photo: %s": "Foto: %s"
 }

@@ -155,6 +155,23 @@ Each button the card declared becomes a target of the remote in the top row of H
 card asks for its data again a few times in the seconds after. A name the card did not declare is ignored. Routes: `POST /api/cards/feed {slot}` and
 `POST /api/cards/action {slot, name, arg}` ([API](../api.md)).
 
+## Providing something to the service: scenes
+
+An add-on with `"provides": ["scenes"]` brings photos for the couch scenes (a theme with `effects.scenes` `couch`, such as Couch): while
+it runs and has scenes, they take the place of the five landscapes that ship with the launcher. `helper/scenes.js` asks the running,
+switched-on add-ons that provide it, in order, and takes the first one with a non-empty list. The object is `scenes` on the module
+`create()` returns:
+
+| Member | What it does |
+|---|---|
+| `list({cc})` | The scenes to show now (or a promise of them): `[{id, credit, darkSky}]`, at most 20. `id`: letters, digits, `-`, `_`, `.`; `credit`: a short line Home shows in the bottom corner (the photographer); `darkSky`: a bright sky, so the top buttons turn dark. `cc` is the TV's country as the launcher reads it (two or three letters, or empty). |
+| `file(id, kind)` | The absolute path of the photo (`kind` `image`, 1920 x 1080) or of its blurred copy for the glass clock and the glass cards (`glass`): a JPEG, PNG or WebP on the TV, at most 8 MB, or `''`. |
+
+The launcher asks `POST /api/scenes {cc}` when the theme starts the couch scenes and every 30 minutes (every minute while no add-on has
+scenes) and draws them as custom scenes: no cut-out, the clock in front of the photo with a darker shade at the top. The photos come
+from `GET /api/scenes/photo/<add-on>/<id>/<image|glass>`, so the launcher needs no network for them; an add-on that downloads them keeps
+them on the TV. Without such an add-on the list is empty and nothing changes.
+
 ### A phone page of the add-on
 
 A service that has a `settings(o)` function (the same contract as a photo source's: it opens a short-lived page on the LAN and answers `{url, code, qr, seconds}`, or closes it
@@ -244,6 +261,7 @@ left out stays installed and running but has no button.
 | `weather` | The **Weather forecast** card for Home, a card of an add-on (see above): the weather at a city you choose on the phone page, with buttons for the remote (Now, Hours, Days). From Open-Meteo, no key; only the coordinates leave the TV, at most every 30 minutes. |
 | `spotify` | The **Spotify now playing** card for Home, a card of an add-on (see above): the cover, title and artist of what plays on your Spotify account, with previous, play or pause, next and the output as buttons for the remote (Premium); the cover opens the Spotify app on the song (permission `luna`), the output button answers with a menu of the devices (the add-on also wakes the speakers of the network that Spotify does not list, over mDNS, as the Spotify apps do). Your own Spotify developer app (its Client ID; sign-in with PKCE), set up from your phone (page on port 8797): Add-ons > Spotify now playing > Set up from your phone. The tokens stay in the add-on's settings. |
 | `jellyfin` | The **Continue watching** card for Home, a card of an add-on (see above): the films and episodes you did not finish on your Jellyfin server (and, as an option, the next episode of a series you follow), with their pictures (wide stills or posters) and a bar for how far you got. Each one is a button: OK opens your Jellyfin app (the official one, Litefin or Moonfin: the first one installed, or the one chosen in the card's options) with `{itemId, serverId, tmdbId, mediaType, title}` as launch parameters. Litefin opens the title by its TMDB id (after 2.0.20); the other apps read no launch parameters on webOS and open on their Home. Set up from your phone (page on port 8798): the address, user name and password; only the access token is kept, in the add-on's settings. The permission `luna` is for `getAppInfo` and `launch`. Needs service 1.6.17. |
+| `seasons` | **Seasons**: photos for the couch scenes that follow the calendar, an add-on that provides scenes (see above): Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of the season (winter from 21 December, spring from 20 March, summer from 21 June, autumn from 23 September); south of the equator the seasons turn around, and the tulip fields of spring show only in the Netherlands and Belgium (by the country the launcher sends). The photos are from Unsplash (free to use under the Unsplash License), with the photographer in the corner; the list is in `photos.js`. It keeps the set in use and the first two of every set on the TV (about 8 MB, so each set shows at least two without network) and contacts Unsplash's image host only while it is installed and switched on: at its start, every six hours and when the set or the country changes. `GET /api/addons/seasons/status` says what it has. |
 | `tuner` | **TV guide (LG tuner)**: a guide for the TV's own tuner (antenna, cable): the channels, what is on now and next and the schedule of the selected channel, read from the data LG's own guide uses; OK opens LG's Live TV on the channel. A page add-on of its own, with the permission `luna` for three LG services. Its page is built from the same guide code as Live TV (`addons/catalog/tuner/src/index.html` includes the files of `helper/addons-bundled/iptv/src`), so the two guides stay alike; it needs neither Live TV nor a playlist. Needs service 1.6.17. |
 
 ## Versions

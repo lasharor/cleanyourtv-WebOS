@@ -971,5 +971,6 @@
  "Progress bar": "Progress bar",
  "Shown": "Shown",
  "Hidden": "Hidden",
- "%s (in the background)": "%s (in the background)"
+ "%s (in the background)": "%s (in the background)",
+ "Photo: %s": "Photo: %s"
 }

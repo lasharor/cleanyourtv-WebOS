@@ -1,0 +1,12 @@
+{
+  "id": "seasons",
+  "name": "Seasons",
+  "version": "1.0.0",
+  "description": "Photos for the Couch scenes that follow the calendar: Christmas, New Year and the four seasons.",
+  "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. South of the equator the seasons turn around; the tulip fields of spring show in the Netherlands and Belgium. The photos are from Unsplash (free to use), the photographer shows in the corner. About 8 MB is kept on the TV, so every set shows at least two photos without network.",
+  "kind": "service",
+  "entry": { "service": "service.js" },
+  "permissions": ["net.fetch"],
+  "provides": ["scenes"],
+  "minService": "1.6.17"
+}
