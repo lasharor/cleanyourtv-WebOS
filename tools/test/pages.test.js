@@ -188,13 +188,13 @@ run(async () => {
     'Customise > Top & cards has Weather (a city, not a place) once the forecast card is there'
   );
   ok(
-    /d\._btn\.name === 'settings'/.test(wcards) && /el\._card\.type === WX_TYPE\) wxMenu\(\)/.test(wcards),
-    'the settings button of the weather card opens Customise > Weather instead of asking the add-on'
+    /function cardBtnRoute/.test(wcards) && /csSettings\(/.test(wcards) && !/wxMenu\(/.test(wcards),
+    'the declared settings action of a card opens the launcher panel (cardBtnRoute), not a weather-specific menu'
   );
   const wdr = rd('app/src/js/wxdrawer.js');
   ok(
-    /d\._btn\.name === 'open'/.test(wcards) && /wxdOpen\(el\)/.test(wcards) && /function wxdOpen/.test(wdr) && /WXD\.on/.test(winput),
-    'OK or a click on the weather card opens the drawer (Now, Hours, Days), which the keys and the mouse then drive'
+    /cardBtnRoute\(pk, name\)/.test(wcards) && /csOpen\(el\)/.test(wcards) && !/wxdOpen\(/.test(wcards) && /function wxdOpen/.test(wdr) && /WXD\.on/.test(winput),
+    'OK or a click on the declared drawer action opens the sheet (the old weather drawer file is unchanged)'
   );
   ok(
     /id === 'wxq'/.test(winput) && /wxFind\(e\.target\.value\)/.test(winput),

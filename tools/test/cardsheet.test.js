@@ -34,6 +34,18 @@ run(async () => {
   ok(P.csTabStep(list, by('c0'), 'right', false) === null, 'a target that is no tab does not step');
   ok(P.csTabStep(list, by('now'), 'down', false) === null, 'up and down do not step tabs');
 
+  const csrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'cards.js'), 'utf8');
+  const m = csrc.match(/function cardBtnRoute[\s\S]*?\n\}\r?\n/);
+  ok(!!m, 'cards.js has cardBtnRoute');
+  const rsb = {};
+  vm.runInNewContext(m[0] + ';this.f = cardBtnRoute;', rsb);
+  const rpk = { drawer: { action: 'open' }, settings: { action: 'settings' } };
+  ok(rsb.f(rpk, 'open') === 'sheet', 'the declared drawer action routes to the sheet');
+  ok(rsb.f(rpk, 'settings') === 'settings', 'the declared settings action routes to the panel');
+  ok(rsb.f(rpk, 'next') === 'addon', 'any other action goes to the add-on');
+  ok(rsb.f({ drawer: null, settings: null }, 'open') === 'addon', 'no drawer and no settings: the add-on gets it');
+  ok(rsb.f(null, 'open') === 'addon', 'no pack: the add-on gets it');
+
   const place = { key: 'place', kind: 'place', default: '' },
     unit = { key: 'unit', kind: 'choice', default: 'c' };
   ok(P.csUnset({}, { options: [place, unit] }) === place, 'an empty place is the unset option');

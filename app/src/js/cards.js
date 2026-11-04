@@ -716,20 +716,30 @@ function cardButtons(el, list) {
 /* OK on a button: the add-on gets the action, then the card is asked for its data again (the answer to a button shows within seconds).
    An answer can carry {menu: {title, action, items: [{id, label, sub, active}]}}: it is shown as a menu, and a row sends that action
    again with its id as the argument (the Spotify card's "Play on"); {said} is a short notice. */
+function cardBtnRoute(pk, name) {
+  if (pk && pk.drawer && pk.drawer.action === name) return 'sheet';
+  if (pk && pk.settings && pk.settings.action === name) return 'settings';
+  return 'addon';
+}
 function cardBtnAct(d) {
-  var el = d._btn.card;
-  /* the button named settings is the launcher's own: the weather card without a city is one such button, and OK (or a click) opens
-     Customise > Weather instead of asking the add-on */
-  if (d._btn.name === 'settings') {
-    if (el._card && el._card.type === WX_TYPE) wxMenu();
+  var el = d._btn.card,
+    name = d._btn.name,
+    pk = el._pk,
+    route = cardBtnRoute(pk, name);
+  /* the add-on's declared drawer action opens the launcher's sheet (cardsheet.js), its settings action the launcher's panel
+     (cardsettings.js); a drawer whose required option is unset opens the settings first */
+  if (route === 'sheet') {
+    if (pk.settings && el._card && CS_PURE.csUnset(el._card, pk)) route = 'settings';
+    else {
+      csOpen(el);
+      return;
+    }
+  }
+  if (route === 'settings') {
+    if (typeof csSettings === 'function') csSettings(el._card ? el._card.type : pk.type);
     return;
   }
-  /* so is open: the weather card's drawer (wxdrawer.js) with the hours, the days and the sun */
-  if (d._btn.name === 'open') {
-    if (el._card && el._card.type === WX_TYPE) wxdOpen(el);
-    return;
-  }
-  cardAction(el, d._btn.name, '');
+  cardAction(el, name, '');
 }
 function cardAction(el, name, arg) {
   api('/api/cards/action', { slot: el._slot, name: name, arg: arg, lang: LANG }).then(
