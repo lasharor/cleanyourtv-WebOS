@@ -63,6 +63,27 @@ run(async () => {
   bad({ actions: [{ name: 'Bad Name' }] }, /action has a name/, 'an action name with capitals or spaces is refused');
   bad({ actions: [{ name: 'a' }, { name: 'a' }] }, /two actions/, 'two actions with one name are refused');
   bad({ actions: new Array(9).fill(0).map((_, i) => ({ name: 'a' + i })) }, /at most 8/, 'more than 8 actions are refused');
+  bad({ drawer: 'x' }, /drawer is an object/, 'a drawer that is not an object is refused');
+  bad({ drawer: { page: 'card.html', action: 'prev' } }, /not the card page/, 'a drawer page equal to the card page is refused');
+  bad({ drawer: { page: '../x.html', action: 'prev' } }, /\.html file/, 'an unsafe drawer page is refused');
+  bad({ drawer: { page: 'drawer.txt', action: 'prev' } }, /\.html file/, 'a drawer page that is not html is refused');
+  bad({ drawer: { page: 'drawer.html', action: 'nope' } }, /drawer action must be one/, 'an undeclared drawer action is refused');
+  bad({ settings: 'x' }, /settings is an object/, 'settings that is not an object is refused');
+  bad({ settings: { action: 'nope' } }, /settings action must be one/, 'an undeclared settings action is refused');
+  bad({ settings: { action: 'prev' }, options: [] }, /settings needs options/, 'settings without options is refused');
+  bad({ drawer: { page: 'drawer.html', action: 'prev' }, settings: { action: 'prev' } }, /different actions/, 'one action for both is refused');
+  const dm = addons.check(
+    Object.assign({}, man, {
+      cards: [Object.assign({}, card, { drawer: { page: 'drawer.html', action: 'prev', label: 'Weather' }, settings: { action: 'toggle' } })],
+    }),
+    '1.6.15'
+  );
+  ok(
+    dm.manifest && dm.manifest.cards[0].drawer.page === 'drawer.html' && dm.manifest.cards[0].settings.action === 'toggle' && dm.manifest.cards[0].settings.title === 'Demo card',
+    'a card can declare a drawer and settings'
+  );
+  ok(m0.manifest.cards[0].drawer === null && m0.manifest.cards[0].settings === null, 'a card without them has null');
+  ok(cc.clean(Object.assign({}, card, { drawer: { page: 'd.html', action: 'prev' } })).card.drawer === null, 'a downloaded card ignores a drawer');
   ok(addons.check(Object.assign({}, man, { cards: [card, card] }), '1.6.15').error, 'two cards with one id are refused');
   ok(addons.check(Object.assign({}, man, { cards: [1, 2, 3, 4, 5] }), '1.6.15').error, 'at most 4 cards');
   ok(addons.check(Object.assign({}, man, { cards: undefined }), '1.6.15').manifest.cards.length === 0, 'an add-on without cards has none');

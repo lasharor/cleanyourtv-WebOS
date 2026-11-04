@@ -85,6 +85,28 @@ function clean(m, folder, opts) {
     }
     options.push(one);
   }
+  // a card of an add-on may bring a drawer (a page that opens over Home) and a settings entry, each tied to one of its actions
+  let drawer = null,
+    settings = null;
+  if (add) {
+    const has = n => actions.some(x => x.name === n);
+    if (m.drawer !== undefined) {
+      const d = m.drawer;
+      if (!d || typeof d !== 'object' || Array.isArray(d)) return { error: 'drawer is an object: {page, action, label}' };
+      if (typeof d.page !== 'string' || !safeRel(d.page) || !/\.html$/.test(d.page) || d.page === m.page)
+        return { error: 'drawer page must be an .html file in the folder of the card, not the card page' };
+      if (!has(d.action)) return { error: 'drawer action must be one of the actions of the card' };
+      drawer = { page: d.page, action: d.action, label: text(d.label, 40) || m.name };
+    }
+    if (m.settings !== undefined) {
+      const s = m.settings;
+      if (!s || typeof s !== 'object' || Array.isArray(s)) return { error: 'settings is an object: {action, title}' };
+      if (!has(s.action)) return { error: 'settings action must be one of the actions of the card' };
+      if (!options.length) return { error: 'settings needs options' };
+      settings = { action: s.action, title: text(s.title, 40) || m.name };
+    }
+    if (drawer && settings && drawer.action === settings.action) return { error: 'drawer and settings need different actions' };
+  }
   return {
     card: {
       id: m.id,
@@ -99,6 +121,8 @@ function clean(m, folder, opts) {
       page: hasPage ? m.page : '',
       poll,
       actions,
+      drawer,
+      settings,
     },
   };
 }
