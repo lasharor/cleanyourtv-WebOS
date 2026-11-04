@@ -34,6 +34,10 @@ yours to change.
 
 The Magic Remote pointer works too: pointing and clicking, and holding the button on an app for its options. The wheel moves from tile to tile on the
 home screen (along the dock, then the grid row by row) and up and down in every menu, where the list scrolls one row at a time and, under the pointer, only when it reaches the first or last row on show.
+On the home screen the tile under the pointer takes the focus as soon as the pointer shows, where it shows (an LG G5 brings it back in the
+middle of the screen, not where it hid), whether you move the remote or turn the wheel; the notch that brings the pointer back does not
+move to the next tile, and a click focuses what it opens. While the pointer is hidden,
+after a button press, it does not move the focus.
 
 ![App options](screenshots/options.jpg)
 

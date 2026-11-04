@@ -45,13 +45,14 @@ function options(e) {
 /* Pointer focus follows real pointer movement only: a tile sliding under a still cursor, a cursor jitter when
    the remote is picked up, or a pointer move right after a button press must not steal the focus. The first move after a button press
    needs 24 px; after that every move of 4 px or more counts, so a cursor that comes to rest over a tile always focuses it (before, a
-   cursor nudged less than 24 px over a tile left the focus elsewhere, while a click opened the tile under it). */
+   cursor nudged less than 24 px over a tile left the focus elsewhere, while a click opened the tile under it). The first position after
+   the pointer shows counts at once (pointerShow); the first one after the page loads is only noted. */
 var pointerLive = false;
 function pointerMoved(x, y) {
   if (lastMX < 0) {
     lastMX = x;
     lastMY = y;
-    return false;
+    return pointerLive;
   }
   if (Math.abs(x - lastMX) + Math.abs(y - lastMY) < (pointerLive ? 4 : 24)) return false;
   lastMX = x;
@@ -59,8 +60,28 @@ function pointerMoved(x, y) {
   pointerLive = true;
   return true;
 }
+/* webOS says when the pointer shows and hides (cursorStateChange, detail.visibility): it hides when a button is pressed and shows when
+   the remote is moved. While it is hidden, pointer events are not the user's (a tile sliding under it). Where it shows comes with the
+   next move, a moment after the event (an LG G5 puts it back in the middle of the screen, not where it hid): that move focuses what is
+   under it at any distance, as on LG's own Home, and every move after that counts. A TV that does not send the event keeps the 1.5 s
+   after a button press instead. */
+var cursorEvents = false,
+  pointerShown = true,
+  pointerShownAt = 0; /* when it last showed: a turn of the wheel shows it, and that notch comes a moment after (menus.js wheelHome) */
+function pointerShow(on) {
+  cursorEvents = true;
+  pointerShown = !!on;
+  if (!on) return;
+  pointerShownAt = Date.now();
+  pointerLive = true;
+  lastMX = -1;
+}
+document.addEventListener('cursorStateChange', function (ev) {
+  pointerShow(ev.detail && ev.detail.visibility);
+});
 document.addEventListener('mousemove', function (ev) {
-  if (stack.length || LIVE.on || PAGER.on || CS.on || Date.now() - lastKey < 1500) return;
+  if (stack.length || LIVE.on || PAGER.on || CS.on) return;
+  if (cursorEvents ? !pointerShown : Date.now() - lastKey < 1500) return;
   if (!pointerMoved(ev.clientX, ev.clientY)) return;
   var el = ev.target.closest ? ev.target.closest('.tile,.pill,.card-btn') : null,
     p = el && posOf(el);
@@ -71,8 +92,11 @@ document.addEventListener('keydown', function (e) {
   var k = e.keyCode;
   /* a right-to-left layout: Left moves to what is on the left, which is the next tile in the row (Live TV keeps left-to-right) */
   if (rtl() && !LIVE.on && (k === 37 || k === 39)) k = 76 - k;
-  lastKey = Date.now();
-  pointerLive = false;
+  /* 1536 and 1537: webOS's keys for the pointer showing and hiding, not a button of the remote */
+  if (k !== 1536 && k !== 1537) {
+    lastKey = Date.now();
+    pointerLive = false;
+  }
   /* a card's sheet has the keys while it is open (it undoes the swap above itself) */
   if (CS.on) {
     csKey(k, e);
