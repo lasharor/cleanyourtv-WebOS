@@ -61,9 +61,9 @@ function create(ctx) {
     };
   }
 
-  // what each app had when the TV booted: the first reading after the boot, before the service changed anything
+  // what each app had before the service changed anything: the file kept by the first reading ever (or the older one of /tmp)
   function base(apps) {
-    const read = f => {
+    const load = f => {
       try {
         const x = JSON.parse(fs.readFileSync(f, 'utf8'));
         return x && typeof x === 'object' && Object.keys(x).length ? x : null;
@@ -71,9 +71,9 @@ function create(ctx) {
         return null;
       }
     };
-    let b = read(baseFile);
+    let b = load(baseFile);
     if (b) return b;
-    b = read(oldFile);
+    b = load(oldFile);
     if (b) {
       try {
         fs.writeFileSync(baseFile, JSON.stringify(b));
