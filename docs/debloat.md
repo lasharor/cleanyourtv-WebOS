@@ -62,7 +62,7 @@ An app LG does not allow to be preloaded on your TV, and Home (which LG manages 
 Switching an app off also closes it when it runs in the background and is not in front.
 
 The choices are kept in `options.preloadPolicy` in `config.json`. LG's preload manager keeps nothing over a reboot, so the service
-sets them again about 20 seconds after it starts, and again every 5 minutes in case LG changed them back. Nothing is written to
+sets them again about 20 seconds after it starts, again every 5 minutes in case LG changed them back, and right after the TV wakes from standby (LG sets its own policy again then; Node does not count standby time, so waiting for the 5 minutes would take 5 awake minutes). Nothing is written to
 the TV's own files: reset every app, or reboot without the boot scripts, and the TV is as LG ships it.
 
 Older versions had three switches in **Debloat** (`options.closePreloaded`); an app on that list counts as switched off.

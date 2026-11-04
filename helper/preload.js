@@ -5,7 +5,7 @@
 // you change it; options.preloadPolicy in config.json keeps the choices as {id: {enabled, mode, type}}.
 // Facts from a real TV (webOS 25), see docs/debloat.md:
 //  - setPreloadPolicy {application:{id, ...}, permanent} changes the policy at run time only, nothing is kept over a reboot, so the
-//    service sets it again after every boot and every 5 minutes (LG may reset it);
+//    service sets it again after every boot, every wake from standby and every 5 minutes (LG may reset it);
 //  - an omitted isEnabled becomes false, so isEnabled is always sent; mode and type the daemon never checks ("bogus" was stored), so
 //    they are checked here; isAllowed cannot be changed through the API, only read;
 //  - an app with an extPolicy (Home) is managed by LG and is left alone.
@@ -24,6 +24,9 @@ const MODES = ['partial', 'semi-full', 'full', 'criu'];
 const TYPES = ['periodic', 'oneshot'];
 const DELAY = 90000; // after boot, once the apps have finished starting: set the policy and close what already runs
 const EVERY = 300000; // the daemon looks every 5 minutes
+const TICK = 10000; // the wake check
+const WAKE = 45000; // a gap this long between two ticks: the TV was suspended
+const WAKE_AGAIN = 30000; // LG may set its policy a while after the wake
 const SAFE = /^com\.(cleanyourtv\.|webos\.app\.(home|hdmi|livetv|tvhotkey))/; // never Home, inputs, Live TV or our own apps are closed
 
 const isId = id => typeof id === 'string' && /^[A-Za-z0-9._-]{1,80}$/.test(id);
@@ -198,13 +201,27 @@ function create(ctx) {
     web.json(res, await status(result));
   }
 
+  const run = closeNow => () => apply(closeNow).catch(e => console.error('preload: ' + e.message));
+  // A TV in standby is suspended and Node's timers do not count that time, so the 5 minute check above comes 5 awake minutes after a
+  // wake, while LG sets its own policy again at the wake. A jump of the wall clock is a wake: set the choices at once, and once more
+  // when LG has finished.
+  let last = 0;
+  function tick(now) {
+    const woke = last && now - last > WAKE;
+    last = now;
+    if (!woke) return false;
+    console.log('preload: the TV woke up, setting the policy');
+    run(false)();
+    const t = setTimeout(run(false), WAKE_AGAIN);
+    if (t.unref) t.unref();
+    return true;
+  }
   const start = () => {
-    const run = closeNow => () => apply(closeNow).catch(e => console.error('preload: ' + e.message));
     for (const t of [setTimeout(run(false), 20000), setTimeout(run(true), DELAY)]) if (t.unref) t.unref();
-    const i = setInterval(run(false), EVERY);
-    if (i.unref) i.unref();
+    for (const i of [setInterval(run(false), EVERY), setInterval(() => tick(Date.now()), TICK)]) if (i.unref) i.unref();
+    tick(Date.now());
   };
-  return { name: 'preload', paths: ['/api/preload'], handle, start, apply, status };
+  return { name: 'preload', paths: ['/api/preload'], handle, start, apply, status, tick };
 }
 
 module.exports = { create, clean, MODES, TYPES };
