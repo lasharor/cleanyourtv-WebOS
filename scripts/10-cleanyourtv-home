@@ -19,11 +19,13 @@ TAKEOVER=$L/home-takeover   # "<method> <LG's Home program>", worked out at an e
 # Fast start on the native Home (issue 125): until the stand-in is mounted, the Home key opens LG's Home, and the steps before the
 # mount start Node.js five times (tvprofile.js, jtool.js, stage-home.sh), which takes seconds while the TV is still booting. When
 # an earlier boot worked out the way and nothing it depends on changed since (LG's Home as it came, tvprofile.js, home-method) and
-# the launcher is staged, the stand-in is mounted first, before the service starts; the rest follows as before.
+# the launcher is staged as it is (no launcher file newer than home-overlay.staged: after an update the slow way stages it first), the
+# stand-in is mounted first, before the service starts; the rest follows as before.
 FAST=""
-if [ ! -e $L/DISABLE ] && [ -f $TAKEOVER ] && [ -f $L/wam-launch.json ] && [ -f $L/home-overlay/index.html ] && ! replaced \
+if [ ! -e $L/DISABLE ] && [ -f $TAKEOVER ] && [ -f $L/wam-launch.json ] && [ -f $L/home-overlay/index.html ] && [ -f $L/home-overlay.staged ] && ! replaced \
   && [ $TAKEOVER -nt $L/backup/home-appinfo.orig.json ] && [ $TAKEOVER -nt $L/tvprofile.js ] \
-  && { [ ! -f $L/home-method ] || [ $TAKEOVER -nt $L/home-method ]; }; then
+  && { [ ! -f $L/home-method ] || [ $TAKEOVER -nt $L/home-method ]; } \
+  && [ -z "$(find $L/app -newer $L/home-overlay.staged 2>/dev/null | head -n 1)" ]; then
   read -r method EXE < $TAKEOVER
   if [ "$method" = standin ] && [ -n "$EXE" ] && [ -f "$EXE" ]; then
     chmod 755 $L/home-standin.sh

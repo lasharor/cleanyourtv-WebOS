@@ -16,6 +16,8 @@ for f in $S/*; do
   case "$n" in appinfo.json) continue ;; esac
   [ -e "$L/app/$n" ] || rm -f "$f"
 done
+# when the launcher was last staged (10-cleanyourtv-home: a launcher file newer than this was not staged yet)
+touch $L/home-overlay.staged
 node $L/jtool.js stage "$L/backup/home-appinfo.orig.json" "$S/appinfo.json"
 # what scripts/home-standin.sh sends to webapp-mgr where LG's Home is the native program (homeTakeover 'standin')
 node $L/jtool.js wamlaunch "$S/appinfo.json" "$S" "$L/wam-launch.json"

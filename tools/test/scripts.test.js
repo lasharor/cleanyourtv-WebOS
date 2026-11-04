@@ -245,8 +245,10 @@ run(async () => {
       bootSh.slice(0, fastMount).indexOf('node ') < 0 &&
       /\$TAKEOVER -nt \$L\/backup\/home-appinfo\.orig\.json/.test(bootSh) &&
       /\$TAKEOVER -nt \$L\/tvprofile\.js/.test(bootSh) &&
-      /echo "\$method \$EXE" > \$TAKEOVER/.test(bootSh),
-    'the boot script mounts the stand-in first when an earlier boot found the way, before the service and any Node.js step'
+      /echo "\$method \$EXE" > \$TAKEOVER/.test(bootSh) &&
+      /find \$L\/app -newer \$L\/home-overlay\.staged/.test(bootSh.slice(0, fastMount)),
+    'the boot script mounts the stand-in first when an earlier boot found the way, before the service and any Node.js step, ' +
+      'and not after an update of the launcher (then the slow way stages it first)'
   );
 
   // the watchdog (watchdog.sh): starts a service that has stopped again, keeps the logs of the runs that ended, starts less often a

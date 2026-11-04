@@ -70,7 +70,8 @@ card are small and stay single files.
       `/tmp/cleanyourtv-home-asked`; a preload does not count) or the app manager reports Home in the foreground without it (a stand-in
       that does not run), so a broken stand-in still brings LG's Home back. `home-method` holding `mount` forces the first way.
       The way and LG's Home program are kept in `home-takeover` (`standin /usr/bin/com.webos.app.home`). At the next boot, when that
-      file is newer than LG's Home as it came, `tvprofile.js` and `home-method` and the launcher is staged, the stand-in is mounted
+      file is newer than LG's Home as it came, `tvprofile.js` and `home-method` and the launcher is staged as it is (no file in `app/`
+      newer than `home-overlay.staged`, which `stage-home.sh` touches, so after an update of the launcher the slow way stages it first), the stand-in is mounted
       as the first step, before the service and the five Node.js starts of the steps above, so the Home key opens LG's Home for a
       shorter time after a boot (issue 125); the rest follows as before. `stage-home.sh` copies only the launcher files that
       changed, so a boot does not write the launcher (with the photos of the seasons, several MB) again while the TV is still busy. The boot log says `known from an earlier boot` then, and its
