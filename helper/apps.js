@@ -460,8 +460,8 @@ function create(ctx) {
             size: have[id].size,
             poll: have[id].poll || 0,
             actions: have[id].addon ? have[id].actions : [],
-            // the drawer and the settings of a card of an add-on: the launcher opens them itself (never the page name)
-            drawer: have[id].drawer ? { action: have[id].drawer.action, label: have[id].drawer.label } : null,
+            // the drawer and the settings of a card of an add-on: the launcher opens them itself (the page is a file in the card's folder, served like the card's own)
+            drawer: have[id].drawer ? { page: have[id].drawer.page, action: have[id].drawer.action, label: have[id].drawer.label } : null,
             settings: have[id].settings ? { action: have[id].settings.action, title: have[id].settings.title } : null,
             options: have[id].options.map(o => ({
               key: o.key,

@@ -204,4 +204,18 @@ run(async () => {
     /p\.open === 'cardspair'/.test(wmgr) && /openCardsPair\(\)/.test(wmgr),
     "the manager opens the cards' phone page (QR code) at once when asked"
   );
+  // the card sheet host: wired into the launcher, generic (no word of any one card)
+  const cshtml = rd('app/src/index.html'),
+    csjs = rd('app/src/js/cardsheet.js'),
+    cscss = rd('app/src/css/cardsheet.css');
+  ok(
+    /@include js\/cardsheet\.js/.test(cshtml) && /@include css\/cardsheet\.css/.test(cshtml) && /<div id="cs"><\/div>/.test(cshtml),
+    'the launcher includes the card sheet (script, style and its element)'
+  );
+  ok(
+    /CS\.on/.test(winput) && /csKey\(k, e\)/.test(winput) && /csClose\(\)/.test(winput),
+    'the keys go to the card sheet while it is open, and a relaunch closes it'
+  );
+  ok(!/weather|wx|forecast/i.test(csjs) && !/weather|wx|forecast/i.test(cscss), 'the card sheet names no card (it is generic)');
+  ok(/e\.source !== CS\.frame\.contentWindow/.test(csjs), 'the card sheet listens only to its own frame');
 });

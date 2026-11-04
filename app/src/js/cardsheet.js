@@ -45,3 +45,218 @@ var CS_PURE = (function () {
 })();
 if (typeof window !== 'undefined') window.CS_PURE = CS_PURE;
 /* @dom */
+/* ---------- the sheet itself ----------
+   A card of an add-on can bring a second page (card.json "drawer"). OK on the card's drawer button opens it from the right edge in a sandboxed
+   frame like the card's own. The page draws; the launcher owns the keys and the focus: the page tells where its targets are (percent of
+   its frame), the launcher moves the focus between them with the arrows, draws the ring over them and tells the page what happened
+   (select, act, focus). Messages: launcher -> page {cytvCard: ctx} and {cytvSheet: {select: i | act: name | focus: name}}; page -> launcher
+   {cytvCard: 'ready'}, {cytvSheet: 'targets', targets, focus}, 'option' (set), 'action' (name, arg), 'close'. */
+var CS = { on: false, el: null, frame: null, targets: [], cur: null, idleT: 0, slot: '', ctxK: '', tick: 0, ov: null };
+/* the live card element of the place the sheet was opened from (Home redraws its cards, which makes new elements) */
+function csCardEl() {
+  var els = $('cards').children;
+  for (var i = 0; i < els.length; i++) if (els[i]._slot === CS.slot && els[i]._pk) return els[i];
+  return null;
+}
+function csCtx() {
+  var el = csCardEl();
+  if (!el || !el._pk) return null;
+  var ctx = cardFrameCtx(el, el._pk, el._card || {});
+  ctx.data = el._data || null;
+  ctx.sheet = true;
+  return ctx;
+}
+function csPost(m) {
+  try {
+    CS.frame.contentWindow.postMessage(m, '*');
+  } catch (e) {}
+}
+function csSendCtx(force) {
+  var ctx = csCtx();
+  if (!ctx) return;
+  var k = JSON.stringify(ctx);
+  if (!force && k === CS.ctxK) return;
+  CS.ctxK = k;
+  csPost({ cytvCard: ctx });
+}
+function csOpen(cardEl) {
+  var pk = cardEl && cardEl._pk;
+  if (!pk || !pk.drawer || !pk.drawer.page || !cardEl._card) return;
+  if (CS.on) csClose();
+  CS.on = true;
+  CS.el = $('cs');
+  CS.slot = cardEl._slot;
+  CS.targets = [];
+  CS.cur = null;
+  CS.ctxK = '';
+  var box = CS.el;
+  box.className = 'on';
+  box.innerHTML = '<div class="sc" data-a="close"></div><div class="pn"><div class="tg"></div></div>';
+  var pn = box.lastChild,
+    f = document.createElement('iframe');
+  f.setAttribute('sandbox', 'allow-scripts');
+  f.setAttribute('tabindex', '-1');
+  f.setAttribute('scrolling', 'no');
+  f.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none';
+  f.onload = function () {
+    csSendCtx(true);
+  };
+  f.src = API + '/card/' + String(cardEl._card.type).replace(/^x-/, '') + '/' + pk.drawer.page;
+  pn.insertBefore(f, pn.firstChild);
+  CS.frame = f;
+  CS.ov = pn.lastChild;
+  /* the sheet slides in (transform only) once it is on screen */
+  setTimeout(function () {
+    if (CS.on) box.className = 'on in';
+  }, 30);
+  /* what the card's add-on last said reaches the page too, while it is open */
+  clearInterval(CS.tick);
+  CS.tick = setInterval(function () {
+    if (CS.on) csSendCtx(false);
+  }, 2000);
+  csIdle();
+}
+function csClose() {
+  if (!CS.on) return;
+  CS.on = false;
+  clearTimeout(CS.idleT);
+  clearInterval(CS.tick);
+  var box = $('cs');
+  box.className = '';
+  box.textContent = '';
+  CS.frame = null;
+  CS.ov = null;
+  CS.targets = [];
+  CS.cur = null;
+}
+/* OLED care, as for the cards: a sheet nobody uses closes after five minutes */
+function csIdle() {
+  clearTimeout(CS.idleT);
+  CS.idleT = setTimeout(csClose, 300000);
+}
+function csPct(v) {
+  v = Number(v);
+  return isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
+}
+/* the targets the page told: kept only as far as they are well formed; the focus stays where it was if that target is still there */
+function csTargets(list, focus) {
+  var ok = [],
+    keep = CS.cur ? CS.cur.name : '';
+  (Array.isArray(list) ? list : []).slice(0, 24).forEach(function (b) {
+    var n = b && typeof b === 'object' ? b : {};
+    if (typeof n.name !== 'string' || !n.name || n.name.length > 40) return;
+    var tab = Number(n.tab);
+    ok.push({
+      name: n.name,
+      x: csPct(n.x),
+      y: csPct(n.y),
+      w: csPct(n.w),
+      h: csPct(n.h),
+      r: Math.max(0, Math.min(60, Number(n.r) || 0)),
+      tab: isFinite(tab) && tab >= 0 && tab === Math.floor(tab) ? tab : -1,
+    });
+  });
+  CS.targets = ok;
+  var want = typeof focus === 'string' && focus ? focus : keep;
+  CS.cur = null;
+  ok.forEach(function (b) {
+    if (b.name === want) CS.cur = b;
+  });
+  if (!CS.cur && ok.length) CS.cur = ok[0];
+  csDraw();
+}
+function csDraw() {
+  if (!CS.ov) return;
+  CS.ov.textContent = '';
+  CS.targets.forEach(function (b) {
+    var d = document.createElement('div');
+    d.className = 'cs-t' + (b === CS.cur ? ' on' : '');
+    d.style.cssText =
+      'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%' + (b.r ? ';border-radius:' + b.r + 'px' : '');
+    d.addEventListener('click', function () {
+      csIdle();
+      csFocus(b, false);
+      csActivate(b);
+    });
+    d.addEventListener('mousemove', function () {
+      if (CS.cur !== b) {
+        csIdle();
+        csFocus(b, false);
+      }
+    });
+    CS.ov.appendChild(d);
+  });
+}
+function csFocus(b, select) {
+  if (!b) return;
+  var moved = CS.cur !== b;
+  CS.cur = b;
+  /* the ring moves without drawing everything again */
+  if (CS.ov) for (var i = 0; i < CS.ov.children.length; i++) CS.ov.children[i].className = 'cs-t' + (CS.targets[i] === b ? ' on' : '');
+  if (!moved) return;
+  if (select && b.tab >= 0) csPost({ cytvSheet: { select: b.tab } });
+  csPost({ cytvSheet: { focus: b.name } });
+}
+function csActivate(b) {
+  if (!b) return;
+  if (b.name === 'close') return csClose();
+  if (b.tab >= 0) csPost({ cytvSheet: { select: b.tab } });
+  csPost({ cytvSheet: { act: b.name } });
+}
+function csKey(k, e) {
+  csIdle();
+  /* the key was swapped for a right-to-left layout (input.js): the targets are where they are on screen, so back to the physical key */
+  var rl = typeof rtl === 'function' && rtl();
+  if (rl && (k === 37 || k === 39)) k = 76 - k;
+  e.preventDefault();
+  if (k === 461 || k === 27 || k === 8) return csClose();
+  if (k === 13) return csActivate(CS.cur);
+  var dir = k === 37 ? 'left' : k === 38 ? 'up' : k === 39 ? 'right' : k === 40 ? 'down' : '';
+  if (!dir || !CS.targets.length) return;
+  if (!CS.cur) return csFocus(CS.targets[0], false);
+  var n = CS_PURE.csTabStep(CS.targets, CS.cur, dir, rl);
+  if (n) return csFocus(n, true);
+  n = CS_PURE.csNext(CS.targets, CS.cur, dir);
+  if (n) csFocus(n, false);
+}
+/* a click on the dimmed Home closes the sheet */
+document.addEventListener('click', function (ev) {
+  if (!CS.on) return;
+  var el = ev.target.closest ? ev.target.closest('[data-a]') : null;
+  if (el && el.getAttribute('data-a') === 'close') csClose();
+});
+window.addEventListener('message', function (e) {
+  if (!CS.on || !CS.frame || e.source !== CS.frame.contentWindow) return;
+  var d = e.data || {};
+  csIdle();
+  if (d.cytvCard === 'ready') return csSendCtx(true);
+  var m = d.cytvSheet;
+  if (m === 'targets') csTargets(d.targets, d.focus);
+  else if (m === 'close') csClose();
+  else if (m === 'option' && d.set && typeof d.set === 'object') {
+    var el = csCardEl();
+    if (!el || !el._card) return;
+    api('/api/cards/options', { type: el._card.type, set: d.set }).then(
+      function (r) {
+        if (r && r.error) return toast(t(r.error), true);
+        cfg.cards = r.cards || cfg.cards;
+        var live = csCardEl();
+        if (live && cfg.cards && cfg.cards[live._slot]) live._card = cfg.cards[live._slot];
+        cardFeedAll();
+        if (CS.on) csSendCtx(true);
+      },
+      function () {
+        toast(t('The service did not answer.'), true);
+      }
+    );
+  } else if (m === 'action' && typeof d.name === 'string') {
+    var c = csCardEl(),
+      pk = c && c._pk,
+      named = false;
+    if (!pk || (pk.drawer && pk.drawer.action === d.name) || (pk.settings && pk.settings.action === d.name)) return;
+    (pk.actions || []).forEach(function (a) {
+      if (a.name === d.name) named = true;
+    });
+    if (named) cardAction(c, d.name, typeof d.arg === 'string' ? d.arg.slice(0, 100) : '');
+  }
+});

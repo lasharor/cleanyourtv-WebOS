@@ -75,20 +75,35 @@ run(async () => {
   bad({ settings: 'x' }, /settings is an object/, 'settings that is not an object is refused');
   bad({ settings: { action: 'nope' } }, /settings action must be one/, 'an undeclared settings action is refused');
   bad({ settings: { action: 'prev' }, options: [] }, /settings needs options/, 'settings without options is refused');
-  bad({ drawer: { page: 'drawer.html', action: 'prev' }, settings: { action: 'prev' } }, /different actions/, 'one action for both is refused');
+  bad(
+    { drawer: { page: 'drawer.html', action: 'prev' }, settings: { action: 'prev' } },
+    /different actions/,
+    'one action for both is refused'
+  );
   const dm = addons.check(
     Object.assign({}, man, {
-      cards: [Object.assign({}, card, { drawer: { page: 'drawer.html', action: 'prev', label: 'Weather' }, settings: { action: 'toggle' } })],
+      cards: [
+        Object.assign({}, card, { drawer: { page: 'drawer.html', action: 'prev', label: 'Weather' }, settings: { action: 'toggle' } }),
+      ],
     }),
     '1.6.15'
   );
   ok(
-    dm.manifest && dm.manifest.cards[0].drawer.page === 'drawer.html' && dm.manifest.cards[0].settings.action === 'toggle' && dm.manifest.cards[0].settings.title === 'Demo card',
+    dm.manifest &&
+      dm.manifest.cards[0].drawer.page === 'drawer.html' &&
+      dm.manifest.cards[0].settings.action === 'toggle' &&
+      dm.manifest.cards[0].settings.title === 'Demo card',
     'a card can declare a drawer and settings'
   );
-  const plain = addons.check(Object.assign({}, man, { cards: [Object.assign({}, card, { drawer: undefined, settings: undefined })] }), '1.6.15');
+  const plain = addons.check(
+    Object.assign({}, man, { cards: [Object.assign({}, card, { drawer: undefined, settings: undefined })] }),
+    '1.6.15'
+  );
   ok(plain.manifest.cards[0].drawer === null && plain.manifest.cards[0].settings === null, 'a card without them has null');
-  ok(cc.clean(Object.assign({}, card, { drawer: { page: 'd.html', action: 'prev' } })).card.drawer === null, 'a downloaded card ignores a drawer');
+  ok(
+    cc.clean(Object.assign({}, card, { drawer: { page: 'd.html', action: 'prev' } })).card.drawer === null,
+    'a downloaded card ignores a drawer'
+  );
   ok(addons.check(Object.assign({}, man, { cards: [card, card] }), '1.6.15').error, 'two cards with one id are refused');
   ok(addons.check(Object.assign({}, man, { cards: [1, 2, 3, 4, 5] }), '1.6.15').error, 'at most 4 cards');
   ok(addons.check(Object.assign({}, man, { cards: undefined }), '1.6.15').manifest.cards.length === 0, 'an add-on without cards has none');
@@ -149,15 +164,37 @@ exports.create = () => ({
     'the launcher is told it comes from an add-on, with its poll'
   );
   ok(
-    ty.drawer && ty.drawer.label === 'Demo drawer' && ty.settings && ty.settings.title === 'Demo settings' && !JSON.stringify(ty).includes('drawer.html'),
-    'the card type tells the drawer label and the settings title, not the page: ' + JSON.stringify(ty)
+    ty.drawer &&
+      ty.drawer.label === 'Demo drawer' &&
+      ty.settings &&
+      ty.settings.title === 'Demo settings' &&
+      !JSON.stringify(r.j).includes('drawer.html'),
+    'the card status (translated state) tells the drawer label and the settings title, not the page: ' + JSON.stringify(ty)
+  );
+  // the launcher needs the page name to open the drawer: /api/apps carries it (a file in the card's folder), the card status does not
+  const appsApi = req('apps').create({
+    config,
+    luna: async () => ({ returnValue: true, apps: [] }),
+    version: '1.6.15',
+    feature: n => (n === 'cards' ? cards : null),
+  });
+  const ar = await call(appsApi, '/api/apps');
+  ok(
+    ar.j.cardPacks &&
+      ar.j.cardPacks['demo-card'] &&
+      ar.j.cardPacks['demo-card'].drawer.page === 'drawer.html' &&
+      ar.j.cardPacks['demo-card'].drawer.action === 'open',
+    '/api/apps tells the launcher the drawer page of the card: ' + JSON.stringify(ar.j.cardPacks)
   );
   r = await call(cards, '/api/cards/set', 'POST', { slot: 'side', type: 'x-demo-card' });
   ok(r.j.ok === true, 'it can be chosen for a place');
 
   // ---- the city search of the settings panel: answered by the service of the card's add-on ----
   r = await call(cards, '/api/cards/places', 'POST', { type: 'x-demo-card', q: ' Pa ' });
-  ok(r.j.places.length === 1 && r.j.places[0].name === 'Paris' && r.j.places[0].lat === 48.85, 'the place search is answered by the add-on: ' + r.out);
+  ok(
+    r.j.places.length === 1 && r.j.places[0].name === 'Paris' && r.j.places[0].lat === 48.85,
+    'the place search is answered by the add-on: ' + r.out
+  );
   r = await call(cards, '/api/cards/places', 'POST', { type: 'x-nope', q: 'Pa' });
   ok(r.j.places.length === 0 && !r.j.error, 'an unknown type has no search');
   r = await call(cards, '/api/cards/places', 'POST', { type: 'x-demo-card', q: 'P' });
