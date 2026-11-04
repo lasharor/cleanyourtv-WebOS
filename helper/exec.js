@@ -9,8 +9,9 @@ const diag = require('./diag'),
 // Node 8 (webOS 5 and 6) sometimes aborts the child it has just forked, before the program runs: the child prints Node's
 // "uv_close: Assertion !uv__is_closing(handle)" to the service log and ends with SIGABRT. On an LG 65UP77006LB (webOS 6.5.3) it
 // happened to the first program started while the service was starting, at every start (issue 125: there it was mkswap, so zram did
-// not come on). Such a child is started once more: it ended within 2 seconds, by SIGABRT, without a byte of output, so the program
-// never ran.
+// not come on). Such a child is started again, up to three times, half a second apart: it ended within 2 seconds, by SIGABRT, without
+// a byte of output, so the program never ran. Once was not always enough: on that TV the second start aborted as well after a power
+// on from standby.
 function run(cmd, args, opts) {
   const o = Object.assign({ env: P.ENV, timeout: 60000, maxBuffer: 8 << 20 }, opts || {});
   const once = () =>
@@ -27,13 +28,17 @@ function run(cmd, args, opts) {
         })
       );
     });
-  return once().then(r => {
-    if (!r.abortedAtStart) return clean(r);
-    diag.note('exec', 'aborted at start (Node 8), again: ' + cmd);
-    console.log('exec: ' + cmd + ' ended by SIGABRT before it ran (Node 8); started once more');
-    return once().then(clean);
-  });
+  const attempt = n =>
+    once().then(r => {
+      if (!r.abortedAtStart || n >= RETRIES) return clean(r);
+      diag.note('exec', 'aborted at start (Node 8), again: ' + cmd);
+      console.log('exec: ' + cmd + ' ended by SIGABRT before it ran (Node 8); started again (' + (n + 1) + ' of ' + RETRIES + ')');
+      return new Promise(res => setTimeout(res, RETRY_MS)).then(() => attempt(n + 1));
+    });
+  return attempt(0);
 }
+const RETRIES = 3,
+  RETRY_MS = 500;
 const clean = r => {
   delete r.abortedAtStart;
   return r;

@@ -272,4 +272,41 @@ run(async () => {
     /--no-reboot/.test(uninstall) && /undo-home\.sh.*\|\|/.test(uninstall),
     'no-reboot uninstall also handles native takeover and stops on failed undo'
   );
+  // the app manager restarts when the TV goes to standby: the stand-in sees its registration end with "is not running", waits until
+  // the app manager answers again, has webapp-mgr close the launcher and ends, so the new app manager starts Home afresh (a launcher
+  // left open as com.webos.app.home was taken for Home, and nothing came to the front: a black screen with only the pointer)
+  {
+    const D = path.join(tmp, 'standin-sam');
+    fs.mkdirSync(D);
+    fs.mkdirSync(path.join(D, 'bin'));
+    fs.writeFileSync(
+      path.join(D, 'bin', 'luna-send'),
+      '#!/bin/sh\nD=' +
+        JSON.stringify(D) +
+        '\nfor a; do case "$a" in luna://*) m=$a ;; esac; done\necho "$m" >> $D/calls\n' +
+        'case "$m" in\n*registerApp) echo \'{"registered":true,"event":"registered"}\'; sleep 1;' +
+        ' echo \'{"serviceName":"com.webos.applicationManager","returnValue":false,"errorCode":-1,"errorText":"com.webos.applicationManager is not running."}\'; while :; do sleep 1; done ;;\n' +
+        '*/running) n=$(cat $D/asked 2>/dev/null || echo 0); echo $((n+1)) > $D/asked; [ $n -ge 1 ] && echo \'{"returnValue":true,"running":[]}\' ;;\n' +
+        '*) echo \'{"returnValue":true}\' ;;\nesac\n'
+    );
+    fs.chmodSync(path.join(D, 'bin', 'luna-send'), 0o755);
+    const t0 = Date.now();
+    const r = cp.spawnSync('sh', [path.join(root, 'scripts', 'home-standin.sh'), '{"reason":"preload"}'], {
+      env: Object.assign({}, process.env, { PATH: path.join(D, 'bin') + ':' + process.env.PATH, CYTV_BOOT_LOG: path.join(D, 'boot.log') }),
+      timeout: 20000,
+      encoding: 'utf8',
+    });
+    cp.spawnSync('pkill', ['-f', D]); // nothing of the stand-in luna-send is left
+    const log = fs.readFileSync(path.join(D, 'boot.log'), 'utf8'),
+      calls = fs.readFileSync(path.join(D, 'calls'), 'utf8');
+    ok(
+      (r.status === 0 || r.signal === 'SIGTERM') &&
+        Date.now() - t0 < 15000 &&
+        /registered with the app manager/.test(log) &&
+        /the app manager restarted \(the TV went to standby\); the launcher is closed/.test(log) &&
+        calls.indexOf('/running') >= 0 &&
+        calls.lastIndexOf('/running') < calls.indexOf('killApp'),
+      'after the app manager restarts, the stand-in waits for it, closes the launcher and ends (' + (Date.now() - t0) + ' ms)'
+    );
+  }
 });

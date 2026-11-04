@@ -369,6 +369,84 @@ run(async () => {
   await waitFor(() => wb.gone, 10000);
   if (!wb.gone) wb.kill();
 
+  // 3. nothing on screen (the stand-in way): LG's app manager restarts when the TV goes to standby, and a launcher that stayed open was
+  // then no longer known as Home: a black screen with only the pointer. With the TV on and no app in front for two checks, the watchdog
+  // closes the stand-in and the launcher and has the app manager open Home; when that does not help twice, LG's Home comes back.
+  // A stand-in luna-send answers from files: fg (the app in front), and "fixes" (a launch of Home brings it to the front).
+  const blankCase = async (name, fixes) => {
+    const D = path.join(tmp, name);
+    fs.mkdirSync(D);
+    fs.writeFileSync(path.join(D, 'helper.js'), 'setInterval(function () {}, 1000);\n');
+    fs.writeFileSync(path.join(D, 'fg'), '');
+    if (fixes) fs.writeFileSync(path.join(D, 'fixes'), '');
+    const exe = path.join(D, 'com.webos.app.home');
+    fs.writeFileSync(exe, 'sleep 60\n');
+    fs.writeFileSync(path.join(D, 'standin'), exe + '\n');
+    fs.writeFileSync(path.join(D, 'mounts'), '/dev/x ' + exe + ' ext4 rw 0 0\n');
+    fs.writeFileSync(path.join(D, 'undo-home.sh'), 'echo "undo $1" >> "$(dirname "$0")/calls"\n');
+    const luna = path.join(D, 'luna-send');
+    fs.writeFileSync(
+      luna,
+      '#!/bin/sh\nD=$(dirname "$0")\nfor a; do u=$a; done\nfor a; do case "$a" in luna://*) m=$a ;; esac; done\necho "$m" >> $D/calls\n' +
+        'case "$m" in\n*getForegroundAppInfo) echo "{\\"returnValue\\":true,\\"appId\\":\\"$(cat $D/fg)\\"}" ;;\n' +
+        '*getPowerState) echo \'{"returnValue":true,"state":"Active"}\' ;;\n' +
+        '*/launch) [ -f $D/fixes ] && echo com.webos.app.home > $D/fg; echo \'{"returnValue":true}\' ;;\n' +
+        '*) echo \'{"returnValue":true}\' ;;\nesac\n'
+    );
+    fs.chmodSync(luna, 0o755);
+    const standin = cp.spawn('/bin/sh', [exe], { stdio: 'ignore' });
+    standin.gone = false;
+    standin.on('exit', () => (standin.gone = true));
+    const srv = require('http').createServer((q, r) => r.end('{"appId":""}'));
+    await new Promise(res => srv.listen(0, '127.0.0.1', res));
+    const w = cp.spawn('sh', [path.join(root, 'scripts', 'watchdog.sh')], {
+      env: Object.assign({}, process.env, {
+        CYTV_DIR: D,
+        CYTV_BOOT_LOG: path.join(D, 'boot.log'),
+        CYTV_SERVICE_LOG: path.join(D, 'helper.log'),
+        CYTV_SERVICE_URL: 'http://127.0.0.1:' + srv.address().port + '/api/foreground',
+        CYTV_WATCH_SECS: '1',
+        CYTV_STANDIN: path.join(D, 'standin'),
+        CYTV_MOUNTS: path.join(D, 'mounts'),
+        CYTV_LUNA: luna,
+      }),
+      stdio: 'ignore',
+    });
+    w.gone = false;
+    w.on('exit', () => (w.gone = true));
+    const log = () => text(path.join(D, 'boot.log')),
+      calls = () => text(path.join(D, 'calls'));
+    const done = await waitFor(() => (fixes ? /launch/.test(calls()) : /undo temp/.test(calls())), 25000);
+    await sleep(fixes ? 4000 : 2000); // nothing more happens after that
+    const res = { done, log: log(), calls: calls(), standinGone: standin.gone };
+    fs.unlinkSync(path.join(D, 'helper.js'));
+    await waitFor(() => w.gone, 10000);
+    if (!w.gone) w.kill();
+    if (!standin.gone) standin.kill();
+    srv.close();
+    return res;
+  };
+  let bc = await blankCase('wd-blank', true);
+  ok(
+    bc.done &&
+      bc.standinGone &&
+      (bc.log.match(/nothing on screen; Home is set up again \(try 1\)/g) || []).length === 1 &&
+      !/try 2/.test(bc.log) &&
+      bc.calls.indexOf('killApp') >= 0 &&
+      bc.calls.indexOf('killApp') < bc.calls.indexOf('/launch') &&
+      !/undo/.test(bc.calls),
+    'with the TV on and nothing on screen the watchdog closes the stand-in and the launcher and opens Home again, once'
+  );
+  bc = await blankCase('wd-blank-stays', false);
+  ok(
+    bc.done &&
+      /try 1/.test(bc.log) &&
+      /try 2/.test(bc.log) &&
+      /still nothing on screen; LG's Home until the next reboot/.test(bc.log) &&
+      (bc.calls.match(/undo temp/g) || []).length === 1,
+    "when the screen stays empty after two tries, LG's Home comes back until the next reboot (once)"
+  );
+
   // tools/release.sh: RELEASE-HOLD stops a release (and the move of main) even when the package changed since the last tag
   {
     const rd = path.join(tmp, 'releasetest'),

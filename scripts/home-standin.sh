@@ -9,7 +9,7 @@ export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
 L=/media/developer/cleanyourtv
 luna_send() { command luna-send "$@" </dev/null; }
 [ ! -r "$L/luna-compat.sh" ] || . "$L/luna-compat.sh"
-LOG=/tmp/cleanyourtv-boot.log
+LOG=${CYTV_BOOT_LOG:-/tmp/cleanyourtv-boot.log} # the tests point it elsewhere
 up() { cut -d' ' -f1 /proc/uptime; }
 log() { echo "$(up) home-standin[$$]: $*" >> $LOG 2>/dev/null; }
 
@@ -60,6 +60,23 @@ show() {
   return 1
 }
 
+# LG's app manager restarts when the TV goes to standby (seen on webOS 6.5: the power state turns "Active Standby" and SAM starts
+# again within two seconds). The new one does not know this script as Home, while webapp-mgr still has the launcher open as
+# com.webos.app.home, so it took that for Home: on power on and on the Home key nothing came to the front (a black screen with only
+# the pointer). So once the app manager is back, the launcher is closed and this script ends; the new app manager starts it afresh
+# the next time Home is launched (at power on, or the Home key). watchdog.sh checks the screen as well.
+sam_restarted() {
+  log "the app manager restarted (the TV went to standby); the launcher is closed so that Home starts afresh"
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+    luna_send -n 1 -w 1000 luna://com.webos.applicationManager/running '{}' 2>/dev/null | grep -q '"returnValue": *true' && break
+    sleep 1
+  done
+  luna_send -n 1 -w 5000 luna://com.palm.webappmanager/killApp '{"appId":"com.webos.app.home"}' >/dev/null 2>&1
+  pkill -f "[l]una-send -i -a com.webos.app.home" 2>/dev/null
+  kill $$ 2>/dev/null
+  exit 0
+}
+
 log "started as uid $(id -u), arguments: $(echo "$*" | cut -c1-200)"
 show start "$1"
 
@@ -70,6 +87,7 @@ for m in registerApp registerNativeApp; do
       *'"event"'*relaunch*) show relaunch "$line" ;;
       *'"event"'*close*) log "closed by the app manager"; kill $$ 2>/dev/null; exit 0 ;;
       *'"event"'*registered*) log "registered with the app manager ($m)" ;;
+      *'com.webos.applicationManager is not running'*) sam_restarted ;;
       *'"returnValue"'*false*) log "$m refused: $(echo "$line" | cut -c1-200)" ;;
     esac
   done

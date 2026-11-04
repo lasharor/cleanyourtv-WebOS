@@ -20,7 +20,7 @@
 | `paths.js` | Every place on the TV the service reads or writes; the tests move them with environment variables. |
 | `config.js` | The settings in `config.json`. `config.update(source, fn)` reads, changes and writes in one step, so two parts never overwrite each other's settings; every change of an option, a learned key or the Input-key mode is logged with its source (`config: options.inputKey true -> false (manager)`), which shows up in Share log. |
 | `tvprofile.js` | Everything that differs between TVs: the Input key's default mode, the notification window type, whether the firmware is in `compat.json`, whether LG's Home is a supported kind, how Home is taken over (`homeTakeover`) and which services are restarted after the app manager (`afterSam`). The service saves it in `tv.json` (`GET /api/tv`); the setup script asks the same rules (`node tvprofile.js get notifyWindow --sdk 10.2.2`). |
-| `exec.js`, `luna.js`, `fetch.js` | The one way to start a program (time limits without Node's own `timeout` option, which can abort Node 8; a child that Node 8 aborts right after forking it, before the program runs, is started once more), to call `luna-send`, and to download (redirects, gzip, size and time limits, dropped connections). |
+| `exec.js`, `luna.js`, `fetch.js` | The one way to start a program (time limits without Node's own `timeout` option, which can abort Node 8; a child that Node 8 aborts right after forking it, before the program runs, is started again, up to three times), to call `luna-send`, and to download (redirects, gzip, size and time limits, dropped connections). |
 | `server.js`, `web.js` | The HTTP server with the origin rules, and small reply helpers. |
 | `apps.js`, `running.js` | The app list, icons, usage, launching and the launcher's own settings; the running apps to close (Back on Home). |
 | `inputkey.js`, `inputhook.js`, `picker.js` | The Input key: the hook in LG's input processes, the key binds, the Inputs picker. |
@@ -76,6 +76,11 @@ card are small and stay single files.
       shorter time after a boot (issue 125); the rest follows as before. `stage-home.sh` copies only the launcher files that
       changed, so a boot does not write the launcher (with the photos of the seasons, several MB) again while the TV is still busy. The boot log says `known from an earlier boot` then, and its
       first line `boot script started` shows when the Homebrew Channel ran the script.
+      LG's app manager restarts when the TV goes to standby (the remote's power key with Quick Start on). The new one does not know
+      the stand-in as Home, while `webapp-mgr` still has the launcher open as `com.webos.app.home`, so it takes that for Home and
+      nothing comes to the front at power on or on the Home key (a black screen with only the pointer). The stand-in sees its
+      registration end with `com.webos.applicationManager is not running`, waits until the app manager answers again, has
+      `webapp-mgr` close the launcher and ends, so the new app manager starts the stand-in afresh the next time Home is launched.
       `bootstrap.sh verify` does the same once: when the launcher does not come up after a stand-in setup (a TV with CRIU never runs
       the stand-in, issues 72 and 84; `criu` in `tvprofile.js` records it but does not decide), it writes `home-method` `mount`, runs the boot
       script again and checks again; the rollback removes the file only if the setup wrote it.
@@ -84,7 +89,9 @@ card are small and stay single files.
    `bootstrap.sh` runs), notes that in `/tmp/cleanyourtv-boot.log` and adds the log of the run that ended to
    `/tmp/cleanyourtv-helper.crash.log` (the last 400 lines; Share log includes it). A service that stops again at once is started less
    often (after 10, 20 ... up to 120 seconds). If the service stays unreachable for about a minute while our launcher is Home, it
-   restores LG's Home until the next reboot. An update stops the watchdog and the boot script starts the one from the new files; it
+   restores LG's Home until the next reboot. On the stand-in way it also checks the screen: when the TV is on (power state `Active`)
+   and no app is in front for two checks in a row, it ends the stand-in, has `webapp-mgr` close the launcher and the app manager
+   launch Home; when the screen is still empty after two such tries, it restores LG's Home until the next reboot. An update stops the watchdog and the boot script starts the one from the new files; it
    ends by itself when CleanYourTV is uninstalled (`helper.js` gone). It also keeps a **black box**: every 30 seconds one line in
    `blackbox.log` in the service folder (on the TV's storage, so it survives a reset) with the free memory and swap, the load, the
    app in front and the busiest processes, below 64 KB. At the start of a boot the box of the boot before becomes `blackbox.last.log`,
