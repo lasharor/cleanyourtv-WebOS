@@ -868,9 +868,11 @@ function customizeMenu() {
                 },
               }
             : null,
-        ].filter(function (it) {
-          return it;
-        });
+        ]
+          .filter(function (it) {
+            return it;
+          })
+          .concat(cards() ? csRows() : []);
       },
     },
     {

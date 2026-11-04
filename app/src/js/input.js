@@ -76,6 +76,15 @@ document.addEventListener('keydown', function (e) {
     }
     return;
   }
+  /* a city typed in a card's settings: OK searches, Back closes the field, the rest types */
+  if (e.target && e.target.id === 'csq') {
+    if (k === 13) csFind(CSQ_TYPE, e.target.value);
+    if (k === 13 || k === 461 || k === 27) {
+      csSearchEnd();
+      e.preventDefault();
+    }
+    return;
+  }
   /* the weather drawer has the keys while it is open */
   if (WXD.on) {
     wxdKey(k, e);
@@ -240,6 +249,7 @@ document.addEventListener('webOSRelaunch', function () {
   }
   wxdClose();
   wxSearchEnd(); /* a city half typed when Home is pressed again */
+  csSearchEnd();
   if (PAGER.on && !(p && p.live)) PAGER.home(); /* Home pressed: back to the first page */
   load();
   refreshSoon();

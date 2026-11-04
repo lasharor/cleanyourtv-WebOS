@@ -51,4 +51,55 @@ run(async () => {
   ok(P.csUnset({}, { options: [place, unit] }) === place, 'an empty place is the unset option');
   ok(P.csUnset({ place: 'Paris' }, { options: [place, unit] }) === null, 'a filled place leaves nothing unset');
   ok(P.csUnset({}, { options: [unit] }) === null, 'a choice with a default is never unset');
+
+  // the settings panel of any card (cardsettings.js): generic rows from the declared options
+  const rd = f => fs.readFileSync(path.join(root, f), 'utf8');
+  const cssrc = rd('app/src/js/cardsettings.js');
+  ok(!/weather|wx|forecast/i.test(cssrc), 'the settings panel names no card (it is generic)');
+  ok(/@include js\/cardsettings\.js/.test(rd('app/src/index.html')) && /id="csq"/.test(rd('app/src/index.html')), 'the launcher includes the settings panel and its city input');
+  ok(/csq/.test(rd('app/src/js/input.js')) && /csFind\(CSQ_TYPE/.test(rd('app/src/js/input.js')) && /csSearchEnd\(\)/.test(rd('app/src/js/input.js')), 'the city input of the panel is wired to the keys');
+  const calls = [];
+  let built = null;
+  const env = {
+    console,
+    t: x => x,
+    cfg: { cards: { a: { type: 'x-demo', place: 'Paris', unit: 'c' } } },
+    CARD_PACKS: {
+      demo: {
+        settings: { action: 'settings', title: 'Demo' },
+        options: [
+          { key: 'place', kind: 'place', label: 'City', default: '' },
+          { key: 'unit', kind: 'choice', label: 'Unit', default: 'c', choices: [['c', '°C'], ['f', '°F']] },
+          { key: 'note', kind: 'text', label: 'Note' },
+        ],
+      },
+    },
+    openBuilt: (title, b) => { built = { title, b }; },
+    api: (u, b) => { calls.push([u, b]); return { then: f => f({ ok: true, cards: {} }) }; },
+    launch: (a, b) => calls.push(['launch', a, b]),
+    toast: () => {},
+    drawCards: () => {},
+    refreshMenu: () => {},
+    backMenu: () => {},
+    $: () => null,
+  };
+  vm.runInNewContext(cssrc, env);
+  env.csSettings('x-demo');
+  ok(built && built.title === 'Demo', 'the panel opens with the declared title');
+  let rows = built.b();
+  const lab = l => rows.filter(r => r.label === l)[0];
+  ok(lab('City') && lab('City').sub === 'Paris', 'the place row shows the city');
+  ok(lab('Unit') && lab('Unit').sub === '°C', 'the choice row shows the current choice');
+  ok(!lab('Note'), 'a text option has no row');
+  ok(!!lab('More on your phone'), 'skipped options give the phone row');
+  lab('Unit').fn();
+  ok(calls.some(c => c[0] === '/api/cards/options' && c[1].type === 'x-demo' && c[1].set.unit === 'f' && Object.keys(c[1].set).length === 1), 'a choice cycles and saves');
+  lab('More on your phone').fn();
+  ok(calls.some(c => c[0] === 'launch' && c[2] && c[2].open === 'cardspair'), 'the phone row opens the manager');
+  env.cfg.cards = {};
+  env.csSettings('x-demo');
+  rows = built.b();
+  ok(rows[0].note === 'This card is not on Home yet. Choose it for a place in Cards.', 'no card on Home: a note first');
+  const cr = env.csRows();
+  ok(cr.length === 1 && cr[0].label === 'Demo' && cr[0].sub === 'Not set', 'Customise gets a row per pack with settings');
 });

@@ -166,7 +166,8 @@
 }
 
 /* the city typed for the weather (menus.js, wxSearch) above the menu; the TV's keyboard types into it */
-#wxq {
+#wxq,
+#csq {
   display: none;
   position: absolute;
   left: 560px;
