@@ -105,7 +105,7 @@ rotation, the dimming and the Picture size setting; a source only supplies photo
 
 An add-on with `"provides": ["cards"]` can bring cards for Home. A downloadable card (see [Making a card](cards.md)) is data that the launcher draws; a card
 of an add-on is a card with its own page, as a page card is, plus what a closed frame cannot do alone: it gets **data** from the add-on's service,
-and its **buttons** send the add-on **actions**. The frame stays closed: no network, no access to the launcher or the service, no keys.
+and its **buttons** send the add-on **actions**. The frame is a sandboxed iframe (`sandbox allow-scripts`) under a policy with `connect-src 'none'`, and it holds no keys. It does not talk to the service: the launcher is the only one that does, for it (the feed, the actions, the options).
 
 `addon.json` lists the cards (at most 4), each checked like a `card.json` with `page` (never `template`), and two more things:
 
@@ -170,11 +170,11 @@ A card of an add-on can declare two more things in its `card.json` (or its entry
 "settings": { "action": "settings", "title": "Weather" }
 ```
 
-- `drawer`: `page` is a second page of the card (in the card's folder, served like `card.html`), `action` the name of a button of the card, and `label` its text for the remote's focus. OK or a click on that button opens the **sheet**: the page in a closed frame (no network, no keys) at the right edge of Home, with the rest of Home dimmed.
+- `drawer`: `page` is a second page of the card (in the card's folder, served like `card.html`), `action` the name of a button of the card, and `label` its text for the remote's focus. OK or a click on that button opens the **sheet**: the page in a sandboxed frame (`connect-src 'none'`, no keys) at the right edge of Home, with the rest of Home dimmed.
 - `settings`: `action` is the name of a button that opens **Customise > Top & cards > `title`**, a panel the launcher builds from the card's `options`: a `place` option becomes a city row (typed with the TV's keyboard, searched, then picked from a list), a `choice` option a row that turns to the next value, and other kinds are set on the phone page (a **More on your phone** row). The panel sets the options for every place that holds the card. The row appears for any card that declares `settings`.
 - The `action` names of `drawer` and `settings` belong to the launcher: it answers them itself and they are never sent to the add-on's service. A sheet page cannot trigger them with an `action` message either.
 
-The **sheet protocol**. The page draws; the launcher owns the keys, the focus, Back and, for tabs, Left and Right.
+The **sheet protocol**. The page draws; the launcher owns the keys, the focus, Back and, for tabs, Left and Right. The launcher checks the page's `option` and `action` messages: an `action` runs only if its name is one of the card's declared `actions` (and not the `drawer` or `settings` action), and an `option` is sent to the service, which keeps only the options the card declares.
 
 | Direction | Message | Meaning |
 |---|---|---|
