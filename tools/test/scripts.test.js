@@ -373,11 +373,14 @@ run(async () => {
   // then no longer known as Home: a black screen with only the pointer. With the TV on and no app in front for two checks, the watchdog
   // closes the stand-in and the launcher and has the app manager open Home; when that does not help twice, LG's Home comes back.
   // A stand-in luna-send answers from files: fg (the app in front), and "fixes" (a launch of Home brings it to the front).
-  const blankCase = async (name, fixes) => {
+  const blankCase = async (name, fixes, o) => {
+    o = o || {};
     const D = path.join(tmp, name);
     fs.mkdirSync(D);
     fs.writeFileSync(path.join(D, 'helper.js'), 'setInterval(function () {}, 1000);\n');
-    fs.writeFileSync(path.join(D, 'fg'), '');
+    fs.writeFileSync(path.join(D, 'fg'), o.fg || '');
+    if (o.running)
+      fs.writeFileSync(path.join(D, 'running'), '{"returnValue":true,"running":[{"id":"com.webos.app.home","processid":"1"}]}');
     if (fixes) fs.writeFileSync(path.join(D, 'fixes'), '');
     const exe = path.join(D, 'com.webos.app.home');
     fs.writeFileSync(exe, 'sleep 60\n');
@@ -391,10 +394,12 @@ run(async () => {
         'case "$m" in\n*getForegroundAppInfo) echo "{\\"returnValue\\":true,\\"appId\\":\\"$(cat $D/fg)\\"}" ;;\n' +
         '*getPowerState) echo \'{"returnValue":true,"state":"Active"}\' ;;\n' +
         '*/launch) [ -f $D/fixes ] && echo com.webos.app.home > $D/fg; echo \'{"returnValue":true}\' ;;\n' +
+        '*/killApp) rm -f $D/running; echo \'{"returnValue":true}\' ;;\n' +
+        '*/running) cat $D/running 2>/dev/null || echo \'{"returnValue":true,"running":[]}\' ;;\n' +
         '*) echo \'{"returnValue":true}\' ;;\nesac\n'
     );
     fs.chmodSync(luna, 0o755);
-    const standin = cp.spawn('/bin/sh', [exe], { stdio: 'ignore' });
+    const standin = o.running ? { gone: true, kill: () => {}, on: () => {} } : cp.spawn('/bin/sh', [exe], { stdio: 'ignore' });
     standin.gone = false;
     standin.on('exit', () => (standin.gone = true));
     const srv = require('http').createServer((q, r) => r.end('{"appId":""}'));
@@ -416,8 +421,8 @@ run(async () => {
     w.on('exit', () => (w.gone = true));
     const log = () => text(path.join(D, 'boot.log')),
       calls = () => text(path.join(D, 'calls'));
-    const done = await waitFor(() => (fixes ? /launch/.test(calls()) : /undo temp/.test(calls())), 25000);
-    await sleep(fixes ? 4000 : 2000); // nothing more happens after that
+    const done = await waitFor(() => (o.until ? o.until(calls()) : fixes ? /launch/.test(calls()) : /undo temp/.test(calls())), 25000);
+    await sleep(fixes || o.running ? 4000 : 2000); // nothing more happens after that
     const res = { done, log: log(), calls: calls(), standinGone: standin.gone };
     fs.unlinkSync(path.join(D, 'helper.js'));
     await waitFor(() => w.gone, 10000);
@@ -445,6 +450,25 @@ run(async () => {
       /still nothing on screen; LG's Home until the next reboot/.test(bc.log) &&
       (bc.calls.match(/undo temp/g) || []).length === 1,
     "when the screen stays empty after two tries, LG's Home comes back until the next reboot (once)"
+  );
+  // Home listed as running by the app manager while no stand-in runs (a restart of the app manager can end it too): the Home key does
+  // nothing. With another app in front the launcher is only closed; with Home in front it is opened again.
+  bc = await blankCase('wd-orphan', false, { running: true, fg: 'youtube.leanback.v4', until: c => /killApp/.test(c) });
+  ok(
+    bc.done &&
+      /Home runs without its stand-in \(the app manager restarted\); the launcher is closed/.test(bc.log) &&
+      (bc.calls.match(/killApp/g) || []).length === 1 &&
+      !/\/launch/.test(bc.calls) &&
+      !/undo/.test(bc.calls),
+    'Home running without its stand-in and another app in front: the launcher is closed once, nothing is opened over the app'
+  );
+  bc = await blankCase('wd-orphan-front', true, { running: true, fg: 'com.webos.app.home' });
+  ok(
+    bc.done &&
+      /Home runs without its stand-in \(the app manager restarted\); Home is set up again/.test(bc.log) &&
+      bc.calls.indexOf('killApp') < bc.calls.indexOf('/launch') &&
+      !/undo/.test(bc.calls),
+    'Home running without its stand-in and in front: the launcher is closed and Home opened again'
   );
 
   // tools/release.sh: RELEASE-HOLD stops a release (and the move of main) even when the package changed since the last tag

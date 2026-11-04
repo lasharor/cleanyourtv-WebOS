@@ -91,7 +91,9 @@ card are small and stay single files.
    often (after 10, 20 ... up to 120 seconds). If the service stays unreachable for about a minute while our launcher is Home, it
    restores LG's Home until the next reboot. On the stand-in way it also checks the screen: when the TV is on (power state `Active`)
    and no app is in front for two checks in a row, it ends the stand-in, has `webapp-mgr` close the launcher and the app manager
-   launch Home; when the screen is still empty after two such tries, it restores LG's Home until the next reboot. An update stops the watchdog and the boot script starts the one from the new files; it
+   launch Home; when the screen is still empty after two such tries, it restores LG's Home until the next reboot. When the app
+   manager lists Home as running while no stand-in runs (a restart of the app manager can end the stand-in too, and then the Home
+   key does nothing), it closes the launcher after two checks, and opens Home again if Home was in front. An update stops the watchdog and the boot script starts the one from the new files; it
    ends by itself when CleanYourTV is uninstalled (`helper.js` gone). It also keeps a **black box**: every 30 seconds one line in
    `blackbox.log` in the service folder (on the TV's storage, so it survives a reset) with the free memory and swap, the load, the
    app in front and the busiest processes, below 64 KB. At the start of a boot the box of the boot before becomes `blackbox.last.log`,

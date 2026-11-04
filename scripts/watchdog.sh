@@ -18,7 +18,9 @@
 #     two checks in a row, Home is set up again: the stand-in and the launcher are closed and the app manager opens Home afresh. LG's
 #     app manager restarts when the TV goes to standby; a launcher that stayed open was then no longer known as Home, and the Home
 #     key gave a black screen with only the pointer. home-standin.sh handles that at once; this is the safety net. If the screen
-#     stays empty after two such tries, LG's Home comes back until the next reboot (undo-home.sh temp).
+#     stays empty after two such tries, LG's Home comes back until the next reboot (undo-home.sh temp). The other form of the same
+#     fault: the app manager lists Home as running while no stand-in runs (a restart of the app manager can end it too), so the Home
+#     key does nothing; seen for two checks in a row, the launcher is closed (and Home opened again when it was in front).
 # The whole script is one block that ends in exit: the shell has read all of it before it runs, so an update that copies a new
 # watchdog.sh over this file does not confuse the copy that is running (bootstrap.sh stops it, and the boot script starts the new one).
 # The paths can be pointed elsewhere for the tests (tools/test/scripts.test.js); on the TV none of these variables is set.
@@ -48,12 +50,22 @@
     [ -z "$(echo "$a" | sed -n 's/.*"appId" *: *"\([^"]*\)".*/\1/p')" ] || { tries=0; return 1; }
     luna luna://com.webos.service.tvpower/power/getPowerState '{}' | grep -q '"state": *"Active"'
   }
-  # Home set up again: the stand-ins and their registrations end, webapp-mgr closes the launcher, the app manager opens Home
+  # the app manager lists Home as running, but no stand-in runs: the launcher webapp-mgr has open is taken for Home, and the Home key
+  # does nothing. $fg is the app in front then.
+  orphan() {
+    [ -f $STANDIN ] && grep -q " $(cat $STANDIN) " $MOUNTS || return 1
+    pgrep -f "^/bin/sh $(cat $STANDIN)" >/dev/null && return 1
+    luna luna://com.webos.applicationManager/running '{}' | grep -q '"id": *"com.webos.app.home"' || return 1
+    fg=$(luna luna://com.webos.applicationManager/getForegroundAppInfo '{}' | sed -n 's/.*"appId" *: *"\([^"]*\)".*/\1/p')
+  }
+  # Home set up again: the stand-ins and their registrations end, webapp-mgr closes the launcher, and (unless $1 is "closed") the
+  # app manager opens Home
   rehome() {
     EXE=$(cat $STANDIN)
     for p in $(pgrep -f "^/bin/sh $EXE"); do kill "$p" 2>/dev/null; done
     pkill -f "[l]una-send -i -a com.webos.app.home" 2>/dev/null
     luna luna://com.palm.webappmanager/killApp '{"appId":"com.webos.app.home"}' >/dev/null
+    [ "$1" = closed ] && return 0
     sleep 2
     luna luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' >/dev/null
   }
@@ -91,6 +103,7 @@
   hold=0      # checks to wait before the next start
   empty=0     # checks in a row with nothing on screen
   tries=0     # times Home was set up again while the screen stayed empty
+  lost=0      # checks in a row with Home running without its stand-in
   while [ -f "$L/helper.js" ]; do
     sleep "$EVERY"
     tick=$((tick + 1))
@@ -110,6 +123,21 @@
       fi
     else
       empty=0
+    fi
+    if [ $fallback = 0 ] && orphan; then
+      lost=$((lost + 1))
+      if [ $lost -ge 2 ]; then
+        lost=0
+        if [ -z "$fg" ] || [ "$fg" = com.webos.app.home ]; then
+          echo "$(up) watchdog: Home runs without its stand-in (the app manager restarted); Home is set up again" >>"$LOG"
+          rehome
+        else
+          echo "$(up) watchdog: Home runs without its stand-in (the app manager restarted); the launcher is closed, the Home key opens it afresh" >>"$LOG"
+          rehome closed
+        fi
+      fi
+    else
+      lost=0
     fi
     if ans=$(curl -s -m 3 "$URL"); then
       [ $((tick % BB_EVERY)) = 0 ] && box "$ans"
