@@ -215,6 +215,8 @@ function create(ctx) {
         name: T(ty.name),
         about: ty.about ? T(ty.about) : ty.pack ? ty.pack.about || ty.pack.description : '',
         preview: ty.pack ? ty.pack.id : ty.type,
+        drawer: ty.pack && ty.pack.drawer ? { label: T(ty.pack.drawer.label) } : null,
+        settings: ty.pack && ty.pack.settings ? { title: T(ty.pack.settings.title) } : null,
         fields: ty.fields.map(f => Object.assign({}, f, { label: T(f.label), choices: f.choices && f.choices.map(c => [c[0], T(c[1])]) })),
       })),
     };
@@ -232,7 +234,7 @@ function create(ctx) {
     });
     return { ok: true };
   }
-  // an option value from the launcher's own settings (Customise > Weather), checked against what the card declares: {value} or {error}
+  // an option value from the launcher's settings panel of a card, checked against what the card declares: {value} or {error}
   function checkOption(f, v) {
     if (f.kind === 'choice') return f.choices.some(c => c[0] === v) ? { value: v } : { error: 'not a choice of this card' };
     if (typeof v !== 'string') return { error: 'not a text' };
@@ -243,7 +245,7 @@ function create(ctx) {
       .slice(0, f.kind === 'place' ? 40 : 200);
     return { value: t };
   }
-  // the launcher's Customise > Weather: {type, set} -> every place that holds a card of this downloaded or add-on type gets those options
+  // the launcher's settings panel of a card: {type, set} -> every place that holds a card of this downloaded or add-on type gets those options
   // (the city with its coordinates, the unit, the size). Only options the card declares count, and a city has both coordinates or none.
   function setOptions(type, set) {
     const ty = packTypes().filter(x => x.type === type)[0];
@@ -406,6 +408,9 @@ function create(ctx) {
     const a = addonCard(String(slot || ''));
     if (a.error) return a;
     if (!a.e.card.actions.some(x => x.name === name) || typeof a.e.mod.cards.action !== 'function') return { error: 'no such action' };
+    // the actions of the drawer and of the settings belong to the launcher (it opens the sheet or the panel), never to the add-on
+    if ((a.e.card.drawer && a.e.card.drawer.action === name) || (a.e.card.settings && a.e.card.settings.action === name))
+      return { error: 'no such action' };
     const v = typeof arg === 'string' ? arg.slice(0, 100) : typeof arg === 'number' && isFinite(arg) ? arg : '';
     return inAddon(() => a.e.mod.cards.action(a.e.card.id, a.opt, name, v));
   }
@@ -431,15 +436,27 @@ function create(ctx) {
     if (u === '/api/cards/feed') return web.json(res, await addonFeed(b.slot));
     if (u === '/api/cards/action') return web.json(res, await addonAction(b.slot, String(b.name || ''), b.arg));
     if (u === '/api/cards/set') return web.json(res, setType(String(b.slot || ''), String(b.type || '')));
-    // the launcher's Customise > Weather: {type, set: {place, lat, lon, unit, size}} -> those options on every place with that card
+    // the launcher's settings panel of a card: {type, set: {place, lat, lon, unit, size}} -> those options on every place with that card
     if (u === '/api/cards/options') return web.json(res, setOptions(String(b.type || ''), b.set));
-    // the launcher's own city search (typed with the TV's keyboard): {q} -> {places: [{name, area, lat, lon}]}, as on the phone page
+    // a city search for a card (the settings panel): {type, q} -> {places: [{name, area, lat, lon}]}, answered by the service of the card's
+    // add-on through its optional hook cards.places(q, lang) -> {places: [...]}
     if (u === '/api/cards/places') {
-      try {
-        return web.json(res, { places: await weather.search(b.q, i18n.lang(req, config.get().lang)) });
-      } catch (e) {
-        return web.json(res, { error: 'City search is not available now.', places: [] });
-      }
+      const e = ctx
+          .feature('addons')
+          .cardsOf()
+          .filter(x => 'x-' + x.card.id === String(b.type || ''))[0],
+        q = String(b.q || '')
+          .trim()
+          .slice(0, 60);
+      if (!e || !e.mod || !e.mod.cards || typeof e.mod.cards.places !== 'function' || q.length < 2) return web.json(res, { places: [] });
+      const lang = i18n.lang(req, config.get().lang),
+        r = await inAddon(() => e.mod.cards.places(q, lang));
+      return web.json(
+        res,
+        r.error
+          ? { error: 'City search is not available now.', places: [] }
+          : { places: Array.isArray(r.places) ? r.places.slice(0, 10) : [] }
+      );
     }
     // the weather card: {lat, lon, unit} -> the weather there (Open-Meteo, at most every 30 minutes)
     if (u === '/api/cards/weather') return web.json(res, await weather.get(b.lat, b.lon, b.unit));
