@@ -90,6 +90,8 @@ function csSet(type, set) {
       if (r && r.error) return toast(t(r.error), true);
       cfg.cards = (r && r.cards) || cfg.cards;
       drawCards();
+      /* the cards are made again without their data: asked for a fresh feed now, so a label such as Choose a city follows at once */
+      if (typeof cardFeedAll === 'function') cardFeedAll();
       refreshMenu();
     },
     function () {

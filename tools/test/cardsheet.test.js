@@ -72,7 +72,8 @@ run(async () => {
   ok(/@include js\/cardsettings\.js/.test(rd('app/src/index.html')) && /id="csq"/.test(rd('app/src/index.html')), 'the launcher includes the settings panel and its city input');
   ok(/csq/.test(rd('app/src/js/input.js')) && /csFind\(CSQ_TYPE/.test(rd('app/src/js/input.js')) && /csSearchEnd\(\)/.test(rd('app/src/js/input.js')), 'the city input of the panel is wired to the keys');
   const calls = [];
-  let built = null;
+  let built = null,
+    feeds = 0;
   const env = {
     console,
     t: x => x,
@@ -92,6 +93,7 @@ run(async () => {
     launch: (a, b) => calls.push(['launch', a, b]),
     toast: () => {},
     drawCards: () => {},
+    cardFeedAll: () => { feeds++; },
     refreshMenu: () => {},
     backMenu: () => {},
     $: () => null,
@@ -108,6 +110,7 @@ run(async () => {
   lab('Unit').fn();
   ok(calls.some(c => c[0] === '/api/cards/options' && c[1].type === 'x-demo' && c[1].set.unit === 'f' && Object.keys(c[1].set).length === 1), 'a choice cycles and saves');
   lab('More on your phone').fn();
+  ok(feeds === 1, 'a saved option asks the cards for a fresh feed');
   ok(calls.some(c => c[0] === 'launch' && c[2] && c[2].open === 'cardspair'), 'the phone row opens the manager');
   env.cfg.cards = {};
   env.csSettings('x-demo');
