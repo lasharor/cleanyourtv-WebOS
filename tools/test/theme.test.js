@@ -483,6 +483,16 @@ run(async () => {
       bl.strip && bl.strip.y === 14 && bl.strip.size === 0.92 && bl.strip.style === 'pills',
       'Bloom sets the strip lower and a little smaller, to sit under its glass dock'
     );
+    const ls = ts.resolve(
+      ts.normalize(
+        JSON.parse(fs.readFileSync(path.join(tdir, 'lockscreen', 'theme.json'), 'utf8')),
+        'lockscreen',
+        null,
+        path.join(tdir, 'lockscreen')
+      )
+    );
+    const uc = (ls.slots || []).filter(sl => sl.id === 'under-clock')[0];
+    ok(uc && uc.t === '262px' && uc.keep === true, 'Lock Screen has a place for a card under the clock');
     const cl = ts.resolve(ts.normalize(JSON.parse(fs.readFileSync(path.join(tdir, 'classic', 'theme.json'), 'utf8')), 'classic', null));
     ok(cl.strip === undefined, 'Classic writes down the default look, so it adds nothing to its reply');
   }

@@ -171,7 +171,13 @@ const TYPES = [
   },
 ];
 // the usual slot ids, named as in the launcher
-const SLOT_NAMES = { greeting: 'Above the clock', 'clock-side': 'Beside the clock', side: 'Right column', row: 'Above the dock' };
+const SLOT_NAMES = {
+  greeting: 'Above the clock',
+  'under-clock': 'Under the clock',
+  'clock-side': 'Beside the clock',
+  side: 'Right column',
+  row: 'Above the dock',
+};
 const PAIR_PORT = 8792, // after the Wallpapers page (8791)
   PAIR_MS = 10 * 60 * 1000;
 

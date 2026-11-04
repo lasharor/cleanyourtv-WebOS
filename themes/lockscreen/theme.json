@@ -93,6 +93,16 @@
    "grid": "keep"
   },
   {
+   "id": "under-clock",
+   "anchor": "top",
+   "align": "left",
+   "x": 102,
+   "y": 262,
+   "w": 900,
+   "h": 60,
+   "grid": "keep"
+  },
+  {
    "id": "clock-side",
    "anchor": "top",
    "align": "left",
