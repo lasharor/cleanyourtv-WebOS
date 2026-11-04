@@ -147,21 +147,24 @@
     {
       "id": "weather",
       "name": "Weather forecast",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "description": "A weather card with the next hours and days, for any place on Home.",
-      "about": "A card for Home that shows the weather at a city you choose on the TV (Customise > Weather) or on the phone page (Cards > Set up from your phone): now, with the temperature, feels like, humidity, wind, rain chance, UV, air pressure, air quality and sunrise and sunset; the next hours; and the next days. The card is one button for the remote: OK opens a drawer with Now, Hours and Days. The weather comes from Open-Meteo (free, no key, no account): only the coordinates of the city you chose leave the TV, at most every 30 minutes. The idea and the first version are from @Edenik (pull request 129).",
+      "about": "A card for Home that shows the weather at a city you choose on the TV (Customise > Weather) or on the phone page (Cards > Set up from your phone): now, with the temperature, feels like, humidity, wind, rain chance, UV, air pressure, air quality and sunrise and sunset; the next hours; and the next days. The card is one button for the remote: OK opens a drawer of the add-on with Now, Hours and Days. The weather comes from Open-Meteo (free, no key, no account): only the coordinates of the city you chose leave the TV, at most every 30 minutes. The idea and the first version are from @Edenik (pull request 129).",
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
         "net.fetch"
       ],
       "files": {
-        "addon.json": "a5363c7658559bf074938bfee66ab5df0186c2f110e9b18f0903b1f2786b4aea",
+        "addon.json": "f1423c5588a116d0014f7ce48e1da86b45a7a224821aecf7c756f01cb16c4220",
         "cards/forecast/card.css": "d10d6c560e1c7232c283dfe361e4e18699b38008394c2e29ed8ab0f57d474845",
         "cards/forecast/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
         "cards/forecast/card.js": "92322445f11e4945e1921a447116c4b7644d2f5d593d4863ec6ca42dc738a043",
+        "cards/forecast/drawer.css": "65ac8d3a65c2c5fa473581d5e8e0fab9515cb8f719d0ea808be21ab7fc85b60d",
+        "cards/forecast/drawer.html": "23d4a3120edfe92312fc55c95e1c5ec661f4eac1f3004026b4d532a5a3ea3eae",
+        "cards/forecast/drawer.js": "e81e72db80ffdada6d98a414eb735268a37c86d4afb1c3ef93fcc5c388030a11",
         "cards/forecast/preview.jpg": "8f718df9627e1a18ed7754cef71ad4cf5b81c101693dda6e39dcf461c415cbd1",
-        "service.js": "f3de0e9f15af9b0f063c2a255279bb1ba147e786516b7b0d5d8c876dca8c41c5",
+        "service.js": "820aab46c4fd352d72df9f51e522b6d63e9d88c628599fd96a0ffb883bf68952",
         "weather.js": "a0f80532ff74f5b272414c966297456b78bacb2a219639d31c11191d750c5821"
       }
     }

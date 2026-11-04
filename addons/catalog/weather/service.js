@@ -1,8 +1,9 @@
 // The weather add-on: the service part of the forecast card (cards/forecast/). The card asks for its data every minute
 // (cards.feed); the weather comes from Open-Meteo through weather.js, which asks for a place at most every 30 minutes and keeps the last answer.
-// The answer has what the card shows (now, the next days, translated words) and wx, the weather as the launcher's drawer draws it (OK on
-// the card opens it: Now, Hours and Days in a panel of the launcher). The words of the card are translated here, in the language of the
-// screens, so the page in its closed frame needs no translation.
+// The answer has what the card shows (now, the next days, translated words) and wx, the weather as the drawer page of the add-on draws it
+// (cards/forecast/drawer.html: Now, Hours and Days in the sheet of the launcher). The words of both pages are translated here, in the
+// language of the screens (labels), so the pages in their closed frames need no translation. The city search of the launcher's settings
+// panel is cards.places.
 const path = require('path');
 const wx = require('./weather');
 
@@ -40,6 +41,48 @@ function create(ctx) {
     'Sunset',
     'Choose a city',
     'Select to set it on the TV',
+    // the drawer page
+    'Weather',
+    'Close',
+    'Hours',
+    'Days',
+    'Today',
+    'now',
+    'Low',
+    'Moderate',
+    'Very high',
+    'Extreme',
+    'Good',
+    'Fair',
+    'Poor',
+    'Very poor',
+    'Extremely poor',
+    'North',
+    'North-east',
+    'East',
+    'South-east',
+    'South',
+    'South-west',
+    'West',
+    'North-west',
+    'Rain likely from %s',
+    'No rain expected in the next 24 hours',
+    'Peak %s',
+    'Warmer than it is',
+    'Cooler than it is',
+    'As it is',
+    '%s of daylight',
+    'Weather data by Open-Meteo.com',
+    'Offline, data from %s',
+    'Feels like %s',
+    'Clear',
+    'Partly cloudy',
+    'Cloudy',
+    'Fog',
+    'Drizzle',
+    'Rain',
+    'Snow',
+    'Thunderstorm',
   ];
 
   async function feed(id, opt) {
@@ -76,11 +119,19 @@ function create(ctx) {
       wx: { now: r.now, unit: r.unit, at: r.at, detail: r.detail },
     };
   }
-  // the buttons of the card (open, settings) are the launcher's own: nothing reaches the add-on
+  // the buttons of the card (open: the drawer, settings: the launcher's panel) are the launcher's own: nothing reaches the add-on
   function action() {
     return { error: 'no such action' };
   }
-  return { cards: { feed, action }, handle: (q, r) => r.end('{}') };
+  // the city search of the settings panel: {places: [{name, area, lat, lon}]}
+  async function places(q, lang) {
+    try {
+      return { places: await w.search(q, lang) };
+    } catch (e) {
+      return { error: 'City search is not available now.' };
+    }
+  }
+  return { cards: { feed, action, places }, handle: (q, r) => r.end('{}') };
 }
 
 module.exports = { create };

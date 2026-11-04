@@ -1,0 +1,442 @@
+/* The weather drawer (drawer.js): the page is the whole panel of the sheet, 760x1080 px of the launcher's canvas (the launcher clips its
+   corners and draws the focus ring over the buttons). Only the page behind it is drawn here; nothing animates. Right-to-left rules at the end. */
+:root {
+  --ink2: rgba(255, 255, 255, 0.72);
+  --ink3: rgba(255, 255, 255, 0.48);
+  --rain: #7cc4ff;
+}
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  box-sizing: border-box;
+  padding: 0 44px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: linear-gradient(180deg, #1a2433, #121a27);
+  color: #fff;
+  font-family: sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+#app {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.tint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 380px;
+  background: linear-gradient(180deg, rgba(90, 150, 230, 0.2), rgba(90, 150, 230, 0));
+  pointer-events: none;
+}
+.ic {
+  width: 1em;
+  height: 1em;
+  display: block;
+  flex: none;
+}
+.ltr {
+  direction: ltr;
+}
+
+/* the header: the place, the unit (both shown) and Close */
+.hd {
+  height: 100px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.pl {
+  font-size: 30px;
+  font-weight: 500;
+}
+.pl small {
+  display: block;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--ink2);
+  margin-top: 2px;
+}
+.pl small.off {
+  color: #ffbf5e;
+}
+.bt {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+.pill {
+  height: 64px;
+  padding: 0 26px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  font-size: 26px;
+  font-weight: 500;
+  margin-left: 12px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.pill .ic {
+  font-size: 26px;
+  margin-right: 10px;
+}
+.pill.unit {
+  padding: 0;
+  overflow: hidden;
+}
+.pill.unit span {
+  padding: 0 22px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  color: var(--ink2);
+}
+.pill.unit span.on {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+/* the temperature: large on Now, small on the lists */
+.hero {
+  height: 250px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.hero.sm {
+  height: 128px;
+}
+.hero .ic {
+  font-size: 132px;
+  margin-right: 22px;
+}
+.hero.sm .ic {
+  font-size: 64px;
+  margin-right: 16px;
+}
+.hero .tmp {
+  font-size: 156px;
+  font-weight: 200;
+  line-height: 1;
+}
+.hero.sm .tmp {
+  font-size: 84px;
+}
+.hero .hx {
+  margin-left: 28px;
+}
+.hero.sm .hx {
+  margin-left: 20px;
+}
+.hero .hx b {
+  display: block;
+  font-size: 34px;
+  font-weight: 500;
+}
+.hero.sm .hx b {
+  font-size: 30px;
+}
+.hero .hx span {
+  display: block;
+  font-size: 24px;
+  color: var(--ink2);
+  margin-top: 4px;
+}
+
+/* the three pages */
+.seg2 {
+  height: 68px;
+  flex: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  padding: 5px;
+  box-sizing: border-box;
+  position: relative;
+}
+.tabb {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--ink2);
+  cursor: pointer;
+}
+.tabb.on {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+.bd {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  padding-top: 22px;
+}
+.bd.list {
+  padding-top: 12px;
+}
+
+/* Now */
+.verdict {
+  display: flex;
+  align-items: center;
+  height: 68px;
+  border-radius: 20px;
+  background: rgba(124, 196, 255, 0.12);
+  padding: 0 22px;
+  font-size: 28px;
+  font-weight: 500;
+}
+.verdict .ic {
+  font-size: 34px;
+  margin-right: 14px;
+}
+.wtiles {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 16px -8px 0;
+}
+.wtile {
+  box-sizing: border-box;
+  width: 50%;
+  height: 150px;
+  padding: 0 8px 16px;
+  position: relative;
+}
+.wtile .tc {
+  position: relative;
+  height: 134px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.wtile .l {
+  padding: 18px 22px 0;
+  font-size: 20px;
+  color: var(--ink2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.wtile .v {
+  padding: 0 22px;
+  font-size: 56px;
+  font-weight: 600;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+.wtile .v small {
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--ink2);
+  margin-left: 6px;
+}
+.wtile .c {
+  padding: 0 22px;
+  font-size: 22px;
+  color: var(--ink2);
+}
+.bar6 {
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  bottom: 32px;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #7cc4ff, #8be28b, #ffd36b, #ff7a5c);
+}
+.bar6 i {
+  position: absolute;
+  top: -5px;
+  width: 4px;
+  height: 16px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: #fff;
+}
+.wmore {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink2);
+  font-size: 22px;
+  padding: 0 6px;
+}
+.wmore b {
+  display: block;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 600;
+}
+.wsunl {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 24px;
+  color: var(--ink2);
+  padding: 0 6px;
+}
+.wsunl b {
+  color: #ffd36b;
+  font-weight: 600;
+  font-size: 28px;
+}
+.src {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  font-size: 18px;
+  color: var(--ink3);
+}
+
+/* Hours: one list, a range bar with a dot and the chance of rain */
+.hrow {
+  height: 76px;
+  display: flex;
+  align-items: center;
+  border-radius: 18px;
+  padding: 0 20px;
+  font-size: 30px;
+  box-sizing: border-box;
+}
+.hrow .tm {
+  width: 112px;
+  color: var(--ink2);
+}
+.hrow .ic {
+  font-size: 42px;
+  margin-right: 22px;
+}
+.hrow .tp {
+  width: 92px;
+  font-weight: 600;
+  font-size: 34px;
+}
+.hrow .tr {
+  flex: 1;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  position: relative;
+  margin: 0 22px;
+}
+.hrow .tr i {
+  position: absolute;
+  top: -3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: #fff;
+}
+.hrow .tr u {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 6px;
+  background: rgba(124, 196, 255, 0.45);
+}
+.hrow .rp {
+  width: 86px;
+  text-align: right;
+  font-size: 24px;
+  color: var(--rain);
+}
+
+/* Days: a capsule from the low to the high on one scale */
+.drow {
+  height: 88px;
+  display: flex;
+  align-items: center;
+  border-radius: 18px;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+.drow.today {
+  background: rgba(255, 255, 255, 0.06);
+}
+.drow .dn {
+  width: 150px;
+  font-size: 32px;
+  font-weight: 600;
+}
+.drow .ic {
+  font-size: 46px;
+  margin-right: 16px;
+}
+.drow .rp {
+  width: 74px;
+  font-size: 22px;
+  color: var(--rain);
+}
+.drow .lo {
+  width: 62px;
+  font-size: 28px;
+  color: var(--ink2);
+  text-align: right;
+}
+.drow .cap {
+  flex: 1;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  position: relative;
+  margin: 0 16px;
+}
+.drow .cap i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #8ec5ff, #ff9a62);
+}
+.drow .hi {
+  width: 62px;
+  font-size: 30px;
+  font-weight: 600;
+}
+
+/* right-to-left: the icons move to the other side of their text (the bars keep their left-to-right scale) */
+[dir="rtl"] .bt {
+  margin-left: 0;
+  margin-right: auto;
+}
+[dir="rtl"] .pill {
+  margin-left: 0;
+  margin-right: 12px;
+}
+[dir="rtl"] .pill .ic,
+[dir="rtl"] .verdict .ic,
+[dir="rtl"] .hrow .ic,
+[dir="rtl"] .drow .ic,
+[dir="rtl"] .hero .ic {
+  margin-right: 0;
+  margin-left: 14px;
+}
+[dir="rtl"] .hero .hx,
+[dir="rtl"] .wtile .v small {
+  margin-left: 0;
+  margin-right: 20px;
+}
+[dir="rtl"] .hrow .rp,
+[dir="rtl"] .drow .lo {
+  text-align: left;
+}

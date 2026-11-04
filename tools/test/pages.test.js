@@ -15,6 +15,10 @@ run(async () => {
       if (fs.existsSync(file)) pages.push(file);
     });
   });
+  // the pages of the cards of add-ons (the weather drawer) are held to the same rules
+  ['drawer.html', 'drawer.js', 'drawer.css'].forEach(f =>
+    pages.push(path.join(root, 'addons', 'catalog', 'weather', 'cards', 'forecast', f))
+  );
   const rules = [
     [/\?\?|\?\.[A-Za-z_\[(]/, 'optional chaining or ??'],
     [/\|\|=|&&=/, 'logical assignment'],
@@ -193,7 +197,11 @@ run(async () => {
   );
   const wdr = rd('app/src/js/wxdrawer.js');
   ok(
-    /cardBtnRoute\(pk, name\)/.test(wcards) && /csOpen\(el\)/.test(wcards) && !/wxdOpen\(/.test(wcards) && /function wxdOpen/.test(wdr) && /WXD\.on/.test(winput),
+    /cardBtnRoute\(pk, name\)/.test(wcards) &&
+      /csOpen\(el\)/.test(wcards) &&
+      !/wxdOpen\(/.test(wcards) &&
+      /function wxdOpen/.test(wdr) &&
+      /WXD\.on/.test(winput),
     'OK or a click on the declared drawer action opens the sheet (the old weather drawer file is unchanged)'
   );
   ok(

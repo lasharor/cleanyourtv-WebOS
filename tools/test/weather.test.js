@@ -51,6 +51,12 @@ run(async () => {
     },
   };
   const om = await serve((q, res) => {
+    if (/^\/geo/.test(q.url)) {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(
+        JSON.stringify({ results: [{ name: 'Paris', admin1: 'Île-de-France', country: 'France', latitude: 48.85341, longitude: 2.3488 }] })
+      );
+    }
     lastUrl = q.url;
     asked++;
     if (fail) {
@@ -61,6 +67,7 @@ run(async () => {
     res.end(JSON.stringify(forecast));
   });
   process.env.CYTV_WEATHER_URL = om.url;
+  process.env.CYTV_GEO_URL = om.url + '/geo';
 
   const addonDir = path.join(root, 'addons', 'catalog', 'weather');
   const M = require(path.join(addonDir, 'service.js'));
@@ -129,10 +136,33 @@ run(async () => {
   // ---- the actions: the card has none of its own (the launcher opens the drawer and the settings) ----
   ok((await w.cards.action('forecast', opt, 'hours')).error === 'no such action', 'the service has no actions to run');
 
+  // ---- the city search of the launcher's settings panel ----
+  const pl = await w.cards.places('Par', 'en');
+  ok(
+    Array.isArray(pl.places) &&
+      pl.places.length === 1 &&
+      pl.places[0].name === 'Paris' &&
+      typeof pl.places[0].lat === 'number' &&
+      typeof pl.places[0].lon === 'number',
+    'cards.places answers a city search with numeric coordinates: ' + JSON.stringify(pl)
+  );
+  ok((await w.cards.places('P', 'en')).places.length === 0, 'a search of one letter finds nothing');
+
   // ---- the words ----
   lang = 'nl';
   d = await w.cards.feed('forecast', opt);
   ok(d.now.text === 'Bewolkt' && d.labels.Humidity === 'Vochtigheid', 'the words are in the language of the screens: ' + d.now.text);
+  const i18n = req('i18n'),
+    en = JSON.parse(fs.readFileSync(path.join(root, 'i18n', 'en.json'), 'utf8'));
+  const drawerJs = fs.readFileSync(path.join(addonDir, 'cards', 'forecast', 'drawer.js'), 'utf8');
+  const wordsAsked = {};
+  drawerJs.replace(/\bL\('([^']*)'\)/g, (_, k) => (wordsAsked[k] = 1));
+  const missing = Object.keys(wordsAsked).filter(k => !(k in d.labels) || !(k in en));
+  ok(
+    !missing.length,
+    'every word the drawer asks for is in the labels of the feed (and in i18n/en.json)' + (missing.length ? ': ' + missing.join(' | ') : '')
+  );
+  ok(d.labels.Close === i18n.tr('nl', 'Close'), 'the drawer words are translated like the card words');
   lang = '';
 
   // ---- when Open-Meteo is not there ----
@@ -147,22 +177,126 @@ run(async () => {
   // ---- the card as the service offers it ----
   const addons = req('addons');
   const man = JSON.parse(fs.readFileSync(path.join(addonDir, 'addon.json'), 'utf8'));
-  const chk = addons.check(man, '1.6.17');
+  const chk = addons.check(man, '1.6.18');
   ok(
     chk.manifest && chk.manifest.provides.join() === 'cards' && chk.manifest.permissions.join() === 'net.fetch',
     'the manifest is accepted and asks for the network only'
   );
-  ok(addons.check(man, '1.6.16').error, 'it needs the service that has cards for add-ons');
+  ok(
+    addons.check(man, '1.6.17').error && /1\.6\.18/.test(addons.check(man, '1.6.17').error),
+    'it needs service 1.6.18, the first that has /api/cards/options and /api/cards/places'
+  );
   const c = chk.manifest.cards[0];
   ok(
     c.id === 'forecast' && c.page === 'card.html' && c.poll === 60 && c.actions.map(a => a.name).join() === 'open,settings',
     'one card with a page, a poll, the button that opens the drawer and the one that opens the settings on the TV'
   );
+  ok(
+    c.drawer && c.drawer.page === 'drawer.html' && c.drawer.action === 'open' && c.settings && c.settings.action === 'settings',
+    'the card declares its drawer page (OK on the open button) and the settings action'
+  );
   const lk = (c.options || []).filter(o => o.key === 'look')[0];
   ok(lk && lk.default === 'minimal' && lk.choices.map(x => x[0]).join() === 'minimal,rich', 'Look is Minimal (the default) or Rich');
-  for (const f of ['card.html', 'card.js', 'card.css']) ok(fs.existsSync(path.join(addonDir, 'cards', 'forecast', f)), f + ' is there');
+  for (const f of ['card.html', 'card.js', 'card.css', 'drawer.html', 'drawer.js', 'drawer.css'])
+    ok(fs.existsSync(path.join(addonDir, 'cards', 'forecast', f)), f + ' is there');
   const page = fs.readFileSync(path.join(addonDir, 'cards', 'forecast', 'card.js'), 'utf8');
   ok(!/XMLHttpRequest|fetch\(|WebSocket|new Image|=>|\bconst\b|\blet\b/.test(page), 'the page is ES5 and makes no request');
+  const dr = fs.readFileSync(path.join(addonDir, 'cards', 'forecast', 'drawer.js'), 'utf8'),
+    drHtml = fs.readFileSync(path.join(addonDir, 'cards', 'forecast', 'drawer.html'), 'utf8'),
+    drCss = fs.readFileSync(path.join(addonDir, 'cards', 'forecast', 'drawer.css'), 'utf8');
+  ok(
+    /cytvSheet: 'targets'/.test(dr) &&
+      /cytvSheet: 'option'/.test(dr) &&
+      /cytvSheet: 'close'/.test(dr) &&
+      /s\.select/.test(dr) &&
+      /s\.act/.test(dr) &&
+      /s\.focus/.test(dr) &&
+      /cytvCard: 'ready'/.test(dr),
+    'the drawer speaks the protocol of the sheet: ready, targets, option, close; select, act, focus'
+  );
+  ok(
+    (dr.match(/\bparent\.[A-Za-z]+/g) || []).every(x => x === 'parent.postMessage') &&
+      !/XMLHttpRequest|fetch\(|WebSocket|new Image|=>|\bconst\b|\blet\b|window\.(top|parent)|\btop\./.test(dr + drHtml) &&
+      !/https?:\/\/|@import|url\(/.test(drCss + drHtml) &&
+      !/\bgap\s*:/.test(drCss),
+    'the drawer only posts messages to the launcher, is ES5 and loads nothing (no gap, no url())'
+  );
+  try {
+    require(path.join(root, 'tools', 'vendor', 'acorn.js')).parse(dr, { ecmaVersion: 5 });
+    ok(true, 'drawer.js parses as ES5');
+  } catch (e) {
+    ok(false, 'drawer.js parses as ES5: ' + e.message);
+  }
+  ok(
+    ['unit', 'close', 'tab0', 'tab1', 'tab2'].every(n => dr.indexOf("'" + n + "'") >= 0) && /MAX_TARGETS = 24/.test(dr),
+    'the targets are unit, close, tab0..tab2 and the rows in view, at most 24'
+  );
+  // drawer.js run with a minimal stand-in for the page: it says ready, and after the card's message and a tab change it tells where its buttons are
+  {
+    const posts = [],
+      listeners = {},
+      els = {};
+    const rect = () => ({ left: 10, top: 20, right: 110, bottom: 80, width: 100, height: 60 });
+    const el = id =>
+      els[id] ||
+      (els[id] = {
+        id,
+        scrollTop: 0,
+        style: {},
+        _h: '',
+        set innerHTML(v) {
+          this._h = v;
+        },
+        get innerHTML() {
+          return this._h;
+        },
+        getBoundingClientRect: rect,
+        getAttribute: () => '0',
+        querySelectorAll: () => [],
+        querySelector: () => null,
+      });
+    const sandbox = {
+      parent: { postMessage: m => posts.push(m) },
+      window: { innerWidth: 760, innerHeight: 1080, addEventListener: (n, f) => (listeners[n] = f) },
+      document: {
+        documentElement: {},
+        body: { style: {} },
+        getElementById: id => (/^(app|bd|unit|close|tab[0-2])$/.test(id) ? el(id) : null),
+        querySelector: () => null,
+      },
+    };
+    require('vm').runInNewContext(dr, sandbox);
+    const send = m => listeners.message({ data: m });
+    ok(posts[0] && posts[0].cytvCard === 'ready', 'the drawer says ready when it has loaded');
+    const feed = JSON.parse(JSON.stringify(d));
+    send({
+      cytvCard: {
+        opt: { unit: 'c', place: 'Amsterdam' },
+        data: feed,
+        lang: 'en',
+        clock: { hour: 'numeric', minute: '2-digit' },
+        dir: 'ltr',
+      },
+    });
+    let tg = posts.filter(m => m.cytvSheet === 'targets').pop();
+    ok(
+      tg && ['unit', 'close', 'tab0', 'tab1', 'tab2'].every(n => tg.targets.some(t => t.name === n)) && tg.focus === 'tab0',
+      'the drawer opens on Now and tells where unit, close and the three tabs are'
+    );
+    ok(/Feels like/.test(els.app.innerHTML) && /Sunrise/.test(els.app.innerHTML), 'Now shows the tiles and the sun');
+    send({ cytvSheet: { select: 1 } });
+    ok(/class="hrow"/.test(els.app.innerHTML) && (els.app.innerHTML.match(/class="hrow"/g) || []).length === 24, 'Hours lists the next 24');
+    tg = posts.filter(m => m.cytvSheet === 'targets').pop();
+    ok(tg.focus === 'tab1' && tg.targets.length <= 24, 'selecting a tab moves the focus name to it and caps the targets');
+    send({ cytvSheet: { select: 2 } });
+    ok((els.app.innerHTML.match(/class="drow/g) || []).length === 7, 'Days lists seven');
+    send({ cytvSheet: { act: 'unit' } });
+    send({ cytvSheet: { act: 'close' } });
+    ok(
+      posts.some(m => m.cytvSheet === 'option' && m.set && m.set.unit === 'f') && posts.some(m => m.cytvSheet === 'close'),
+      'the unit button sets the other unit, close asks the launcher to close'
+    );
+  }
   ok(
     /fullButton\('open'/.test(page) && !/name: '(now|hours|days)'|getElementById\('tabs'\)/.test(page),
     'the whole card is one button that opens the drawer, with no tabs'
