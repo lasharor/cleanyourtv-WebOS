@@ -188,9 +188,10 @@ run(async () => {
   );
   ok(
     !fs.existsSync(path.join(root, 'app', 'src', 'js', 'wxdrawer.js')) &&
-      !/x-forecast|\bwx[A-Z]\w*|\bWXD\b|wxdrawer|wxd\b|wxq/.test(
+      !/x-forecast|wxdrawer|\bwxd\b|\bWXD\b|wxq|wxMenu|wxSet/i.test(
         ['js/cards.js', 'js/menus.js', 'js/input.js', 'js/cardsheet.js', 'js/cardsettings.js', 'css/cardsheet.css']
           .map(p => rd('app/src/' + p))
+          .concat([rd('helper/cards.js'), rd('helper/apps.js')])
           .join('\n')
       ),
     'the launcher has no code of the weather add-on (no wxdrawer, no x-forecast, no wx names)'

@@ -59,6 +59,32 @@ run(async () => {
   ok(Math.abs(sc[0].y - 66.667) < 0.01 && Math.abs(sc[0].x - 25) < 0.01 && Math.abs(sc[0].w - 25) < 0.01, 'rectangles on the screen work at any offset: ' + JSON.stringify(sc));
   ok(!/offsetTop/.test(csrc.slice(csrc.indexOf('function cardButtons'), csrc.indexOf('function cardButtons') + 3000)), 'cardButtons no longer uses offsetTop');
 
+  // the message handler of the sheet: a message from any window but the sheet's own frame is ignored
+  const hi = src.indexOf("window.addEventListener('message'");
+  ok(hi > 0, 'cardsheet.js has the message handler');
+  let handler = null;
+  const own = {},
+    seen = [];
+  vm.runInNewContext(src.slice(hi), {
+    window: { addEventListener: (n, f) => { if (n === 'message') handler = f; } },
+    CS: { on: true, frame: { contentWindow: own }, targets: [] },
+    csIdle: () => seen.push('idle'),
+    csSendCtx: () => seen.push('ctx'),
+    csTargets: () => seen.push('targets'),
+    csClose: () => seen.push('close'),
+    csCardEl: () => null,
+    api: () => { seen.push('api'); return { then: () => {} }; },
+    cfg: {},
+    toast: () => {},
+    t: x => x,
+    cardAction: () => seen.push('action'),
+  });
+  ok(typeof handler === 'function', 'the handler is registered');
+  handler({ source: {}, data: { cytvSheet: 'close' } });
+  ok(seen.length === 0, 'a message from another window is ignored');
+  handler({ source: own, data: { cytvSheet: 'close' } });
+  ok(seen.indexOf('close') >= 0, 'a message from the sheet frame is handled');
+
   const place = { key: 'place', kind: 'place', def: '', label: 'City', choices: [] },
     unit = { key: 'unit', kind: 'choice', def: 'c', label: 'Unit', choices: [['c', 'C'], ['f', 'F']] };
   ok(P.csUnset({}, { options: [place, unit] }) === place, 'an empty place is the unset option');
