@@ -1266,8 +1266,9 @@ body.scenes-on {
 [data-cards="glass"] .card-ha-camera {
   padding: 0;
 }
-/* a card with its own page on glass: the page inside the margins of the panel (cards.js moves the targets of its buttons along) */
-[data-cards="glass"] .card-frame > iframe {
+/* a card with its own page on glass: the page inside the margins of the panel, and the box of its buttons (.card-bw) the same */
+[data-cards="glass"] .card-frame > iframe,
+[data-cards="glass"] .card-frame > .card-bw {
   left: 18px !important;
   top: 16px !important;
   width: calc(100% - 36px) !important;

@@ -46,18 +46,20 @@ run(async () => {
   ok(rsb.f({ drawer: null, settings: null }, 'open') === 'addon', 'no drawer and no settings: the add-on gets it');
   ok(rsb.f(null, 'open') === 'addon', 'no pack: the add-on gets it');
 
-  const mr = csrc.match(/function cardBtnRemap[\s\S]*?\n\}\r?\n/);
-  ok(!!mr, 'cards.js has cardBtnRemap');
-  const rmb = {};
-  vm.runInNewContext(mr[0] + ';this.f = cardBtnRemap;', rmb);
-  const bx = () => [{ x: 0, y: 0, w: 100, h: 100 }];
-  const same = rmb.f({ left: 0, top: 0, width: 100, height: 260 }, { left: 0, top: 0, width: 100, height: 260 }, bx());
-  ok(same[0].x === 0 && same[0].y === 0 && same[0].w === 100 && same[0].h === 100, 'a frame equal to the card leaves the buttons');
-  const mid = rmb.f({ left: 0, top: 100, width: 100, height: 60 }, { left: 0, top: 0, width: 100, height: 260 }, bx());
-  ok(Math.abs(mid[0].y - 38.4615) < 0.01 && Math.abs(mid[0].h - 23.0769) < 0.01 && mid[0].x === 0 && mid[0].w === 100, 'a centred smaller frame moves the buttons into it: ' + JSON.stringify(mid));
-  const sc = rmb.f({ left: 20, top: 200, width: 100, height: 120 }, { left: 20, top: 100, width: 200, height: 240 }, [{ x: 50, y: 50, w: 50, h: 50 }]);
-  ok(Math.abs(sc[0].y - 66.667) < 0.01 && Math.abs(sc[0].x - 25) < 0.01 && Math.abs(sc[0].w - 25) < 0.01, 'rectangles on the screen work at any offset: ' + JSON.stringify(sc));
-  ok(!/offsetTop/.test(csrc.slice(csrc.indexOf('function cardButtons'), csrc.indexOf('function cardButtons') + 3000)), 'cardButtons no longer uses offsetTop');
+  ok(!/cardBtnRemap/.test(csrc), 'no remap of the buttons: they sit in a wrapper with the frame box');
+  const cb = csrc.slice(csrc.indexOf('function cardButtons'), csrc.indexOf('function cardBtnRoute'));
+  ok(!/offsetTop|getBoundingClientRect/.test(cb), 'cardButtons does not measure the card');
+  ok(/_bw\.className = 'card-bw'/.test(cb) && /el\._bw\.appendChild\(d\)/.test(cb) && /CARD_FRAME_BOX/.test(cb), 'buttons go into the wrapper that has the frame box');
+  const css = fs.readFileSync(path.join(root, 'app', 'src', 'css', 'home.css'), 'utf8');
+  ok(/\.card-frame > iframe,\s*\[data-cards="glass"\] \.card-frame > \.card-bw/.test(css), 'on glass the wrapper has the same inset as the frame');
+  // a 30px card with the frame box of 44px: the stored percentages are the page's own
+  const sty = [];
+  vm.runInNewContext(cb + ';cardButtons(el, [{name:"a",x:10,y:20,w:30,h:100}]);', {
+    el: { _pk: { actions: [{ name: 'a', label: 'A' }] }, appendChild() {} },
+    document: { createElement: () => ({ style: {}, appendChild(d) { sty.push(d.style.cssText); } }) },
+    CARD_FRAME_BOX: 'x', hit() {}, JSON, Array, Math, Number, isFinite, window: {},
+  });
+  ok(sty.length === 1 && /left:10%;top:20%;width:30%;height:100%/.test(sty[0]), 'percent stored as the page says it: ' + sty[0]);
 
   // the message handler of the sheet: a message from any window but the sheet's own frame is ignored
   const hi = src.indexOf("window.addEventListener('message'");

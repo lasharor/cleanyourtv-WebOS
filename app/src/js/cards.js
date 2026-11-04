@@ -651,21 +651,6 @@ window.addEventListener('message', function (e) {
   )
     cardButtons(el, e.data.buttons);
 });
-/* the buttons say percent of the card's frame; the frame can sit inside the card (glass cards, centred by a transform, which offsetTop ignores), so
-   the two rectangles as the browser draws them (both with the transform) move the percentages to the card. Changes the buttons and returns them. */
-function cardBtnRemap(fr, cr, btns) {
-  if (!fr || !cr || !fr.width || !cr.width || !cr.height) return btns;
-  var l = fr.left - cr.left,
-    tp = fr.top - cr.top;
-  if (Math.abs(l) < 0.5 && Math.abs(tp) < 0.5 && Math.abs(fr.width - cr.width) < 0.5 && Math.abs(fr.height - cr.height) < 0.5) return btns;
-  btns.forEach(function (b) {
-    b.x = ((l + (b.x * fr.width) / 100) / cr.width) * 100;
-    b.y = ((tp + (b.y * fr.height) / 100) / cr.height) * 100;
-    b.w = ((b.w * fr.width) / 100 / cr.width) * 100;
-    b.h = ((b.h * fr.height) / 100 / cr.height) * 100;
-  });
-  return btns;
-}
 /* the buttons of a card of an add-on: made again only when they changed, and the top row of the remote follows */
 function cardButtons(el, list) {
   var ok = [],
@@ -692,9 +677,6 @@ function cardButtons(el, list) {
       look: n.look === 'ring' || n.look === 'fill' ? n.look : '',
     });
   });
-  /* the page says percent of its frame; the frame can sit inside the card's margins (glass cards), so the targets are moved there */
-  var f = el._f;
-  if (f) cardBtnRemap(f.getBoundingClientRect(), el.getBoundingClientRect(), ok);
   var key = JSON.stringify(ok);
   if (el._bk === key) return;
   el._bk = key;
@@ -702,7 +684,10 @@ function cardButtons(el, list) {
     if (b.parentNode) b.parentNode.removeChild(b);
   });
   if (!el._bw) {
+    /* the box of the buttons is the box of the frame (CARD_FRAME_BOX, and the glass inset in home.css for .card-bw), so the page's percentages
+       are the wrapper's: they are stored as they come, never moved to the card (a slim slot is shorter than the frame's 44px) */
     el._bw = document.createElement('div');
+    el._bw.className = 'card-bw';
     el._bw.style.cssText = CARD_FRAME_BOX + ';pointer-events:none';
     el.appendChild(el._bw);
   }
