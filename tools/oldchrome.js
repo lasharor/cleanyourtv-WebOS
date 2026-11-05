@@ -99,6 +99,8 @@ const PAGES = [
   ['launcher', 'app/index.html', /class="tile[ "]/g, 8, 3000],
   ['manager', 'manager/app/index.html', /class="row[ "]/g, 5, 3000],
   ['picker', 'picker/app/index.html', /class="chip[ "]/g, 2, 3000],
+  // the phone remote's page on the TV: one paired phone, so its list and its choices must be drawn by its script
+  ['phone-remote', 'addons/catalog/phoneremote/page/index.html', /class="phone[ "]/g, 1, 3000],
 ];
 const marks = []; // what the pages log (perf lines: tools/perf-tv.sh reads the same on a TV)
 function serve() {
@@ -110,11 +112,23 @@ function serve() {
     const json = o => (r.writeHead(200, { 'content-type': 'application/json' }), r.end(JSON.stringify(o)));
     const p = PAGES.filter(x => '/' + x[0] + '.html' === u)[0];
     if (p) return r.writeHead(200, { 'content-type': 'text/html' }), r.end(page(p[1]));
-    if (u === '/qrcode.js')
+    if (u === '/qrcode.js' || u === '/addon/qrcode.js')
       return (
         r.writeHead(200, { 'content-type': 'text/javascript' }),
         r.end(fs.readFileSync(path.join(ROOT, 'third-party', 'qrcode-generator', 'qrcode.js')))
       );
+    if (u === '/addon/sdk.js')
+      return r.writeHead(200, { 'content-type': 'text/javascript' }), r.end('window.CYTV={close:function(){},api:function(){}};');
+    // the phone remote's page asks its add-on for the state; one paired phone, so it draws a row
+    if (u === '/api/addons/phoneremote/state')
+      return json({
+        expireDays: 14,
+        listening: false,
+        listenError: '',
+        pairing: null,
+        phones: [{ id: 'a1b2c3d4', name: 'Kitchen phone', created: 1700000000000, seen: 1700000000000, blocked: false, online: true }],
+        keys: { backend: 'special', ok: true, error: '', at: 0 },
+      });
     if (u.indexOf('/api/theme/') === 0) return theme.handle(q, r, u, async () => ({}));
     if (u === '/api/apps')
       return json({
