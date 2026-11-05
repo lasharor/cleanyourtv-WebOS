@@ -104,7 +104,7 @@ function draw() {
     $('sub').textContent = tr('Add-on repositories');
     return;
   }
-  if (view === 'confirm-addon') {
+  if (view === 'confirm-addon' || view === 'confirm-repo') {
     $('sub').textContent = tr('Code from outside the project');
     return;
   }
@@ -209,7 +209,7 @@ function drawAbout(r, ie) {
     ie.appendChild(im);
   }
   var b = document.createElement('b');
-  b.textContent = r.label;
+  b.textContent = r.ablabel ? tr(r.ablabel) : r.label;
   ie.appendChild(b);
   var box = document.createElement('div'),
     txt = document.createElement('div');

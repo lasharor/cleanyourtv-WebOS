@@ -1,22 +1,31 @@
 # Add-on repositories
 
 Add-ons are not tied to this project. The TV keeps a **list of repositories**; a repository is a folder on the web (a GitHub repository is
-enough) with an `index.json` and the add-ons beside it. The project's own catalog is the first entry of the list (`official`) and can be
-removed like any other. Anyone can publish a repository, and anyone can add it to their TV.
+enough) with an `index.json` and the add-ons beside it. The project's own catalog is the first entry of the list (`official`); it always
+stays and cannot be removed, in the manager or in the service. Anyone can publish a repository, and anyone can add it to their TV.
 
-!!! warning "A service add-on is code that runs as root on your TV"
-    An add-on of `kind: "service"` runs inside CleanYourTV's service, with root rights. Add only repositories whose author you trust, and
-    look at what you install. CleanYourTV checks that each file is the one the repository's index lists (SHA-256), which protects against
-    a damaged or swapped download, **not** against an author who writes something harmful. Because of that the service refuses to add a
-    repository, or to install or update from one other than `official`, until you confirm it (the manager and `cytv-addons` ask).
+!!! warning "Code from another repository runs as root on your TV"
+    An add-on of `kind: "service"` runs inside CleanYourTV's service, with root rights: it can read and change anything on the TV and on
+    your network. CleanYourTV checks that each file is the one the repository's index lists (SHA-256). That only shows that a file is the one
+    the repository published; it does **not** show that its author is trustworthy, and the CleanYourTV project has not reviewed the add-ons
+    of other repositories. Only continue for people and projects you trust.
+
+    Before you add a repository, and before you install or update an add-on from a repository other than `official`, the manager (and
+    the phone page, and `cytv-addons`) shows this warning and the add-on's permissions in plain words (what its `addon.json` asks for:
+    its permissions and the calls to LG's services). The default is **Cancel**; the button that continues says what it does ("Install
+    code from <repository>"). The service refuses without `confirm: true`, so a script cannot skip it by accident.
     Only `https://` repositories are accepted.
+
+!!! note "What a repository sees"
+    Every repository you add is contacted each time the add-ons list or a picture of an add-on is opened (and when you install or update),
+    so its operator sees the TV's address, and when. The official repository is on GitHub; so is any repository you add with `user/repo`.
 
 ## Use a repository
 
 ### On the TV
 
 Manager app > **Add-ons** > **Repositories**: the list; select one to remove it; **Add from your phone** shows a code and a QR code (page on
-port 8799, open for ten minutes) and you type the address on the phone, tick the box that you trust it, and **Add**. Back in **Add-ons**,
+port 8800, open for ten minutes) and you type the address on the phone, tick the box that you trust it, and **Add**. Back in **Add-ons**,
 the repository's add-ons are listed under the ones you have, with where they come from; selecting one asks first. **Update all add-ons**
 installs newer versions, each from the repository it was installed from.
 
@@ -67,9 +76,9 @@ An address is one of:
 | `https://github.com/user/repo` (also `.../tree/<branch>/<folder>`) | the same |
 | `https://host/path` | any https folder that has `index.json` (a `/index.json` at the end is dropped) |
 
-The list is `addonRepos` in `config.json` (`[{"name": "alice-tv-addons", "url": "https://..."}]`, and `{"name": "official", "url": ""}`
-for the project's own), changed only by the service (`config.update`, logged as `addon-repos`). A TV that never touched it has just
-`official`; removing it keeps it removed. Editing the file by hand works after a service restart; the service checks each entry.
+The repositories you added are `addonRepos` in `config.json` (`[{"name": "alice-tv-addons", "url": "https://..."}]`), changed only by the
+service (`config.update`, logged as `addon-repos`). `official` is not stored: it is always there, always first, and a stored entry with that
+name is ignored. Editing the file by hand works after a service restart; the service checks each entry.
 
 ### From a script
 
@@ -95,6 +104,12 @@ catalog/<id>/         addon.json, index.html, service.js (optional), preview.jpg
 
 Rules the service enforces when it installs (an add-on that breaks one is refused whole, nothing is installed):
 
+- An id that the **official** repository has is the official add-on's: another repository cannot offer it (so a third-party repository cannot
+  ship its own `spotify`), and the service refuses to install it from there. An id that two other repositories both have must say which
+  one to take (`cytv-addons install <id> <repository>`; the manager always names it). If the official repository cannot be read, what other
+  repositories offer is hidden until it can, because the ids cannot be checked.
+- What the person is shown is what the add-on asks for: the index lists `kind`, `permissions` and the `luna` calls (`node make-index.js`
+  writes them from `addon.json`), and the install is refused if the downloaded `addon.json` asks for something else.
 - The folder name is the `id` in `addon.json`: lower case letters, digits and `-`, starting with a letter, 2 to 32 characters. Not `catalog`, `install`, `remove`, `sdk`,
   `book`, `preview`, `repos`, `update`; and not the id of a bundled add-on.
 - `version` is `major.minor.patch` (`1.0.0`). Raise it when the files change: the TV offers an update only for a higher version.
@@ -127,7 +142,8 @@ Checklist for the result:
 - `helper/addonrepos.js`: the address parser and the list rules (pure). `helper/addons.js`: reads each repository's `index.json` at the
   same time (one that fails is reported in `errors`, the others still list), installs through `entryFor(id, repo)`, and writes
   `addons/.sources/<id>.json` (`{repo, version}`) beside the add-on so that an update comes from the repository it was installed from. An add-on
-  without a record counts as `official`. `helper/addonrepophone.js`: the phone page (port 8799).
-- The confirm is enforced in the service (`NEED_CONFIRM`), not only in the screens.
+  without a record counts as `official`. `helper/addonrepophone.js`: the phone page (port 8800).
+- The confirm is enforced in the service (`needConfirm`), not only in the screens; its reply carries what is to be installed and what it may
+  do (`addons: [{repo, id, name, version, kind, can}]`), which `cytv-addons` prints.
 - `CYTV_ADDONS_URL` still replaces the address of `official` (tests, a mirror). `CYTV_REPOS_ALLOW_HTTP=1` is for the tests' stand-in servers only.
 - `scripts/cytv-addons.js` is copied to the TV with the other scripts by `bootstrap.sh`.

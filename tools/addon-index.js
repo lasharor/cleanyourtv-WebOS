@@ -38,6 +38,7 @@ function build(dir) {
       preview: ['jpg', 'png', 'webp'].map(x => 'preview.' + x).filter(f => fs.existsSync(path.join(dir, f)))[0] || '',
       kind: m.kind,
       permissions: m.permissions || [],
+      luna: (m.luna || []).map(l => l.uri),
       files: walk(dir, '', {}),
     });
   }

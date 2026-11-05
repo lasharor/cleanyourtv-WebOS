@@ -618,10 +618,19 @@ run(async () => {
     rp.list({}).length === 1 && rp.list({}).every(x => x.name === 'official' && !x.url),
     'a TV that never set the list has the official repository'
   );
-  ok(rp.list({ addonRepos: [] }).length === 0, 'an emptied list stays empty');
   ok(
-    rp.list({ addonRepos: [{ name: 'official', url: 'https://evil.example/x' }] }).length === 0,
-    'a custom repository cannot take the name official'
+    rp.list({ addonRepos: [] }).length === 1 && rp.list({ addonRepos: [] })[0].name === 'official',
+    'the official repository is there when the list is empty'
+  );
+  ok(
+    rp.list({ addonRepos: [{ name: 'official', url: 'https://evil.example/x' }] }).length === 1 &&
+      !rp.list({ addonRepos: [{ name: 'official', url: 'https://evil.example/x' }] })[0].url,
+    'a custom repository cannot take the name official, and the official one is first'
+  );
+  ok(
+    rp.describe('service', ['net.fetch', 'luna'], ['luna://com.webos.service.iepg/getChannelList']).join('|') ===
+      "run its own code as root on the TV|connect to the internet|call LG's services: com.webos.service.iepg/getChannelList",
+    'what an add-on may do is said in plain words'
   );
 
   process.env.CYTV_REPOS_ALLOW_HTTP = '1';
@@ -724,16 +733,108 @@ run(async () => {
   ok(r.code === 400, 'removing a repository that is not there is refused');
   r = await call(a, '/api/addons/remove', 'POST', { id: 'extra' });
   ok(r.code === 200 && !fs.existsSync(path.join(dir, '.sources', 'extra.json')), 'removing an add-on removes its record');
+  // ---- the rules for other repositories: ids of the official one are its own, two repositories with one id, what is shown is what is asked ----
+  const repoServer = async items => {
+    // items: [{id, ver, perms (what addon.json asks), listed (what the index says), tamper}]
+    const files = {};
+    items.forEach(it => {
+      files[it.id] = {
+        'addon.json': JSON.stringify({
+          id: it.id,
+          name: it.id,
+          version: it.ver,
+          kind: 'service',
+          entry: { service: 'service.js' },
+          permissions: it.perms || [],
+        }),
+        'service.js': 'exports.create = () => ({});',
+      };
+    });
+    return serve((q, s) => {
+      if (q.url === '/index.json')
+        return s.end(
+          JSON.stringify({
+            addons: items.map(it => ({
+              id: it.id,
+              name: it.id,
+              version: it.ver,
+              kind: 'service',
+              permissions: it.listed || [],
+              files: { 'addon.json': sha(files[it.id]['addon.json']), 'service.js': sha(files[it.id]['service.js']) },
+            })),
+          })
+        );
+      const m = /^\/catalog\/([^/]+)\/(.+)$/.exec(q.url);
+      if (m && files[m[1]] && files[m[1]][m[2]] !== undefined) return s.end(files[m[1]][m[2]]);
+      s.writeHead(404);
+      s.end();
+    });
+  };
+  const gs = await repoServer([
+    { id: 'hello', ver: '9.0.0' },
+    { id: 'twin', ver: '1.0.0' },
+    { id: 'liar', ver: '1.0.0', perms: ['net.fetch'], listed: [] },
+  ]);
+  const gt = await repoServer([{ id: 'twin', ver: '1.0.0' }]);
+  await call(a, '/api/addons/repos', 'POST', { add: gs.url, name: 'shadow', confirm: true });
+  await call(a, '/api/addons/repos', 'POST', { add: gt.url, name: 'second', confirm: true });
+  r = await call(a, '/api/addons/catalog');
+  ok(
+    !r.j.addons.some(x => x.id === 'hello' && x.repo !== 'official') && r.j.addons.filter(x => x.id === 'twin').length === 2,
+    'another repository cannot offer the id of an official add-on'
+  );
+  r = await call(a, '/api/addons/install', 'POST', { id: 'hello', repo: 'shadow', confirm: true });
+  ok(r.code === 400 && /official repository/.test(r.j.error) && !fs.existsSync(path.join(dir, 'hello')), 'and it cannot install it either');
+  r = await call(a, '/api/addons/install', 'POST', { id: 'twin', confirm: true });
+  ok(
+    r.code === 400 && /several repositories \(shadow, second\)/.test(r.j.error),
+    'an id two other repositories have must say which: ' + r.out
+  );
+  r = await call(a, '/api/addons/install', 'POST', { id: 'twin', repo: 'second' });
+  ok(
+    r.code === 400 &&
+      r.j.confirm === true &&
+      r.j.addons[0].repo === 'second' &&
+      r.j.addons[0].can[0] === 'run its own code as root on the TV',
+    'the confirm says what is to be installed and what it may do: ' + r.out
+  );
+  r = await call(a, '/api/addons/install', 'POST', { id: 'twin', repo: 'second', confirm: true });
+  ok(r.code === 200 && r.j.repo === 'second', 'with the repository named it installs');
+  r = await call(a, '/api/addons/install', 'POST', { id: 'liar', repo: 'shadow', confirm: true });
+  ok(
+    r.code === 400 && /other permissions/.test(r.j.error) && !fs.existsSync(path.join(dir, 'liar')),
+    'an add-on that asks for more than its index showed is refused'
+  );
+  r = await call(a, '/api/addons/remove', 'POST', { id: 'twin' });
+  // the official repository cannot be read: what others offer is hidden, not installed
+  const officialUrl = process.env.CYTV_ADDONS_URL;
+  process.env.CYTV_ADDONS_URL = 'http://127.0.0.1:9';
+  r = await call(a, '/api/addons/catalog');
+  ok(
+    r.j.addons.length === 0 && r.j.errors.some(x => x.repo === 'official') && r.j.errors.some(x => x.repo === 'others'),
+    'without the official repository, what others offer is hidden: ' + JSON.stringify(r.j.errors)
+  );
+  r = await call(a, '/api/addons/install', 'POST', { id: 'twin', repo: 'second', confirm: true });
+  ok(r.code === 400 && !fs.existsSync(path.join(dir, 'twin')), 'and not installed');
+  process.env.CYTV_ADDONS_URL = officialUrl;
+  await call(a, '/api/addons/repos', 'POST', { remove: 'shadow' });
+  await call(a, '/api/addons/repos', 'POST', { remove: 'second' });
+  gs.server.close();
+  gt.server.close();
+  r = await call(a, '/api/addons/repos', 'POST', { remove: 'official' });
+  ok(r.code === 400 && /cannot be removed/.test(r.j.error), 'the official repository cannot be removed');
+  r = await call(a, '/api/addons/repos');
+  ok(r.j.repos[0].name === 'official' && r.j.repos[0].official, 'and stays the first entry');
   // the phone page: the code is needed, adding needs the box ticked
   r = await call(a, '/api/addons/repos/phone', 'POST', {});
   ok(
-    r.code === 200 && /^\d{6}$/.test(r.j.code) && /:8799$/.test(r.j.url) && r.j.qr.endsWith('#' + r.j.code),
+    r.code === 200 && /^\d{6}$/.test(r.j.code) && /:8800$/.test(r.j.url) && r.j.qr.endsWith('#' + r.j.code),
     'the phone page opens with a code'
   );
   const ph = (method, p, code, b) =>
     new Promise(resolve => {
       const q = require('http').request(
-        { host: '127.0.0.1', port: 8799, method, path: p, headers: { 'x-code': code, 'content-type': 'application/json' } },
+        { host: '127.0.0.1', port: 8800, method, path: p, headers: { 'x-code': code, 'content-type': 'application/json' } },
         s => {
           let t = '';
           s.on('data', d => (t += d));
@@ -817,10 +918,6 @@ run(async () => {
     'cytv-addons shortcut writes the command to ~/.local/bin'
   );
   bridge.server.close();
-  r = await call(a, '/api/addons/repos', 'POST', { remove: 'official' });
-  ok(r.code === 200 && r.j.repos.length === 0, 'the official repository can be removed');
-  r = await call(a, '/api/addons/catalog');
-  ok(r.j.addons.length === 0 && !r.j.error, 'with no repositories the catalog is empty');
   delete process.env.CYTV_REPOS_ALLOW_HTTP;
   gx.server.close();
   gh.server.close();

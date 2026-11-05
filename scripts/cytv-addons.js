@@ -67,8 +67,15 @@ function confirmed(method, path, body, yes, why, done) {
       });
     };
     if (yes) return again();
-    console.log(why);
-    console.log('It runs as root on this TV. Only continue if you trust its author and have looked at the code.');
+    console.log(why + '\n');
+    console.log('The code of an add-on runs as root on this TV and can read and change anything on it and on your network.');
+    console.log('The checksum only shows that a file is the one the repository published, not that its author is trustworthy.');
+    console.log('Only continue for people and projects you trust. The CleanYourTV project has not reviewed these add-ons.');
+    console.log("Every repository is contacted whenever the add-ons list or a picture is opened, so its operator sees the TV's address.");
+    (j.addons || []).forEach(function (a) {
+      console.log('\n  ' + a.name + ' ' + a.version + ' (from ' + a.repo + ') may: ' + (a.can || []).join(', ') + '.');
+    });
+    console.log('');
     ask('Continue?', function (y) {
       if (!y) fail('Cancelled, nothing changed.');
       again();

@@ -1,7 +1,7 @@
 // Add-on repositories (docs/development/addon-repos.md): the list of places add-ons are fetched from. A repository is a folder on the web
 // with an index.json and catalog/<id>/<files> (what tools/addon-index.js writes). Pure helpers; helper/addons.js does the fetching.
-// The list is config.json "addonRepos": [{name, url}] (url is empty for the project's own repository, "official", which follows the
-// update channel). A TV that never touched it has just the official one; removing it keeps it removed.
+// The official repository (the project's own, on the branch of the update channel) is always the first and cannot be removed; the ones
+// a person adds are config.json "addonRepos": [{name, url}].
 const NAME = /^[a-z0-9][a-z0-9._-]{0,39}$/;
 const OFFICIAL = 'official';
 // plain http exists only for the tests' stand-in server; the service never sets this
@@ -48,25 +48,37 @@ function cleanName(n) {
   );
 }
 
-// the list as stored, with the official one in place when the key was never written
+// the list: the official repository always first (it cannot be removed), then the added ones as stored (config.json "addonRepos" holds
+// only those; an entry that is not a valid address or a free name is dropped)
 function list(cfg) {
   const raw = cfg && cfg.addonRepos;
-  if (!Array.isArray(raw)) return [{ name: OFFICIAL, url: '' }];
   const seen = {},
-    out = [];
-  for (const r of raw) {
+    out = [{ name: OFFICIAL, url: '' }];
+  seen[OFFICIAL] = true;
+  for (const r of Array.isArray(raw) ? raw : []) {
     if (!r || !NAME.test(r.name || '') || seen[r.name]) continue;
-    if (r.name === OFFICIAL) {
-      if (r.url) continue; // "official" is not a name a custom repository can take
-      out.push({ name: OFFICIAL, url: '' });
-    } else {
-      const p = parseSpec(r.url);
-      if (p.error || p.url !== r.url) continue;
-      out.push({ name: r.name, url: r.url });
-    }
+    const p = parseSpec(r.url);
+    if (p.error || p.url !== r.url) continue;
+    out.push({ name: r.name, url: r.url });
     seen[r.name] = true;
   }
   return out;
 }
 
-module.exports = { parseSpec, cleanName, list, NAME, OFFICIAL };
+// what an add-on may do, in plain words, from its permissions and the luna calls of its addon.json (kind: "service" runs code as root)
+const WORDS = {
+  'net.fetch': 'connect to the internet',
+  'config.own': 'keep its own settings',
+  notify: 'show notifications on the TV',
+  'key.guide': 'use the Guide button',
+};
+function describe(kind, permissions, luna) {
+  const out = [];
+  if (kind === 'service') out.push('run its own code as root on the TV');
+  else out.push('show its own web page');
+  for (const p of permissions || []) if (WORDS[p]) out.push(WORDS[p]);
+  if ((luna || []).length) out.push("call LG's services: " + luna.map(u => String(u).replace('luna://', '')).join(', '));
+  return out;
+}
+
+module.exports = { parseSpec, cleanName, list, describe, NAME, OFFICIAL };

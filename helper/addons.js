@@ -38,6 +38,7 @@ const PROVIDES = ['wallpapers', 'cards'];
 const POSITIONS = ['', 'top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
 const ID = /^[a-z][a-z0-9-]{1,31}$/;
 const MIME_IMG = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+const LUNA_URI = /^luna:\/\/[a-z][\w.-]{2,80}\/[\w/.-]{0,60}$/;
 const RESERVED = ['catalog', 'install', 'remove', 'sdk', 'book', 'preview', 'repos', 'update'];
 const MAX_PREVIEW = 600 * 1024, // the picture of an add-on (preview.jpg), as for themes
   MAX_FILE = 2 << 20,
@@ -159,6 +160,8 @@ function cleanIndex(raw) {
       preview: /^preview\.(?:jpg|png|webp)$/.test(e.preview || '') ? e.preview : '',
       kind: KINDS.indexOf(e.kind) >= 0 ? e.kind : 'page',
       permissions: (Array.isArray(e.permissions) ? e.permissions : []).filter(p => PERMISSIONS.indexOf(p) >= 0),
+      // the calls to LG's services it asks for (the uris of luna in its addon.json), so the person can be told before installing
+      luna: (Array.isArray(e.luna) ? e.luna : []).filter(u => typeof u === 'string' && LUNA_URI.test(u)).slice(0, 8),
       files,
     });
   }
@@ -436,54 +439,91 @@ function create(ctx) {
       )
     );
 
-  async function catalog() {
-    const out = [],
-      errors = [];
-    for (const x of await indexes(repoList())) {
-      if (x.error) {
-        errors.push({ repo: x.repo.name, error: x.error });
-        continue;
-      }
-      for (const e of x.entries) {
-        const a = find(e.id),
-          mine = !!(a && !a.bundled && sourceOf(e.id) === x.repo.name);
-        out.push({
-          id: e.id,
-          name: e.name,
-          version: e.version,
-          description: e.description,
-          about: e.about,
-          preview: !!e.preview,
-          kind: e.kind,
-          permissions: e.permissions,
-          repo: x.repo.name,
-          official: x.repo.name === repos.OFFICIAL,
-          installed: a && a.manifest ? a.manifest.version : '',
-          bundled: !!(a && a.bundled),
-          // an update comes from the repository the add-on was installed from
-          update: !!(mine && a.manifest && version.cmp(e.version, a.manifest.version) > 0),
-        });
-      }
+  // the add-on as the person is shown it before anything is installed: what it is and what it may do, in plain words
+  const brief = (repo, e) => ({
+    repo: repo.name,
+    id: e.id,
+    name: e.name,
+    version: e.version,
+    kind: e.kind,
+    can: repos.describe(e.kind, e.permissions, e.luna),
+  });
+
+  // Every repository is read at the same time. The official one decides which ids are its own: another repository cannot offer the id
+  // of an official add-on (it could not ship its own "spotify"). When the official one cannot be read, what others offer is not shown
+  // (and not installed) until it can: the ids cannot be checked.
+  async function allEntries() {
+    const all = await indexes(repoList()),
+      official = all.filter(x => x.repo.name === repos.OFFICIAL)[0],
+      own = {};
+    if (official && official.entries) official.entries.forEach(e => (own[e.id] = true));
+    const errors = all.filter(x => x.error).map(x => ({ repo: x.repo.name, error: x.error }));
+    if (official && official.error && all.length > 1)
+      errors.push({ repo: 'others', error: 'what other repositories offer is hidden until the official repository can be read' });
+    const out = [];
+    for (const x of all) {
+      if (x.error) continue;
+      const off = x.repo.name === repos.OFFICIAL;
+      if (!off && (!official || official.error)) continue;
+      for (const e of x.entries) if (off || !own[e.id]) out.push({ repo: x.repo, entry: e });
     }
-    return { addons: out, error: errors.map(x => x.repo + ': ' + x.error).join('; '), errors };
+    return { entries: out, errors, ownedByOfficial: own, officialOk: !!(official && !official.error) };
   }
 
-  // the repository an install or a picture comes from: the one named, else the one the add-on is installed from, else the first that has it
-  async function entryFor(id, repoName) {
-    const rs = repoName ? [repoByName(repoName)].filter(Boolean) : repoList();
-    if (!rs.length) return { error: repoName ? 'no such repository: ' + repoName : 'no repositories' };
-    const src = !repoName && find(id) ? sourceOf(id) : '';
-    if (src) rs.sort((a, b) => Number(b.name === src) - Number(a.name === src));
-    let lastErr = '';
-    for (const x of await indexes(rs)) {
-      if (x.error) {
-        lastErr = x.repo.name + ': ' + x.error;
-        continue;
-      }
-      const e = x.entries.filter(y => y.id === id)[0];
-      if (e) return { repo: x.repo, entry: e };
+  async function catalog() {
+    const all = await allEntries(),
+      out = [];
+    for (const { repo, entry: e } of all.entries) {
+      const a = find(e.id),
+        mine = !!(a && !a.bundled && sourceOf(e.id) === repo.name);
+      out.push({
+        id: e.id,
+        name: e.name,
+        version: e.version,
+        description: e.description,
+        about: e.about,
+        preview: !!e.preview,
+        kind: e.kind,
+        permissions: e.permissions,
+        luna: e.luna,
+        can: repos.describe(e.kind, e.permissions, e.luna),
+        repo: repo.name,
+        official: repo.name === repos.OFFICIAL,
+        installed: a && a.manifest ? a.manifest.version : '',
+        bundled: !!(a && a.bundled),
+        // an update comes from the repository the add-on was installed from
+        update: !!(mine && a.manifest && version.cmp(e.version, a.manifest.version) > 0),
+      });
     }
-    return { error: lastErr || 'not in the catalog' };
+    return { addons: out, error: all.errors.map(x => x.repo + ': ' + x.error).join('; '), errors: all.errors };
+  }
+
+  // the repository an install or a picture comes from: the one named; else the one the add-on is installed from; else the official one;
+  // else the only one that has it (two have it: the person must say which)
+  /**
+   * @param {string} id
+   * @param {string} [repoName]
+   * @returns {Promise<{repo?: any, entry?: any, error?: string}>}
+   */
+  async function entryFor(id, repoName) {
+    const all = await allEntries();
+    if (repoName && !repoByName(repoName)) return { error: 'no such repository: ' + repoName };
+    const has = all.entries.filter(x => x.entry.id === id);
+    if (repoName) {
+      const x = has.filter(y => y.repo.name === repoName)[0];
+      if (x) return x;
+      if (repoName !== repos.OFFICIAL && all.ownedByOfficial[id])
+        return { error: "'" + id + "' is an add-on of the official repository; it cannot be installed from another repository" };
+      const err = all.errors.filter(y => y.repo === repoName || y.repo === 'others')[0];
+      return { error: err ? err.repo + ': ' + err.error : 'not in the catalog' };
+    }
+    const src = find(id) && !find(id).bundled ? sourceOf(id) : '';
+    const pick = has.filter(x => x.repo.name === src)[0] || has.filter(x => x.repo.name === repos.OFFICIAL)[0];
+    if (pick) return pick;
+    if (has.length > 1)
+      return { error: "'" + id + "' is in several repositories (" + has.map(x => x.repo.name).join(', ') + '): say which one to take' };
+    if (has.length) return has[0];
+    return { error: all.errors.length ? all.errors[0].repo + ': ' + all.errors[0].error : 'not in the catalog' };
   }
 
   // the picture of an add-on: from its folder when it is on the TV, else from its repository, kept in add-ons/.previews for a day
@@ -515,12 +555,15 @@ function create(ctx) {
     }
   }
 
-  // body.confirm: the person was told that an add-on from outside the project is code that runs as root on the TV (the manager and
-  // cytv-addons ask first); the service refuses without it so no screen or script can forget to
-  const NEED_CONFIRM = {
-    error: 'confirm first: an add-on from this repository is code that runs as root on your TV',
-    confirm: true,
-  };
+  // body.confirm: the person was shown that code from outside the project runs as root on the TV and can read and change anything on
+  // it and on the network, that the checksum only shows the file is the one the repository published, and what the add-on may do (the
+  // manager, the phone page and cytv-addons show it, with the default on Cancel). The service refuses without it, so no screen or
+  // script can skip it by accident. `extra` says what is to be confirmed: the add-on(s), or the repository.
+  const needConfirm = extra =>
+    Object.assign(
+      { error: 'confirm first: code from a repository other than the official one runs as root on your TV', confirm: true },
+      extra
+    );
 
   async function install(id, repoName, confirm) {
     const a0 = find(id);
@@ -529,7 +572,7 @@ function create(ctx) {
     if (found.error) return { error: found.error };
     const e = found.entry,
       base = baseOf(found.repo);
-    if (found.repo.name !== repos.OFFICIAL && confirm !== true) return NEED_CONFIRM;
+    if (found.repo.name !== repos.OFFICIAL && confirm !== true) return needConfirm({ addons: [brief(found.repo, e)] });
     const stage = path.join(P.ADDONS, '.staging-' + id),
       old = path.join(P.ADDONS, '.old-' + id),
       dest = path.join(P.ADDONS, id);
@@ -545,6 +588,17 @@ function create(ctx) {
       const r = check(readJson(path.join(stage, 'addon.json')), ctx.version);
       if (r.error) throw new Error(r.error);
       if (r.manifest.id !== id || r.manifest.version !== e.version) throw new Error('addon.json does not match the catalog entry');
+      // what the person was shown (the index) must be what the add-on asks for
+      const same = (x, y) => JSON.stringify(x.slice().sort()) === JSON.stringify(y.slice().sort());
+      if (
+        r.manifest.kind !== e.kind ||
+        !same(r.manifest.permissions, e.permissions) ||
+        !same(
+          r.manifest.luna.map(l => l.uri),
+          e.luna
+        )
+      )
+        throw new Error('addon.json asks for other permissions than the catalog entry lists (nothing was installed)');
       if (r.manifest.kind === 'service' && !fs.existsSync(path.join(stage, r.manifest.entry.service)))
         throw new Error('the service file is missing');
     } catch (err) {
@@ -578,15 +632,21 @@ function create(ctx) {
     return { id, version: e.version, repo: found.repo.name, restartNeeded: false };
   }
 
-  // install the newer version of what is installed (one add-on, or all), each from the repository it came from
+  // install the newer version of what is installed (one add-on, or all), each from the repository it came from. Nothing is installed
+  // until the confirm is given for everything that comes from a repository other than the official one.
   async function updateAll(only, confirm) {
     const c = await catalog(),
+      todo = c.addons.filter(x => x.update && (!only || x.id === only)),
       done = [],
       failed = [];
+    const other = todo.filter(x => !x.official);
+    if (other.length && confirm !== true)
+      return needConfirm({
+        addons: other.map(x => ({ repo: x.repo, id: x.id, name: x.name, version: x.version, kind: x.kind, can: x.can })),
+      });
     let restartNeeded = false;
-    for (const e of c.addons.filter(x => x.update && (!only || x.id === only))) {
+    for (const e of todo) {
       const r = await install(e.id, e.repo, confirm);
-      if (r.confirm) return r;
       if (r.error) failed.push({ id: e.id, error: r.error });
       else {
         done.push({ id: e.id, version: r.version });
@@ -603,11 +663,12 @@ function create(ctx) {
     add: (spec, name, confirm) => addRepo(spec, name, confirm),
     remove: name => removeRepo(name),
     lanIp: web.lanIp,
+    lang: () => config.get().lang || '',
   });
   function addRepo(spec, name, confirm) {
     const p = repos.parseSpec(spec);
     if (p.error) return { error: p.error };
-    if (confirm !== true) return NEED_CONFIRM;
+    if (confirm !== true) return needConfirm({ repoAddress: p.url });
     const nm = name === undefined || name === '' ? p.name : String(name);
     if (!repos.NAME.test(nm) || nm === repos.OFFICIAL) return { error: 'the name is lower case letters, digits, . _ - (at most 40)' };
     const cur = repoList();
@@ -619,6 +680,7 @@ function create(ctx) {
     return { repos: repoList().map(repoInfo), added: nm };
   }
   function removeRepo(name) {
+    if (name === repos.OFFICIAL) return { error: 'the official repository cannot be removed' };
     const cur = repoList();
     if (!cur.some(r => r.name === name)) return { error: 'no such repository: ' + name };
     config.update('addon-repos', cfg => {
@@ -719,7 +781,7 @@ function create(ctx) {
     }
     if (u === '/api/addons/catalog' && req.method === 'GET') return web.json(res, await catalog());
     if (u === '/api/addons/repos' && req.method === 'GET') return web.json(res, { repos: repoList().map(repoInfo) });
-    // the phone page for adding a repository (port 8799): {url, code, qr, seconds}, or {stop: true} to close it
+    // the phone page for adding a repository (port 8800): {url, code, qr, seconds}, or {stop: true} to close it
     if (u === '/api/addons/repos/phone' && req.method === 'POST') {
       const b = await body(req);
       return web.json(res, await phone.start(b && typeof b === 'object' ? b : {}));
