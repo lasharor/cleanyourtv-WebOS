@@ -176,10 +176,9 @@ run(async () => {
     /var states = \['off'\]\.concat\(\s*pr\.modes\.filter\(function \(m\) \{\s*return seen\[m\];/.test(mm),
     'the preload State row offers only the modes the TV itself uses'
   );
-  // Customise > Weather: the forecast card's city, unit and size are set on the TV; with no city the card is one button that opens it
+  // a card of an add-on: its declared drawer and settings actions are the launcher's (the sheet and the settings panel)
   const rd = f => fs.readFileSync(path.join(root, ...f.split('/')), 'utf8');
-  const wmenus = rd('app/src/js/menus.js'),
-    wcards = rd('app/src/js/cards.js'),
+  const wcards = rd('app/src/js/cards.js'),
     winput = rd('app/src/js/input.js'),
     wmgr = rd('manager/src/js/input.js');
   ok(

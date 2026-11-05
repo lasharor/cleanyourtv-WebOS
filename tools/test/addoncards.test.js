@@ -190,7 +190,10 @@ exports.create = () => ({
   const ops = ar.j.cardPacks['demo-card'].options;
   ok(
     ops.length > 0 &&
-      ops.every(o => typeof o.key === 'string' && typeof o.kind === 'string' && 'def' in o && typeof o.label === 'string' && Array.isArray(o.choices)),
+      ops.every(
+        o =>
+          typeof o.key === 'string' && typeof o.kind === 'string' && 'def' in o && typeof o.label === 'string' && Array.isArray(o.choices)
+      ),
     '/api/apps options carry key, kind, def, label and choices: ' + JSON.stringify(ops)
   );
   const uo = ops.filter(o => o.kind === 'choice')[0];
@@ -219,7 +222,10 @@ exports.create = () => ({
       r.j.places[0].lon === 2.35,
     'a long name and area are cut, coordinates rounded; null, string, NaN, out-of-range and non-number entries are dropped: ' + r.out
   );
-  ok(r.j.places[1].name === 'bOslo/b' && r.j.places[1].area === 'iNo/i' && r.j.places[1].lat === 59.91, 'markup and control characters are taken out of a place: ' + r.out);
+  ok(
+    r.j.places[1].name === 'bOslo/b' && r.j.places[1].area === 'iNo/i' && r.j.places[1].lat === 59.91,
+    'markup and control characters are taken out of a place: ' + r.out
+  );
   r = await call(cards, '/api/cards/places', 'POST', { type: 'x-demo-card', q: 'boom' });
   ok(r.j.error === 'City search is not available now.' && r.j.places.length === 0, 'a search that fails says so: ' + r.out);
 
@@ -250,19 +256,36 @@ exports.create = () => ({
   req('netcompat').mkdirp(path.join(tmp, 'cardpacks', 'dl-card'));
   fs.writeFileSync(
     path.join(tmp, 'cardpacks', 'dl-card', 'card.json'),
-    JSON.stringify({ id: 'dl-card', name: 'Downloaded', version: '1.0.0', template: '# {{opt.who}}', options: [{ key: 'who', kind: 'text', label: 'Who', default: 'W' }] })
+    JSON.stringify({
+      id: 'dl-card',
+      name: 'Downloaded',
+      version: '1.0.0',
+      template: '# {{opt.who}}',
+      options: [{ key: 'who', kind: 'text', label: 'Who', default: 'W' }],
+    })
   );
   const config2 = memoryConfig({ cards: { a: { type: 'x-dl-card', who: 'W' }, b: { type: 'x-plain-card', who: 'W' } } });
-  const plainCard = Object.assign({}, card, { id: 'plain-card', drawer: null, settings: null, options: [{ key: 'who', kind: 'text', label: 'Who', default: 'W' }] });
+  const plainCard = Object.assign({}, card, {
+    id: 'plain-card',
+    drawer: null,
+    settings: null,
+    options: [{ key: 'who', kind: 'text', label: 'Who', default: 'W' }],
+  });
   const cards2 = req('cards').create({
     config: config2,
     feature: n => (n === 'addons' ? { cardsOf: () => [{ addon: 'demo', dir: tmp, mod: null, card: plainCard }] } : null),
     version: '1.6.15',
   });
   r = await call(cards2, '/api/cards/options', 'POST', { type: 'x-dl-card', set: { who: 'Hacked' } });
-  ok(r.j.error === 'this card has no settings' && config2.get().cards.a.who === 'W', 'a downloaded card is not changed through the panel: ' + r.out);
+  ok(
+    r.j.error === 'this card has no settings' && config2.get().cards.a.who === 'W',
+    'a downloaded card is not changed through the panel: ' + r.out
+  );
   r = await call(cards2, '/api/cards/options', 'POST', { type: 'x-plain-card', set: { who: 'Hacked' } });
-  ok(r.j.error === 'this card has no settings' && config2.get().cards.b.who === 'W', 'a card of an add-on without settings is not changed: ' + r.out);
+  ok(
+    r.j.error === 'this card has no settings' && config2.get().cards.b.who === 'W',
+    'a card of an add-on without settings is not changed: ' + r.out
+  );
   r = await call(cards, '/api/cards/remove', 'POST', { id: 'demo-card' });
   ok(r.code === 400 && /add-on/.test(r.j.error), 'a card of an add-on is not removed as a downloaded one: ' + r.out);
 

@@ -477,12 +477,7 @@ function create(ctx) {
       if (!e || !e.mod || !e.mod.cards || typeof e.mod.cards.places !== 'function' || q.length < 2) return web.json(res, { places: [] });
       const lang = i18n.lang(req, config.get().lang),
         r = await inAddon(() => e.mod.cards.places(q, lang));
-      return web.json(
-        res,
-        r.error
-          ? { error: 'City search is not available now.', places: [] }
-          : { places: cleanPlaces(r.places) }
-      );
+      return web.json(res, r.error ? { error: 'City search is not available now.', places: [] } : { places: cleanPlaces(r.places) });
     }
     // the weather card: {lat, lon, unit} -> the weather there (Open-Meteo, at most every 30 minutes)
     if (u === '/api/cards/weather') return web.json(res, await weather.get(b.lat, b.lon, b.unit));
