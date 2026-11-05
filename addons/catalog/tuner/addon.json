@@ -9,7 +9,7 @@
     "service": "service.js",
     "page": "page/index.html"
   },
-  "permissions": ["luna"],
+  "permissions": ["luna", "key.guide"],
   "luna": [
     {
       "uri": "luna://com.webos.service.iepg/getChannelList",

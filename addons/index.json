@@ -117,12 +117,13 @@
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
-        "luna"
+        "luna",
+        "key.guide"
       ],
       "files": {
-        "addon.json": "c1988ff75d83c81498e7e62183b9634268520721216134cfb71f60957c8c8207",
-        "page/index.html": "dace9a993131c1c13917bf5352723ceb2640844035c16aed197ae5a0a5b2c070",
-        "service.js": "63e99e9fa925c642bf37a337093f45d32ec0a7bd9f522b365018a437d60f6758",
+        "addon.json": "5b3ff2aeaa688b0f9d9ce89c69d7738f77852d9d343e9fdce90418d7e1419718",
+        "page/index.html": "8658644be21eaa8591b5bc37948da3afdbaedfb79d2b60742c83e3b8987885ba",
+        "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
       }

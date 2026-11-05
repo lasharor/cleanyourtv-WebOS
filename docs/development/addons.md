@@ -192,6 +192,12 @@ Back (or a click on the dimmed Home) closes the sheet, and it closes by itself a
 
 The city field of the settings panel searches through the service: the `cards` of an add-on can have the optional hook `places(q, lang)`, which answers `{places: [{name, area, lat, lon}]}` (at most 10 are used; `q` is two to 60 characters). `POST /api/cards/places {type, q}` calls it; with no hook the answer is an empty list. The service must know these keys, so raise the add-on's `minService` to the version that brought `drawer` and `settings`.
 
+## The Guide key
+
+An add-on with the permission `key.guide` in its manifest is a guide of its own (the TV guide for LG's tuner is one): while it is running and switched on, the learned
+Guide key opens its page, with Live TV (IPTV) on or off, and its screen in the manager's Add-ons has a **Learn the Guide key** row. Without such an add-on the key opens the
+Live TV guide, as before.
+
 ## Permissions for LG's services
 
 A service add-on has no access to LG's services unless its manifest asks: `"permissions": ["luna"]` and a list of the calls it may make, each
