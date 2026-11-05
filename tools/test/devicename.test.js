@@ -147,6 +147,3 @@ run(async () => {
   );
   ok(!/var HINT=[^;]*</.test(phonePage(i18n, 'en', '', 'a<b')), 'a < in the hint is escaped');
 });
-
-
-
