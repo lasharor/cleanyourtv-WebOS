@@ -41,6 +41,7 @@ uninstall. Optional features contact other services only when you switch them on
       when the TV goes to standby; the stand-in then closes the launcher and ends, so the new app manager starts Home afresh. The
       watchdog also checks that the TV, when on, has something in front: if not, it sets Home up again, and after two tries brings
       LG's Home back until the next reboot. It also closes the launcher when the app manager has Home running without the stand-in.
+      With LG's Home Auto Launch on, the launcher opens when the TV comes back from standby on an input, as LG's Home did.
       On some of these TVs the stand-in never runs: the kernel has CRIU (`criu_enabled` in `/proc/cmdline`), which restores LG's Home
       from a checkpoint instead of starting its program (issues 72 and 84). When the launcher does not come up after the setup, the
       setup tries the first way once and writes `home-method` itself, so the next boots use it too; only when that fails as well is

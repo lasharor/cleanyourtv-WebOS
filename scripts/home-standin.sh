@@ -13,9 +13,10 @@ LOG=${CYTV_BOOT_LOG:-/tmp/cleanyourtv-boot.log} # the tests point it elsewhere
 up() { cut -d' ' -f1 /proc/uptime; }
 log() { echo "$(up) home-standin[$$]: $*" >> $LOG 2>/dev/null; }
 
-# a previous copy that SAM killed leaves its registration and reader behind
+# a previous copy that SAM killed leaves its registration, its power watch and their readers behind
 for p in $(pgrep -f "^/bin/sh $0"); do [ "$p" != $$ ] && kill "$p" 2>/dev/null; done
 pkill -f "[l]una-send -i -a com.webos.app.home" 2>/dev/null
+pkill -f "[l]una-send -i luna://com.webos.service.tvpower/power/getPowerState" 2>/dev/null
 
 # The parameters of a Home launch ({live, guide} from guidekey.sh, {inputs} from inputkey.sh) are passed on to the launcher (issue 26).
 # The key scripts leave them in $PARAMS with the time ("<uptime> <json>"), so they arrive even if what the app manager sends is read
@@ -77,7 +78,43 @@ sam_restarted() {
   exit 0
 }
 
+# Home at power on. LG's own Home program opens Home when the TV comes back from standby and its setting Home Auto Launch (General >
+# Home Settings, "homeAutoLaunch") is on; the boot manager itself only starts the last input. With this script in its place the TV
+# stayed on that input (seen on webOS 6.5.3: Suspend -> Active, then bootManager launches com.webos.app.hdmi1, and nothing else). So
+# the power state is followed, and when it turns Active after Active Standby or Suspend, with the setting on and an input (or
+# nothing) in front, Home is launched. An app the TV was turned on with (the Netflix key, a cast) stays in front.
+home_at_power_on() {
+  if ! luna_send -n 1 -w 3000 luna://com.webos.settingsservice/getSystemSettings '{"category":"general","keys":["homeAutoLaunch"]}' 2>/dev/null |
+    grep -q '"homeAutoLaunch": *"on"'; then
+    log "the TV came on; Home Auto Launch is off in LG's settings, so it stays on what it shows"
+    return 0
+  fi
+  fg=''
+  for i in 1 2 3 4 5 6; do
+    sleep 1
+    fg=$(luna_send -n 1 -w 2000 luna://com.webos.applicationManager/getForegroundAppInfo '{}' 2>/dev/null | sed -n 's/.*"appId": *"\([^"]*\)".*/\1/p')
+    [ -n "$fg" ] && break
+  done
+  case "$fg" in
+    com.webos.app.home) return 0 ;;
+    com.webos.app.hdmi* | com.webos.app.livetv | com.webos.app.externalinput.* | '') ;;
+    *) log "the TV came on with $fg in front; Home is not opened over it"; return 0 ;;
+  esac
+  log "the TV came on (${fg:-nothing in front}) and Home Auto Launch is on: Home is opened"
+  luna_send -n 1 -w 5000 luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' >/dev/null 2>&1
+}
+power_watch() {
+  last=''
+  luna_send -i luna://com.webos.service.tvpower/power/getPowerState '{"subscribe":true}' 2>/dev/null | while read -r line; do
+    st=$(echo "$line" | sed -n 's/.*"state": *"\([^"]*\)".*/\1/p')
+    [ -n "$st" ] || continue
+    case "$last" in 'Active Standby' | Suspend) [ "$st" = Active ] && home_at_power_on ;; esac
+    last=$st
+  done
+}
+
 log "started as uid $(id -u), arguments: $(echo "$*" | cut -c1-200)"
+power_watch &
 show start "$1"
 
 # the registration: SAM's events arrive one JSON line each
