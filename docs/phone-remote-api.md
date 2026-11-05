@@ -133,10 +133,11 @@ Do not log these addresses: they hold the token.
 
 ## On the TV itself
 
-The add-on's page on the TV uses these calls on `http://127.0.0.1:8765` (loopback only), under `/api/addons/phoneremote`: `GET` (the status:
-the pairing window, the paired phones, the last key's result), `POST {expireDays}`, `/pair {stop?}`, `/revoke {id}` or `{all:true}`,
-`/access {id, allow}`, and `/key {key}` (press one key as a phone would, to test the TV's side without a phone). The add-on is switched on and
-off with `POST /api/addons/phoneremote/enable {enabled}`, as any add-on is.
+The add-on's page on the TV uses these calls on `http://127.0.0.1:8765` (loopback only), under `/api/addons/phoneremote`: `GET /state` (the
+status: the pairing window, the paired phones, the last key's result), `POST /state {expireDays}`, `/pair {stop?}`, `/revoke {id}` or
+`{all:true}`, `/access {id, allow}`, and `/key {key}` (press one key as a phone would, to test the TV's side without a phone). The bare
+address `/api/addons/phoneremote` is the loader's own reply about the add-on, not this state. The add-on is switched on and off with
+`POST /api/addons/phoneremote/enable {enabled}`, as any add-on is.
 
 ## The page's `window.CYTV_APP` hooks
 

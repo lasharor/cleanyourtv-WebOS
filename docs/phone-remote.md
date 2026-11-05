@@ -202,8 +202,8 @@ Any of these sends the same packet to the TV:
 ## From a shell
 
 ```sh
-curl -s localhost:8765/api/addons/phoneremote                                     # state, paired phones (names, last seen), last key result
-curl -X POST localhost:8765/api/addons/phoneremote -d '{"expireDays":7}'          # remove phones unused for 7 days (1, 3, 7, 14, 30; 0 = never)
+curl -s localhost:8765/api/addons/phoneremote/state                               # state, paired phones (names, last seen), last key result
+curl -X POST localhost:8765/api/addons/phoneremote/state -d '{"expireDays":7}'    # remove phones unused for 7 days (1, 3, 7, 14, 30; 0 = never)
 curl -X POST localhost:8765/api/addons/phoneremote/key -d '{"key":"VOLUMEUP"}'    # press one key as a phone would, to try the way into the TV
 curl -X POST localhost:8765/api/addons/phoneremote/access -d '{"id":"<id>","allow":false}'   # block / allow
 curl -X POST localhost:8765/api/addons/phoneremote/revoke -d '{"id":"<id>"}'      # or {"all":true}

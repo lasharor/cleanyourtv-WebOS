@@ -1,9 +1,10 @@
 // Phone remote: a page on a paired phone that works as a remote control for the TV, over a WebSocket kept open while the phone's browser
 // is awake. Nothing is sent to the TV before the phone has paired. It is a catalog add-on (addons/catalog/phoneremote): it runs inside
 // the service and gets only its ctx (settings, dataDir, util, luna, log), never the service's own modules.
-// The TV's own page (page/index.html) asks this add-on through the loader, at /api/addons/phoneremote followed by:
-//   (nothing)   GET: the listener (listenError says why it cannot bind), the pairing window, the paired phones, what the last key did
-//   (nothing)   POST {expireDays}: "remove unused phones" (0, 1, 3, 7, 14 or 30 days)
+// The TV's own page (page/index.html) asks this add-on through the loader, at /api/addons/phoneremote followed by (the bare address is the
+// loader's own reply about the add-on, so the state has a path of its own):
+//   /state      GET: the listener (listenError says why it cannot bind), the pairing window, the paired phones, what the last key did
+//   /state      POST {expireDays}: "remove unused phones" (0, 1, 3, 7, 14 or 30 days)
 //   /pair       POST {stop?}: opens the pairing window (a 6-digit code, shown on the TV page); called again it keeps it open
 //   /revoke     POST {id} or {all:true}: forgets phones, their token stops working at once
 //   /access     POST {id, allow}: blocks a phone without forgetting it (it keeps its token), or allows it again
@@ -826,10 +827,11 @@ function create(ctx, opts) {
       keys: keys.status(),
     };
   }
-  // the add-on's own API, under /api/addons/phoneremote: `sub` is what the loader found after the id ('', '/pair', ...)
+  // The add-on's own API, under /api/addons/phoneremote: `sub` is what the loader found after the id ('/state', '/pair', ...). The bare
+  // address is the loader's (it answers with the add-on's info), so the state has its own path.
   async function handle(req, res, sub, body) {
     const u = sub || '/';
-    if (u === '/' && req.method === 'POST') {
+    if ((u === '/' || u === '/state') && req.method === 'POST') {
       const b = await body(req);
       if (b.expireDays !== undefined) {
         const d = b.expireDays;
@@ -843,7 +845,7 @@ function create(ctx, opts) {
       await new Promise(r => setTimeout(r, 50)); // the port is listening (or not) by the time the answer is made
       return json(res, status());
     }
-    if (u === '/') return json(res, status());
+    if (u === '/' || u === '/state') return json(res, status());
     if (u === '/pair' && req.method === 'POST') {
       const b = await body(req);
       if (b.stop) {

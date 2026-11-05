@@ -193,6 +193,11 @@ run(async () => {
     !r.j.listening && r.j.phones.length === 0 && r.j.pairing === null,
     'nothing listens at first: no phone is paired and no window is open'
   );
+  r = await lib.call(pr, '/state');
+  ok(
+    r.code === 200 && Array.isArray(r.j.phones) && r.j.expireDays !== undefined,
+    "the state has its own path (/state): the bare address is the loader's info about the add-on"
+  );
   ok(
     typeof r.j.listenError === 'string' && r.j.listenError === '' && !('error' in r.j),
     "the listener's own failure has its own key in the status (listenError, empty when it listened), apart from a failed request (error)"

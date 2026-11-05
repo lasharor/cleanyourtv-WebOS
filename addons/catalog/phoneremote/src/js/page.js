@@ -38,7 +38,7 @@ function el(tag, cls, text) {
   if (text !== undefined) e.textContent = text;
   return e;
 }
-/* one call to the add-on: path '' is the state, '/pair', '/revoke', '/access' and the base POST are the rest */
+/* one call to the add-on: '/state' is the state (and POSTs the expiry), then '/pair', '/revoke', '/access' */
 function api(path, body, cb) {
   var x = new XMLHttpRequest();
   x.open(body ? 'POST' : 'GET', API + path);
@@ -164,7 +164,7 @@ function setExpire(days) {
     return;
   }
   neverAsk = 0;
-  api('', { expireDays: days }, function (r) {
+  api('/state', { expireDays: days }, function (r) {
     if (!r) return fail(r);
     if (r.error) return toast(r.error);
     S = r;
@@ -316,7 +316,7 @@ function sig() {
   return s.join('|');
 }
 function poll() {
-  api('', null, function (r) {
+  api('/state', null, function (r) {
     if (!r || r.error) return;
     var was = S,
       paired = r.pairing && r.pairing.paired;
@@ -369,7 +369,7 @@ function init() {
   $('pairstop').onclick = stopPair;
   $('removeall').onclick = removeAll;
   document.addEventListener('keydown', onKey, true);
-  api('', null, function (r) {
+  api('/state', null, function (r) {
     if (!r) return fail(r);
     if (r.error) return toast(r.error);
     S = r;
