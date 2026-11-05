@@ -78,25 +78,6 @@ function load(keep) {
         },
         function () {}
       );
-      api('/api/phoneremote').then(
-        function (r) {
-          prMiss = 0;
-          pr = r && r.phones ? r : null; /* the add-on answers /api/phoneremote only while it runs */
-          if (view === 'main') {
-            build();
-            draw();
-          }
-        },
-        function () {
-          /* a stopped add-on answers 404 with no body, which lands here too: one missed poll keeps the row, the second one clears it */
-          if (++prMiss < 2) return;
-          pr = null;
-          if (view === 'main') {
-            build();
-            draw();
-          }
-        }
-      );
       if (s.checking)
         setTimeout(function () {
           load(true);

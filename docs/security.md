@@ -21,7 +21,7 @@ local network on request, and an optional notification endpoint is off by defaul
 | 8797 | Spotify page | The same, for the Spotify add-on (the Client ID of your own Spotify app, the sign-in); see [Spotify now playing](#spotify-now-playing) |
 | 8800 | Add-on repositories page | The same, for adding a repository of add-ons from your phone (ten minutes); see [Add-on repositories](development/addon-repos.md) |
 | 8798 | Jellyfin page | The same, for the Jellyfin add-on (server address, user name and password; the TV keeps only the access token); see [Cards](launcher.md#cards) |
-| 8799 | Phone remote | Only while the phone remote is switched on in the manager app **and** a phone is paired or its QR screen is open; every phone needs a token from a one-time code; see [Phone remote](phone-remote.md) |
+| 8799 | Phone remote (a catalog add-on) | Only while the add-on is on **and** a phone is paired or its pairing screen is open; every phone needs a token from a one-time code; see [Phone remote](phone-remote.md) |
 
 What the setup changes on the TV is listed in [What it changes on the TV](tv-changes.md).
 
@@ -105,15 +105,17 @@ the package and launcher names the updater already expects.
 
 ## Phone remote
 
-A phone that pairs can press the TV's remote keys, so the pairing is strict. Off until switched on in the manager app; the port (8799)
-listens on the network only while a phone is paired or the QR screen is open. Pairing needs the 6-digit code shown on the TV (the QR code
-carries it in its address, so a phone that scans the screen pairs without typing; that is the same information as the digits, and a
-photograph of the screen already gave it away): it works
-once, an address gets five tries a minute, the window closes after eight wrong codes and three minutes after the QR screen was left, and
-a pairing request from a web page of another site is refused. The phone gets a random 128-bit token; the TV keeps only its SHA-256 in
-`config.json` (root only), compares in constant time, and never logs tokens, hashes or codes. Nothing is accepted from a connection before
+A phone that pairs can press the TV's remote keys, so the pairing is strict. It is a catalog add-on, off until a person installs it and
+switches it on (Add-ons), because it opens a port on the LAN; that port (8799) listens on the network only while a phone is paired or the
+pairing screen of the add-on's page is open. Pairing needs the 6-digit code shown on the TV (the QR code carries it in its address, so a
+phone that scans the screen pairs without typing; that is the same information as the digits, and a photograph of the screen already gave
+it away): it works once, an address gets five tries a minute, the window closes after eight wrong codes and three minutes after the
+pairing screen was left, and a pairing request from a web page of another site is refused: the `Origin` has to name the TV's own
+address (or `localhost`), not merely match the `Host` header, which a page using DNS rebinding controls. The phone gets a random 128-bit
+token; the TV keeps only its SHA-256 in the add-on's settings (`config.json`, `addons.phoneremote.settings`, root only), compares in
+constant time, and never logs tokens, hashes or codes. Nothing is accepted from a connection before
 it shows a valid token (first message, 5 seconds), wrong tokens shut an address out for a minute, a connection may send 40 messages a
-second, and a page from another origin cannot open the WebSocket. Phones can be blocked or removed in the manager app and are cut off
+second, and a page from another origin cannot open the WebSocket. Phones can be blocked or removed on the add-on's page and are cut off
 at once. It is plain HTTP: anyone who can watch your Wi-Fi traffic can read the token and the keys (and could pair only with a code from
 the screen, but could replay a stolen token), as for the other phone pages. A paired phone can also put the TV in standby with the TV's
 own power key (`POWER`, not the service's full power-off, so Wake-on-LAN keeps working); turning it on again from deep standby needs a Wake-on-LAN packet (see [Turning the TV on](phone-remote.md#turning-the-tv-on)).

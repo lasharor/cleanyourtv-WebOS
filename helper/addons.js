@@ -9,10 +9,10 @@
 //   POST /api/addons/install {id}          download from the catalog, check every file against its hash, install
 //   POST /api/addons/remove {id}           delete an installed add-on (its data stays)
 //   GET  /api/addons/<id>                  one add-on
-//   POST /api/addons/<id>/enable {enabled} stored in config.json; takes effect at the next start (a page add-on at once, and a bundled
-//                                          service add-on whose manifest says "live": true, which has a stop())
+//   POST /api/addons/<id>/enable {enabled} stored in config.json; takes effect at the next start (a page add-on at once)
 //   ANY  /api/addons/<id>/<path>           answered by the add-on's own service.js (path = what follows the id)
-//   GET  /addon/<id>/<file>                a file of the add-on's page (only while it runs); GET /addon/sdk.js is the helper for pages
+//   GET  /addon/<id>/<file>                a file of the add-on's page (only while it runs); GET /addon/sdk.js is the helper for pages,
+//                                          GET /addon/qrcode.js the QR code generator a page may draw with
 // An add-on of kind "service" is Node code that runs as root in this process; it gets a small ctx (its folders, its settings, fetch,
 // a log line) and a failing one is switched off without touching the rest. Installed add-ons come only from the catalog, file by
 // file against the SHA-256 in its index. DISABLE-ADDONS in the CleanYourTV folder (or ADDONS/DISABLE) loads none.
@@ -128,7 +128,6 @@ function check(m, serviceVersion) {
       cards,
       claims: (Array.isArray(m.claims) ? m.claims : []).filter((c, i, a) => CLAIMS.indexOf(c) >= 0 && a.indexOf(c) === i),
       enabledOption: /^[A-Za-z]{2,24}$/.test(m.enabledOption || '') ? m.enabledOption : '',
-      live: m.live === true, // bundled only: the switch starts and stops the service part at once (the module has stop())
       tile: t
         ? {
             label: String(t.label || m.name).slice(0, 40),
@@ -168,6 +167,15 @@ function cleanIndex(raw) {
     });
   }
   return out;
+}
+
+// the QR code generator an add-on's page may load as /addon/qrcode.js: beside the helper files on the TV (the package puts it there),
+// and in third-party/ on a computer
+function qrcodeFile() {
+  const beside = path.join(__dirname, 'qrcode.js'),
+    repo = path.join(__dirname, '..', 'third-party', 'qrcode-generator', 'qrcode.js');
+  if (fs.existsSync(beside)) return beside;
+  return fs.existsSync(repo) ? repo : '';
 }
 
 const rmrf = d => {
@@ -309,7 +317,7 @@ function create(ctx) {
       a.status = 'failed';
       a.error = String((e && e.message) || e).slice(0, 200);
       console.error('addon ' + a.id + ' failed to start: ' + ((e && e.stack) || e));
-      // a live switch never stops a failed add-on, so whatever start() set up (a listener, a timer) is stopped here
+      // whatever start() set up before it failed (a listener, a timer) is stopped here, so a restart of the switch starts clean
       try {
         if (typeof a.mod.stop === 'function') a.mod.stop();
       } catch (e2) {
@@ -760,6 +768,25 @@ function create(ctx) {
       res.writeHead(200, { 'content-type': TYPES.js, 'cache-control': 'no-cache' });
       return res.end(SDK);
     }
+    if (u === '/addon/qrcode.js') {
+      // a shared page asset: the QR code generator (third-party/qrcode-generator), for an add-on page that shows a QR (the phone remote's
+      // pairing screen). One copy in the repository: it ships in the package beside the helper files (ipk/build.py) and is read from
+      // third-party/ on a computer, where the package's flat layout does not exist.
+      const f = qrcodeFile();
+      if (!f) return web.notFound(res);
+      try {
+        const st = fs.statSync(f);
+        res.writeHead(200, {
+          'content-type': TYPES.js,
+          'content-length': st.size,
+          'cache-control': 'no-cache',
+          'x-content-type-options': 'nosniff',
+        });
+        return fs.createReadStream(f).pipe(res);
+      } catch (_) {
+        return web.notFound(res);
+      }
+    }
     const pg = /^\/addon\/([a-z][a-z0-9-]*)\/(.*)$/.exec(u);
     if (pg) {
       const a = find(pg[1]);
@@ -845,40 +872,6 @@ function create(ctx) {
       if (a.manifest.kind === 'page' && a.status !== 'paused') {
         a.status = b.enabled ? 'running' : 'off';
         return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: false });
-      }
-      if (a.bundled && a.manifest.live && a.manifest.kind === 'service' && a.status !== 'paused' && a.status !== 'failed') {
-        if (b.enabled && a.status === 'off') {
-          a.status = 'ready';
-          activate(a);
-          // a live add-on is switched off by stop(): one without it would keep running while the manager says off and its routes 404
-          if (a.status === 'running' && typeof a.mod.stop !== 'function') {
-            a.mod = null;
-            a.status = 'failed';
-            a.error = 'a live add-on needs a stop() so it can be switched off; this one has none';
-            console.error('addon ' + a.id + ': ' + a.error);
-            return web.json(res, { error: a.error, restartNeeded: true });
-          }
-          startOne(a);
-        } else if (!b.enabled && a.mod) {
-          if (typeof a.mod.stop !== 'function') {
-            // only reachable when a live add-on started at boot: it cannot be stopped without stopping the service
-            a.error = 'the add-on has no stop(); restart the service to switch it off';
-            console.error('addon ' + a.id + ': ' + a.error);
-            return web.json(res, { error: a.error, restartNeeded: true });
-          }
-          try {
-            a.mod.stop();
-          } catch (e) {
-            // it may still be bound: keep it running and say so, so the switch can be tried again instead of a second listener (EADDRINUSE)
-            a.error = 'the add-on did not stop: ' + String((e && e.message) || e).slice(0, 160);
-            console.error('addon ' + a.id + ' failed to stop: ' + ((e && e.stack) || e));
-            return web.json(res, { error: a.error });
-          }
-          a.mod = null;
-          a.status = 'off';
-          a.error = '';
-        }
-        return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: a.status === 'failed' });
       }
       // an add-on switched by an option stays loaded and the launcher reads the option: no restart for it
       return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: changed && !opt });

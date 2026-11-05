@@ -2,8 +2,9 @@
 // it is a name, a number is added when another phone has the same name, and the page falls back from the app to the router to the browser.
 const path = require('path');
 const { ok, root, run } = require('./lib');
-const dn = require(path.join(root, 'helper', 'addons-bundled', 'phoneremote', 'devicename'));
-const { phonePage } = require(path.join(root, 'helper', 'addons-bundled', 'phoneremote', 'page'));
+const dn = require(path.join(root, 'addons', 'catalog', 'phoneremote', 'devicename'));
+const { phonePage } = require(path.join(root, 'addons', 'catalog', 'phoneremote', 'page'));
+const i18n = require(path.join(root, 'helper', 'i18n'));
 
 run(async () => {
   // ---- what counts as a name ----
@@ -77,7 +78,7 @@ run(async () => {
   );
 
   // ---- the guess in the page: the app, then the router, then the browser, then Device ----
-  const h = phonePage('en', '', 'Router-Name');
+  const h = phonePage(i18n, 'en', '', 'Router-Name');
   const a = h.indexOf('function has(u,s)');
   const e = h.indexOf('return n||', a);
   const js = h.slice(a, h.indexOf(String.fromCharCode(10), e));
@@ -141,8 +142,11 @@ run(async () => {
 
   // ---- the router name reaches the page only as a quoted, escaped string ----
   ok(
-    /var HINT="Router-Name";/.test(h) && /var HINT="";/.test(phonePage('en', '', '')) && /var HINT="";/.test(phonePage('en')),
+    /var HINT="Router-Name";/.test(h) && /var HINT="";/.test(phonePage(i18n, 'en', '', '')) && /var HINT="";/.test(phonePage(i18n, 'en')),
     'the page carries the hint, or an empty one'
   );
-  ok(!/var HINT=[^;]*</.test(phonePage('en', '', 'a<b')), 'a < in the hint is escaped');
+  ok(!/var HINT=[^;]*</.test(phonePage(i18n, 'en', '', 'a<b')), 'a < in the hint is escaped');
 });
+
+
+

@@ -1,0 +1,220 @@
+/* The phone remote's page on the TV (1920x1080): pair a phone, the paired phones, and when unused ones are removed.
+   The page sits over Home as a page of the book, so it keeps Home's dark look; the sizes are the panel's own (Chromium 68, ES5 script).
+   Only the focus ring and the toast change with a transition: transform and opacity only (the TV's GPU is weak). */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0a0c10;
+  color: #eef2f8;
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  overflow: hidden;
+}
+#app {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 52px 88px 44px;
+  display: flex;
+  flex-direction: column;
+}
+h1 {
+  font-size: 50px;
+  line-height: 1.1;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+.sub {
+  margin: 10px 0 0;
+  font-size: 24px;
+  color: #94a1b5;
+}
+.cols {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  margin-top: 40px;
+}
+.col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.col + .col {
+  margin-left: 72px;
+}
+h2 {
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0 0 18px;
+  color: #c7d1e0;
+}
+.count {
+  color: #7c8aa0;
+  font-weight: 500;
+}
+button {
+  font: inherit;
+  font-size: 21px;
+  color: #eef2f8;
+  background: #191e27;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 14px 22px;
+  cursor: pointer;
+  outline: none;
+}
+button:focus {
+  border-color: #4da3ff;
+  background: #202a3b;
+}
+button.pri {
+  background: #2b6fd6;
+}
+button.pri:focus {
+  background: #3b82f6;
+}
+button.ghost {
+  background: #12161d;
+  color: #9aa6b8;
+}
+button.danger {
+  background: #23161a;
+  color: #ffb3b3;
+}
+button.danger:focus {
+  background: #3a2027;
+  border-color: #ff6b6b;
+}
+button.on {
+  background: #23532f;
+  border-color: #46c46f;
+}
+button.dim {
+  color: #5d6878;
+}
+.wide {
+  align-self: flex-start;
+}
+.hide {
+  display: none !important;
+}
+.hint {
+  font-size: 19px;
+  line-height: 1.35;
+  color: #8391a6;
+  margin: 12px 0;
+}
+.warn {
+  color: #ffcf80;
+}
+#pairsheet {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+}
+#qr {
+  width: 320px;
+  height: 320px;
+  background: #fff;
+  border-radius: 10px;
+  image-rendering: pixelated;
+}
+.url {
+  font-size: 22px;
+  color: #cfe0ff;
+  font-family: Menlo, Consolas, monospace;
+  margin: 4px 0 6px;
+}
+.code {
+  font-size: 54px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  font-family: Menlo, Consolas, monospace;
+  color: #fff;
+  margin: 6px 0;
+}
+#phonelist {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.phone {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+  background: #12161d;
+  border-radius: 14px;
+}
+.phone .who {
+  flex: 1;
+  min-width: 0;
+}
+.phone b {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+}
+.phone .st {
+  display: block;
+  font-size: 18px;
+  color: #8391a6;
+  margin-top: 3px;
+}
+.phone .st.on {
+  color: #6fd48c;
+}
+.phone .st.no {
+  color: #ffb3b3;
+}
+.phone .acts {
+  display: flex;
+  flex-shrink: 0;
+}
+.phone .acts button {
+  font-size: 18px;
+  padding: 10px 16px;
+  margin-left: 10px;
+}
+#removeall {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+.unused {
+  margin-top: 28px;
+}
+.choices {
+  display: flex;
+}
+.choices button {
+  margin-right: 12px;
+  font-size: 19px;
+  padding: 12px 20px;
+}
+#toast {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translate(-50%, 20px);
+  padding: 14px 26px;
+  border-radius: 12px;
+  background: #1c2634;
+  color: #fff;
+  font-size: 21px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.18s,
+    opacity 0.18s;
+}
+#toast.on {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+#debug {
+  display: none;
+}

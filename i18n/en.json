@@ -1229,5 +1229,13 @@
  "Logged out. This phone was removed from the TV’s list.": "Logged out. This phone was removed from the TV’s list.",
  "The TV cannot be reached right now, so it cannot be told. This phone stops controlling the TV and everything it stored about the TV is deleted, but the TV keeps listing it until you remove it in the manager app. To use it again you pair with a new code.": "The TV cannot be reached right now, so it cannot be told. This phone stops controlling the TV and everything it stored about the TV is deleted, but the TV keeps listing it until you remove it in the manager app. To use it again you pair with a new code.",
  "The TV could not be reached: its list is left as it is": "The TV could not be reached: its list is left as it is",
- "Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.": "Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones."
+ "Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.": "Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.",
+ "A phone that is lost or sold would control the TV for ever. Choose Never again to keep every phone.": "A phone that is lost or sold would control the TV for ever. Choose Never again to keep every phone.",
+ "No phone is paired yet.": "No phone is paired yet.",
+ "Allow": "Allow",
+ "Block": "Block",
+ "Yes, remove": "Yes, remove",
+ "Remove": "Remove",
+ "The pairing window closed.": "The pairing window closed.",
+ "The TV is not waiting for a phone. On the TV, open the Phone remote page and choose Pair a phone.": "The TV is not waiting for a phone. On the TV, open the Phone remote page and choose Pair a phone."
 }

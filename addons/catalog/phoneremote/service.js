@@ -1,33 +1,72 @@
 // Phone remote: a page on a paired phone that works as a remote control for the TV, over a WebSocket kept open while the phone's browser
-// is awake. Nothing is sent to the TV before the phone has paired.
-//   GET  /api/phoneremote          on/off, the listener (listenError says why it cannot bind), the pairing window, the paired phones,
-//                                  what the last key did
-//   POST /api/phoneremote          {enabled} switches the phone remote on or off (off closes the port and every connection)
-//   POST /api/phoneremote/pair     {stop?} opens the pairing window (a 6-digit code, shown on the TV); called again it keeps it open
-//   POST /api/phoneremote/revoke   {id} or {all:true} forgets phones: their token stops working at once
-//   POST /api/phoneremote/access   {id, allow} blocks a phone without forgetting it (it keeps its token), or allows it again
-//   POST /api/phoneremote/key      {key} presses one remote button as a phone would (to try the key adapter from the TV: curl)
-// The settings are config.json "phoneRemote": {enabled, phones: [{id, name, hash, created, seen, blocked}]}. A phone's token is
-// "<id>.<secret>": the phone keeps it, the TV keeps only the SHA-256 of the secret, and it is never logged.
-// The LAN listener (port 8799) runs only while the phone remote is on AND a phone is paired or the pairing window is open. It serves the
-// page, accepts a pairing (the code, five tries a minute per address, the window closes after eight wrong ones) and the WebSocket at /ws,
-// where the first message must be {t:'hello', token}. The keys themselves are remotekeys.js. The listener's own failure is separate from a
-// request that failed: GET /api/phoneremote reports it as listenError (a port that cannot be bound, say 8799 busy), so the manager can tell
-// the two apart.
+// is awake. Nothing is sent to the TV before the phone has paired. It is a catalog add-on (addons/catalog/phoneremote): it runs inside
+// the service and gets only its ctx (settings, dataDir, util, luna, log), never the service's own modules.
+// The TV's own page (page/index.html) asks this add-on through the loader, at /api/addons/phoneremote followed by:
+//   (nothing)   GET: the listener (listenError says why it cannot bind), the pairing window, the paired phones, what the last key did
+//   (nothing)   POST {expireDays}: "remove unused phones" (0, 1, 3, 7, 14 or 30 days)
+//   /pair       POST {stop?}: opens the pairing window (a 6-digit code, shown on the TV page); called again it keeps it open
+//   /revoke     POST {id} or {all:true}: forgets phones, their token stops working at once
+//   /access     POST {id, allow}: blocks a phone without forgetting it (it keeps its token), or allows it again
+//   /key        POST {key}: presses one remote button as a phone would (to try the key adapter from the TV: curl)
+// The settings are this add-on's settings in config.json (addons.phoneremote.settings): {expireDays, phones: [{id, name, hash, created,
+// seen, blocked}]}. A phone's token is "<id>.<secret>": the phone keeps it, the TV keeps only the SHA-256 of the secret, and it is never
+// logged.
+// The LAN listener (port 8799) runs only while a phone is paired or the pairing window is open. It serves the phone page, accepts a
+// pairing (the code, five tries a minute per address, the window closes after eight wrong ones) and the WebSocket at /ws, where the first
+// message must be {t:'hello', token}. The keys themselves are remotekeys.js. The listener's own failure is separate from a request that
+// failed: GET reports it as listenError (a port that cannot be bound, say 8799 busy), so the TV page can tell the two apart.
 const http = require('http'),
   fs = require('fs'),
   path = require('path'),
-  crypto = require('crypto');
+  crypto = require('crypto'),
+  nodeUrl = require('url');
 const tvname = require('./tvname');
-const web = require('../../web'),
-  i18n = require('../../i18n'),
-  luna = require('../../luna'),
-  nc = require('../../netcompat'),
-  ws = require('./ws'),
+const ws = require('./ws'),
   page = require('./page'),
   devicename = require('./devicename');
 
-const PORT = 8799, // after the Android box page (8793)
+// the small parts of the service's web helpers and of its Node 8 compatibility layer that a catalog add-on cannot require (it gets only
+// its ctx): a JSON reply, a 404, the request body, and http(s) options from an address (Node 8 has no http.get(url, options))
+const json = (res, o, code) => {
+  res.writeHead(code || 200, { 'content-type': 'application/json' });
+  res.end(JSON.stringify(o));
+};
+const notFound = res => {
+  res.writeHead(404);
+  res.end();
+};
+function readBody(req, max) {
+  const limit = max || 1 << 20;
+  return new Promise(resolve => {
+    let b = '',
+      big = false;
+    req.on('data', c => {
+      if (big) return;
+      b += c;
+      if (b.length > limit) big = true;
+    });
+    req.on('end', () => {
+      if (big) return resolve({});
+      try {
+        resolve(JSON.parse(b || '{}'));
+      } catch (_) {
+        resolve({});
+      }
+    });
+    req.on('error', () => resolve({}));
+  });
+}
+const withUrl = u => {
+  const x = nodeUrl.parse(String(u)),
+    o = { protocol: x.protocol, hostname: String(x.hostname || '').replace(/^\[|\]$/g, ''), path: x.path };
+  if (x.port) o.port = x.port;
+  if (x.auth) o.auth = x.auth;
+  return o;
+};
+const get = (lib, u, opts, cb) => lib.get(Object.assign(withUrl(u), opts), cb);
+const request = (lib, u, opts, cb) => lib.request(Object.assign(withUrl(u), opts), cb);
+
+const PORT = 8799, // after the Jellyfin page (8798)
   IDLE_MS = 3 * 60 * 1000, // the pairing window closes this long after the manager last asked for it ...
   MAX_PAIR_MS = 30 * 60 * 1000, // ... and at the latest this long after it opened
   MAX_PHONES = 10,
@@ -51,25 +90,30 @@ const cleanName = n =>
     .trim()
     .slice(0, 30) || 'Phone';
 
-// opts: {port (0 = any, tests), host, keys (the key adapter, tests), apiTimeout (the loopback API call's limit in ms, 5000 by default)}
+// opts: {port (0 = any, tests), host, keys (the key adapter, tests), luna (tests), lanIp (tests), api (the loopback address, tests),
+//        apiTimeout (the loopback API call's limit in ms, 5000 by default), localAddresses (tests: the TV's own addresses an Origin may name)}
 function create(ctx, opts) {
   const o = opts || {};
-  const API = String(o.api || 'http://127.0.0.1:8765');
-  const config = ctx.config;
+  const util = ctx.util,
+    i18n = util.i18n;
+  const API = String(o.api || 'http://127.0.0.1:8765'); // the service's own loopback API (apps, inputs, Live TV, icons)
+  const lang = req => i18n.lang(req, ctx.env.lang());
+  const lanIp = o.lanIp || util.lanIp;
   const keys = o.keys || require('./remotekeys').create(ctx);
-  const L = o.luna || luna; // the TV's IPC (tests hand in a fake)
-  const cfg = () => Object.assign({ enabled: false, phones: [] }, config.get().phoneRemote || {});
-  const save = fn =>
-    config.update('phoneremote', c => {
-      c.phoneRemote = Object.assign({ enabled: false, phones: [] }, c.phoneRemote || {});
-      c.phoneRemote.phones = (c.phoneRemote.phones || []).slice();
-      fn(c.phoneRemote);
-    });
-  const find = id => cfg().phones.filter(p => p.id === id)[0] || null;
+  const L = o.luna || ctx.luna || (() => Promise.resolve({ returnValue: false })); // the TV's IPC (tests hand in a fake)
+  // everything this add-on keeps is its own settings (config.json addons.phoneremote.settings): no service config, no files beside it
+  const state = () => Object.assign({ phones: [], expireDays: EXPIRE_DEFAULT }, ctx.settings.get());
+  const save = fn => {
+    const s = state();
+    s.phones = (s.phones || []).slice();
+    fn(s);
+    ctx.settings.set({ phones: s.phones, expireDays: s.expireDays });
+  };
+  const find = id => state().phones.filter(p => p.id === id)[0] || null;
   // For security a phone that has not been used for this many days is removed by itself (its token stops working): one that was lost,
-  // sold or forgotten does not keep the remote for ever. 0 is off, chosen in the manager.
+  // sold or forgotten does not keep the remote for ever. 0 is off, chosen on the add-on's page.
   const expireDays = () => {
-    const v = cfg().expireDays;
+    const v = state().expireDays;
     return v === 0 ? 0 : EXPIRE_DAYS.indexOf(v) >= 0 ? v : EXPIRE_DEFAULT;
   };
 
@@ -82,7 +126,7 @@ function create(ctx, opts) {
 
   // ---- the pairing window ----
   function newCode() {
-    return String(nc.randomInt(100000, 1000000));
+    return String(util.randomInt(100000, 1000000));
   }
   function openPair() {
     const now = Date.now();
@@ -101,11 +145,12 @@ function create(ctx, opts) {
   }
 
   // ---- the listener ----
-  const wanted = () => cfg().enabled && (cfg().phones.length > 0 || !!pair);
+  // the add-on is on or off with the loader's switch (Add-ons > Phone remote), so it only has to listen while a phone is paired or the
+  // pairing window is open: a TV without a paired phone and with no one pairing listens on nothing
+  const wanted = () => state().phones.length > 0 || !!pair;
   function sync() {
     if (wanted() && !srv) listen();
     else if (!wanted() && srv) unlisten();
-    if (!cfg().enabled) closePairQuiet();
   }
   function closePairQuiet() {
     if (!pair) return;
@@ -138,10 +183,29 @@ function create(ctx, opts) {
     } catch (_) {}
   }
   const port = () => (srv && srv.address() ? srv.address().port : o.port || PORT);
-  const lan = () => 'http://' + web.lanIp() + ':' + port();
+  const lan = () => 'http://' + lanIp() + ':' + port();
 
-  // a page from another site must not talk to the phone remote: browsers send Origin, and it has to be this very address
-  const ownOrigin = (origin, host) => !origin || origin === 'http://' + host;
+  // A page from another site must not talk to the phone remote. Browsers send Origin, and it has to name the TV itself: comparing it
+  // with the Host header alone is not enough, because a page using DNS rebinding controls Host. So the origin's host must be one of the
+  // TV's own addresses (or localhost) and the same as Host. The token is still needed, so this mainly guards the pairing window.
+  const localAddresses = () => {
+    const out = ['localhost', '127.0.0.1'];
+    try {
+      const n = require('os').networkInterfaces();
+      for (const k of Object.keys(n))
+        for (const a of n[k] || []) if (a && a.family === 'IPv4' && a.address) out.push(String(a.address).toLowerCase());
+    } catch (_) {}
+    return out;
+  };
+  const hostOnly = h =>
+    String(h || '')
+      .replace(/:\d+$/, '')
+      .toLowerCase();
+  const ownOrigin = (origin, host) => {
+    if (!origin) return true; // not a browser (curl, a script, the phone's own app): no Origin to check
+    if (origin !== 'http://' + host) return false;
+    return (o.localAddresses || localAddresses()).indexOf(hostOnly(host)) >= 0;
+  };
   const ip = req => String((req.socket && req.socket.remoteAddress) || '');
 
   function onRequest(req, res) {
@@ -166,7 +230,7 @@ function create(ctx, opts) {
       // the router's name for the phone is the first guess for the name field (devicename.js); the page falls back to what the browser says
       return devicename.routerName(
         ip(req),
-        hint => send(200, page.phonePage(i18n.lang(req, config.get().lang), c ? c[1] : '', hint), 'text/html; charset=utf-8'),
+        hint => send(200, page.phonePage(i18n, lang(req), c ? c[1] : '', hint), 'text/html; charset=utf-8'),
         opts && opts.reverse
       );
     }
@@ -185,8 +249,8 @@ function create(ctx, opts) {
     }
     if (req.method === 'POST' && u === '/api/pair') {
       if (!ownOrigin(req.headers.origin, req.headers.host)) return send(403, { error: 'forbidden' });
-      return web.body(req, 2048).then(b => {
-        const r = tryPair(ip(req), b, i18n.lang(req, config.get().lang));
+      return readBody(req, 2048).then(b => {
+        const r = tryPair(ip(req), b, lang(req));
         send(r.status, r.body);
       });
     }
@@ -205,19 +269,19 @@ function create(ctx, opts) {
     if (!pair)
       return {
         status: 403,
-        body: { error: i18n.tr(lang, 'The TV is not waiting for a phone. On the TV, open Features > Phone remote > Pair a phone.') },
+        body: { error: i18n.tr(lang, 'The TV is not waiting for a phone. On the TV, open the Phone remote page and choose Pair a phone.') },
       };
     if (typeof b.code !== 'string' || !same(b.code.trim(), pair.code)) {
       if (++pair.wrong >= WRONG_MAX) closePair();
       return { status: 403, body: { error: i18n.tr(lang, 'That code is not right. Check the 6 digits on the TV screen.') } };
     }
-    if (cfg().phones.length >= MAX_PHONES)
+    if (state().phones.length >= MAX_PHONES)
       return { status: 409, body: { error: i18n.tr(lang, 'Too many phones are paired. Remove one on the TV.') } };
     const id = crypto.randomBytes(4).toString('hex'),
       secret = crypto.randomBytes(16).toString('hex'),
       name = devicename.unique(
         cleanName(b.name),
-        cfg().phones.map(p => p.name)
+        state().phones.map(p => p.name)
       );
     save(c => {
       c.phones.push({ id, name, hash: sha(secret).toString('hex'), created: now, seen: now, blocked: false });
@@ -232,7 +296,7 @@ function create(ctx, opts) {
   // ---- connections ----
   function onUpgrade(req, socket, head) {
     const u = req.url.split('?')[0];
-    if (u !== '/ws' || clients.size >= MAX_SOCKETS || !cfg().enabled) {
+    if (u !== '/ws' || clients.size >= MAX_SOCKETS) {
       socket.end('HTTP/1.1 ' + (u === '/ws' ? 503 : 404) + ' No\r\nConnection: close\r\n\r\n');
       return;
     }
@@ -281,7 +345,7 @@ function create(ctx, opts) {
     const limit = Date.now() - days * 86400000,
       online = {};
     clients.forEach(c => c.id && (online[c.id] = true));
-    const old = cfg().phones.filter(p => !online[p.id] && Math.max(p.seen || 0, p.created || 0) < limit);
+    const old = state().phones.filter(p => !online[p.id] && Math.max(p.seen || 0, p.created || 0) < limit);
     if (!old.length) return;
     save(c => {
       c.phones = c.phones.filter(p => old.every(q => q.id !== p.id));
@@ -289,8 +353,7 @@ function create(ctx, opts) {
     console.log('phoneremote: ' + old.length + (old.length === 1 ? ' phone' : ' phones') + ' not used for ' + days + ' days removed');
     sync();
   }
-  const sweeper = setInterval(sweep, 3600000);
-  if (sweeper.unref) sweeper.unref();
+  // (its hourly interval is made in start(), with the one that drops quiet connections)
 
   // the address a Wake-on-LAN packet needs, and whether the TV listens for one (a phone's browser cannot send it itself; the page shows both)
   let netCache = null;
@@ -397,7 +460,7 @@ function create(ctx, opts) {
       const c = POWER[String(m.a || '')];
       if (!c) return { ok: false, error: 'bad action' };
       try {
-        const r = await L('luna://com.webos.service.tvpower/power/' + c.m, c.a, { timeout: 5000 });
+        const r = await L('luna://com.webos.service.tvpower/power/' + c.m, c.a, { wait: 5000 });
         pwrAt = 0; // a state change just happened: the next question goes to the TV, not to what it said a moment ago
         return { ok: !!(r && r.returnValue !== false), error: (r && r.errorText) || '' };
       } catch (e) {
@@ -413,7 +476,7 @@ function create(ctx, opts) {
     if (Date.now() - pwrAt < 2000) return pwrVal;
     pwrAt = Date.now();
     try {
-      const r = await L('luna://com.webos.service.tvpower/power/getPowerState', {}, { timeout: 3000 });
+      const r = await L('luna://com.webos.service.tvpower/power/getPowerState', {}, { wait: 3000 });
       pwrVal = r && typeof r.state === 'string' ? r.state : '';
     } catch (_) {
       pwrVal = '';
@@ -430,7 +493,7 @@ function create(ctx, opts) {
     let name = tvname.read();
     if (!name) {
       try {
-        const r = await L('luna://com.webos.service.tv.systemproperty/getSystemInfo', { keys: ['modelName'] }, { timeout: 3000 });
+        const r = await L('luna://com.webos.service.tv.systemproperty/getSystemInfo', { keys: ['modelName'] }, { wait: 3000 });
         name = r && typeof r.modelName === 'string' ? r.modelName : '';
       } catch (_) {
         name = '';
@@ -460,7 +523,7 @@ function create(ctx, opts) {
       try {
         const payload = body ? JSON.stringify(body) : '';
         const headers = payload ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) } : {};
-        const r = nc.request(http, API + path, { method, headers }, s => {
+        const r = request(http, API + path, { method, headers }, s => {
           let data = '';
           s.on('data', c => (data += c));
           s.on('end', () => {
@@ -573,7 +636,7 @@ function create(ctx, opts) {
       if (timer.unref) timer.unref();
       try {
         const lib = String(address).indexOf('https:') === 0 ? require('https') : http; // most provider logos sit on https
-        req = nc.get(lib, address, {}, r => {
+        req = get(lib, address, {}, r => {
           if (LOGO_REDIRECT[r.statusCode] && r.headers.location && hops < LOGO_HOPS) {
             following = true;
             r.on('error', () => {}); // the redirect's own body is not read: whatever happens to it is not this logo's answer
@@ -581,7 +644,7 @@ function create(ctx, opts) {
             r.resume();
             let next;
             try {
-              next = new nc.URL(String(r.headers.location), String(address)).toString();
+              next = nodeUrl.resolve(String(address), String(r.headers.location));
             } catch (_) {
               return finish(null);
             }
@@ -637,16 +700,14 @@ function create(ctx, opts) {
   function appIcon(res, id, send) {
     if (!/^[\w.\-]+$/.test(id)) return send(404, { error: 'no icon' }, 'application/json');
     try {
-      http
-        .get(API + '/icon/' + encodeURIComponent(id), r => {
-          if (r.statusCode !== 200) {
-            r.resume();
-            return send(404, { error: 'no icon' }, 'application/json');
-          }
-          res.writeHead(200, { 'content-type': r.headers['content-type'] || 'image/png', 'cache-control': 'max-age=3600' });
-          r.pipe(res);
-        })
-        .on('error', () => send(404, { error: 'no icon' }, 'application/json'));
+      get(http, API + '/icon/' + encodeURIComponent(id), {}, r => {
+        if (r.statusCode !== 200) {
+          r.resume();
+          return send(404, { error: 'no icon' }, 'application/json');
+        }
+        res.writeHead(200, { 'content-type': r.headers['content-type'] || 'image/png', 'cache-control': 'max-age=3600' });
+        r.pipe(res);
+      }).on('error', () => send(404, { error: 'no icon' }, 'application/json'));
     } catch (_) {
       send(404, { error: 'no icon' }, 'application/json');
     }
@@ -723,17 +784,7 @@ function create(ctx, opts) {
     if (m.n !== undefined && !c.conn.closed) c.conn.send(JSON.stringify({ t: 'ack', n: m.n, ok: !!r.ok, e: r.ok ? '' : r.error }));
   }
 
-  // drop what has gone quiet (a phone that lost the network does not close its connection)
-  const beat = setInterval(() => {
-    const now = Date.now();
-    clients.forEach(c => {
-      if (now - c.last > QUIET_MS) c.conn.terminate();
-    });
-    Object.keys(bad).forEach(k => {
-      if (now > bad[k].until) delete bad[k];
-    });
-  }, 20000);
-  if (beat.unref) beat.unref();
+  // drop what has gone quiet (a phone that lost the network does not close its connection): the interval is made in start()
 
   // a phone that is removed is told so before its connection is closed: the page then goes back to its pairing screen, not to "lost the TV"
   const kick = id =>
@@ -751,7 +802,6 @@ function create(ctx, opts) {
     const online = {};
     clients.forEach(c => c.id && (online[c.id] = true));
     return {
-      enabled: cfg().enabled,
       expireDays: expireDays(),
       listening: !!(srv && srv.listening),
       port: port(),
@@ -765,7 +815,7 @@ function create(ctx, opts) {
             paired: pair.paired,
           }
         : null,
-      phones: cfg().phones.map(p => ({
+      phones: state().phones.map(p => ({
         id: p.id,
         name: p.name,
         created: p.created,
@@ -776,45 +826,38 @@ function create(ctx, opts) {
       keys: keys.status(),
     };
   }
-  async function handle(req, res, u, body) {
-    if (u === '/api/phoneremote' && req.method === 'POST') {
+  // the add-on's own API, under /api/addons/phoneremote: `sub` is what the loader found after the id ('', '/pair', ...)
+  async function handle(req, res, sub, body) {
+    const u = sub || '/';
+    if (u === '/' && req.method === 'POST') {
       const b = await body(req);
       if (b.expireDays !== undefined) {
         const d = b.expireDays;
-        if (d !== 0 && EXPIRE_DAYS.indexOf(d) < 0) return web.json(res, { error: 'Choose 1, 3, 7, 14 or 30 days, or 0 for never.' }, 400);
+        if (d !== 0 && EXPIRE_DAYS.indexOf(d) < 0) return json(res, { error: 'Choose 1, 3, 7, 14 or 30 days, or 0 for never.' }, 400);
         save(c => {
           c.expireDays = d;
         });
         sweep();
       }
-      if (b.enabled !== undefined)
-        save(c => {
-          c.enabled = b.enabled === true;
-        });
-      if (!cfg().enabled) {
-        closePairQuiet();
-        keys.close();
-      }
       sync();
       await new Promise(r => setTimeout(r, 50)); // the port is listening (or not) by the time the answer is made
-      return web.json(res, status());
+      return json(res, status());
     }
-    if (u === '/api/phoneremote') return web.json(res, status());
-    if (u === '/api/phoneremote/pair' && req.method === 'POST') {
+    if (u === '/') return json(res, status());
+    if (u === '/pair' && req.method === 'POST') {
       const b = await body(req);
       if (b.stop) {
         closePair();
-        return web.json(res, status());
+        return json(res, status());
       }
-      if (!cfg().enabled) return web.json(res, { error: 'Switch the phone remote on first.' }, 400);
       openPair();
       await new Promise(r => setTimeout(r, 50));
-      return web.json(res, status());
+      return json(res, status());
     }
-    if (u === '/api/phoneremote/revoke' && req.method === 'POST') {
+    if (u === '/revoke' && req.method === 'POST') {
       const b = await body(req);
       if (b.all === true) {
-        const ids = cfg().phones.map(p => p.id);
+        const ids = state().phones.map(p => p.id);
         save(c => {
           c.phones = [];
         });
@@ -824,42 +867,60 @@ function create(ctx, opts) {
           c.phones = c.phones.filter(p => p.id !== b.id);
         });
         kick(b.id);
-      } else return web.json(res, { error: 'This phone is not paired.' }, 404);
+      } else return json(res, { error: 'This phone is not paired.' }, 404);
       sync();
-      return web.json(res, status());
+      return json(res, status());
     }
-    if (u === '/api/phoneremote/access' && req.method === 'POST') {
+    if (u === '/access' && req.method === 'POST') {
       const b = await body(req);
-      if (typeof b.id !== 'string' || !find(b.id)) return web.json(res, { error: 'This phone is not paired.' }, 404);
+      if (typeof b.id !== 'string' || !find(b.id)) return json(res, { error: 'This phone is not paired.' }, 404);
       save(c => {
         c.phones.forEach(p => {
           if (p.id === b.id) p.blocked = b.allow === false;
         });
       });
       if (b.allow === false) clients.forEach(c => c.id === b.id && c.conn.close(4403));
-      return web.json(res, status());
+      return json(res, status());
     }
-    if (u === '/api/phoneremote/key' && req.method === 'POST') {
+    if (u === '/key' && req.method === 'POST') {
       const b = await body(req);
-      return web.json(res, await keys.press(String(b.key || '')));
+      return json(res, await keys.press(String(b.key || '')));
     }
-    web.notFound(res);
+    notFound(res);
   }
 
+  // the two timers of a running add-on: the quiet connections and the hourly sweep; start() and stop() come in pairs (the loader's live
+  // switch calls them), so nothing is left running after a stop
+  let beat = null,
+    sweeper = null;
+
   return {
-    name: 'phoneremote',
-    paths: ['/api/phoneremote', '/api/phoneremote/pair', '/api/phoneremote/revoke', '/api/phoneremote/access', '/api/phoneremote/key'],
     handle,
     start() {
+      if (!beat)
+        beat = setInterval(() => {
+          const now = Date.now();
+          clients.forEach(c => {
+            if (now - c.last > QUIET_MS) c.conn.terminate();
+          });
+          Object.keys(bad).forEach(k => {
+            if (now > bad[k].until) delete bad[k];
+          });
+        }, 20000);
+      if (beat.unref) beat.unref();
+      if (!sweeper) sweeper = setInterval(sweep, 3600000);
+      if (sweeper.unref) sweeper.unref();
       sweep();
       sync();
     },
     stop() {
       closePairQuiet();
       if (srv) unlisten();
-      clearInterval(beat);
-      clearInterval(sweeper);
       keys.close();
+      if (beat) clearInterval(beat);
+      if (sweeper) clearInterval(sweeper);
+      beat = null;
+      sweeper = null;
     },
     address: () => (srv && srv.address()) || null,
   };

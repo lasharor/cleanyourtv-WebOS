@@ -4,9 +4,40 @@
 const http = require('http'),
   fs = require('fs'),
   path = require('path');
-const { ok, call, memoryConfig, run, sleep, root } = require('./lib');
-const tvname = require('../../helper/addons-bundled/phoneremote/tvname');
-const ws = require('../../helper/addons-bundled/phoneremote/ws');
+const { ok, run, sleep, root, tmp, req } = require('./lib');
+const lib = require('./lib');
+const tvname = require('../../addons/catalog/phoneremote/tvname');
+const ws = require('../../addons/catalog/phoneremote/ws');
+
+// the add-on's API is under /api/addons/phoneremote, and the loader passes what follows the id to handle(): '' is the state, '/pair' the
+// pairing window, and so on. The tests keep writing the whole path.
+const call = (pr, url, method, body) => lib.call(pr, String(url).replace(/^\/api\/phoneremote/, ''), method, body);
+// the ctx a catalog add-on gets from the loader: its settings in memory, a data folder of its own, and the service's small helpers
+let ctxs = 0;
+function store(initial) {
+  let s = Object.assign({}, initial || {});
+  return {
+    get: () => Object.assign({}, s),
+    set: o => {
+      s = Object.assign({}, s, o);
+    },
+    raw: () => Object.assign({}, s),
+  };
+}
+function addonCtx(settings) {
+  return {
+    settings,
+    dataDir: path.join(tmp, 'prdata-' + ++ctxs),
+    util: {
+      lanIp: () => '127.0.0.1',
+      randomInt: req('netcompat').randomInt,
+      mkdirp: req('netcompat').mkdirp,
+      i18n: req('i18n'),
+    },
+    env: { lang: () => 'en' },
+    log: () => {},
+  };
+}
 
 // Node 8's writeHead returns undefined (it returns the response from Node 11.10): the fake servers below chain .end() after it
 const writeHead = http.ServerResponse.prototype.writeHead;
@@ -15,7 +46,7 @@ http.ServerResponse.prototype.writeHead = function () {
   return this;
 };
 
-function post(port, path, body, origin) {
+function post(port, path, body, origin, hostHeader) {
   return new Promise((resolve, reject) => {
     const r = http.request(
       {
@@ -23,7 +54,7 @@ function post(port, path, body, origin) {
         port,
         path,
         method: 'POST',
-        headers: Object.assign({ 'content-type': 'application/json' }, origin ? { origin } : {}),
+        headers: Object.assign({ 'content-type': 'application/json' }, origin ? { origin } : {}, hostHeader ? { host: hostHeader } : {}),
       },
       res => {
         let t = '';
@@ -57,10 +88,9 @@ function get(port, path, ms) {
   });
 }
 // a phone-remote instance with the phone remote switched on and a phone paired through its LAN listener: the token the other doors need
-async function lanPair(PR, config, opts) {
-  const pr = PR.create({ config }, opts);
+async function lanPair(PR, settings, opts) {
+  const pr = PR.create(addonCtx(settings), opts);
   pr.start();
-  await call(pr, '/api/phoneremote', 'POST', { enabled: true });
   const s = await call(pr, '/api/phoneremote/pair', 'POST', {});
   const port = s.j.port;
   const r = await post(port, '/api/pair', { code: s.j.pairing.code, name: 'test' });
@@ -102,8 +132,8 @@ const fakeKeys = () => {
 
 run(async () => {
   const http = require('http');
-  const PR = require('../../helper/addons-bundled/phoneremote/service');
-  const config = memoryConfig({});
+  const PR = require('../../addons/catalog/phoneremote/service');
+  const settings = store({});
   const keys = fakeKeys();
   // the launcher's API that the phone service asks about the TV's apps (loopback in the real thing, an ephemeral port here)
   const launcher = {
@@ -155,20 +185,19 @@ run(async () => {
   launcher.logo = api + '/logo.png';
   const rev = { name: '' }; // what the stand-in router answers for the phone's address
   const reverse = (a, cb) => cb(rev.name ? null : new Error('ENOTFOUND'), rev.name ? [rev.name] : []);
-  const make = () => PR.create({ config }, { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna, reverse, liveWaitMs: 40 });
+  const make = () => PR.create(addonCtx(settings), { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna, reverse, liveWaitMs: 40 });
   let pr = make();
   pr.start();
   let r = await call(pr, '/api/phoneremote');
-  ok(r.j.enabled === false && !r.j.listening && r.j.phones.length === 0, 'the phone remote is off at first and nothing listens');
+  ok(
+    !r.j.listening && r.j.phones.length === 0 && r.j.pairing === null,
+    'nothing listens at first: no phone is paired and no window is open'
+  );
   ok(
     typeof r.j.listenError === 'string' && r.j.listenError === '' && !('error' in r.j),
     "the listener's own failure has its own key in the status (listenError, empty when it listened), apart from a failed request (error)"
   );
-  r = await call(pr, '/api/phoneremote/pair', 'POST', {});
-  ok(r.code === 400 && /on first/.test(r.j.error), 'the pairing window needs the phone remote to be switched on');
 
-  r = await call(pr, '/api/phoneremote', 'POST', { enabled: true });
-  ok(r.j.enabled === true && !r.j.listening, 'switched on, it still does not listen while no phone is paired and no window is open');
   r = await call(pr, '/api/phoneremote/pair', 'POST', {});
   const port = r.j.port;
   const code = r.j.pairing.code;
@@ -190,7 +219,7 @@ run(async () => {
     'the phone page is served, and no cache may keep it (headers and its own meta tags)'
   );
   // the name field: the router's name for the phone is written into the page; a name that is not one is not
-  const dn = require('../../helper/addons-bundled/phoneremote/devicename');
+  const dn = require('../../addons/catalog/phoneremote/devicename');
   rev.name = 'Danas-iPhone.lan';
   dn.forget();
   let hp = await get(port, '/');
@@ -252,7 +281,11 @@ run(async () => {
   ok(r.code === 403, 'a wrong code is refused');
   r = await post(port, '/api/pair', { code, name: 'Eden <b>phone</b>' }, 'http://evil.example');
   ok(r.code === 403, 'a pairing from a page on another site is refused');
-  r = await post(port, '/api/pair', { code, name: 'Eden <b>phone</b>' });
+  // DNS rebinding: a page controls the Host header of its own requests, so Origin === Host alone proves nothing. The Origin must name an
+  // address the TV itself has.
+  r = await post(port, '/api/pair', { code, name: 'rebound' }, 'http://tv.example:8799', 'tv.example:8799');
+  ok(r.code === 403, 'an Origin that names a host the TV is not is refused, even when it matches the Host header (DNS rebinding)');
+  r = await post(port, '/api/pair', { code, name: 'Eden <b>phone</b>' }, 'http://127.0.0.1:' + port);
   const token = r.j && r.j.token;
   ok(
     r.code === 200 && /^[0-9a-f]{8}\.[0-9a-f]{32}$/.test(token) && r.j.name === 'Eden bphone/b',
@@ -260,7 +293,7 @@ run(async () => {
   );
   r = await post(port, '/api/pair', { code, name: 'again' });
   ok(r.code === 403, 'a code works once');
-  const stored = JSON.stringify(config.get());
+  const stored = JSON.stringify(settings.raw());
   ok(!stored.includes(token.split('.')[1]) && /"hash":"[0-9a-f]{64}"/.test(stored), 'only the hash of the token is stored');
   r = await call(pr, '/api/phoneremote');
   ok(
@@ -287,6 +320,17 @@ run(async () => {
     'an over-long run is not taken for a name'
   );
   ok(typeof tvname.read() === 'string', 'reading the store never throws, even off a TV');
+  // only the store's first 64 bytes are read: what follows the name is the pairing material, which is none of the add-on's business
+  {
+    const storeFile = path.join(tmp, 'homekit-store');
+    fs.writeFileSync(
+      storeFile,
+      Buffer.concat([Buffer.from([2, 0, 0, 0, 0, 0, 0, 0]), Buffer.from('Living room TV\u0000'), Buffer.from('PAIRINGSECRET')])
+    );
+    ok(tvname.read(storeFile) === 'Living room TV', 'the name is read from the first bytes of the HomeKit store');
+    fs.writeFileSync(storeFile, Buffer.concat([Buffer.from([2, 0, 0, 0, 0, 0, 0, 0]), Buffer.alloc(60, 65), Buffer.from('PAIRINGSECRET')]));
+    ok(tvname.read(storeFile) === '', 'and a name that starts after the 64th byte is not read at all');
+  }
   // the Apps tab: the list and the icons come from the launcher's API, through this server, only with the phone's token
   let ap = await get(port, '/api/apps?t=' + encodeURIComponent(token));
   ok(
@@ -495,9 +539,11 @@ run(async () => {
   r = await call(pr, '/api/phoneremote/pair', 'POST', {});
   ok(r.j.pairing && r.j.pairing.code !== right, 'a new window has a new code');
 
-  // ---- off ----
-  r = await call(pr, '/api/phoneremote', 'POST', { enabled: false });
-  ok(r.j.enabled === false && !r.j.listening && r.j.pairing === null, 'switched off, the port closes and the window with it');
+  // ---- off: the Add-ons switch stops the add-on, which closes the port and the window ----
+  pr.stop();
+  r = await call(pr, '/api/phoneremote');
+  ok(!r.j.listening && r.j.pairing === null, 'stopped, the port closes and the window with it');
+  pr.start();
 
   // ---- the loopback key call, for trying the adapter from the TV ----
   keys.pressed.length = 0;
@@ -519,15 +565,14 @@ run(async () => {
     slow.enter = async () => (reached.push('enter'), { ok: true, error: '' });
     slow.press = async n => (reached.push('key:' + n), { ok: true, error: '' });
     let writes = 0;
-    const cfg3 = memoryConfig({});
-    const upd = cfg3.update;
-    cfg3.update = function () {
+    const cfg3 = store({});
+    const set3 = cfg3.set;
+    cfg3.set = function (o) {
       writes++;
-      return upd.apply(cfg3, arguments);
+      return set3(o);
     };
-    const pr3 = PR.create({ config: cfg3 }, { port: 0, host: '127.0.0.1', keys: slow, api, luna: fakeLuna });
+    const pr3 = PR.create(addonCtx(cfg3), { port: 0, host: '127.0.0.1', keys: slow, api, luna: fakeLuna });
     pr3.start();
-    await call(pr3, '/api/phoneremote', 'POST', { enabled: true });
     let r3 = await call(pr3, '/api/phoneremote/pair', 'POST', {});
     const port3 = r3.j.port;
     const pj = await post(port3, '/api/pair', { code: r3.j.pairing.code, name: 'order' });
@@ -597,20 +642,18 @@ run(async () => {
     d1.c.terminate();
     await sleep(80);
     ok(writes === before, 'logins and closes within a minute of the last one do not rewrite the settings');
-    const stale = cfg3.get().phoneRemote.phones[0];
-    cfg3.update('test', c => {
-      c.phoneRemote.phones[0].seen = Date.now() - 120000;
-    });
+    const stale = cfg3.get().phones[0];
+    stale.seen = Date.now() - 120000;
     const w0 = writes;
     const e1 = await phone(port3, tok3);
     await ready(e1);
     e1.c.terminate();
     await sleep(80);
-    ok(writes > w0 && stale && cfg3.get().phoneRemote.phones[0].seen > Date.now() - 60000, 'a "seen" older than a minute is written again');
+    ok(writes > w0 && stale && cfg3.get().phones[0].seen > Date.now() - 60000, 'a "seen" older than a minute is written again');
 
     // the ready message tells the page when the phone was used before this connection and when it was paired (the "This remote" sheet)
-    const lastSeen = cfg3.get().phoneRemote.phones[0].seen,
-      madeAt = cfg3.get().phoneRemote.phones[0].created;
+    const lastSeen = cfg3.get().phones[0].seen,
+      madeAt = cfg3.get().phones[0].created;
     const f1 = await phone(port3, tok3);
     await ready(f1);
     const rd = f1.msgs.filter(m => m.t === 'ready')[0];
@@ -620,7 +663,7 @@ run(async () => {
     f1.c.send(JSON.stringify({ t: 'logout' }));
     await sleep(150);
     ok(f1.msgs.some(m => m.t === 'bye') && f1.closed === 1000, 'a phone that logs out is told bye and its connection is closed');
-    ok(cfg3.get().phoneRemote.phones.length === 0, 'and it is gone from the list of paired phones');
+    ok(cfg3.get().phones.length === 0, 'and it is gone from the list of paired phones');
     const f2 = await phone(port3, tok3);
     await sleep(100);
     ok(
@@ -642,8 +685,8 @@ run(async () => {
       seen: now - seenDaysAgo * day,
       blocked: false,
     });
-    const cfgE = memoryConfig({ phoneRemote: { enabled: true, phones: [mk('aaaaaaa1', 40), mk('aaaaaaa2', 10), mk('aaaaaaa3', 2)] } });
-    const prE = PR.create({ config: cfgE }, { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna });
+    const cfgE = store({ phones: [mk('aaaaaaa1', 40), mk('aaaaaaa2', 10), mk('aaaaaaa3', 2)] });
+    const prE = PR.create(addonCtx(cfgE), { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna });
     prE.start();
     let st = await call(prE, '/api/phoneremote');
     ok(st.j.expireDays === 14, 'with nothing chosen a phone is removed after 14 days without use');
@@ -656,19 +699,14 @@ run(async () => {
       'choosing 7 days removes the phone unused for 10 days at once'
     );
     st = await call(prE, '/api/phoneremote', 'POST', { expireDays: 0 });
-    ok(
-      st.j.expireDays === 0 && st.j.phones.length === 1 && st.j.enabled === true,
-      'never keeps every phone, and a body without "enabled" leaves the remote switched on'
-    );
-    cfgE.update('test', c => {
-      c.phoneRemote.phones[0].seen = now - 200 * day;
-    });
+    ok(st.j.expireDays === 0 && st.j.phones.length === 1, 'never keeps every phone');
+    cfgE.get().phones[0].seen = now - 200 * day;
     st = await call(prE, '/api/phoneremote', 'POST', { expireDays: 0 });
     ok(st.j.phones.length === 1, 'with "never" even a phone unused for 200 days stays');
     prE.stop();
     // a connected phone is not removed, however old its last use
-    const cfgF = memoryConfig({ phoneRemote: { enabled: true, expireDays: 1, phones: [] } });
-    const prF = PR.create({ config: cfgF }, { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna });
+    const cfgF = store({ expireDays: 1, phones: [] });
+    const prF = PR.create(addonCtx(cfgF), { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna });
     prF.start();
     await call(prF, '/api/phoneremote/pair', 'POST', {});
     const pcode = (await call(prF, '/api/phoneremote')).j.pairing.code;
@@ -677,31 +715,35 @@ run(async () => {
     const tokF = pr1.j.token;
     const liveP = await phone(portF, tokF);
     await sleep(100);
-    cfgF.update('test', c => {
-      c.phoneRemote.phones[0].seen = c.phoneRemote.phones[0].created = now - 30 * day;
-    });
+    cfgF.get().phones[0].seen = cfgF.get().phones[0].created = now - 30 * day;
     await call(prF, '/api/phoneremote', 'POST', { expireDays: 1 });
-    ok(cfgF.get().phoneRemote.phones.length === 1, 'a phone that is connected is not removed, however long ago it was last used');
+    ok(cfgF.get().phones.length === 1, 'a phone that is connected is not removed, however long ago it was last used');
     liveP.c.close(1000);
     await sleep(300);
-    cfgF.update('test', c => {
-      c.phoneRemote.phones[0].seen = c.phoneRemote.phones[0].created = now - 30 * day;
-    });
+    cfgF.get().phones[0].seen = cfgF.get().phones[0].created = now - 30 * day;
     await call(prF, '/api/phoneremote', 'POST', { expireDays: 1 });
-    ok(cfgF.get().phoneRemote.phones.length === 0, 'once it is not connected any more it goes');
+    ok(cfgF.get().phones.length === 0, 'once it is not connected any more it goes');
     prF.stop();
   }
 
   // ---- the tokens never reach the log ----
-  const lines = [];
-  const cfg2 = require('../../helper/config').memory({}, l => lines.push(l));
-  const pr2 = PR.create({ config: cfg2 }, { port: 0, host: '127.0.0.1', keys });
-  await call(pr2, '/api/phoneremote', 'POST', { enabled: true });
-  ok(
-    lines.every(l => !/hash|token/i.test(l)),
-    'the settings log shows no token or hash'
-  );
-  pr2.stop();
+  {
+    const lines = [];
+    const log2 = console.log;
+    console.log = (...a) => lines.push(a.join(' '));
+    let tok2 = '';
+    try {
+      const pr2 = PR.create(addonCtx(store({})), { port: 0, host: '127.0.0.1', keys });
+      pr2.start();
+      const s2 = await call(pr2, '/api/phoneremote/pair', 'POST', {});
+      const r2 = await post(s2.j.port, '/api/pair', { code: s2.j.pairing.code, name: 'log' });
+      tok2 = (r2.j && r2.j.token) || '';
+      pr2.stop();
+    } finally {
+      console.log = log2;
+    }
+    ok(tok2 && lines.length > 0 && lines.every(l => !/hash/i.test(l) && l.indexOf(tok2) < 0), 'the log shows no token or hash');
+  }
   pr.stop();
 
   // ---- the logos: one channel list for many of them, a size cap, redirects, and the hour-long image cache ----
@@ -773,7 +815,7 @@ run(async () => {
     });
     await new Promise(r => logoServer.listen(0, '127.0.0.1', r));
     logoApi = 'http://127.0.0.1:' + logoServer.address().port;
-    const lp = await lanPair(PR, memoryConfig({}), {
+    const lp = await lanPair(PR, store({}), {
       port: 0,
       host: '127.0.0.1',
       keys: fakeKeys(),
@@ -836,7 +878,7 @@ run(async () => {
     });
     await new Promise(r => stall.listen(0, '127.0.0.1', r));
     const stallApi = 'http://127.0.0.1:' + stall.address().port;
-    const sp = await lanPair(PR, memoryConfig({}), {
+    const sp = await lanPair(PR, store({}), {
       port: 0,
       host: '127.0.0.1',
       keys: fakeKeys(),
@@ -861,9 +903,8 @@ run(async () => {
     const busy = http.createServer((req, res) => res.end('busy'));
     await new Promise(r => busy.listen(0, '127.0.0.1', r));
     const busyPort = busy.address().port;
-    const bp = PR.create({ config: memoryConfig({}) }, { port: busyPort, host: '127.0.0.1', keys: fakeKeys(), luna: fakeLuna });
+    const bp = PR.create(addonCtx(store({})), { port: busyPort, host: '127.0.0.1', keys: fakeKeys(), luna: fakeLuna });
     bp.start();
-    await call(bp, '/api/phoneremote', 'POST', { enabled: true });
     await call(bp, '/api/phoneremote/pair', 'POST', {}); // the window is what opens (and here fails to open) the port
     let bs = await call(bp, '/api/phoneremote');
     for (let i = 0; i < 40 && !bs.j.listenError; i++) {
@@ -876,7 +917,7 @@ run(async () => {
         /could not listen/.test(bs.j.listenError) &&
         bs.j.listenError.indexOf(String(busyPort)) >= 0 &&
         !('error' in bs.j),
-      'a port that is already taken says why in listenError (with the port) and listening is false, so the manager can show a busy port'
+      "a port that is already taken says why in listenError (with the port) and listening is false, so the add-on's page can show a busy port"
     );
     bp.stop();
     busy.close();
@@ -884,9 +925,8 @@ run(async () => {
 
   // ---- the pairing rate limit: five tries a minute, and pruning the list must not give a sixth ----
   {
-    const rl = PR.create({ config: memoryConfig({}) }, { port: 0, host: '127.0.0.1', keys: fakeKeys(), luna: fakeLuna });
+    const rl = PR.create(addonCtx(store({})), { port: 0, host: '127.0.0.1', keys: fakeKeys(), luna: fakeLuna });
     rl.start();
-    await call(rl, '/api/phoneremote', 'POST', { enabled: true });
     const win = await call(rl, '/api/phoneremote/pair', 'POST', {});
     const rport = win.j.port;
     const wrong = win.j.pairing.code === '111111' ? '222222' : '111111';
@@ -905,7 +945,7 @@ run(async () => {
   }
 
   // ---- the page ----
-  const pg = require('../../helper/addons-bundled/phoneremote/page').phonePage('en');
+  const pg = require('../../addons/catalog/phoneremote/page').phonePage(req('i18n'), 'en');
   ok(
     /localStorage/.test(pg) &&
       /new WebSocket/.test(pg) &&
@@ -1269,181 +1309,63 @@ run(async () => {
     /else if\(native\(\)\)wakeNow\(\)/.test(pg) && !/\$\('retry'\)/.test(pg),
     'when the TV is not there the power button turns it on through the app, instead of only retrying'
   );
-  // the TV settings: Paired phones is a screen of its own, with every phone listed and Remove all phones inside it
-  const menu = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'menu.js'), 'utf8');
-  ok(/view === 'phones'/.test(menu) && /push\('phones'\)/.test(menu), 'the Paired phones row opens a screen of its own');
   ok(
-    /Remove unused phones/.test(menu) &&
-      /view === 'prexpire'/.test(menu) &&
-      /view === 'confirm-pr-exp-off'/.test(menu) &&
-      /expireDays: 0/.test(menu) &&
-      /for security/.test(menu),
-    'Remove unused phones: five choices, and "never" asks first with a warning'
-  );
-  ok(
-    !/pmsg/.test(require('../../helper/addons-bundled/phoneremote/page').PHONE_JS.replace(/apmsg/g, '')) &&
+    !/pmsg/.test(require('../../addons/catalog/phoneremote/page').PHONE_JS.replace(/apmsg/g, '')) &&
       /else pnote\(j\.error\|\|t\('That code is not right\. Check the 6 digits on the TV screen\.'\),'warn',10000\)/.test(
-        require('../../helper/addons-bundled/phoneremote/page').PHONE_JS
+        require('../../addons/catalog/phoneremote/page').PHONE_JS
       ) &&
       /x\.onerror=x\.ontimeout=function\(\)\{pairing=false;pnote\(t\('The TV did not answer\. Check the phone is on the same Wi-Fi as the TV\.'\),'warn',10000\)/.test(
-        require('../../helper/addons-bundled/phoneremote/page').PHONE_JS
+        require('../../addons/catalog/phoneremote/page').PHONE_JS
       ) &&
       /function showPair\(s,k\)\{[^}]*if\(s\)pnote\(s,k\|\|'warn',10000\)\}/.test(
-        require('../../helper/addons-bundled/phoneremote/page').PHONE_JS
+        require('../../addons/catalog/phoneremote/page').PHONE_JS
       ),
     'the pairing screen shows its errors (wrong code, the TV did not answer, removed on the TV) as the timed note at the top, not as a line in the page'
   );
+  // ---- a catalog add-on with a page of its own; the manager has no phone remote screens any more ----
   {
-    const rem = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'remote.js'), 'utf8');
-    const cnt = new Function(rem.match(/function prCount\([^)]*\) \{[^}]*\}/)[0] + '; return prCount;')();
+    const addon = JSON.parse(fs.readFileSync(path.join(root, 'addons', 'catalog', 'phoneremote', 'addon.json'), 'utf8'));
     ok(
-      cnt(0) === '0 phones' &&
-        cnt(1) === '1 phone' &&
-        cnt(2) === '2 phones' &&
-        /tr\(prCount\(pr\.phones\.length\)\) \+ ' ' \+ tr\('paired'\)/.test(menu) &&
-        !/length \+ ' phones'/.test(menu),
-      'the phone counts say "1 phone paired" on the Features row and "1 phone" in the list, never "1 phones"'
+      addon.kind === 'service' && addon.entry && addon.entry.service === 'service.js' && addon.entry.page === 'page/index.html',
+      'the add-on is a catalog service add-on with a page of its own'
     );
     ok(
-      /function prLiveTick\(/.test(rem) &&
-        /setInterval\(prLiveTick, 2500\)/.test(rem) &&
-        /clearInterval\(prLiveTimer\)/.test(rem) &&
-        /prIsPhoneView\(\)\) prLiveStart\(\)/.test(menu) &&
-        /view === 'prphone'/.test(rem) &&
-        /prLiveKey\(r\) === prLiveKey\(pr\)/.test(rem),
-      'the phone screens in the manager follow the TV every few seconds, only while one of them is open (a phone that logs out disappears), and redraw only when the list changed'
+      addon.routes === undefined && addon.live === undefined && addon.enabledOption === undefined,
+      'it needs no bundled-only keys: no routes, no live, no enabledOption (the Add-ons switch is the on/off)'
+    );
+    ok(
+      addon.permissions &&
+        addon.permissions.indexOf('luna') >= 0 &&
+        Array.isArray(addon.luna) &&
+        addon.luna.length >= 4 &&
+        addon.luna.length <= 8,
+      'it declares the luna calls it makes (networkinput, ime, audio, tvpower, settings, systemproperty)'
+    );
+    ok(addon.tile && addon.tile.placement === 'page' && addon.tile.icon, 'and a tile, so its page is a page of the book on Home');
+    ok(/^\d+\.\d+\.\d+$/.test(addon.minService || ''), 'it asks for the service version that gives a catalog add-on its ctx');
+  }
+  {
+    const page = fs.readFileSync(path.join(root, 'addons', 'catalog', 'phoneremote', 'page', 'index.html'), 'utf8');
+    ok(
+      /<script src="\/addon\/qrcode\.js"><\/script>/.test(page) && /<script src="\/addon\/sdk\.js"><\/script>/.test(page),
+      "the page loads the shared QR code script and the SDK (Back to Home, the page's API)"
+    );
+    ok(
+      /\/api\/addons\/phoneremote/.test(page) && /data-k="pair"/.test(page) && /id="expire"/.test(page) && /id="phonelist"/.test(page),
+      'it pairs a phone, lists the paired phones and offers when unused ones are removed'
+    );
+    ok(
+      /var I18N = /.test(page) && /data-t="Phone remote"/.test(page) && /function setLang\(/.test(page),
+      'its texts go through the translations of the pages'
     );
   }
-  ok(/last used '/.test(menu), 'the phone list shows when each phone was last used');
-  const listView = menu.slice(menu.indexOf("view === 'phones'"), menu.indexOf("view === 'prphone'"));
-  ok(
-    /lst\.forEach/.test(listView) && /label: 'Remove all phones'/.test(listView) && /confirm-pr-all/.test(listView),
-    'that screen lists every phone, and holds Remove all phones (with its confirmation)'
-  );
-  const mgr = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'remote.js'), 'utf8');
-  const en = JSON.parse(fs.readFileSync(path.join(root, 'i18n', 'en.json'), 'utf8'));
-  // the phone remote is an add-on: its Features row is there only while the add-on answers, and the add-on's own screen leads to the same settings
-  const stat = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'status.js'), 'utf8');
-  ok(
-    /pr = r && r\.phones \? r : null/.test(stat),
-    'a service that does not answer /api/phoneremote (the add-on is off) leaves no phone remote state'
-  );
-  ok(
-    / if \(pr\)\s+rows\.push\(\{\s+label: 'Phone remote',/.test(menu),
-    'so Features shows the Phone remote row only while the add-on runs'
-  );
-  ok(
-    /a1\.id === 'phoneremote' && a1\.status === 'running'\)\s+rows\.push\(\{ label: 'Phone remote settings'[^}]*fn: openPhoneRemote/.test(
-      menu
-    ),
-    "and the add-on's screen in Add-ons has a Phone remote settings row (while it runs) that opens the same screens"
-  );
-  const scr = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'screens.js'), 'utf8');
-  ok(
-    /a1\.id === 'phoneremote' && !a1\.enabled \? openPhoneRemote : null/.test(menu) &&
-      /if \(after && !r\.restartNeeded\) after\(\)/.test(scr),
-    'switching the add-on on opens its settings at once; switched off, its Features row goes at once'
-  );
-  ok(
-    JSON.parse(fs.readFileSync(path.join(root, 'helper', 'addons-bundled', 'phoneremote', 'addon.json'), 'utf8')).live === true,
-    'the add-on is live: its switch starts and stops it with no restart'
-  );
-  // a right-to-left language must not mirror the remote
-  const he = require('../../helper/addons-bundled/phoneremote/page').phonePage('ar');
-  ok(
-    /html,body\{direction:ltr\}/.test(he) && /documentElement\.dir='ltr'/.test(he) && !/\[dir=rtl\]/.test(he),
-    'the remote stays left to right in a right-to-left language'
-  );
-
-  // ---- the manager's phone screens: the busy port, the retries, and the English they build ----
   {
+    const mgr = ['manager/src/js/menu.js', 'manager/src/js/status.js', 'manager/src/js/share.js', 'manager/src/index.html']
+      .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
+      .join('\n');
     ok(
-      (mgr.match(/if \(r\.listenError\)/g) || []).length >= 2 &&
-        /if \(r\.listenError\) banner\(tr\(r\.listenError\), 'err'\)/.test(mgr) &&
-        /if \(r\.listenError !== prListenShown\) \{/.test(mgr) /* the poll says it once, not every 2.5 seconds */ &&
-        /if \(r\.listenError\) \$\('sharemsg'\)\.textContent = tr\(r\.listenError\)/.test(mgr) &&
-        (mgr.match(/if \(r\.error\)/g) || []).length >= 2,
-      'every phone screen reads listenError (a port that could not be opened) and still treats a failed request (r.error) as a failure'
-    );
-    // a screen that is still open keeps asking after a failed poll; before, the first refusal stopped it until it was reopened
-    ok(
-      /if \(r\.error\) \{\s*\$\('sharemsg'\)\.textContent = tr\(r\.error\);\s*setTimeout\(prWatch, 2000\);[^\n]*\n\s*return;/.test(mgr),
-      'a refused pairing poll asks again in two seconds instead of leaving the QR screen frozen'
-    );
-    ok(
-      /function \(\) \{\s*\$\('sharemsg'\)\.textContent = tr\('The service did not answer\.'\);\s*setTimeout\(prWatch, 2000\);/.test(mgr),
-      'and a request that never arrived is tried again too'
-    );
-    // switching the remote on from a QR screen used to recurse whether or not the reply said it was on, which never ended if it was not
-    ok(
-      (mgr.match(/if \(r && r\.enabled\)/g) || []).length === 1 &&
-        /if \(r && r\.enabled\) \{\s*pr = r;\s*openPrPair\(\);/.test(mgr) &&
-        /banner\(\(r && r\.error\) \|\| 'The service did not answer', 'err'\)/.test(mgr),
-      'opening a QR screen goes on only when the reply says the phone remote is on, and says why when it is not (no endless retry)'
-    );
-    ok(
-      /pr = null;/.test(stat) &&
-        /function \(\) \{\s*\/\* a stopped add-on answers 404[^*]*\*\/\s*if \(\+\+prMiss < 2\) return;\s*pr = null;/.test(stat),
-      'a phone remote that stops answering clears the state on the second rejected poll in a row (one missed poll keeps the row), so its Features row goes with it'
-    );
-    const share = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'share.js'), 'utf8');
-    const closeShare = share.slice(share.indexOf('function closeShare()'));
-    ok(
-      /if \(shareMode === 'remote'\) \{\s*api\('\/api\/phoneremote\/pair'/.test(closeShare) &&
-        (closeShare.match(/api\('\/api\/phoneremote\/pair', \{ stop: true \}\)/g) || []).length === 1 &&
-        true,
-      'closing the phone pairing screen stops the window'
-    );
-    ok(
-      /if \(r\.error\) \{[\s\S]{0,400}?banner\(r\.error, 'err'\);\s*loadAddons\(\);\s*return;\s*\}/.test(scr) &&
-        /if \(after && !r\.restartNeeded\) after\(\);/.test(scr),
-      'an add-on change that failed shows the real status again and does not run "after", as if it had worked'
-    );
-    // the English the phone screens build at run time: every literal, and a literal that is only the start of a composed string needs a template
-    const NEW_KEYS = [
-      '%d phone',
-      '%d phones',
-      'after %d day',
-      'after %d days',
-      'after 1 month',
-      'after 1 week',
-      'after 2 weeks',
-      'allowed',
-      'Choose it to block or remove it.',
-      'Last used %s',
-      'last used %s',
-      'no phones paired',
-      'paired',
-      'paired %s',
-    ];
-    const absent = NEW_KEYS.filter(k => !(k in en));
-    ok(
-      NEW_KEYS.length === 14 && absent.length === 0,
-      'the fourteen keys the phone screens now build are in the English list' +
-        (absent.length ? ' (missing: ' + absent.join(', ') + ')' : '')
-    );
-    // the Features row translates the count and the word after it apart ("2 phones" + " paired"): a template has to match the whole
-    // string, so "%d phones" can never match "2 phones paired" — see menu.js's Features row
-    // only the phone screens of the manager: the four phone views, their Features row, and remote.js (all of it is the phone remote)
-    const phoneSource = [
-      mgr,
-      menu.slice(menu.indexOf("if (view === 'phoneremote') {"), menu.indexOf("if (view === 'wallpapers') {")),
-      menu.slice(menu.indexOf('/* the phone remote is an add-on:'), menu.indexOf("rows.push({ label: 'Home Assistant'")),
-    ].join('\n');
-    const enKeys = Object.keys(en);
-    const literals = [];
-    {
-      const re = /(^|[^\w$])tr\(\s*'((?:[^'\\]|\\.)*)'/g;
-      let m;
-      while ((m = re.exec(phoneSource))) literals.push({ key: m[2], composed: /^\s*\+/.test(phoneSource.slice(re.lastIndex)) });
-    }
-    const unlisted = literals
-      .filter(k => (k.composed ? !enKeys.some(x => x.indexOf(k.key) === 0 && /%[sd]/.test(x.slice(k.key.length))) : !(k.key in en)))
-      .map(k => k.key);
-    ok(
-      literals.length > 20 && unlisted.length === 0,
-      'every English string the phone screens translate (the composed ones too) has its key in en.json' +
-        (unlisted.length ? ' (missing: ' + unlisted.join(' | ') + ')' : '')
+      !/phoneremote|\/api\/phoneremote|openPhoneRemote/.test(mgr) && !fs.existsSync(path.join(root, 'manager', 'src', 'js', 'remote.js')),
+      'the manager has no phone remote screens: the add-on brings its own page (Add-ons > its entry)'
     );
   }
 });

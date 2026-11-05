@@ -2,7 +2,7 @@
 const http = require('http'),
   net = require('net');
 const { ok, run, sleep } = require('./lib');
-const ws = require('../../helper/addons-bundled/phoneremote/ws');
+const ws = require('../../addons/catalog/phoneremote/ws');
 
 // a masked client frame, built by hand
 function frame(op, payload, opts) {

@@ -1,8 +1,13 @@
 // The key adapter of the phone remote (remotekeys.js) against a fake luna and a fake pointer socket: the lines sent to the socket, the
 // address tried again on the loopback, the volume fallback and the text calls. NOT a test of a real TV: whether the TV's pointer socket
 // takes these lines is checked by hand (docs/phone-remote.md).
-const { ok, req, run } = require('./lib');
-const RK = require('../../helper/addons-bundled/phoneremote/remotekeys');
+const path = require('path');
+const { ok, run, tmp } = require('./lib');
+const RK = require('../../addons/catalog/phoneremote/remotekeys');
+// the add-on's data folder (ctx.dataDir), where the SSAP key is kept
+const dataDir = path.join(tmp, 'prdata');
+require('fs').mkdirSync(dataDir);
+const mk = (c, o) => RK.create(Object.assign({ dataDir }, c), o);
 
 run(async () => {
   const calls = [],
@@ -32,7 +37,7 @@ run(async () => {
     };
     return c;
   };
-  const k = RK.create({ luna }, { connect });
+  const k = mk({ luna }, { connect });
 
   let r = await k.press('HOME');
   ok(r.ok && sent[0] === 'type:button\nname:HOME\n\n', 'a button is a line "type:button / name:" ended by an empty line');
@@ -60,7 +65,7 @@ run(async () => {
   );
 
   // the socket the TV closed: the next key opens a new one
-  const k2 = RK.create({ luna }, { connect });
+  const k2 = mk({ luna }, { connect });
   await k2.press('UP');
   closed = true;
   const n = opened.length;
@@ -73,7 +78,7 @@ run(async () => {
 
   // no socket at all: volume still works through the audio service, other keys report why
   reply = { returnValue: false, errorText: 'denied' };
-  const k3 = RK.create({ luna }, { connect });
+  const k3 = mk({ luna }, { connect });
   calls.length = 0;
   r = await k3.press('VOLUMEUP');
   ok(r.ok && calls.some(c => /audio\/master\/volumeUp/.test(c[0])), 'volume falls back to the audio service');
@@ -89,7 +94,7 @@ run(async () => {
     const srv = net.createServer(c => c.on('data', d => got.push(String(d))));
     await new Promise(r => srv.listen(sock, r));
     // only the socket call works: any other luna call would take the key before the socket does
-    const k4 = RK.create(
+    const k4 = mk(
       { luna: async uri => (uri.indexOf('getPointerInputSocket') > 0 ? { returnValue: true, socketPath: sock } : { returnValue: false }) },
       { ssap: false }
     );
@@ -103,12 +108,12 @@ run(async () => {
   // the way that works on the TV: sendSpecialKey, and controls/ for the keys it does not know
   special = true;
   calls.length = 0;
-  const k5 = RK.create({ luna }, { connect });
+  const k5 = mk({ luna }, { connect });
   r = await k5.press('RIGHT');
   ok(r.ok && calls.length === 1 && /sendSpecialKey/.test(calls[0][0]) && calls[0][1].key === 'RIGHT', 'a button is a sendSpecialKey call');
   special = false;
   calls.length = 0;
-  const k6 = RK.create(
+  const k6 = mk(
     {
       luna: async (u, p) => (
         calls.push([u, p]), /sendSpecialKey/.test(u) ? { returnValue: false, errorText: 'invalid key' } : { returnValue: true }
@@ -122,8 +127,7 @@ run(async () => {
   // ---- the SSAP sign-in: a fake control service that shows its "allow" prompt once, hands out a key and then a pointer socket address
   const http = require('http'),
     fs = require('fs'),
-    paths = req('paths'),
-    ws = require('../../helper/addons-bundled/phoneremote/ws');
+    ws = require('../../addons/catalog/phoneremote/ws');
   const seen = [];
   const srv = http.createServer();
   srv.on('upgrade', (q, socket, head) => {
@@ -143,7 +147,7 @@ run(async () => {
   });
   await new Promise(r => srv.listen(0, '127.0.0.1', r));
   const ssapUrl = 'ws://127.0.0.1:' + srv.address().port;
-  const k7 = RK.create(
+  const k7 = mk(
     { luna: async () => ({ returnValue: true }) },
     {
       ssap: true,
@@ -165,7 +169,7 @@ run(async () => {
     'the first sign-in asks for the pointer permission'
   );
   ok(
-    fs.existsSync(paths.D + '/ssap-key') && fs.readFileSync(paths.D + '/ssap-key', 'utf8') === 'KEY1',
+    fs.existsSync(path.join(dataDir, 'ssap-key')) && fs.readFileSync(path.join(dataDir, 'ssap-key'), 'utf8') === 'KEY1',
     'the key the TV gives is kept for the next time'
   );
   ok(

@@ -7,8 +7,8 @@
 const crypto = require('crypto'),
   http = require('http'),
   https = require('https'),
+  nodeUrl = require('url'),
   { EventEmitter } = require('events');
-const nc = require('../../netcompat');
 
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const accept = key =>
@@ -214,12 +214,8 @@ function upgrade(req, socket, head, opts) {
 function connect(address, opts) {
   const o = opts || {};
   return new Promise((resolve, reject) => {
-    let u;
-    try {
-      u = new nc.URL(String(address));
-    } catch (_) {
-      return reject(new Error('bad address'));
-    }
+    const u = nodeUrl.parse(String(address));
+    if (!u || !u.hostname) return reject(new Error('bad address'));
     const tls = u.protocol === 'wss:' || u.protocol === 'https:';
     if (!tls && u.protocol !== 'ws:' && u.protocol !== 'http:') return reject(new Error('bad address'));
     const key = crypto.randomBytes(16).toString('base64');
@@ -231,9 +227,9 @@ function connect(address, opts) {
       reject(e instanceof Error ? e : new Error(String(e)));
     };
     const r = lib.request({
-      hostname: u.hostname.replace(/^\[|\]$/g, ''),
+      hostname: String(u.hostname).replace(/^\[|\]$/g, ''),
       port: u.port || (tls ? 443 : 80),
-      path: u.pathname + u.search,
+      path: (u.pathname || '/') + (u.search || ''),
       headers: { Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Version': '13', 'Sec-WebSocket-Key': key },
       rejectUnauthorized: o.rejectUnauthorized !== false,
     });

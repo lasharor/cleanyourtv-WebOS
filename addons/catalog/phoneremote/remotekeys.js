@@ -16,9 +16,10 @@
 // says which step failed. The tests use a fake luna, a fake socket and a real Unix socket (not on Windows).
 const fs = require('fs');
 const net = require('net');
+const path = require('path');
 const ws = require('./ws');
-const paths = require('../../paths');
-const KEY_FILE = paths.D + '/ssap-key'; // private, never shown or shared
+// the SSAP key is the add-on's own private file, in the folder the loader gives it (ctx.dataDir); never shown or shared
+const KEY_FILE = dataDir => path.join(dataDir, 'ssap-key');
 
 // the buttons a phone may press (the names the pointer socket knows); nothing else is passed on
 const KEYS = [
@@ -43,7 +44,7 @@ const SOCKET_URI = 'luna://com.webos.service.networkinput/getPointerInputSocket'
 const AUDIO = 'luna://com.webos.service.audio/master/';
 // The TV's control service (SSAP, what the LG ThinQ app talks to) hands out the pointer socket that really moves the pointer; the same
 // call over luna gives a Unix socket that takes the lines and does nothing with them. This service signs in to SSAP on the loopback with
-// a key of its own: the first time the TV asks on screen to allow it (the key is then kept in KEY_FILE).
+// a key of its own: the first time the TV asks on screen to allow it (the key is then kept in ctx.dataDir/ssap-key).
 const SSAP_URL = 'ws://127.0.0.1:3000';
 const SSAP_URI = 'ssap://com.webos.service.networkinput/getPointerInputSocket';
 const SSAP_MANIFEST = {
@@ -57,6 +58,7 @@ const num = (n, lim) => Math.max(-lim, Math.min(lim, Math.round(Number(n) || 0))
 // ctx.luna is the service's luna(); opts.connect replaces the WebSocket client (tests)
 function create(ctx, opts) {
   const luna = ctx.luna;
+  const keyFile = ctx.dataDir ? KEY_FILE(ctx.dataDir) : (opts && opts.keyFile) || '';
   // the TV answers with a Unix socket (/tmp/netinput.pointer.sock: the lines go in as they are); LG's phone app reaches it through a
   // WebSocket (ws://...) the TV's SSAP service offers, so an address of that kind is opened as a WebSocket
   const unix = path =>
@@ -90,8 +92,9 @@ function create(ctx, opts) {
   };
 
   const readKey = () => {
+    if (!keyFile) return '';
     try {
-      return fs.readFileSync(KEY_FILE, 'utf8').trim();
+      return fs.readFileSync(keyFile, 'utf8').trim();
     } catch (_) {
       return '';
     }
@@ -136,7 +139,7 @@ function create(ctx, opts) {
       if (key) payload['client-key'] = key;
       const reg = await ssapAsk(c, { type: 'register', id: 'r1', payload }, 'registered', waitMs);
       const got = reg.payload && reg.payload['client-key'];
-      if (got && got !== key) fs.writeFileSync(KEY_FILE, got, { mode: 0o600 });
+      if (got && got !== key && keyFile) fs.writeFileSync(keyFile, got, { mode: 0o600 });
       const s = await ssapAsk(c, { type: 'request', id: 'p1', uri: SSAP_URI }, 'response', 4000);
       if (!s.payload || !s.payload.socketPath) throw new Error('the TV gave no pointer socket');
       c.on('close', () => {

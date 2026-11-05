@@ -9,8 +9,8 @@ depends on how far it went down: see [Turning the TV on](#turning-the-tv-on).
     On an LG 65UR91006LB (webOS 10) all 34 buttons were accepted by the TV, and the effect was seen for the arrows, Back, Menu, Mute and
     **Turn off** (the `POWER` key: standby, and every port closed). Typing into a text field has **not** been tried on a TV yet. The touchpad moves the TV's real pointer on this TV (through the TV's own `ws://` pointer socket, see below). The volume keys do nothing
     when the TV's sound goes out over optical or to an external amplifier, because the TV does not control that volume. If a key does
-    nothing, `curl -X POST localhost:8765/api/phoneremote/key -d '{"key":"HOME"}'` (and the status `keys` field of `/api/phoneremote`) say which
-    step failed; please report it in an issue with the Share log.
+    nothing, `curl -X POST localhost:8765/api/addons/phoneremote/key -d '{"key":"HOME"}'` (and the status `keys` field of
+    `/api/addons/phoneremote`) say which step failed; please report it in an issue with the Share log.
     The wake packet was tried on this TV as well: in standby, with every port closed, a packet brought it back in about a second, with the
     same boot (Quick Start+). The packet came from a computer on the network.
     The power drawer was tried on this TV, one row at a time: **Screen off** left it in `Screen Off` with every port still open, **Standby**
@@ -22,18 +22,28 @@ The phone page has four tabs: **Remote**, **Touchpad**, **Apps** and **Live**. T
 cannot be reached the line under the TV name says so ("Can't reach the TV": it may be off, or the phone may be on another network) and the page retries by itself. Every short message (opening an app, not connected, the TV did not come on) shows in that line for a few seconds and then goes back to the real status: nothing is drawn over the keys. The page is always left to right,
 also in an Arabic or Hebrew phone, so the arrows do not swap sides.
 
-**Touchpad.** A swipe moves the TV's pointer as you move, a tap is OK, a tap with two fingers is Back, and two fingers moving scroll. The rail on the right of the pad scrolls too: drag its thumb up or down, and it springs back to the middle when you let go. Both work with a mouse as well (drag, click, wheel; a right click is Back). The first time, the TV asks you to **allow** the connection on its screen: allow it once and the key is kept in `ssap-key` next to `config.json`. Until it is allowed (or if the TV refuses) the pad falls back to the arrow keys, at a slower pace.
+**Touchpad.** A swipe moves the TV's pointer as you move, a tap is OK, a tap with two fingers is Back, and two fingers moving scroll. The rail on the right of the pad scrolls too: drag its thumb up or down, and it springs back to the middle when you let go. Both work with a mouse as well (drag, click, wheel; a right click is Back). The first time, the TV asks you to **allow** the connection on its screen: allow it once and the key is kept in the add-on's own data
+folder (`/media/developer/cleanyourtv/addon-data/phoneremote/ssap-key`, mode 600). Until it is allowed (or if the TV refuses) the pad
+falls back to the arrow keys, at a slower pace.
 
 **Keyboard.** The **Keyboard** button (last row of the Remote and the Touchpad) opens a drawer (the same kind as Inputs and Numbers) and brings up the phone's keyboard. What you type goes to the TV as you type, and the line under the TV name says "Typing live on TV". **Clear**, **Delete** (hold to repeat) and **Enter** (sends Enter to the TV and closes the drawer) sit under the box.
 
 ## Set up
 
-1. In the manager app open **Features**, then **Phone remote**, and switch it **On**. Nothing listens on the network until then.
+It is an add-on from the catalog, not part of the package: the phone remote opens a port on your network and lets a paired phone control
+the TV, so you install it on purpose. In the manager app, **Add-ons**, find **Phone remote**, install it and switch it **On**. Nothing
+listens on the network until then, and switching it off again closes the port.
+
+1. Open the add-on's page: in the manager, **Add-ons > Phone remote**, turn on **Page of the book** (or press 2 on Home afterwards): the
+   page has **Pair a phone**, the paired phones, and **Remove unused phones**.
 2. Choose **Pair a phone**. The TV shows a QR code, the address (`http://<tv address>:8799`) and a 6-digit code.
 3. On the phone (same Wi-Fi) scan the code, or type the address. The code it shows is in the address the QR carries, so scanning it
    pairs by itself; typed in, the same code is entered on the page. The code works once
-   and expires a few minutes after you leave the screen; the TV then shows a new one for the next phone.
+   and expires a few minutes after you leave the page; the TV then shows a new one for the next phone.
 4. Press Back on the TV. The phone page now shows **Connected**. Add it to the home screen for a one-tap remote.
+
+The page draws the QR with the generator that ships with CleanYourTV (`/addon/qrcode.js`, one copy in the repository: a catalog add-on
+brings no copy of its own).
 
 The phone keeps a token in the browser (`localStorage`). It has to be the same address every time, so give the TV a fixed address in
 your router; if the address changes, pair again.
@@ -75,7 +85,7 @@ again it pairs with a new code.
 Logging out tells the TV (`{"t":"logout"}` on the connection; the TV answers `{"t":"bye"}`) and removes the phone from its list at once. What decides this is whether the
 TV can be reached, not whether its screen is on: a TV on standby that still answers is told. When the page's own connection is closed it opens a short one of
 its own, and waits three seconds at most. If the TV cannot be reached the phone still logs out and a note says the TV still lists it
-(remove it in the manager app, **Features › Phone remote › Paired phones**). The result shows as a toast at the top of the pairing screen: three seconds when the TV was told, ten seconds when it was not. On the phone, the page deletes the token and every `cytv` entry it kept, and the Android app
+(remove it on the TV, on the add-on's page, **Paired phones**). The result shows as a toast at the top of the pairing screen: three seconds when the TV was told, ten seconds when it was not. On the phone, the page deletes the token and every `cytv` entry it kept, and the Android app
 forgets the TV's address, the network card address and the saved page, and returns to its start page.
 
 ## The apps on the TV
@@ -90,19 +100,24 @@ how Live TV takes a number (the launcher is not asked for anything the phone rem
 
 The page's top bar shows the TV's own name. On webOS 10 the name the user sets (Settings > General > Devices > TV Name) is not in the
 settings store — it lives in Apple's HomeKit store, `/var/lib/airplay/HomeKitStore/00.00` (eight bytes of header, then the name,
-NUL-terminated), which only root can read; `helper/addons-bundled/phoneremote/tvname.js` reads it and never writes to it. When there is no name there, the page shows
+NUL-terminated), which only root can read; `addons/catalog/phoneremote/tvname.js` reads its first 64 bytes (the header and the name, never
+the pairing material that follows) and never writes to it. When there is no name there, the page shows
 the model the TV reports (`getSystemInfo`), and **TV** only if even that cannot be read.
 
-In the manager app, **Features › Phone remote**:
+The phone remote has no screens in the manager: its own page on the TV does this (add it to the book: **Add-ons > Phone remote > Page of
+the book**, then press 2 on Home):
 
-| Row | What it does |
+| On the page | What it does |
 |---|---|
-| **Phone remote** On/Off | Off closes the port and every connection. Paired phones stay paired and work again when it is switched on |
-| **Pair a phone** | Opens the pairing window while the QR screen is open |
-| **Remove unused phones** | For security: a phone that is not connected and has not been used for 1 day, 3 days, 1 week, 2 weeks (the default) or 1 month is removed by itself, and its token stops working. **Never remove** switches it off, after a warning |
-| **Paired phones** | Opens the list: every phone that is paired, with whether it is connected or blocked, when it was last used and the day it was paired |
-| A phone's name | **Block this phone** (it stays paired but sends nothing until you allow it) or **Remove this phone** (its token stops working; it has to pair again) |
-| **Remove all phones**, at the bottom of that list | Every token stops working |
+| **Pair a phone** | Opens the pairing window (the QR code, the address and the 6-digit code) while it is open; Back closes it |
+| **Remove unused phones** | For security: a phone that is not connected and has not been used for 1 day, 3 days, 1 week, 2 weeks (the default) or 1 month is removed by itself, and its token stops working. **Never** switches it off, after a warning |
+| **Phones** | Every phone that is paired, with whether it is connected or blocked and when it was last used |
+| **Block** / **Allow**, on a phone | It stays paired but sends nothing until you allow it (or the other way round) |
+| **Remove**, on a phone (twice) | Its token stops working; it has to pair again |
+| **Remove all phones**, below the list (twice) | Every token stops working |
+
+Switching the add-on on or off is in the manager's Add-ons screen, as for every add-on: off closes the port and every connection, and
+paired phones stay paired and work again when it is switched on. A service add-on's switch takes effect at the next start of the service.
 
 The list shows when each phone was last used and whether it is connected. Up to 10 phones can be paired; the 11th is refused until one is removed. The **last used** time is saved at most once a minute per phone, so it
 is accurate to about a minute.
@@ -154,15 +169,16 @@ Any of these sends the same packet to the TV:
 
 ## How it works
 
-- **Pairing.** The pairing window opens only while the QR screen is open (and closes 3 minutes after it was left). The code is
+- **Pairing.** The pairing window opens only while the add-on's page shows it (and closes 3 minutes after it was left). The code is
   random, works once, and a wrong guess is counted: an address gets five tries a minute and the window closes after eight wrong codes.
-  A pairing from a web page on another site is refused. The phone gets a random token (`<id>.<128-bit secret>`); the TV keeps
-  only the SHA-256 of the secret in `config.json` (readable by root only), compares it in constant time and never writes tokens or
-  codes in the log.
+  A pairing from a web page on another site is refused, and the `Origin` has to name the TV's own address (or `localhost`), not merely
+  match the `Host` header a page using DNS rebinding controls. The phone gets a random token (`<id>.<128-bit secret>`); the TV keeps
+  only the SHA-256 of the secret in the add-on's settings (`config.json`, `addons.phoneremote.settings`, readable by root only), compares
+  it in constant time and never writes tokens or codes in the log.
 - **Before pairing nothing is accepted.** A connection that does not start with `{"t":"hello","token":…}` within 5 seconds, or sends
   anything else first, is closed. Unknown tokens count against the address; too many and it is shut out for a minute. A phone can send
   about 40 messages a second (a burst of 60); past that the TV answers "slow down".
-- **The port.** 8799 listens on the local network **only** while the phone remote is On and a phone is paired or the pairing window is
+- **The port.** 8799 listens on the local network **only** while the add-on is on and a phone is paired or the pairing window is
   open. It serves the phone page, the pairing call and the WebSocket (`/ws`), nothing else. It is plain HTTP; see [Security](security.md).
 - **Typing.** `text`, `del` and `enter` are handled one after another for each connection, in the order they arrive, so typed text, a
   delete and Enter cannot overtake each other; a call that hangs for 8 seconds is given up so the rest still goes. Other keys are not
@@ -173,23 +189,27 @@ Any of these sends the same packet to the TV:
   tried, and the volume and mute keys then fall back to `com.webos.service.audio`. The touchpad uses the pointer socket (`type:move`,
   `type:click`, `type:scroll`). The luna call `getPointerInputSocket` returns a Unix socket on webOS 10 that accepts the lines and ignores
   them, so the service asks the TV's SSAP service (`ws://127.0.0.1:3000`, `ssap://com.webos.service.networkinput/getPointerInputSocket`) instead: it
-  gives a `ws://` address that works. That needs a client key, got once with the on-screen prompt and kept in `ssap-key` (mode 600); the
-  service has its own small WebSocket in `helper/addons-bundled/phoneremote/ws.js`, as Node.js 8 has none. The page batches moves every 33 ms and, if the pointer
-  socket refuses, plays arrow keys instead for 30 seconds. Text goes through `com.webos.service.ime`
-  (`insertText`, `deleteCharacters`, `sendEnterKey`). The code is `helper/addons-bundled/phoneremote/remotekeys.js` behind a small interface, and each key's
-  result is logged (`phoneremote: key HOME ok via special`).
+  gives a `ws://` address that works. That needs a client key, got once with the on-screen prompt and kept, mode 600, in the add-on's data
+  folder (`addon-data/phoneremote/ssap-key`); the add-on has its own small WebSocket in `addons/catalog/phoneremote/ws.js`, as Node.js 8
+  has none. The page batches moves every 33 ms and, if the pointer socket refuses, plays arrow keys instead for 30 seconds. Text goes
+  through `com.webos.service.ime` (`insertText`, `deleteCharacters`, `sendEnterKey`). The code is
+  `addons/catalog/phoneremote/remotekeys.js` behind a small interface, and each key's result is logged
+  (`phoneremote: key HOME ok via special`).
 - **Power.** The button in the page's top bar shows the TV's own power state — the remote asks `tvpower` for it when it connects and every five seconds, so **On** means the TV is `Active` or on its `Screen Saver`, not merely that a port answers — and a tap while the remote is connected sends the TV's power key (`POWER`, the standby of the remote's own key, so Quick Start+ and Wake-on-LAN keep working) without opening anything: it turns the TV off, and turns the screen back on from Quick Start+ standby. A **hold** on that button (about half a second) while the TV is on opens the **Power** drawer — the same sheet as the Inputs and the Numbers — with the four things the TV's power service can be told to do, one call to `luna://com.webos.service.tvpower/power/` each: **Screen off** (`turnOffScreen`: the picture goes dark and the TV keeps running, with the network up), **Standby** (`powerOff`, the soft off, which this page wakes again), **Restart** (`reboot`) and **Shut down** (`shutDown`, the hard off, after which only the TV's own remote turns it back on). Each call carries a reason, which is how the TV is told what caused it: `remoteKey` is the remote of the TV, and it refuses any other word with "Invalid reason", so the page sends nothing that the TV would not hear from its own keys. What the TV answers is what the phone shows; a restart and a shut down cannot be taken back, so they want a second tap within four seconds and say so while they wait for it. With the TV not answering the sheet does not open: in the app a tap on the button wakes the TV with a Wake-on-LAN packet, and a browser can only try to connect again, since a page cannot send UDP; see [Turning the TV on](#turning-the-tv-on). The status line says when the TV's own Wake-on-LAN setting (`wolwowlOnOff`) is off: turn it on in **Settings > General > Devices > External Devices > TV On With Mobile**. A full power-off through the service (`/api/power/off`) is not used here: afterwards the TV no longer wakes over the network.
 
 ## From a shell
 
 ```sh
-curl -s localhost:8765/api/phoneremote                                     # state, paired phones (names, last seen), last key result
-curl -X POST localhost:8765/api/phoneremote -d '{"enabled":true}'          # on / off
-curl -X POST localhost:8765/api/phoneremote -d '{"expireDays":7}'          # remove phones unused for 7 days (1, 3, 7, 14, 30; 0 = never)
-curl -X POST localhost:8765/api/phoneremote/key -d '{"key":"VOLUMEUP"}'    # press one key as a phone would, to try the way into the TV
-curl -X POST localhost:8765/api/phoneremote/access -d '{"id":"<id>","allow":false}'   # block / allow
-curl -X POST localhost:8765/api/phoneremote/revoke -d '{"id":"<id>"}'      # or {"all":true}
+curl -s localhost:8765/api/addons/phoneremote                                     # state, paired phones (names, last seen), last key result
+curl -X POST localhost:8765/api/addons/phoneremote -d '{"expireDays":7}'          # remove phones unused for 7 days (1, 3, 7, 14, 30; 0 = never)
+curl -X POST localhost:8765/api/addons/phoneremote/key -d '{"key":"VOLUMEUP"}'    # press one key as a phone would, to try the way into the TV
+curl -X POST localhost:8765/api/addons/phoneremote/access -d '{"id":"<id>","allow":false}'   # block / allow
+curl -X POST localhost:8765/api/addons/phoneremote/revoke -d '{"id":"<id>"}'      # or {"all":true}
+curl -X POST localhost:8765/api/addons/phoneremote/pair -d '{"stop":true}'        # close the pairing window
 ```
+
+The add-on is switched on and off in the manager's Add-ons screen (`POST /api/addons/phoneremote/enable` with `{"enabled":true}` or
+`false`, which takes effect at the next start of the service).
 
 The keys: `UP DOWN LEFT RIGHT ENTER BACK HOME MENU EXIT INFO VOLUMEUP VOLUMEDOWN MUTE CHANNELUP CHANNELDOWN PLAY PAUSE STOP REWIND FASTFORWARD RED GREEN YELLOW BLUE 0`-`9`.
 
@@ -202,4 +222,5 @@ The keys: `UP DOWN LEFT RIGHT ENTER BACK HOME MENU EXIT INFO VOLUMEUP VOLUMEDOWN
 - **"The TV did not answer":** the address changed, the TV is off, or the service restarted. The page retries by itself, and **Turn on**
   wakes the TV again when it still answers; from deep standby it needs a Wake-on-LAN packet ([Turning the TV on](#turning-the-tv-on)).
 
-To undo everything: switch **Phone remote** off, or **Remove all phones**. Uninstalling removes the settings with `config.json`.
+To undo everything: switch **Phone remote** off in Add-ons, or use **Remove all phones** on its page. Removing the add-on deletes its code
+and keeps its settings; they go with `config.json` when CleanYourTV is uninstalled.

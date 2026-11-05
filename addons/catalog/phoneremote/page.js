@@ -4,8 +4,9 @@
 // drop, a sleep or a restart of the service.
 // The look follows the redesign: a round pad with a large OK, volume and channel rockers, numbers and colours in a sheet, a tab bar, and a
 // status line under the TV name for every message. Spacing is by sibling margins (no flex gap: Chromium 68), and the page is always left to right.
-const web = require('../../web'),
-  i18n = require('../../i18n');
+// the texts are translated with the service's i18n, which the add-on gets as ctx.util.i18n (a catalog add-on cannot require it); `esc`
+// is helper/web.js's, kept here because the add-on gets only its ctx
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 const PHONE_JS = `document.documentElement.dir='ltr'; /* the remote is laid out like a real one in every language: the arrows must not swap sides */
 var KEY='cytv-remote',curTab='kb',liveOk=false,appsIn=false,liveIn=false,tok='',ws=null,timer=0,delay=1000,lastRx=0,lastPing=0,lastAsk=0,pwrState='',n=0,blocked=false,ready=false,lastTouch=0,prev='',mac='',wol=null,offAt=0,MK='cytv-tvmac',$=function(i){return document.getElementById(i)};
@@ -651,16 +652,16 @@ const P = {
   chev: '<path d="m6 9 6 6 6-6"/>',
 }; // prettier-ignore
 
-function phonePage(lang, preCode, hint) {
+function phonePage(i18n, lang, preCode, hint) {
   // a code in the address the page was opened with: it goes into the input on the server, before any script runs
   const pre = /^[0-9]{6}$/.test(String(preCode || '')) ? String(preCode) : '';
   let cellHtml = '';
   for (let i = 0; i < 6; i++) cellHtml += '<div class=cell>' + (pre.charAt(i) || '') + '</div>';
-  const T = s => web.esc(i18n.tr(lang, s));
+  const T = s => esc(i18n.tr(lang, s));
   const ic = (p, cls) => `<svg class="ic${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden=true>${P[p]}</svg>`;
   // a button that sends one key: aria-label names it, rep=1 repeats while held
   const key = (k, inner, label, cls, rep) =>
-    `<button${cls ? ' class="' + cls + '"' : ''} data-k=${k}${rep ? ' data-r=1' : ''} aria-label="${web.esc(label)}">${inner}</button>`;
+    `<button${cls ? ' class="' + cls + '"' : ''} data-k=${k}${rep ? ' data-r=1' : ''} aria-label="${esc(label)}">${inner}</button>`;
   const digits =
     ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => key(d, d, d)).join('') +
     key('EXIT', `<span class=tx2>${T('Exit')}</span>`, T('Exit')) +
@@ -672,7 +673,7 @@ function phonePage(lang, preCode, hint) {
 <meta http-equiv=pragma content=no-cache><title>${T('Phone remote')}</title>
 <style>${STYLE}</style>
 <div id=pairbox class=hide><div class=glow></div><p class=eyebrow id=eb data-app="${T('Step 2 of 2')}">&nbsp;</p><h1>${T('Enter the code')}</h1><p class=sub id=psub data-app="${T('The 6-digit code is on the TV screen.')}">${T('Use this device as a remote for your TV. You only do this once.')}</p>
-<div class=steps id=steps><div><i>1</i><span>${T('On the TV, open the manager app:')} <b>${T('Features > Phone remote > Pair a phone')}</b>. ${T('It shows a QR code and a 6-digit code.')}</span></div><div><i>2</i><span>${T('Type the 6-digit code below.')}</span></div></div>
+<div class=steps id=steps><div><i>1</i><span>${T('On the TV, open the Phone remote page and choose')} <b>${T('Pair a phone')}</b>. ${T('It shows a QR code and a 6-digit code.')}</span></div><div><i>2</i><span>${T('Type the 6-digit code below.')}</span></div></div>
 <label for=code>${T('Code from the TV')}</label><div class=cellwrap><div class=cells>${cellHtml}</div><input id=code inputmode=numeric maxlength=6 autocomplete=one-time-code autofocus value="${pre}"></div>
 <label for=pname>${T('Name of this device')}</label><input id=pname maxlength=30>
 <div class=actions><button class=pri id=go>${T('Pair this device')}</button>

@@ -1,0 +1,767 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Phone remote</title>
+<style>
+/* The phone remote's page on the TV (1920x1080): pair a phone, the paired phones, and when unused ones are removed.
+   The page sits over Home as a page of the book, so it keeps Home's dark look; the sizes are the panel's own (Chromium 68, ES5 script).
+   Only the focus ring and the toast change with a transition: transform and opacity only (the TV's GPU is weak). */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0a0c10;
+  color: #eef2f8;
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  overflow: hidden;
+}
+#app {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 52px 88px 44px;
+  display: flex;
+  flex-direction: column;
+}
+h1 {
+  font-size: 50px;
+  line-height: 1.1;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+.sub {
+  margin: 10px 0 0;
+  font-size: 24px;
+  color: #94a1b5;
+}
+.cols {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  margin-top: 40px;
+}
+.col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.col + .col {
+  margin-left: 72px;
+}
+h2 {
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0 0 18px;
+  color: #c7d1e0;
+}
+.count {
+  color: #7c8aa0;
+  font-weight: 500;
+}
+button {
+  font: inherit;
+  font-size: 21px;
+  color: #eef2f8;
+  background: #191e27;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 14px 22px;
+  cursor: pointer;
+  outline: none;
+}
+button:focus {
+  border-color: #4da3ff;
+  background: #202a3b;
+}
+button.pri {
+  background: #2b6fd6;
+}
+button.pri:focus {
+  background: #3b82f6;
+}
+button.ghost {
+  background: #12161d;
+  color: #9aa6b8;
+}
+button.danger {
+  background: #23161a;
+  color: #ffb3b3;
+}
+button.danger:focus {
+  background: #3a2027;
+  border-color: #ff6b6b;
+}
+button.on {
+  background: #23532f;
+  border-color: #46c46f;
+}
+button.dim {
+  color: #5d6878;
+}
+.wide {
+  align-self: flex-start;
+}
+.hide {
+  display: none !important;
+}
+.hint {
+  font-size: 19px;
+  line-height: 1.35;
+  color: #8391a6;
+  margin: 12px 0;
+}
+.warn {
+  color: #ffcf80;
+}
+#pairsheet {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+}
+#qr {
+  width: 320px;
+  height: 320px;
+  background: #fff;
+  border-radius: 10px;
+  image-rendering: pixelated;
+}
+.url {
+  font-size: 22px;
+  color: #cfe0ff;
+  font-family: Menlo, Consolas, monospace;
+  margin: 4px 0 6px;
+}
+.code {
+  font-size: 54px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  font-family: Menlo, Consolas, monospace;
+  color: #fff;
+  margin: 6px 0;
+}
+#phonelist {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.phone {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+  background: #12161d;
+  border-radius: 14px;
+}
+.phone .who {
+  flex: 1;
+  min-width: 0;
+}
+.phone b {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+}
+.phone .st {
+  display: block;
+  font-size: 18px;
+  color: #8391a6;
+  margin-top: 3px;
+}
+.phone .st.on {
+  color: #6fd48c;
+}
+.phone .st.no {
+  color: #ffb3b3;
+}
+.phone .acts {
+  display: flex;
+  flex-shrink: 0;
+}
+.phone .acts button {
+  font-size: 18px;
+  padding: 10px 16px;
+  margin-left: 10px;
+}
+#removeall {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+.unused {
+  margin-top: 28px;
+}
+.choices {
+  display: flex;
+}
+.choices button {
+  margin-right: 12px;
+  font-size: 19px;
+  padding: 12px 20px;
+}
+#toast {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translate(-50%, 20px);
+  padding: 14px 26px;
+  border-radius: 12px;
+  background: #1c2634;
+  color: #fff;
+  font-size: 21px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.18s,
+    opacity 0.18s;
+}
+#toast.on {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+#debug {
+  display: none;
+}
+</style></head><body>
+<div id="app">
+  <div>
+    <h1 data-t="Phone remote">Phone remote</h1>
+    <p class="sub" data-t="Use a phone as the TV remote over your Wi-Fi.">Use a phone as the TV remote over your Wi-Fi.</p>
+  </div>
+  <div class="cols">
+    <section class="col">
+      <h2 data-t="Pair a phone">Pair a phone</h2>
+      <button class="pri wide" id="pairbtn" data-k="pair" data-t="Pair a phone">Pair a phone</button>
+      <div id="pairsheet" class="hide">
+        <canvas id="qr" width="320" height="320" aria-hidden="true"></canvas>
+        <p class="hint" data-t="Scan the QR code with the camera of the phone, or type this address.">Scan the QR code with the camera of the phone, or type this address.</p>
+        <div id="pairurl" class="url"></div>
+        <p class="hint" data-t="Then type this code on the phone:">Then type this code on the phone:</p>
+        <div id="codebox" class="code"></div>
+        <p class="hint" data-t="The code works once.">The code works once.</p>
+        <p class="hint warn" id="pairnote"></p>
+        <button id="pairstop" data-k="stop" data-t="Close">Close</button>
+      </div>
+    </section>
+    <section class="col">
+      <h2><span data-t="Phones">Phones</span><span id="phcount" class="count"></span></h2>
+      <div id="phonelist"></div>
+      <button class="ghost" id="removeall" data-k="all" data-t="Remove all phones">Remove all phones</button>
+    </section>
+  </div>
+  <section class="unused">
+    <h2 data-t="Remove unused phones">Remove unused phones</h2>
+    <p class="hint" data-t="Only phones that are not connected and not used for this long are removed. A phone that is removed can pair again with a new code.">Only phones that are not connected and not used for this long are removed. A phone that is removed can pair again with a new code.</p>
+    <div id="expire" class="choices"></div>
+  </section>
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+var I18N = {"ar":{"_name":"العربية","_dir":"rtl","_pct":70,"%d days ago":{"zero":"منذ %d يوم","one":"منذ %d يوم","two":"منذ %d يومين","few":"منذ %d أيام","many":"منذ %d يومًا","other":"منذ %d يوم"},"%d h ago":"منذ %d س","%d min ago":"منذ %d د","%d of %d":"%d من %d","%d of %d on":"%d من %d مفعّل","All":"الكل","Back":"رجوع","Close":"إغلاق","Home":"Home","just now":"الآن","never":"أبدًا","not connected":"غير متصل","On":"تشغيل","Save":"حفظ","Saved":"تم الحفظ","Text":"نص","The service did not answer":"لم تستجب الخدمة","The service did not answer.":"لم تستجب الخدمة.","Days":"الأيام","connected":"متصل","Phone remote":"جهاز التحكم من الهاتف","Pair":"إقران","Paired":"تم الإقران","Pair a phone":"إقران هاتف","Remove all phones":"إزالة كل الهواتف","Phone allowed":"تم السماح للهاتف","Phone blocked":"تم حظر الهاتف","Phone removed":"تمت إزالة الهاتف","All phones removed":"تمت إزالة كل الهواتف","blocked":"محظور"},"ca":{"_name":"Català","_dir":"ltr","_pct":70,"%d days ago":{"one":"fa %d dia","other":"fa %d dies"},"%d h ago":"fa %d h","%d min ago":"fa %d min","%d of %d":"%d de %d","%d of %d on":"%d de %d d'activats","All":"Tot","Back":"Enrere","Close":"Tanca","Home":"Inici","just now":"ara mateix","never":"mai","not connected":"no connectat","On":"Activat","Save":"Desa","Saved":"Desat","Text":"Text","The service did not answer":"El servei no ha respost","The service did not answer.":"El servei no ha respost.","Days":"Dies","connected":"connectat","Phone remote":"Comandament al mòbil","Pair":"Aparella","Paired":"Aparellat","Pair a phone":"Aparella un mòbil","Remove all phones":"Elimina tots els mòbils","Phone allowed":"Mòbil permès","Phone blocked":"Mòbil bloquejat","Phone removed":"Mòbil eliminat","All phones removed":"S’han eliminat tots els mòbils","blocked":"bloquejat"},"de":{"_name":"Deutsch","_dir":"ltr","_pct":79,"%d days ago":{"one":"vor %d Tag","other":"vor %d Tagen"},"%d h ago":"vor %d Std.","%d min ago":"vor %d Min.","%d of %d":"%d von %d","%d of %d on":"%d von %d an","All":"Alle","Back":"Zurück","Close":"Schließen","Home":"Home","just now":"gerade eben","never":"nie","not connected":"nicht verbunden","On":"An","Save":"Speichern","Saved":"Gespeichert","Text":"Text","The service did not answer":"Der Dienst hat nicht geantwortet","The service did not answer.":"Der Dienst hat nicht geantwortet.","TV":"TV","Days":"Tage","connected":"verbunden","Phone remote":"Handy-Fernbedienung","Pair":"Koppeln","Paired":"Gekoppelt","Pair a phone":"Handy koppeln","Remove all phones":"Alle Handys entfernen","Phone allowed":"Handy zugelassen","Phone blocked":"Handy gesperrt","Phone removed":"Handy entfernt","All phones removed":"Alle Handys entfernt","blocked":"gesperrt"},"es":{"_name":"Español","_dir":"ltr","_pct":74,"%d days ago":{"one":"hace %d día","other":"hace %d días"},"%d h ago":"hace %d h","%d min ago":"hace %d min","%d of %d":"%d de %d","%d of %d on":"%d de %d activados","All":"Todos","Back":"Atrás","Close":"Cerrar","Home":"Home","just now":"ahora mismo","never":"nunca","not connected":"no conectado","On":"Activado","Save":"Guardar","Saved":"Guardado","Text":"Texto","The service did not answer":"El servicio no respondió","The service did not answer.":"El servicio no respondió.","Days":"Días","connected":"conectado","Phone remote":"Mando en el móvil","Pair":"Vincular","Paired":"Vinculado","Pair a phone":"Vincular un móvil","Remove all phones":"Quitar todos los móviles","Phone allowed":"Móvil permitido","Phone blocked":"Móvil bloqueado","Phone removed":"Móvil quitado","All phones removed":"Todos los móviles quitados","blocked":"bloqueado"},"fr":{"_name":"Français","_dir":"ltr","_pct":74,"%d days ago":{"one":"il y a %d jour","other":"il y a %d jours"},"%d h ago":"il y a %d h","%d min ago":"il y a %d min","%d of %d":"%d sur %d","%d of %d on":"%d sur %d activés","All":"Tous","Back":"Retour","Close":"Fermer","Home":"Home","just now":"à l’instant","never":"jamais","not connected":"non connecté","On":"Activé","Save":"Enregistrer","Saved":"Enregistré","Text":"Texte","The service did not answer":"Le service n’a pas répondu","The service did not answer.":"Le service n’a pas répondu.","Days":"Jours","connected":"connecté","Phone remote":"Télécommande sur téléphone","Pair":"Associer","Paired":"Associé","Pair a phone":"Associer un téléphone","Remove all phones":"Supprimer tous les téléphones","Phone allowed":"Téléphone autorisé","Phone blocked":"Téléphone bloqué","Phone removed":"Téléphone supprimé","All phones removed":"Tous les téléphones supprimés","blocked":"bloqué"},"hu":{"_name":"Magyar","_dir":"ltr","_pct":68,"%d days ago":{"one":"%d napja","other":"%d napja"},"%d h ago":"%d órája","%d min ago":"%d perce","%d of %d":"%d / %d","%d of %d on":"%d / %d be","All":"Összes","Back":"Vissza","Close":"Bezárás","Home":"Főképernyő","just now":"épp most","never":"soha","not connected":"nincs kapcsolat","On":"Be","Save":"Mentés","Saved":"Mentve","Text":"Szöveg","The service did not answer":"A szolgáltatás nem válaszolt","The service did not answer.":"A szolgáltatás nem válaszolt.","TV":"Tévé"},"it":{"_name":"Italiano","_dir":"ltr","_pct":74,"%d days ago":{"one":"%d giorno fa","other":"%d giorni fa"},"%d h ago":"%d h fa","%d min ago":"%d min fa","%d of %d":"%d di %d","%d of %d on":"%d di %d attivi","All":"Tutti","Back":"Indietro","Close":"Chiudi","Home":"Home","just now":"adesso","never":"mai","not connected":"non connesso","On":"On","Save":"Salva","Saved":"Salvato","Text":"Testo","The service did not answer":"Il servizio non ha risposto","The service did not answer.":"Il servizio non ha risposto.","TV":"TV","Days":"Giorni","connected":"connesso","Phone remote":"Telecomando dal telefono","Pair":"Associa","Paired":"Associato","Pair a phone":"Associa un telefono","Remove all phones":"Rimuovi tutti i telefoni","Phone allowed":"Telefono consentito","Phone blocked":"Telefono bloccato","Phone removed":"Telefono rimosso","All phones removed":"Tutti i telefoni rimossi","blocked":"bloccato"},"nl":{"_name":"Nederlands","_dir":"ltr","_pct":80,"%d days ago":{"one":"%d dag geleden","other":"%d dagen geleden"},"%d h ago":"%d uur geleden","%d min ago":"%d min geleden","%d of %d":"%d van %d","%d of %d on":"%d van %d aan","All":"Alle","Back":"Terug","Close":"Sluiten","Home":"Home","just now":"zojuist","never":"nooit","not connected":"niet verbonden","On":"Aan","Save":"Opslaan","Saved":"Opgeslagen","Text":"Tekst","The service did not answer":"De service antwoordde niet","The service did not answer.":"De service antwoordde niet.","Days":"Dagen","connected":"verbonden","Phone remote":"Telefoon als afstandsbediening","Pair":"Koppelen","Paired":"Gekoppeld","Pair a phone":"Telefoon koppelen","Remove all phones":"Alle telefoons verwijderen","Phone allowed":"Telefoon toegestaan","Phone blocked":"Telefoon geblokkeerd","Phone removed":"Telefoon verwijderd","All phones removed":"Alle telefoons verwijderd","blocked":"geblokkeerd"},"pl":{"_name":"Polski","_dir":"ltr","_pct":86,"%d days ago":{"one":"%d dzień temu","few":"%d dni temu","many":"%d dni temu","other":"%d dni temu"},"%d h ago":"%d godz. temu","%d min ago":"%d min temu","%d of %d":"%d z %d","%d of %d on":"%d z %d włączonych","All":"Wszystkie","Back":"Wstecz","Close":"Zamknij","Home":"Home","just now":"przed chwilą","never":"nigdy","not connected":"niepołączony","On":"Wł.","Save":"Zapisz","Saved":"Zapisano","Text":"Tekst","The service did not answer":"Usługa nie odpowiedziała","The service did not answer.":"Usługa nie odpowiedziała.","TV":"TV","Days":"Dni","connected":"połączono","Phone remote":"Pilot w telefonie","Pair":"Sparuj","Paired":"Sparowano","Pair a phone":"Sparuj telefon","Remove all phones":"Usuń wszystkie telefony","Phone allowed":"Telefon dozwolony","Phone blocked":"Telefon zablokowany","Phone removed":"Telefon usunięty","All phones removed":"Usunięto wszystkie telefony","blocked":"zablokowany"},"pt":{"_name":"Português (Brasil)","_dir":"ltr","_pct":67,"%d days ago":{"one":"há %d dia","other":"há %d dias"},"%d h ago":"há %d h","%d min ago":"há %d min","%d of %d":"%d de %d","%d of %d on":"%d de %d ativado","All":"Todos","Back":"Voltar","Close":"Fechar","Home":"Início","just now":"agora mesmo","never":"nunca","not connected":"não conectado","On":"Ativado","Save":"Salvar","Saved":"Salvo","Text":"Texto","The service did not answer":"O serviço não respondeu","The service did not answer.":"O serviço não respondeu.","Days":"Dias","connected":"conectado","Phone remote":"Controle no celular","Pair":"Parear","Paired":"Pareado","Pair a phone":"Parear um celular","Remove all phones":"Remover todos os celulares","Phone allowed":"Celular permitido","Phone blocked":"Celular bloqueado","Phone removed":"Celular removido","All phones removed":"Todos os celulares removidos","blocked":"bloqueado"},"ru":{"_name":"Русский","_dir":"ltr","_pct":70,"%d days ago":{"one":"%d день назад","few":"%d дня назад","many":"%d дней назад","other":"%d дня назад"},"%d h ago":"%d ч назад","%d min ago":"%d мин назад","%d of %d":"%d из %d","%d of %d on":"%d из %d включено","All":"Все","Back":"Назад","Close":"Закрыть","Home":"Home","just now":"только что","never":"никогда","not connected":"не подключён","On":"Вкл.","Save":"Сохранить","Saved":"Сохранено","Text":"Текст","The service did not answer":"Служба не ответила","The service did not answer.":"Служба не ответила.","Days":"Дни","connected":"подключён","Phone remote":"Пульт на телефоне","Pair":"Связать","Paired":"Связан","Pair a phone":"Связать телефон","Remove all phones":"Удалить все телефоны","Phone allowed":"Телефон разрешён","Phone blocked":"Телефон заблокирован","Phone removed":"Телефон удалён","All phones removed":"Все телефоны удалены","blocked":"заблокирован"},"tr":{"_name":"Türkçe","_dir":"ltr","_pct":70,"%d days ago":"%d gün önce","%d h ago":"%d sa önce","%d min ago":"%d dk önce","%d of %d":"%d / %d","%d of %d on":"%d / %d açık","All":"Tümü","Back":"Geri","Close":"Kapat","Home":"Home","just now":"az önce","never":"hiç","not connected":"bağlı değil","On":"Açık","Save":"Kaydet","Saved":"Kaydedildi","Text":"Metin","The service did not answer":"Hizmet yanıt vermedi","The service did not answer.":"Hizmet yanıt vermedi.","Days":"Günler","connected":"bağlı","Phone remote":"Telefon kumandası","Pair":"Eşleştir","Paired":"Eşleştirildi","Pair a phone":"Telefon eşleştir","Remove all phones":"Tüm telefonları kaldır","Phone allowed":"Telefona izin verildi","Phone blocked":"Telefon engellendi","Phone removed":"Telefon kaldırıldı","All phones removed":"Tüm telefonlar kaldırıldı","blocked":"engelli"},"vi":{"_name":"Tiếng Việt","_dir":"ltr","_pct":66,"%d days ago":{"one":"%d ngày trước","other":"%d ngày trước"},"%d h ago":"%d giờ trước","%d min ago":"%d phút trước","%d of %d":"%d trên %d","%d of %d on":"%d trên %d đang bật","All":"Tất cả","Back":"Quay lại","Close":"Đóng","Home":"Màn hình chính","just now":"vừa xong","never":"không bao giờ","not connected":"chưa kết nối","On":"Bật","Save":"Lưu","Saved":"Đã lưu","Text":"Văn bản","The service did not answer":"Dịch vụ không phản hồi","The service did not answer.":"Dịch vụ không phản hồi.","TV":"TV"},"en":{"%d days ago":{"one":"%d day ago","other":"%d days ago"},"%d phone":{"one":"%d phone","other":"%d phone"},"%d phones":{"one":"%d phone","other":"%d phones"}}};
+/* ---------- language: the pages are written in English and translated where text is shown ----------
+   I18N holds the translations this page uses, from i18n/<language>.json, put in by tools/build-pages.js ({language: {English: text}}).
+   The language is the TV's, unless the manager's Language setting chose another (setLang). t() looks a text up whole, then the parts
+   of a text joined by line breaks or " · ", and fills in templates: "%s" is any text, "%d" a number ("Launcher %s", "%d photos").
+   A text without a translation stays English. A translation can have plural forms, {"one": "%d foto", "other": "%d foto's"}: the
+   form follows the first number in the text, by the language's plural rules (Unicode CLDR: zero, one, two, few, many, other). The
+   English plural forms are in I18N.en. */
+var LANG_TV = String((window.webOSSystem && window.webOSSystem.locale) || navigator.language || 'en')
+    .slice(0, 2)
+    .toLowerCase(),
+  LANG = 'en',
+  LT = null,
+  LTPL = null;
+/* '' or undefined: the TV's language; a language without translations here falls back to English */
+function setLang(code) {
+  var c = code || LANG_TV;
+  LANG = I18N[c] && (c === 'en' || I18N[c]._name) ? c : 'en';
+  LT = I18N[LANG] || null;
+  LTPL = null;
+  if (document.documentElement) {
+    document.documentElement.lang = LANG;
+    /* a right-to-left language (_dir "rtl": Arabic, Hebrew) mirrors the layout; the pages' CSS has the [dir="rtl"] rules */
+    document.documentElement.dir = LT && LT._dir === 'rtl' ? 'rtl' : 'ltr';
+  }
+}
+/* left and right swap places in a right-to-left layout: the arrow keys follow what the eye sees */
+function rtl() {
+  return !!(LT && LT._dir === 'rtl');
+}
+/* the plural form of n in the current language: the browser's rules, or a small table of the same rules for older engines */
+function pluralForm(n) {
+  try {
+    if (window.Intl && Intl.PluralRules) return new Intl.PluralRules(LANG).select(n);
+  } catch (e) {}
+  var i = Math.floor(Math.abs(n)),
+    m10 = i % 10,
+    m100 = i % 100;
+  if (/^(ja|zh|ko|th|vi|id|ms|tr)$/.test(LANG)) return 'other';
+  if (/^(fr|pt)$/.test(LANG)) return i < 2 ? 'one' : 'other';
+  if (/^(ru|uk|be)$/.test(LANG))
+    return m10 === 1 && m100 !== 11 ? 'one' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'few' : 'many';
+  if (LANG === 'pl') return i === 1 ? 'one' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'few' : 'many';
+  if (/^(cs|sk)$/.test(LANG)) return i === 1 ? 'one' : i >= 2 && i <= 4 ? 'few' : 'other';
+  if (LANG === 'ar')
+    return i === 0 ? 'zero' : i === 1 ? 'one' : i === 2 ? 'two' : m100 >= 3 && m100 <= 10 ? 'few' : m100 >= 11 ? 'many' : 'other';
+  if (LANG === 'he') return i === 1 ? 'one' : i === 2 ? 'two' : 'other';
+  return n === 1 ? 'one' : 'other';
+}
+/* a translation, with its plural form picked for n when it has forms */
+function tForm(v, n) {
+  if (typeof v === 'string') return v;
+  if (!v) return '';
+  return (n !== undefined && v[pluralForm(+String(n).replace(',', '.'))]) || v.other || '';
+}
+setLang('');
+/* which capture of a template holds its first number (the plural form follows it) */
+function firstNum(key) {
+  var k = 0,
+    re = /%[sd]/g,
+    x;
+  while ((x = re.exec(key))) {
+    k++;
+    if (x[0] === '%d') return k;
+  }
+  return 1;
+}
+function tTemplates() {
+  if (LTPL) return LTPL;
+  LTPL = [];
+  for (var k in LT)
+    if (k.charAt(0) !== '_' && /%[sd]/.test(k))
+      LTPL.push([
+        new RegExp(
+          '^' +
+            k
+              .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              .replace(/%s/g, '([\\s\\S]+?)')
+              .replace(/%d/g, '([0-9][0-9.,]*)') +
+            '$'
+        ),
+        k,
+        /\n| · /.test(k),
+      ]);
+  LTPL.sort(function (a, b) {
+    return b[1].length - a[1].length;
+  });
+  return LTPL;
+}
+function tTpl(s, joined) {
+  var tp = tTemplates();
+  for (var i = 0; i < tp.length; i++) {
+    if (tp[i][2] !== joined) continue;
+    var m = tp[i][0].exec(s);
+    if (m) {
+      var j = 1,
+        num = /%d/.test(tp[i][1]) ? m[firstNum(tp[i][1])] : undefined;
+      return tForm(LT[tp[i][1]], num).replace(/%[sd]/g, function () {
+        return t(m[j++]);
+      });
+    }
+  }
+  return null;
+}
+function t(s) {
+  if (!LT || s === null || s === undefined || s === '') return s;
+  s = String(s);
+  if (Object.prototype.hasOwnProperty.call(LT, s)) return tForm(LT[s]);
+  var r = tTpl(s, true);
+  if (r !== null) return r;
+  if (s.indexOf('\n') >= 0) return s.split('\n').map(t).join('\n');
+  if (s.indexOf(' · ') >= 0) return s.split(' · ').map(t).join(' · ');
+  r = tTpl(s, false);
+  return r !== null ? r : s;
+}
+/* the manager calls it tr: its code has local variables named t */
+function tr(s) {
+  return t(s);
+}
+/* the languages for the manager's Language list: English and every language this page has, with how complete it is */
+function languages() {
+  var out = [{ code: 'en', name: 'English', pct: 100 }];
+  for (var c in I18N) if (c !== 'en') out.push({ code: c, name: I18N[c]._name || c, pct: I18N[c]._pct || 0 });
+  return out;
+}
+/* The phone remote's page on the TV: pair a phone (a QR code and a 6-digit code), the paired phones, and when unused ones are removed.
+   It is a page of the launcher's book: the launcher gives it the focus, Back closes it (the SDK script at the end of the page posts
+   that to the launcher), and the number and colour buttons stay the launcher's. ES5, Chromium 68: no arrow functions, no template
+   literals, no flex gap. The service is at /api/addons/phoneremote (the loader passes what follows to the add-on's handle). */
+var Q = (function () {
+  var o = {},
+    s = String(location.search || '')
+      .replace(/^\?/, '')
+      .split('&'),
+    i,
+    p;
+  for (i = 0; i < s.length; i++) {
+    p = s[i].split('=');
+    if (p[0]) o[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || '');
+  }
+  return o;
+})();
+var API = '/api/addons/phoneremote',
+  S = null,
+  SIG = '',
+  qrFor = '',
+  pairFrom = 0,
+  toastT = 0,
+  confirmKey = '',
+  confirmT = 0,
+  neverAsk = 0,
+  neverT = 0,
+  busy = false;
+
+setLang(Q.lang || '');
+
+function $(id) {
+  return document.getElementById(id);
+}
+function el(tag, cls, text) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+/* one call to the add-on: path '' is the state, '/pair', '/revoke', '/access' and the base POST are the rest */
+function api(path, body, cb) {
+  var x = new XMLHttpRequest();
+  x.open(body ? 'POST' : 'GET', API + path);
+  if (body) x.setRequestHeader('content-type', 'application/json');
+  x.timeout = 15000;
+  x.onload = function () {
+    var j = null;
+    try {
+      j = JSON.parse(x.responseText);
+    } catch (e) {}
+    cb(j, x.status);
+  };
+  x.onerror = x.ontimeout = function () {
+    cb(null, 0);
+  };
+  x.send(body ? JSON.stringify(body) : null);
+}
+function toast(text) {
+  var e = $('toast');
+  e.textContent = text;
+  e.className = 'on';
+  clearTimeout(toastT);
+  toastT = setTimeout(function () {
+    e.className = '';
+  }, 3500);
+}
+function fail(r) {
+  toast((r && r.error) || t('The service did not answer.'));
+}
+/* "7 min ago", "3 h ago", "2 days ago": the number is put in first, so the language's plural form follows it */
+function ago(at) {
+  if (!at) return t('never');
+  var m = Math.round((Date.now() - at) / 60000);
+  if (m < 1) return t('just now');
+  if (m < 60) return t(m + ' min ago');
+  if (m < 1440) return t(Math.round(m / 60) + ' h ago');
+  return t(Math.round(m / 1440) + ' days ago');
+}
+function state(p) {
+  return p.blocked ? t('blocked') : p.online ? t('connected') : t('last used ' + ago(p.seen));
+}
+/* a remove button asks once: the same button again within five seconds does it */
+function ask(key) {
+  if (confirmKey === key) {
+    confirmKey = '';
+    clearTimeout(confirmT);
+    return true;
+  }
+  confirmKey = key;
+  clearTimeout(confirmT);
+  confirmT = setTimeout(function () {
+    confirmKey = '';
+    render();
+  }, 5000);
+  render();
+  return false;
+}
+function removePhone(id) {
+  if (!ask('p' + id)) return;
+  api('/revoke', { id: id }, function (r) {
+    if (!r) return fail(r);
+    S = r;
+    toast(t('Phone removed'));
+    render();
+  });
+}
+function removeAll() {
+  if (!ask('all')) return;
+  api('/revoke', { all: true }, function (r) {
+    if (!r) return fail(r);
+    S = r;
+    toast(t('All phones removed'));
+    render();
+  });
+}
+function allow(id, blocked) {
+  api('/access', { id: id, allow: blocked }, function (r) {
+    if (!r) return fail(r);
+    S = r;
+    toast(blocked ? t('Phone allowed') : t('Phone blocked'));
+    render();
+  });
+}
+/* the pairing window: open while the TV shows the code, closed when the page leaves it or a phone has paired */
+function pair() {
+  if (busy) return;
+  busy = true;
+  api('/pair', {}, function (r) {
+    busy = false;
+    if (!r) return fail(r);
+    S = r;
+    pairFrom = Date.now();
+    SIG = '';
+    render();
+    focusFirst();
+  });
+}
+function stopPair() {
+  api('/pair', { stop: true }, function (r) {
+    if (r) S = r;
+    SIG = '';
+    render();
+    focusFirst();
+  });
+}
+var EXPIRES = [
+  [1, '1 day'],
+  [3, '3 days'],
+  [7, '1 week'],
+  [14, '2 weeks'],
+  [30, '1 month'],
+  [0, 'Never'],
+];
+function setExpire(days) {
+  /* "Never" is not recommended: the first choice warns, the same choice again keeps every phone */
+  if (days === 0 && !neverAsk) {
+    neverAsk = 1;
+    clearTimeout(neverT);
+    neverT = setTimeout(function () {
+      neverAsk = 0;
+    }, 6000);
+    toast(t('A phone that is lost or sold would control the TV for ever. Choose Never again to keep every phone.'));
+    return;
+  }
+  neverAsk = 0;
+  api('', { expireDays: days }, function (r) {
+    if (!r) return fail(r);
+    if (r.error) return toast(r.error);
+    S = r;
+    toast(t('Saved'));
+    render();
+  });
+}
+function drawQr(text) {
+  try {
+    var q = qrcode(0, 'M');
+    q.addData(text);
+    q.make();
+    var n = q.getModuleCount(),
+      cell = Math.max(3, Math.floor(320 / (n + 8))),
+      cv = $('qr'),
+      size = cell * (n + 8),
+      g,
+      r,
+      c;
+    cv.width = cv.height = size;
+    g = cv.getContext('2d');
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, size, size);
+    g.fillStyle = '#000';
+    for (r = 0; r < n; r++) for (c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect((c + 4) * cell, (r + 4) * cell, cell, cell);
+  } catch (e) {
+    /* no QR code: the address and the code are on the page anyway */
+  }
+}
+function renderPhones() {
+  var box = $('phonelist'),
+    list = (S && S.phones) || [],
+    i,
+    p,
+    row,
+    who,
+    acts,
+    b;
+  box.textContent = '';
+  $('phcount').textContent = list.length ? ' ' + list.length : '';
+  if (!list.length) box.appendChild(el('p', 'hint', t('No phone is paired yet.')));
+  for (i = 0; i < list.length; i++) {
+    p = list[i];
+    row = el('div', 'phone');
+    who = el('div', 'who');
+    who.appendChild(el('b', '', p.name));
+    who.appendChild(el('span', 'st' + (p.online ? ' on' : '') + (p.blocked ? ' no' : ''), state(p)));
+    acts = el('div', 'acts');
+    b = el('button', '', p.blocked ? t('Allow') : t('Block'));
+    b.setAttribute('data-k', 'allow:' + p.id);
+    b.onclick = (function (id, blocked) {
+      return function () {
+        allow(id, blocked);
+      };
+    })(p.id, !!p.blocked);
+    acts.appendChild(b);
+    b = el('button', 'danger', confirmKey === 'p' + p.id ? t('Yes, remove') : t('Remove'));
+    b.setAttribute('data-k', 'remove:' + p.id);
+    b.onclick = (function (id) {
+      return function () {
+        removePhone(id);
+      };
+    })(p.id);
+    acts.appendChild(b);
+    row.appendChild(who);
+    row.appendChild(acts);
+    box.appendChild(row);
+  }
+}
+function renderExpire() {
+  var box = $('expire'),
+    cur = S && S.expireDays !== undefined ? S.expireDays : 14,
+    i;
+  box.textContent = '';
+  for (i = 0; i < EXPIRES.length; i++)
+    (function (days, label) {
+      var b = el('button', cur === days ? 'on' : '', t(label));
+      b.setAttribute('data-k', 'exp:' + days);
+      b.onclick = function () {
+        setExpire(days);
+      };
+      box.appendChild(b);
+    })(EXPIRES[i][0], EXPIRES[i][1]);
+}
+function render() {
+  if (!S) return;
+  var p = S.pairing,
+    act = document.activeElement,
+    dk = act && act.getAttribute ? act.getAttribute('data-k') : '';
+  $('pairbtn').className = p ? 'pri wide hide' : 'pri wide';
+  $('pairsheet').className = p ? '' : 'hide';
+  if (p) {
+    $('pairurl').textContent = p.url || '';
+    $('codebox').textContent = String(p.code || '')
+      .split('')
+      .join(' ');
+    $('pairnote').textContent = p.seconds ? '' : t('The pairing window closed.');
+    if (p.qr && p.qr !== qrFor) {
+      qrFor = p.qr;
+      drawQr(p.qr);
+    }
+  } else qrFor = '';
+  $('removeall').className = 'ghost' + ((S.phones || []).length ? '' : ' dim');
+  renderPhones();
+  renderExpire();
+  trDom();
+  if (!focusKey(dk)) focusFirst();
+}
+function trDom() {
+  var n = document.querySelectorAll('[data-t]'),
+    i;
+  for (i = 0; i < n.length; i++) n[i].textContent = t(n[i].getAttribute('data-t'));
+}
+function focusables() {
+  var all = document.querySelectorAll('button'),
+    out = [],
+    i;
+  for (i = 0; i < all.length; i++) if (all[i].offsetParent !== null && !all[i].disabled) out.push(all[i]);
+  return out;
+}
+function focusKey(k) {
+  var n, i;
+  if (!k) return false;
+  n = document.querySelectorAll('[data-k="' + k + '"]');
+  for (i = 0; i < n.length; i++)
+    if (n[i].offsetParent !== null) {
+      try {
+        n[i].focus();
+      } catch (e) {}
+      return true;
+    }
+  return false;
+}
+function focusFirst() {
+  var l = focusables();
+  if (l.length) {
+    try {
+      l[0].focus();
+    } catch (e) {}
+  }
+}
+/* the state is drawn again only when something changed (no flicker, and the focus stays where it was) */
+function sig() {
+  var p = (S && S.phones) || [],
+    s = [S && S.expireDays, S && S.pairing ? S.pairing.code : '', confirmKey],
+    i;
+  for (i = 0; i < p.length; i++)
+    s.push(p[i].id + ':' + (p[i].blocked ? 1 : 0) + (p[i].online ? 1 : 0) + ':' + Math.round((p[i].seen || 0) / 60000) + ':' + p[i].name);
+  return s.join('|');
+}
+function poll() {
+  api('', null, function (r) {
+    if (!r || r.error) return;
+    var was = S,
+      paired = r.pairing && r.pairing.paired;
+    S = r;
+    if (paired && paired.at > pairFrom) {
+      pairFrom = paired.at;
+      toast(t('Paired: ' + paired.name));
+      stopPair();
+      return;
+    }
+    if (sig() !== SIG) {
+      SIG = sig();
+      render();
+    }
+  });
+}
+function onKey(e) {
+  var k = e.keyCode,
+    l,
+    at;
+  /* Back: the pairing window closes first, then the page (that is the launcher's, through the SDK's own Back) */
+  if (k === 461 || k === 27 || k === 8) {
+    if (S && S.pairing) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      stopPair();
+      return;
+    }
+    if (confirmKey) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      confirmKey = '';
+      render();
+    }
+    return;
+  }
+  if (k >= 37 && k <= 40) {
+    l = focusables();
+    if (!l.length) return;
+    at = -1;
+    for (var i = 0; i < l.length; i++) if (l[i] === document.activeElement) at = i;
+    if (k === 37 || k === 38) at = at <= 0 ? l.length - 1 : at - 1;
+    else at = at < 0 || at === l.length - 1 ? 0 : at + 1;
+    e.preventDefault();
+    l[at].focus();
+  }
+}
+function init() {
+  $('pairbtn').onclick = pair;
+  $('pairstop').onclick = stopPair;
+  $('removeall').onclick = removeAll;
+  document.addEventListener('keydown', onKey, true);
+  api('', null, function (r) {
+    if (!r) return fail(r);
+    if (r.error) return toast(r.error);
+    S = r;
+    SIG = sig();
+    render();
+    focusFirst();
+  });
+  setInterval(poll, 2000);
+}
+init();
+<script src="/addon/sdk.js"></script>
+<script src="/addon/qrcode.js"></script>
+</body></html>

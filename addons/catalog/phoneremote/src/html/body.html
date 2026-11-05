@@ -1,0 +1,33 @@
+<div id="app">
+  <div>
+    <h1 data-t="Phone remote">Phone remote</h1>
+    <p class="sub" data-t="Use a phone as the TV remote over your Wi-Fi.">Use a phone as the TV remote over your Wi-Fi.</p>
+  </div>
+  <div class="cols">
+    <section class="col">
+      <h2 data-t="Pair a phone">Pair a phone</h2>
+      <button class="pri wide" id="pairbtn" data-k="pair" data-t="Pair a phone">Pair a phone</button>
+      <div id="pairsheet" class="hide">
+        <canvas id="qr" width="320" height="320" aria-hidden="true"></canvas>
+        <p class="hint" data-t="Scan the QR code with the camera of the phone, or type this address.">Scan the QR code with the camera of the phone, or type this address.</p>
+        <div id="pairurl" class="url"></div>
+        <p class="hint" data-t="Then type this code on the phone:">Then type this code on the phone:</p>
+        <div id="codebox" class="code"></div>
+        <p class="hint" data-t="The code works once.">The code works once.</p>
+        <p class="hint warn" id="pairnote"></p>
+        <button id="pairstop" data-k="stop" data-t="Close">Close</button>
+      </div>
+    </section>
+    <section class="col">
+      <h2><span data-t="Phones">Phones</span><span id="phcount" class="count"></span></h2>
+      <div id="phonelist"></div>
+      <button class="ghost" id="removeall" data-k="all" data-t="Remove all phones">Remove all phones</button>
+    </section>
+  </div>
+  <section class="unused">
+    <h2 data-t="Remove unused phones">Remove unused phones</h2>
+    <p class="hint" data-t="Only phones that are not connected and not used for this long are removed. A phone that is removed can pair again with a new code.">Only phones that are not connected and not used for this long are removed. A phone that is removed can pair again with a new code.</p>
+    <div id="expire" class="choices"></div>
+  </section>
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
