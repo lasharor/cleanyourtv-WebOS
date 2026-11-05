@@ -70,6 +70,23 @@
       }
     },
     {
+      "id": "seasons",
+      "name": "Seasons",
+      "version": "1.0.0",
+      "description": "Photos for the Couch scenes that follow the calendar: Christmas, New Year and the four seasons.",
+      "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. South of the equator the seasons turn around; the tulip fields of spring show in the Netherlands and Belgium. The photos are from Unsplash (free to use), the photographer shows in the corner. About 8 MB is kept on the TV, so every set shows at least two photos without network.",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "files": {
+        "addon.json": "d50da41d5dbc0548a22338ff21e1e7d22791173a86b146682308dc97ff568b63",
+        "photos.js": "81051e7844fc059e22cb12b4e9c1df339fff4ade4640ffcff46e3987a11ad91b",
+        "service.js": "c9fd51d3f3d398cce347d729e22b801bb8401886082215ca7f76b18069b90d50"
+      }
+    },
+    {
       "id": "spotify",
       "name": "Spotify now playing",
       "version": "1.1.0",
@@ -122,7 +139,7 @@
       ],
       "files": {
         "addon.json": "5b3ff2aeaa688b0f9d9ce89c69d7738f77852d9d343e9fdce90418d7e1419718",
-        "page/index.html": "8658644be21eaa8591b5bc37948da3afdbaedfb79d2b60742c83e3b8987885ba",
+        "page/index.html": "d99bd1b72e36705a5989d304ec4592a0872d7073932a98684475707e154c11d3",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
