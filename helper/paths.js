@@ -23,6 +23,7 @@ module.exports = {
   CARDPACKS: env.CYTV_CARDPACKS || D + '/cardpacks', // downloaded cards: one folder each with a card.json (cardcatalog.js)
   ADDONS: env.CYTV_ADDONS || D + '/addons', // add-ons: one folder each with an addon.json (addons.js)
   ADDON_DATA: env.CYTV_ADDON_DATA || D + '/addon-data', // what each add-on stores, apart from its code
+  PRELOAD_BASE: D + '/preload-base.json', // what LG's preload policy had before we changed it (preload.js); kept over reboots
   WEATHER: D + '/weather.json', // the weather card's last answers (weather.js)
   HOOK: D + '/inputhook',
   APP: D + '/app',
