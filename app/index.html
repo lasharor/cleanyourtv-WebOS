@@ -2011,7 +2011,7 @@ function languages() {
 }
 var API = 'http://127.0.0.1:8765',
   CACHE_KEY = 'cytv.cache.v7',
-  VERSION = '1.5.11';
+  VERSION = '1.5.12';
 var DEFAULTS = {
   dock: ['netflix', 'youtube.leanback.v4', 'amazon', 'com.disney.disneyplus-prod'],
   topbar: [
@@ -2663,7 +2663,8 @@ function tile(a) {
       paint(d, { c: f, b: hsl2rgb(hashHue(a.id), 0.4, 0.2) });
     }
   }; /* not remembered: a failed load must not pin a made-up colour */
-  i.src = a.id === '__live' ? LIVE_ICON : API + '/icon/' + encodeURIComponent(a.id) + (a.iv ? '?v=' + a.iv : '');
+  /* Live TV shows its own picture once one was chosen for it (App icons) */
+  i.src = a.id === '__live' && !a.iv ? LIVE_ICON : API + '/icon/' + encodeURIComponent(a.id) + (a.iv ? '?v=' + a.iv : '');
   d.appendChild(i);
   if (i.decode) i.decode().catch(function () {});
   return d;
@@ -6354,7 +6355,8 @@ function load() {
       tunerOn = x.tuner === true; // the service found LG's own Live TV (the tuner): Customise can offer a TV button
       useLang(cfg.lang);
       applyTheme(cfg.theme);
-      if (liveOn()) apps.push({ id: '__live', title: t('Live TV') });
+      if (liveOn())
+        apps.push({ id: '__live', title: t('Live TV'), iv: (x.liveIcon && x.liveIcon.iv) || 0, it: x.liveIcon && x.liveIcon.it ? 1 : 0 });
       store();
       rebuild();
       WALL.sync();
