@@ -1363,6 +1363,12 @@ run(async () => {
       /var I18N = /.test(page) && /data-t="Phone remote"/.test(page) && /function setLang\(/.test(page),
       'its texts go through the translations of the pages'
     );
+    // the page's script and the translations are one <script> block: without the tags the TV shows only the static text
+    ok(
+      /<script>[\s\S]*var I18N = [\s\S]*function init\(\)[\s\S]*<\/script>/.test(page) &&
+        page.indexOf('</script>') > page.indexOf('function init()'),
+      'the page script is inside a <script> tag (a build without it leaves the list and the choices empty on the TV)'
+    );
   }
   {
     const mgr = ['manager/src/js/menu.js', 'manager/src/js/status.js', 'manager/src/js/share.js', 'manager/src/index.html']
