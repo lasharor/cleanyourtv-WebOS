@@ -4,8 +4,9 @@ This page is for anyone who builds their own client for the [Phone remote](phone
 integration, a script, a microcontroller with buttons. The project ships the phone page and does not maintain a native app. The protocol
 below is what the phone page itself uses, so whatever the page can do, a client can do.
 
-Everything runs on the TV's **LAN address, port 8799** (`http://<tv address>:8799`), served by the add-on `phoneremote`. The add-on has to be on
-(manager app, **Features › Phone remote**); while it is off nothing listens. Nothing on this port is encrypted: use it on a network you trust.
+Everything runs on the TV's **LAN address, port 8799** (`http://<tv address>:8799`), served by the add-on `phoneremote` — a catalog add-on,
+installed from the manager's **Add-ons** screen and switched on there. While it is off nothing listens. Nothing on this port is encrypted: use
+it on a network you trust.
 
 ## Overview
 
@@ -16,9 +17,10 @@ Everything runs on the TV's **LAN address, port 8799** (`http://<tv address>:879
 
 ## Pairing
 
-On the TV: manager app, **Features › Phone remote › Pair a phone**. The TV shows the address and a code. The code works once and the pairing
-window closes a few minutes after the screen is left (at most 30 minutes after it opened), or after 8 wrong codes. Programs on the TV can open the same window without the screen:
-`POST http://127.0.0.1:8765/api/phoneremote/pair` (loopback only, see [the API](api.md)).
+On the TV: the add-on's own page (**Add-ons > Phone remote**, then its page of the book on Home: **Pair a phone**). The TV shows the address
+and a code. The code works once and the pairing window closes a few minutes after the page is left (at most 30 minutes after it opened), or
+after 8 wrong codes. Programs on the TV can open the same window without the page:
+`POST http://127.0.0.1:8765/api/addons/phoneremote/pair` (loopback only; see [On the TV itself](#on-the-tv-itself)).
 
 ```
 POST /api/pair
@@ -34,11 +36,12 @@ content-type: application/json
 | `409 {"error": ...}` | 10 phones are paired already; remove one on the TV |
 | `429 {"error": ...}` | More than 5 tries from this address in a minute |
 
-The `Origin` header must be **absent or equal to the TV's own address** (`http://<tv address>:8799`). A request from a page on another web
-site is refused with `403`; a native app, a script or a Home Assistant integration sends no `Origin` and is fine. This is what keeps a
-web page you happen to visit from pairing with your TV. It also means a client written as a web page has to be served from the TV's own address.
+The `Origin` header must be **absent, or name the TV itself** (`http://<tv address>:8799`, or `localhost`). A request from a page on another
+web site is refused with `403`; a native app, a script or a Home Assistant integration sends no `Origin` and is fine. This is what keeps a
+web page you happen to visit from pairing with your TV. The address has to be one the TV has, not merely the same as its `Host` header (a
+page using DNS rebinding controls that), so a client written as a web page has to be served from the TV's own address.
 
-Up to 10 phones can be paired. A phone is removed from the manager app (**Paired phones**), by itself when it has not been used for
+Up to 10 phones can be paired. A phone is removed on the add-on's page (**Paired phones**), by itself when it has not been used for
 the chosen time (2 weeks by default), or when it logs out (below). After that its token stops working and it has to pair again.
 
 ## The WebSocket
@@ -69,8 +72,8 @@ The TV answers with `ready`, or with `denied` and closes the connection.
 | `4408` | no `hello` within 5 seconds |
 | `1000` | normal close after `logout` |
 
-An HTTP `503` on the upgrade means the add-on is off or 24 connections are open; `429` means too many wrong tokens from this address (10 in a
-minute).
+An HTTP `503` on the upgrade means 24 connections are open already (the add-on itself takes no more); `429` means too many wrong tokens from
+this address (10 in a minute). While the add-on is off, or nothing is paired and no window is open, nothing listens on 8799 at all.
 
 ### Messages from the client
 
@@ -130,9 +133,30 @@ Do not log these addresses: they hold the token.
 
 ## On the TV itself
 
-The calls on `http://127.0.0.1:8765` (loopback only) that the manager uses are listed in [the API](api.md): `GET /api/phoneremote` (status,
-paired phones), `POST /api/phoneremote` `{enabled?, expireDays?}`, `/pair`, `/revoke`, `/access` and `/key` (press one key as a phone would, to
-test the TV's side without a phone).
+The add-on's page on the TV uses these calls on `http://127.0.0.1:8765` (loopback only), under `/api/addons/phoneremote`: `GET` (the status:
+the pairing window, the paired phones, the last key's result), `POST {expireDays}`, `/pair {stop?}`, `/revoke {id}` or `{all:true}`,
+`/access {id, allow}`, and `/key {key}` (press one key as a phone would, to test the TV's side without a phone). The add-on is switched on and
+off with `POST /api/addons/phoneremote/enable {enabled}`, as any add-on is.
+
+## The page's `window.CYTV_APP` hooks
+
+A native app (not part of this project) can wrap the phone page in a WebView and give it an object called `window.CYTV_APP`, for what a
+browser cannot do. The page uses it only when it is there, so these seven names are the contract between the page and a wrapper: `wake`,
+`setMac`, `deviceName`, `buzz`, `up`, `forget`, `setName`.
+
+| Hook | What the page expects |
+|---|---|
+| `wake()` | send the Wake-on-LAN packet to the address the page last gave with `setMac`, and return whether it was sent |
+| `setMac(address)` | the TV's network card address (the page learns it from `ready.mac`), kept by the app for the next wake |
+| `deviceName()` | the name of this phone, the first guess in the pairing form (before the router's name and the browser's) |
+| `buzz()` | a short vibration when a key is sent or a pairing works; a browser has none and the page works without it |
+| `up()` | whether the app can reach the TV right now (its own check), for the "On"/"Off" line |
+| `forget(reason)` | delete everything the app kept about this TV, on **Log out of this TV**: `reason` is `'left'` or `'removed'` (the TV removed this phone) |
+| `setName(tv)` | the TV's own name, as the TV reported it (empty when it has none), so the app can show it where it lists the TV |
+
+A browser has none of these hooks and the page works without them: `wake` and `up` fall back to the page's own connection, and `buzz`,
+`setMac`, `deviceName`, `setName` and `forget` do nothing. A wrapper that adds a hook must keep to this table: the page may use it on any
+screen.
 
 ## Security
 

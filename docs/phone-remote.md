@@ -142,7 +142,9 @@ app that wraps the page (see [Other clients](#other-clients)).
 
 The phone page is the main client. A native app can wrap it in a WebView and add what a browser cannot do, such as sending the
 Wake-on-LAN packet; the page looks for an object called `window.CYTV_APP` and uses it when it is there (`wake`, `setMac`, `deviceName`,
-`buzz`, `up`, `forget`). A browser has none of these and the page works without them. No app is part of this project.
+`buzz`, `up`, `forget`). A browser has none of these and the page works without them. No app is part of this project. The LAN protocol,
+and what a wrapper can rely on, is written down for anyone who builds a client of their own:
+[the phone remote protocol](phone-remote-api.md).
 
 ### If you already have something that wakes machines
 
