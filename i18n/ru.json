@@ -615,6 +615,8 @@
  "The weather (from a weather card)": "Погода (из карточки погоды)",
  "Theme": "Тема",
  "Theme default": "По умолчанию для темы",
+ "Card background": "Фон карточки",
+ "Dark background": "Тёмный фон",
  "Theme options": "Параметры темы",
  "Then paste your M3U playlist address. This page closes by itself.": "Затем вставьте адрес вашего плейлиста M3U. Эта страница закроется сама.",
  "there are %d uploads already: remove some first": "загрузок уже %d: сначала удалите некоторые",

@@ -110,6 +110,15 @@ const TYPES = [
     fields: [
       { key: 'title', kind: 'text', label: 'Title (optional)' },
       { key: 'entities', kind: 'entities', label: 'Entities, one per line' },
+      {
+        key: 'background',
+        kind: 'choice',
+        label: 'Card background',
+        choices: [
+          ['', 'Theme default'],
+          ['dark', 'Dark background'],
+        ],
+      },
     ],
   },
   {

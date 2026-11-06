@@ -448,6 +448,7 @@ var CARD_TYPES = {
         }),
         title = String(o.title || '').slice(0, 60),
         key = title + JSON.stringify(rows) + HA.err;
+      el.classList.toggle('ha-dark', o.background === 'dark');
       haHide(el, !ids.length || HA.err === HA_NOT_SET);
       if (el._k === key) return;
       el._k = key;

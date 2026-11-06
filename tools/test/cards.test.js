@@ -81,6 +81,16 @@ run(async () => {
       p.j.types.some(t => t.type === 'template' && t.fields.some(f => f.key === 'text')),
     'the state lists the slots (named in the language), the saved cards and the card types with their options'
   );
+  const background = p.j.types.find(t => t.type === 'ha-entities').fields.find(f => f.key === 'background');
+  ok(
+    background.kind === 'choice' && background.choices.map(choice => choice[0]).join(',') === ',dark',
+    'the phone offers the theme default and dark backgrounds for an HA entity list'
+  );
+  for (const choice of ['dark', '']) {
+    await phone('POST', '/api/save', { cards: { side: { type: 'ha-entities', entities: 'sensor.test', background: choice } } }, code);
+    p = await phone('GET', '/api/state', undefined, code);
+    ok(p.j.cards.side.background === choice, 'the phone can save dark and return to the theme background');
+  }
   p = await phone(
     'POST',
     '/api/save',

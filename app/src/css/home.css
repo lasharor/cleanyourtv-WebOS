@@ -1271,6 +1271,16 @@ body.scenes-on {
 [data-cards="glass"] .card-ha-camera {
   padding: 0;
 }
+.card-ha-entities.ha-dark,
+[data-cards="glass"] .card-ha-entities.ha-dark {
+  background-color: rgba(12, 18, 28, 0.60);
+  background-image: none !important;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+}
+.card-ha-entities.ha-dark .ha-ri {
+  --ink2: rgba(255, 255, 255, 0.90);
+}
 /* a card with its own page on glass: the page inside the margins of the panel, and the box of its buttons (.card-bw) the same */
 [data-cards="glass"] .card-frame > iframe,
 [data-cards="glass"] .card-frame > .card-bw {
