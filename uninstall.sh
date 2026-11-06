@@ -33,6 +33,9 @@ for id in com.cleanyourtv.picker com.cleanyourtv.notify com.cleanyourtv.live com
   rm -rf /media/developer/apps/usr/palm/packages/$id /media/developer/apps/usr/palm/applications/$id
 done
 rm -rf /media/developer/apps/usr/palm/services/com.cleanyourtv.manager.service
+# the command "cytv-addons" that cytv-addons.js shortcut wrote, only when it is ours
+SC=${HOME:-/home/root}/.local/bin/cytv-addons
+grep -q "cleanyourtv/cytv-addons.js" "$SC" 2>/dev/null && rm -f "$SC"
 rm -rf $D
 [ $KEEP = 1 ] && { mkdir -p $D; mv /media/developer/cytv-keep/* $D/ 2>/dev/null; rmdir /media/developer/cytv-keep; }
 echo "[cleanyourtv] removed. Restarting the TV so that LG's Home and services come back."

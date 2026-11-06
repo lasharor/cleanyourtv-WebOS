@@ -845,5 +845,7 @@
  "Warmer than it is": "Plus chaud qu'en réalité",
  "Cooler than it is": "Plus frais qu'en réalité",
  "As it is": "Tel quel",
- "%s of daylight": "%s de jour"
+ "%s of daylight": "%s de jour",
+ "Voice is not available on this TV": "La voix n'est pas disponible sur cette TV",
+ "its kernel is 32-bit": "son noyau est en 32 bits"
 }
