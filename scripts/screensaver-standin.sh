@@ -18,10 +18,12 @@ for p in $(pgrep -f "^/bin/sh $0"); do [ "$p" != $$ ] && kill "$p" 2>/dev/null; 
 REQ=$L/wam-launch-saver.json
 [ -f $REQ ] || { log "no $REQ: the screen saver page was not staged"; exit 1; }
 r=$(luna-send -n 1 -w 8000 luna://com.palm.webappmanager/launchApp "$(cat $REQ)" </dev/null 2>&1 | tr -d '\n')
-case "$r" in
-  *'"returnValue": *true'*) log "the page is open" ;;
-  *) log "webapp-mgr refused the page: $(echo "$r" | cut -c1-200)"; exit 1 ;;
-esac
+# a regex, not a case pattern: inside quotes a case pattern's * is a literal star, so '"returnValue": *true' never matched the reply
+if echo "$r" | grep -q '"returnValue": *true'; then
+  log "the page is open"
+else
+  log "webapp-mgr refused the page: $(echo "$r" | cut -c1-200)"; exit 1
+fi
 
 # Stay while the page is up; then the screen saver is over and this program ends with it. The running list of the app manager lags by
 # seconds after a start and after a close, so one reading decides nothing (AGENTS.md): a page that has not shown up yet gets ten

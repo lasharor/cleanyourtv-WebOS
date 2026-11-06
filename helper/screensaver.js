@@ -1,7 +1,7 @@
 // The screen saver: our page in place of LG's screen saver app (scripts/20-cleanyourtv-screensaver, docs/screensaver.md). This module
 // serves that page, closes it again, and opens it over an idle launcher when tvpowerd did not:
 //   GET  /api/screensaver          {replaced, method, running, photos, every}
-//   GET  /api/screensaver/photos   {photos: ['u/<id>', ...], stamp, every}   the wallpaper library (wallpapers.js)
+//   GET  /api/screensaver/photos   {photos: ['u/<id>', 's/<add-on>/<id>', ...], stamp, every}   the wallpaper library (wallpapers.js)
 //   POST /api/screensaver/active   {returnValue}   the launcher reports a key: the TV is in use, do not open the page over it
 //   POST /api/screensaver/dismiss  {returnValue}   close the page: the app that was on screen comes back
 // The page keeps LG's own screen-saver window type, and a page that stayed up would keep the remote. The page closes itself on the
@@ -43,10 +43,12 @@ function mayOpen(now, homeSince, activeAt) {
 function create(ctx) {
   const { luna, config } = ctx;
   const wp = () => ctx.feature('wallpapers');
+  // the photo files of the library: uploads (u/<id>) and the photos of source add-ons (s/<add-on>/<id>); a live source (l/<add-on>)
+  // is a URL that Home asks for, not a file /api/wallpapers/photo/ can hand out
   const photos = () => {
     const w = wp();
     try {
-      return w ? w.list() : [];
+      return w ? w.list().filter(id => /^[us]\//.test(id)) : [];
     } catch (_) {
       return [];
     }

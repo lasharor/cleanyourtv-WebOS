@@ -139,9 +139,15 @@ run(async () => {
     asked = await wake(1, true);
     ok(asked.length === 0, 'nor one that is hidden');
   }
-  const pages = ['app', 'manager/app', 'picker/app', 'notify/app', 'screensaver/app', 'helper/addons-bundled/iptv/page', 'addons/catalog/tuner/page'].map(d =>
-    path.join(root, d, 'index.html')
-  );
+  const pages = [
+    'app',
+    'manager/app',
+    'picker/app',
+    'notify/app',
+    'screensaver/app',
+    'helper/addons-bundled/iptv/page',
+    'addons/catalog/tuner/page',
+  ].map(d => path.join(root, d, 'index.html'));
   // the cards that bring a page of their own run on the TV too
   fs.readdirSync(path.join(root, 'cards', 'catalog')).forEach(id => {
     ['card.html', id + '.js'].forEach(f => {
