@@ -175,6 +175,48 @@ run(async () => {
     'saving the Voice page keeps Home Assistant'
   );
   await sleep(2100);
+  // a server of yours with the same chat API (Ollama at http://<computer>:11434/v1): no key, none of OpenRouter's extra fields
+  const olLog = [];
+  const ol = await serve((q, rs) => {
+    let b = '';
+    q.on('data', c => (b += c));
+    q.on('end', () => {
+      olLog.push({ url: q.url, headers: q.headers, body: b ? JSON.parse(b) : null });
+      rs.writeHead(200, { 'content-type': 'application/json' });
+      if (q.url === '/v1/models')
+        return rs.end(JSON.stringify({ object: 'list', data: [{ id: 'qwen2.5:3b' }, { id: 'llama3.2:3b', object: 'model' }] }));
+      if (q.url !== '/v1/chat/completions') return rs.end('{}');
+      rs.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'Ollama says hi' } }] }));
+    });
+  });
+  r = await vask('set', { llm: { base: 'ftp://x' } });
+  ok(r.code === 400 && /AI server address/.test(r.j.error), 'an AI server address that is not http(s) is refused');
+  await vask('set', { llm: { clearKey: true } });
+  r = await vask('set', { llm: { enabled: true } });
+  ok(r.code === 400, 'no key and no server address: the AI chat cannot be switched on');
+  r = await vask('set', { llm: { base: ol.url + '/v1/', model: 'llama3.2:3b', enabled: true }, ha: { route: 'ai-only' } });
+  ok(
+    r.code === 200 && r.j.llm.base === ol.url + '/v1' && r.j.llm.enabled && !r.j.llm.hasKey,
+    'a server address switches the AI chat on without a key; the trailing slash is dropped'
+  );
+  r = await vask('ask', { text: 'hello there', card: false });
+  const chat = olLog.filter(x => x.url === '/v1/chat/completions')[0];
+  ok(r.j.answer === 'Ollama says hi' && r.j.via === 'ai', 'the server of yours answers');
+  ok(
+    chat && chat.body.model === 'llama3.2:3b' && !chat.body.reasoning && !chat.headers.authorization && !chat.headers['x-title'],
+    'it gets the model, no key and none of the OpenRouter fields'
+  );
+  r = await vask('models', null, 'GET');
+  ok(
+    r.code === 200 && r.j.count === 2 && r.j.picks[0].id === 'llama3.2:3b' && r.j.picks[1].id === 'qwen2.5:3b',
+    'the model list comes from the server of yours, all of it'
+  );
+  await vask('set', { llm: { key: 'lm-key' } });
+  await vask('ask', { text: 'again', card: false });
+  ok(olLog[olLog.length - 1].headers.authorization === 'Bearer lm-key', 'a key, when one is set, is sent to the server of yours');
+  r = await vask('set', { llm: { base: '' } });
+  ok(r.code === 200 && r.j.llm.base === '' && r.j.llm.hasKey, 'an empty address goes back to OpenRouter');
+  ol.server.close();
   ha.server.close();
   ai.server.close();
 });

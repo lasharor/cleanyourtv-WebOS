@@ -13,7 +13,8 @@ const fs = require('fs'),
 const nc = require('./netcompat'),
   { URL, URLSearchParams } = nc;
 const answers = require('./answers'),
-  { toServer, askLlm, askHa, haTest, haAgents, models, haBase, haReady, llmCfg, haCfg, LLM_DEFAULTS, HA_DEFAULTS, HA_ROUTES } = answers;
+  { toServer, askLlm, askHa, haTest, haAgents, models, haBase, haReady, llmCfg, llmReady, haCfg, LLM_DEFAULTS, HA_DEFAULTS, HA_ROUTES } =
+    answers;
 const P = require('./paths'),
   luna = require('./luna'),
   exec = require('./exec'),
@@ -424,7 +425,7 @@ async function respond(text, card) {
     out = { text };
   const say = o => (card ? show(o) : Promise.resolve());
   const useHa = haReady(h) && h.route !== 'ai-only',
-    useAi = l.enabled && l.key && !(useHa && h.route === 'ha-only');
+    useAi = llmReady(l) && !(useHa && h.route === 'ha-only');
   if (!useHa && !useAi && !c.url) {
     await say({ kind: 'answer', title: 'You said', text, seconds: readSeconds(text) });
     return out;
@@ -574,12 +575,20 @@ function applySet(b) {
       l.key = '';
       l.enabled = false;
     }
+    if (typeof b.llm.base === 'string') {
+      // the address of an OpenAI-compatible chat API (Ollama: http://<computer>:11434/v1); empty is OpenRouter
+      const u = b.llm.base.trim().slice(0, 300),
+        base = u ? haBase(u) : '';
+      if (u && !base) return 'the AI server address must start with http:// or https://';
+      if (base !== l.base) answers.forget(); // another server: the conversation starts again
+      l.base = base;
+    }
     if (typeof b.llm.model === 'string' && b.llm.model.trim()) {
       if (!/^[\w.\-:\/~]{1,100}$/.test(b.llm.model.trim())) return 'that model name is not valid';
       l.model = b.llm.model.trim();
     }
     if (typeof b.llm.system === 'string') l.system = b.llm.system.slice(0, 1000);
-    if (l.enabled && !l.key) return 'set the OpenRouter key first';
+    if (l.enabled && !l.key && !l.base) return 'set the OpenRouter key or the address of your AI server first';
     v.llm = l;
   }
   if (b.ha && typeof b.ha === 'object') {
@@ -642,7 +651,8 @@ function pairPage(msg, done, list, token, lang, only) {
 <label class=c><input type=checkbox name=hass value=1 ${ha.selfSigned ? 'checked' : ''}> ${T('Accept a self-signed certificate')}</label>
 <button>${T('Save')}</button></form>`
         : `<form method=post action="/${token}/save">
-<label>${T('OpenRouter key')} ${l.key ? T('(one is saved; leave empty to keep it)') : ''}</label><input name=key type=password autocomplete=off placeholder="sk-or-...">
+<label>${T('AI server address')} <small>${T('(empty: OpenRouter. Your own, such as Ollama: http://computer:11434/v1)')}</small></label><input name=base type=url placeholder="https://openrouter.ai/api/v1" value="${esc(l.base)}">
+<label>${T('OpenRouter key')} ${l.key ? T('(one is saved; leave empty to keep it)') : ''} <small>${T('(not needed for Ollama)')}</small></label><input name=key type=password autocomplete=off placeholder="sk-or-...">
 <label>${T('Model')} <small>${T('choose from the list or type any OpenRouter model name')}</small></label><input name=model list=ml value="${esc(l.model)}" autocomplete=off><datalist id=ml>${opts}</datalist>
 <label class=c><input type=checkbox name=enabled value=1 ${l.enabled ? 'checked' : ''}> ${T('Answer with the AI')}</label>
 <label>${T('Instructions for the AI')} <small>${T('(empty: short plain answers)')}</small></label><textarea name=system rows=3>${esc(l.system)}</textarea>
@@ -692,7 +702,12 @@ function startPair(only) {
           if (f.get('hatoken')) set.ha.token = f.get('hatoken');
         } else {
           set = {
-            llm: { model: f.get('model') || '', system: f.get('system') || '', enabled: f.get('enabled') === '1' },
+            llm: {
+              model: f.get('model') || '',
+              system: f.get('system') || '',
+              enabled: f.get('enabled') === '1',
+              base: f.get('base') || '',
+            },
             url: f.get('url') || '',
             ha: { route: f.get('haroute') || 'ha-first' },
           };
@@ -747,7 +762,7 @@ const status = () => {
     enabled: !!c.enabled,
     url: c.url,
     hasToken: !!c.token,
-    llm: (l => ({ enabled: !!l.enabled, hasKey: !!l.key, model: l.model }))(llmCfg()),
+    llm: (l => ({ enabled: !!l.enabled, hasKey: !!l.key, model: l.model, base: l.base }))(llmCfg()),
     ha: (h => ({ configured: haReady(h), url: h.url, hasToken: !!h.token, selfSigned: h.selfSigned, route: h.route, agent: h.agent }))(
       haCfg()
     ),
@@ -832,7 +847,7 @@ async function handle(req, res, u, body) {
         .slice(0, 1000);
     if (!text) return json({ error: 'send {"text": "..."}' }, 400);
     const l = llmCfg();
-    if (!(l.enabled && l.key) && !cfg().url && !haReady(haCfg()))
+    if (!llmReady(l) && !cfg().url && !haReady(haCfg()))
       return json({ error: 'no destination: set up Home Assistant, switch on the AI chat or set a server address' }, 400);
     const r = await respond(text, b.card !== false);
     return json({ text: r.text, answer: r.answer || '', via: r.via || '', error: r.error || '' });

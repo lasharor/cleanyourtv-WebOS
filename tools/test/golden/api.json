@@ -812,6 +812,7 @@
    "lgPaused": false,
    "listening": false,
    "llm": {
+    "base": "",
     "enabled": false,
     "hasKey": false,
     "model": "openrouter/auto"

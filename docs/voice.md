@@ -1,7 +1,7 @@
 # Voice (optional)
 
 Recognises speech from the remote's microphone **on the TV**. The text is shown on screen and can be sent to a server you run,
-to a language model through OpenRouter, or both; the answer is shown as text on screen. Answers are not spoken. No audio is
+to a language model (through OpenRouter, or on a computer of yours with Ollama), or both; the answer is shown as text on screen. Answers are not spoken. No audio is
 recorded or sent anywhere.
 
 It is **off and not installed by default**. Nothing described here runs until you install it.
@@ -68,6 +68,34 @@ curl -X POST localhost:8765/api/voice/ask -d '{"text":"..."}'
 
 It answers `{"text","answer","error"}`; add `"card":false` to skip the screen.
 
+## AI chat on a computer of yours (Ollama), free
+
+Instead of OpenRouter, the answers can come from a language model on a computer at home: [Ollama](https://ollama.com), or any
+server with the same OpenAI-compatible chat API (LM Studio, llama.cpp's `llama-server`, vLLM). Nothing is paid and the text stays on
+your network.
+
+On the computer, install Ollama, get a small model and let it listen on the network (by default it answers only the computer itself):
+
+```sh
+ollama pull llama3.2:3b
+OLLAMA_HOST=0.0.0.0 ollama serve
+```
+
+On Windows and macOS set `OLLAMA_HOST` to `0.0.0.0` in the environment of the Ollama app and restart it; allow port 11434 in the
+firewall. Then, on the phone page of **Set up from your phone**, set **AI server address** to `http://<computer>:11434/v1`, leave
+the key empty, choose the model from the list (it is read from your server) and switch on **Answer with the AI**. The same from a
+shell:
+
+```sh
+curl -X POST localhost:8765/api/voice/set -d '{"llm":{"base":"http://192.168.1.20:11434/v1","model":"llama3.2:3b","enabled":true}}'
+```
+
+- The address is the part before `/chat/completions`; `http://` is fine on your own network. An empty address goes back to OpenRouter.
+- A key is sent as `Authorization: Bearer <key>` only when one is set (LM Studio or vLLM with a key); Ollama needs none.
+- The answer must arrive within 60 seconds: on a computer without a graphics card, take a small model (1 to 4 billion parameters).
+- **Model** on the TV then lists the models of your server; the manager app shows **AI chat (your server)**.
+- Home Assistant with its Ollama integration is another way: choose that conversation agent under **Assist agent** (below).
+
 ## The speech model
 
 [Moonshine](https://github.com/moonshine-ai/moonshine) (Moonshine AI, MIT licence) runs on the TV; there is no cloud recogniser.
@@ -87,7 +115,7 @@ It answers `{"text","answer","error"}`; add `"card":false` to skip the screen.
 The TV's programs are 32-bit ARM on a 64-bit kernel and the recogniser is a 64-bit program, so `cytv-asr` runs through the 64-bit
 loader and libraries that the download places in the same folder. Nothing in the system folders is changed.
 
-Only text goes further: to your server, to OpenRouter, or nowhere. LG's own assistant is a separate path with its own cloud
+Only text goes further: to your server, to OpenRouter or the AI server you set, or nowhere. LG's own assistant is a separate path with its own cloud
 recognition; **Switch off LG's voice assistant** pauses it while voice is on.
 
 ## Home Assistant (Assist)

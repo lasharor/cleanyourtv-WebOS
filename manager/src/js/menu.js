@@ -230,10 +230,10 @@ function build() {
       },
     });
     rows.push({
-      label: 'AI chat (OpenRouter)',
-      sub: lm.hasKey ? onoff(lm.enabled) + ' \u00B7 ' + lm.model : 'no key set',
+      label: lm.base ? 'AI chat (your server)' : 'AI chat (OpenRouter)',
+      sub: lm.hasKey || lm.base ? onoff(lm.enabled) + ' \u00B7 ' + lm.model : 'no key set',
       fn: function () {
-        if (!lm.hasKey) {
+        if (!lm.hasKey && !lm.base) {
           openPair();
           return;
         }
