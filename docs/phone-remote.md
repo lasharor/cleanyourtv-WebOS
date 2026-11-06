@@ -39,7 +39,9 @@ listens on the network until then, and switching it off again closes the port.
 2. Choose **Pair a phone**. The TV shows a QR code, the address (`http://<tv address>:8799`) and a 6-digit code.
 3. On the phone (same Wi-Fi) scan the code, or type the address. The code it shows is in the address the QR carries, so scanning it
    pairs by itself; typed in, the same code is entered on the page. The code works once
-   and expires a few minutes after you leave the page; the TV then shows a new one for the next phone.
+   and expires a few minutes after you leave the page. **A scan takes the code off the TV at once**: the TV says "Code scanned. Finish
+   on the phone." and keeps the window open only for the phone that scanned it, until it has paired. A phone that is already paired
+   and scans the code again just connects: the TV closes the window and says it is connected.
 4. Press Back on the TV. The phone page now shows **Connected**. Add it to the home screen for a one-tap remote.
 
 The page draws the QR with the generator that ships with CleanYourTV (`/addon/qrcode.js`, one copy in the repository: a catalog add-on
@@ -109,12 +111,12 @@ the book**, then press 2 on Home):
 
 | On the page | What it does |
 |---|---|
-| **Pair a phone** | Opens the pairing window (the QR code, the address and the 6-digit code) while it is open; Back closes it |
-| **Remove unused phones** | For security: a phone that is not connected and has not been used for 1 day, 3 days, 1 week, 2 weeks (the default) or 1 month is removed by itself, and its token stops working. **Never** switches it off, after a warning |
-| **Phones** | Every phone that is paired, with whether it is connected or blocked and when it was last used |
-| **Block** / **Allow**, on a phone | It stays paired but sends nothing until you allow it (or the other way round) |
-| **Remove**, on a phone (twice) | Its token stops working; it has to pair again |
-| **Remove all phones**, below the list (twice) | Every token stops working |
+| **Pair a phone** | The stage on the left becomes the pairing window: the QR code, the address and the 6-digit code, with how long it still works (**Expires in 2:47 · works once.**). When it runs out the code reads **Code expired** and **Get a new code** opens a new window; **Close** or Back closes it |
+| **Remove unused phones** | One row at the bottom of the phones, with the current choice (**After 2 weeks ›**). For security: a phone that is not connected and has not been used for 1 day, 3 days, 1 week, 2 weeks (the default) or 1 month is removed by itself, and its token stops working. OK opens a list of the six choices; **Never** switches it off after a confirm, and the row then shows **Never** in amber. A phone that is close to being removed says so on its card (**Last used 12 days ago · removed in 2 days**), and its Manage sheet always says when (**Removed in 9 days if not used.**). When there are more phones than fit, the list slides with the focus and a line under it says how many more there are |
+| **Phones** | Every phone that is paired (connected first), with whether it is connected or blocked and when it was last used; OK on a phone opens **Manage** |
+| **Manage** > **Block this phone** / **Allow this phone** | It stays paired but sends nothing until you allow it (or the other way round); it applies at once |
+| **Manage** > **Remove phone** | After a confirm (Cancel is first): its token stops working; it has to pair again |
+| **Remove all phones**, below the list (two phones or more) | After a confirm: every token stops working |
 
 Switching the add-on on or off is in the manager's Add-ons screen, as for every add-on: off closes the port and every connection, and
 paired phones stay paired and work again when it is switched on. A service add-on's switch takes effect at the next start of the service.

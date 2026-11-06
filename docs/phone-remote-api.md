@@ -19,7 +19,9 @@ it on a network you trust.
 
 On the TV: the add-on's own page (**Add-ons > Phone remote**, then its page of the book on Home: **Pair a phone**). The TV shows the address
 and a code. The code works once and the pairing window closes a few minutes after the page is left (at most 30 minutes after it opened), or
-after 8 wrong codes. Programs on the TV can open the same window without the page:
+after 8 wrong codes. Opening `GET /?code=<the code>` (what the QR code carries) counts as a scan: the TV takes the code off its screen
+(`pairing.scanned` in the state), and from then on only that address may pair with it. When a phone that is already paired connects from
+that address, the window closes (`scanned: {name, at}` in the state). Programs on the TV can open the same window without the page:
 `POST http://127.0.0.1:8765/api/addons/phoneremote/pair` (loopback only; see [On the TV itself](#on-the-tv-itself)).
 
 ```

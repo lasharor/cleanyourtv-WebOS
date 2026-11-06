@@ -120,7 +120,8 @@ function create(ctx, opts) {
 
   let srv = null,
     listenError = '', // why the port could not be bound; status() reports it as listenError, apart from a request that failed
-    pair = null;
+    pair = null,
+    scanned = null; // {name, at}: the last pairing window a phone that was already paired closed by scanning the QR code
   const clients = new Set();
   const tries = {}; // address -> times of its pairing tries
   const bad = {}; // address -> {n, until} wrong tokens in a row
@@ -228,6 +229,12 @@ function create(ctx, opts) {
     if (req.method === 'GET' && u === '/') {
       // the QR code on the TV carries the pairing code in its address: render it into the page, so it is filled in at once
       const c = /(?:^|&)code=([0-9]{6})(?:&|$)/.exec(String(req.url.split('?')[1] || ''));
+      // A scan of the QR code takes it off the TV at once. The window stays open for the phone that scanned it, and for no other, so a
+      // new phone can still finish (its name, Pair this device); a phone that was already paired closes it when it connects (login).
+      if (c && pair && !pair.scanned && same(c[1], pair.code)) {
+        pair.scanned = { at: Date.now(), addr: ip(req) };
+        console.log('phoneremote: the pairing code was scanned');
+      }
       // the router's name for the phone is the first guess for the name field (devicename.js); the page falls back to what the browser says
       return devicename.routerName(
         ip(req),
@@ -272,6 +279,12 @@ function create(ctx, opts) {
         status: 403,
         body: { error: i18n.tr(lang, 'The TV is not waiting for a phone. On the TV, open the Phone remote page and choose Pair a phone.') },
       };
+    // once the QR code was scanned, only that phone may finish: the TV no longer shows the code to anyone else
+    if (pair.scanned && pair.scanned.addr !== addr)
+      return {
+        status: 403,
+        body: { error: i18n.tr(lang, 'The TV is not waiting for a phone. On the TV, open the Phone remote page and choose Pair a phone.') },
+      };
     if (typeof b.code !== 'string' || !same(b.code.trim(), pair.code)) {
       if (++pair.wrong >= WRONG_MAX) closePair();
       return { status: 403, body: { error: i18n.tr(lang, 'That code is not right. Check the 6 digits on the TV screen.') } };
@@ -289,6 +302,7 @@ function create(ctx, opts) {
     });
     pair.code = newCode(); // a code works once
     pair.wrong = 0;
+    pair.scanned = null; // the new phone's own connection must not count as a paired phone scanning the code (login)
     pair.paired = { name, at: now };
     console.log('phoneremote: phone ' + id + ' paired');
     return { status: 200, body: { token: id + '.' + secret, name } };
@@ -395,6 +409,12 @@ function create(ctx, opts) {
       return c.conn.close(4403);
     }
     c.id = p.id;
+    // a phone that was already paired scanned the QR code: it is connected again, so the pairing window has nothing left to do
+    if (pair && pair.scanned && pair.scanned.addr === c.addr) {
+      scanned = { name: p.name, at: Date.now() };
+      console.log('phoneremote: phone ' + p.id + ' scanned the code while paired; pairing closed');
+      closePair();
+    }
     const lastUsed = p.seen; // before this connection counts: the page shows when the phone was used last
     touchSeen(p.id);
     netinfo().then(n => {
@@ -806,6 +826,7 @@ function create(ctx, opts) {
       expireDays: expireDays(),
       listening: !!(srv && srv.listening),
       port: port(),
+      url: lanIp() ? lan() : '', // the address a phone types, for the TV page also while no window is open ('' = the TV has no network)
       listenError: listenError,
       pairing: pair
         ? {
@@ -814,8 +835,10 @@ function create(ctx, opts) {
             qr: lan() + '/?code=' + pair.code, // the code travels in the address, so a phone that scans it fills it in by itself
             seconds: Math.max(0, Math.round((pair.until - now) / 1000)),
             paired: pair.paired,
+            scanned: pair.scanned ? pair.scanned.at : 0, // a phone opened the QR code: the TV page takes it off the screen
           }
         : null,
+      scanned: scanned, // {name, at}: a paired phone scanned the code and so closed the window (the TV page says it is connected)
       phones: state().phones.map(p => ({
         id: p.id,
         name: p.name,

@@ -124,6 +124,7 @@ function serve() {
       return json({
         expireDays: 14,
         listening: false,
+        url: 'http://192.168.1.42:8799',
         listenError: '',
         pairing: null,
         phones: [{ id: 'a1b2c3d4', name: 'Kitchen phone', created: 1700000000000, seen: 1700000000000, blocked: false, online: true }],

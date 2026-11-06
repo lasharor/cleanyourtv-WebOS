@@ -214,6 +214,10 @@ run(async () => {
     r.j.pairing.qr.indexOf(code) > 0 && !/code/.test(r.j.pairing.url),
     'the QR code carries the code in its address, so scanning it fills the numbers in; the plain address does not'
   );
+  ok(
+    r.j.url === r.j.pairing.url && /^http:\/\/127\.0\.0\.1:\d+$/.test(r.j.url),
+    'the state carries the address a phone types also outside the window (url), so the TV page shows it beside Pair a phone'
+  );
   const page = await get(port, '/');
   ok(
     page.code === 200 &&
@@ -902,6 +906,48 @@ run(async () => {
     sockets.forEach(s => s.destroy());
     stall.close();
   }
+  // ---- a scan of the QR code takes it off the TV at once, also when the phone that scanned it is already paired ----
+  {
+    const sc = await lanPair(PR, store({}), { port: 0, host: '127.0.0.1', keys: fakeKeys(), api, luna: fakeLuna, reverse });
+    let s = await call(sc.pr, '/api/phoneremote/pair', 'POST', {});
+    ok(s.j.pairing && s.j.pairing.scanned === 0, 'a window that nobody scanned yet shows its QR code (scanned is 0)');
+    await get(sc.port, '/?code=' + (s.j.pairing.code === '000000' ? '111111' : '000000'));
+    s = await call(sc.pr, '/api/phoneremote');
+    ok(s.j.pairing.scanned === 0, 'a page opened with a wrong code does not count as a scan');
+    await get(sc.port, '/?code=' + s.j.pairing.code);
+    s = await call(sc.pr, '/api/phoneremote');
+    ok(s.j.pairing && s.j.pairing.scanned > 0, 'the page opened from the QR code marks the window scanned: the TV page takes the code off');
+    const pp = await phone(sc.port, sc.token);
+    await sleep(100);
+    s = await call(sc.pr, '/api/phoneremote');
+    ok(
+      pp.msgs[0] && pp.msgs[0].t === 'ready' && s.j.pairing === null && s.j.scanned && s.j.scanned.name === 'test' && s.j.scanned.at > 0,
+      'a phone that was already paired scanned it and connected: the window closes and the state says which phone it was'
+    );
+    pp.c.terminate();
+    // a new phone scans, then finishes pairing on the phone: the window stays open for it, and its own connection does not close it
+    s = await call(sc.pr, '/api/phoneremote/pair', 'POST', {});
+    await get(sc.port, '/?code=' + s.j.pairing.code);
+    const np = await post(sc.port, '/api/pair', { code: s.j.pairing.code, name: 'new one' });
+    ok(np.code === 200 && np.j.token, 'the phone that scanned the code can still pair with it');
+    const np2 = await phone(sc.port, np.j.token);
+    await sleep(100);
+    s = await call(sc.pr, '/api/phoneremote');
+    ok(
+      s.j.pairing && s.j.pairing.paired && s.j.pairing.paired.name === 'new one' && s.j.pairing.scanned === 0,
+      'the new phone connecting is not taken for a paired phone scanning: the TV page sees it paired (and closes the window itself)'
+    );
+    np2.c.terminate();
+    sc.pr.stop();
+  }
+  {
+    const js = fs.readFileSync(path.join(root, 'addons/catalog/phoneremote/src/js/page.js'), 'utf8');
+    ok(
+      /function live\(\) \{\s*return !!\(S && S\.pairing && !S\.pairing\.scanned\);/.test(js) &&
+        /var p = live\(\) \? S\.pairing : null/.test(js),
+      'the TV page shows the code only while nobody has scanned it (live), so a scan takes it off the screen at the next poll'
+    );
+  }
 
   // ---- a port that is taken: the status says so under listenError, apart from a request that failed ----
   {
@@ -1363,11 +1409,81 @@ run(async () => {
       /var I18N = /.test(page) && /data-t="Phone remote"/.test(page) && /function setLang\(/.test(page),
       'its texts go through the translations of the pages'
     );
-    // the page's script and the translations are one <script> block: without the tags the TV shows only the static text
+    // the 10-foot layout: a stage that becomes pairing, a list with one stop per phone, a band; destructive actions ask in a confirm
+    const js = fs.readFileSync(path.join(root, 'addons', 'catalog', 'phoneremote', 'src', 'js', 'page.js'), 'utf8');
     ok(
-      /<script>[\s\S]*var I18N = [\s\S]*function init\(\)[\s\S]*<\/script>/.test(page) &&
-        page.indexOf('</script>') > page.indexOf('function init()'),
-      'the page script is inside a <script> tag (a build without it leaves the list and the choices empty on the TV)'
+      /id="stage"/.test(page) && /data-t="Pairing"/.test(page) && /data-t="New phone"/.test(page) && !/flex-gap|[;{\s]gap:/.test(page),
+      'the page has the stage (Pairing, New phone, Pair a phone as its only primary) and no flex gap (Chromium 68)'
+    );
+    ok(
+      /button\.phone:focus \{[^}]*outline: none;[^}]*box-shadow: inset 0 0 0 2px #e9f0fa;/.test(page),
+      'a focused phone card draws its ring inside (border and inset shadow): the clipping list cannot cut it and old Chromium keeps it round'
+    );
+    ok(
+      /t\('Expires in ' \+ mmss\(left\) \+ ' · works once\.'\)/.test(js) && /p\.seconds/.test(js) && /id="rail"/.test(page),
+      'while the window is open the code counts down from the seconds the service gives ("Expires in 1:47 · works once.", and a rail)'
+    );
+    ok(
+      /function expire\(\)/.test(js) &&
+        /t\('Code expired'\)/.test(js) &&
+        /data-k="renew"/.test(page) &&
+        /\$\('pairnew'\)\.onclick = pair/.test(js),
+      'an ended window stays on the stage, dimmed: "Code expired", and Get a new code opens a new window'
+    );
+    ok(
+      /row = el\('button', 'phone'\)/.test(js) &&
+        !/Yes, remove/.test(js) &&
+        /data-k="s:access"[\s\S]*data-k="s:remove"[\s\S]*data-k="s:cancel"/.test(page) &&
+        /data-k="d:cancel"[\s\S]*data-k="d:ok"/.test(page) &&
+        /focusKey\('d:cancel'\)/.test(js),
+      'a phone is one stop that opens Manage (Block or Allow first, then Remove phone, Cancel); a remove asks in a confirm with Cancel focused first'
+    );
+    ok(/cls\(\$\('removeall'\), 'hide', list\.length < 2\)/.test(js), 'Remove all phones shows only with two phones or more');
+    // when unused phones are removed: one row at the bottom of the phones (one stop), OK opens a picker with the six choices
+    ok(
+      /<button class="setrow" id="expire" data-k="exp">/.test(page) &&
+        !/class="band"|id="bandtitle"|button\.cell/.test(page) &&
+        /<div id="pick" class="sheet pick hide">/.test(page) &&
+        /var DAYS = \[1, 3, 7, 14, 30, 0\];/.test(js) &&
+        /\$\('expire'\)\.onclick = openPick;/.test(js) &&
+        /if \(picking\) return \$\('pick'\);/.test(js) &&
+        /else if \(picking\) closePick\(\);/.test(js),
+      'the rule is one setting row (one stop, no band of six cells); OK opens the picker, which keeps the focus, and Back closes it'
+    );
+    ok(
+      /if \(days === 0\) \{\s*back = 'o:0';\s*return ask\(/.test(js) && /button\.setrow \{[\s\S]*?margin-top: auto;/.test(page),
+      'Never still asks first and Cancel goes back to the list; the row is pinned to the bottom of the column (margin, no flex gap)'
+    );
+    // the countdown on a card: run the page's own functions on a few phones
+    {
+      const src = js.slice(js.indexOf('var DAY = '), js.indexOf('function stateCls('));
+      const sb = { S: { expireDays: 14 }, t: s => s, Date, Math };
+      require('vm').runInNewContext(src + ';this.countdown=countdown;this.removalLeft=removalLeft;', sb);
+      const now = Date.now(),
+        D = 86400000;
+      const cd = p => sb.countdown(Object.assign({ created: now - 100 * D }, p));
+      ok(
+        cd({ seen: now - 12 * D }) === 'removed in 2 days' &&
+          cd({ seen: now - 3 * D }) === '' &&
+          cd({ seen: now - 13.7 * D }) === 'removed soon' &&
+          cd({ seen: now - 20 * D }) === 'removed soon' &&
+          cd({ seen: now - 12 * D, online: true }) === '' &&
+          cd({ seen: now - 12 * D, blocked: true }) === '',
+        'a card says "removed in N days" only near the end (3 days or the last quarter), "removed soon" under a day, never for a connected or blocked phone'
+      );
+      sb.S.expireDays = 0;
+      ok(cd({ seen: now - 400 * D }) === '' && sb.removalLeft({ seen: now }) === -1, 'with Never no card counts down');
+      sb.S.expireDays = 30;
+      ok(
+        cd({ seen: now - 23 * D }) === 'removed in 7 days' && cd({ seen: now - 21 * D }) === '',
+        'with a month, the last quarter (7.5 days) is when the countdown shows'
+      );
+    }
+    // the page's script and the translations are one <script> block (qrcode.js loads before it): without the tags the TV shows only the static text
+    ok(
+      /<script src="\/addon\/qrcode\.js"><\/script>\s*<script>[\s\S]*var I18N = [\s\S]*function init\(\)[\s\S]*<\/script>/.test(page) &&
+        /function init\([\s\S]*<\/script>\s*<script src="\/addon\/sdk\.js"><\/script>/.test(page),
+      'the page script is inside a <script> tag after qrcode.js (a build without it leaves the list and the choices empty on the TV)'
     );
   }
   {
