@@ -175,6 +175,10 @@ function draw() {
     $('sub').textContent = tr('Input key');
     return;
   }
+  if (view === 'cardsidledim') {
+    $('sub').textContent = tr('Dim inactive cards');
+    return;
+  }
   if (view === 'volumebar') {
     $('sub').textContent = tr('Volume bar');
     return;

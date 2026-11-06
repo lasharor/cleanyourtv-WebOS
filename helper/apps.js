@@ -482,7 +482,12 @@ function create(ctx) {
       }
       return web.json(res, reply);
     }
-    if (u === '/api/apps/stamp') return web.json(res, { stamp: await stampNow() });
+    if (u === '/api/apps/stamp') {
+      const reply = { stamp: await stampNow() };
+      const options = config.options();
+      if (options.cardsIdleDim !== false) reply.cardsIdleMinutes = options.cardsIdleMinutes || 3;
+      return web.json(res, reply);
+    }
     if (u === '/api/inputs') return web.json(res, await inputsWithTuner());
     if (u === '/api/inputs/pin' && req.method === 'POST') return web.json(res, await pin(await body(req)));
     if (u === '/api/foreground') return web.json(res, await luna('luna://com.webos.applicationManager/getForegroundAppInfo', {}));

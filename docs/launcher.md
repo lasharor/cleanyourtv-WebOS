@@ -124,8 +124,10 @@ offers your entities while you type.
 A Home Assistant card stays hidden while Home Assistant is not set up or no entity is chosen, and is then no place for the focus
 either.
 
-Cards dim after three minutes without a key press and shift by a few pixels every few minutes, so nothing stays in one place on an
-OLED panel for hours. How a theme marks its places is in [Themes](themes.md#slots-for-cards).
+Cards shift by a few pixels every few minutes, so they do not stay in one place on an OLED panel for hours.
+In the manager, Features → Dim inactive cards lowers card opacity after 3, 5 or 10 minutes without a key press.
+The default delay is three minutes. A key press restores full opacity.
+How a theme marks its places is in [Themes](themes.md#slots-for-cards).
 
 ## Inputs
 

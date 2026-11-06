@@ -329,6 +329,8 @@ function load() {
           : { id: a.id, title: a.title, removable: !!a.removable, iv: a.iv || 0, it: a.it ? 1 : 0 };
       });
       cfg = x.config || {};
+      var options = cfg.options || {};
+      setCardsIdleMinutes(options.cardsIdleDim !== false ? options.cardsIdleMinutes || 3 : 0);
       iconsOn = x.icons === true;
       CARD_PACKS = x.cardPacks || {};
       tunerOn = x.tuner === true; // the service found LG's own Live TV (the tuner): Customise can offer a TV button
@@ -361,6 +363,7 @@ setInterval(function () {
   if (appsStamp === null || (window.LIVE && LIVE.on) || moving) return;
   api('/api/apps/stamp').then(
     function (x) {
+      if (x) setCardsIdleMinutes(x.cardsIdleMinutes);
       if (x && typeof x.stamp === 'number' && x.stamp !== appsStamp) {
         appsStamp = x.stamp;
         load();

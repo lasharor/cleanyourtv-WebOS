@@ -1005,7 +1005,6 @@ body.wpon {
   font-size: 0.82em;
   color: #9fd3ff;
 }
-/* OLED care (cards.js): dimmed after three minutes without a key; the slow shift of the whole layer is not animated */
 .cards-idle .card {
   opacity: 0.45;
   transition: opacity 2s linear;
@@ -3949,18 +3948,25 @@ function cardAct(el) {
   if (ty.can && !ty.can(el._card)) return;
   ty.act(el, el._card);
 }
-/* OLED care: after three minutes without a key the cards dim, and every few minutes they shift a few pixels, so a card that stays on
-   screen for hours does not leave its outline in the panel */
-var cardsIdleT = 0;
-function cardsWake() {
+var cardsIdleMinutes = 0,
+  cardsIdleTimer = 0;
+function wakeCards() {
+  clearTimeout(cardsIdleTimer);
   document.body.classList.remove('cards-idle');
-  clearTimeout(cardsIdleT);
-  cardsIdleT = setTimeout(function () {
-    document.body.classList.add('cards-idle');
-  }, 180000);
+  if (cardsIdleMinutes)
+    cardsIdleTimer = setTimeout(function () {
+      document.body.classList.add('cards-idle');
+    }, cardsIdleMinutes * 60000);
 }
-document.addEventListener('keydown', cardsWake, true);
-cardsWake();
+function setCardsIdleMinutes(minutes) {
+  var next = [3, 5, 10].indexOf(minutes) >= 0 ? minutes : 0;
+  if (next === cardsIdleMinutes) return;
+  cardsIdleMinutes = next;
+  wakeCards();
+}
+document.addEventListener('keydown', wakeCards, true);
+
+/* OLED care: shift the cards a few pixels periodically. */
 setInterval(function () {
   var b = $('cards');
   if (b && !document.hidden)
@@ -6963,6 +6969,8 @@ function load() {
           : { id: a.id, title: a.title, removable: !!a.removable, iv: a.iv || 0, it: a.it ? 1 : 0 };
       });
       cfg = x.config || {};
+      var options = cfg.options || {};
+      setCardsIdleMinutes(options.cardsIdleDim !== false ? options.cardsIdleMinutes || 3 : 0);
       iconsOn = x.icons === true;
       CARD_PACKS = x.cardPacks || {};
       tunerOn = x.tuner === true; // the service found LG's own Live TV (the tuner): Customise can offer a TV button
@@ -6995,6 +7003,7 @@ setInterval(function () {
   if (appsStamp === null || (window.LIVE && LIVE.on) || moving) return;
   api('/api/apps/stamp').then(
     function (x) {
+      if (x) setCardsIdleMinutes(x.cardsIdleMinutes);
       if (x && typeof x.stamp === 'number' && x.stamp !== appsStamp) {
         appsStamp = x.stamp;
         load();
