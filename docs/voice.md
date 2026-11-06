@@ -82,6 +82,8 @@ It answers `{"text","answer","error"}`; add `"card":false` to skip the screen.
 | Language | English. Moonshine also publishes German, Spanish, Arabic, Japanese, Mandarin, Tagalog and Vietnamese models and larger English ones (small 123 M, medium 245 M parameters). |
 | Audio | 16 kHz mono from the microphone stream of LG's `voiceinput` service. Held in memory while recognising, then discarded; not written to disk or sent anywhere. |
 
+**Which TVs.** Voice needs a TV with a **64-bit kernel**. A TV whose kernel is 32-bit ARM (`uname -m` says `armv7l`, as on the 43UP7550PTZ, issue 175) cannot run the recogniser at all: the manager says so and downloads nothing.
+
 The TV's programs are 32-bit ARM on a 64-bit kernel and the recogniser is a 64-bit program, so `cytv-asr` runs through the 64-bit
 loader and libraries that the download places in the same folder. Nothing in the system folders is changed.
 

@@ -43,6 +43,7 @@ nav = [
     { "Testing and CI" = "development/testing.md" },
     { "Internals" = "development/internals.md" },
     { "Making a card" = "development/cards.md" },
+    { "Add-on repositories" = "development/addon-repos.md" },
   ] },
   { "Credits and licences" = "credits.md" },
 ]

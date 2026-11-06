@@ -1,0 +1,20 @@
+{
+  "addons": [
+    {
+      "id": "hello",
+      "name": "Hello",
+      "version": "1.0.0",
+      "description": "A page that says hello and counts how often it was opened. The sample add-on to copy.",
+      "about": "The sample add-on of the repository template: a page next to Home (press its button or number), a service part that answers /api/addons/hello/hit and keeps a counter in its own settings. Copy this folder, rename the id, change the page.",
+      "preview": "",
+      "kind": "service",
+      "permissions": [],
+      "luna": [],
+      "files": {
+        "addon.json": "fc5bdc9fcbcb3501716e7745fa07909fcdcd457ec6562297d85fbf9a1343163f",
+        "index.html": "b3003514f3acc49ffafdce674ab4f3334e86e1c3645046678abed7cdb691c2cf",
+        "service.js": "6d11b278bf9a8b842cb351249a1b960a7e06b10e0d3b410b89d7d498bfddcebb"
+      }
+    }
+  ]
+}

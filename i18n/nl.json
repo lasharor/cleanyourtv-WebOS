@@ -907,5 +907,7 @@
  "Cooler than it is": "Koeler dan het is",
  "As it is": "Zoals het is",
  "%s of daylight": "%s daglicht",
- "Photo: %s": "Foto: %s"
+ "Photo: %s": "Foto: %s",
+ "Voice is not available on this TV": "Spraak is niet beschikbaar op deze tv",
+ "its kernel is 32-bit": "de kernel is 32-bit"
 }

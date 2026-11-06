@@ -91,6 +91,7 @@ function closeShare() {
   if (shareMode === 'addonpair') {
     api(pairPath, { stop: true }).catch(function () {});
     pop();
+    if (view === 'addonrepos') loadAddons();
     return;
   }
   if (shareMode === 'abox') {

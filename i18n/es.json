@@ -845,5 +845,7 @@
  "Warmer than it is": "Más cálido de lo que es",
  "Cooler than it is": "Más fresco de lo que es",
  "As it is": "Tal como es",
- "%s of daylight": "%s de luz diurna"
+ "%s of daylight": "%s de luz diurna",
+ "Voice is not available on this TV": "La voz no está disponible en esta TV",
+ "its kernel is 32-bit": "su kernel es de 32 bits"
 }
