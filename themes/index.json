@@ -79,6 +79,13 @@
    "preview": "midnight/preview.jpg"
   },
   {
+   "id": "moon",
+   "name": "Moon",
+   "author": "capegf",
+   "description": "A moonlit autumn launcher with a four-app glass dock, warm focus, app-colour rails and room for weather.",
+   "preview": "moon/preview.jpg"
+  },
+  {
    "id": "oled",
    "name": "OLED black",
    "author": "CleanYourTV",
