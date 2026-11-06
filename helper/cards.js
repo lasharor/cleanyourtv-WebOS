@@ -231,7 +231,7 @@ function create(ctx) {
   function state(lang) {
     const T = x => i18n.tr(lang, x);
     return {
-      slots: slots().map(sl => ({ id: sl.id, name: T(SLOT_NAMES[sl.id] || sl.id), card: sl.card })),
+      slots: slots().map(sl => ({ id: sl.id, name: T(sl.name || SLOT_NAMES[sl.id] || sl.id), card: sl.card })),
       cards: config.get().cards || {},
       ha: ha.ready(),
       types: /** @type {any[]} */ (TYPES).concat(packTypes()).map(ty => ({

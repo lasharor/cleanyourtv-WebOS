@@ -61,7 +61,7 @@ function create(opts) {
   };
   async function states(ids) {
     if (!ready()) return { error: 'Home Assistant is not set up' };
-    const want = (Array.isArray(ids) ? ids : []).filter(i => typeof i === 'string' && ID.test(i)).slice(0, 20);
+    const want = (Array.isArray(ids) ? ids : []).filter(i => typeof i === 'string' && ID.test(i)).slice(0, 96);
     try {
       const by = {};
       for (const e of await list()) by[e.entity_id] = e;
