@@ -126,7 +126,7 @@ is accurate to about a minute.
 
 **Remove unused phones** is a security setting: a phone that was lost, sold or forgotten would otherwise be able to control the TV for ever. The
 service checks when it starts and every hour; a phone that is connected is never removed, and one that is removed can pair again with a new code.
-Turning it off (**Never remove**) asks first, and the screen says what it means: a lost phone keeps the remote until someone removes it by hand.
+Choosing **Never** turns it off and asks first, and the screen says what it means: a lost phone keeps the remote until someone removes it by hand.
 
 ## Turning the TV on
 

@@ -22,7 +22,7 @@ run(async () => {
     'nothing, wlan0, localhost and a one-letter name are not names'
   );
   ok(
-    c('02:D5:D6:2B:08:32') === '' && c('02-d5-d6-2b-08-32') === '' && c('10.100.102.28') === '',
+    c('02:00:5E:10:00:01') === '' && c('02-00-5e-10-00-01') === '' && c('192.0.2.28') === '',
     'a MAC address and an IP address are not names'
   );
   ok(
