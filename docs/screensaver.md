@@ -8,7 +8,8 @@ LG's screen saver back.
 
 ## What it shows
 
-- **Photos** from the wallpaper library (uploads from the phone and Immich, the same photos as the ones behind Home), changed every
+- **Photos** from the wallpaper library (uploads from the phone and the photos of a source you install as an add-on, such as Immich:
+  the same photos as the ones behind Home; a live source such as Unsplash is not shown here), changed every
   25 seconds. A new photo starts when the page opens.
 - **The clock and the date**, bottom right, solid white over the photo: no transparency, so it stays readable on a bright picture.
   It sits in the same corner all the time, which is the one thing to watch on a panel that retains static content.

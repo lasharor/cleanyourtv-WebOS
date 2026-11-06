@@ -418,13 +418,13 @@ function build() {
   }
   if (view === 'confirm-home' || view === 'confirm-uninstall' || view === 'confirm-saver') {
     var un = view === 'confirm-uninstall',
-      sv = view === 'confirm-saver',
-      on = sv ? !(st.saver && st.saver.enabled) : !(st.home && st.home.enabled);
+      saver = view === 'confirm-saver',
+      on = saver ? !(st.saver && st.saver.enabled) : !(st.home && st.home.enabled);
     rows.push({ label: 'Cancel', fn: pop });
     rows.push({
       label: un
         ? 'Yes, remove CleanYourTV'
-        : sv
+        : saver
           ? on
             ? 'Yes, use our screen saver'
             : 'Yes, use LG’s screen saver'
@@ -433,13 +433,13 @@ function build() {
             : 'Yes, use LG’s Home',
       sub: un ? 'settings and apps are deleted; the TV restarts' : 'the TV restarts',
       fn: function () {
-        api(un ? '/api/manager/uninstall' : sv ? '/api/manager/saver' : '/api/manager/home', un ? {} : { enabled: on }).catch(
+        api(un ? '/api/manager/uninstall' : saver ? '/api/manager/saver' : '/api/manager/home', un ? {} : { enabled: on }).catch(
           function () {}
         );
         banner(
           un
             ? 'Removing CleanYourTV… the TV restarts in a moment and LG’s Home comes back.'
-            : sv
+            : saver
               ? on
                 ? 'Switching to our screen saver… the TV restarts in a moment.'
                 : 'Switching to LG’s screen saver… the TV restarts in a moment.'

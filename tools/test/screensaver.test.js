@@ -80,13 +80,14 @@ run(async () => {
       if (/listRunningApps/.test(uri)) return { returnValue: true, running: [{ id: 'com.webos.app.screensaver' }] };
       return { returnValue: true };
     },
-    feature: n => (n === 'wallpapers' ? { list: () => ['u/aa', 'i/bb'], stamp: () => '2:ab' } : null),
+    // an upload, a photo of a source add-on, and a live source (a URL the launcher asks for, not a file the page can show)
+    feature: n => (n === 'wallpapers' ? { list: () => ['u/aa', 's/immich/bb', 'l/unsplash'], stamp: () => '2:ab' } : null),
   };
   const f = saver.create(ctx);
   let x = await call(f, '/api/screensaver/photos');
   ok(
-    x.code === 200 && x.j.photos.length === 2 && x.j.stamp === '2:ab' && x.j.every === 25,
-    'GET /api/screensaver/photos: the wallpaper library and the seconds between photos'
+    x.code === 200 && x.j.photos.join(',') === 'u/aa,s/immich/bb' && x.j.stamp === '2:ab' && x.j.every === 25,
+    'GET /api/screensaver/photos: the photo files of the wallpaper library (no live sources) and the seconds between photos'
   );
   x = await call(f, '/api/screensaver/dismiss', 'POST');
   ok(
