@@ -8,6 +8,7 @@ var kFlow = 'input',
   API = 'http://127.0.0.1:8765',
   SVC = '/media/developer/apps/usr/palm/services/com.cleanyourtv.manager.service';
 var napi = null,
+  mnet = null /* MCP on the network (/api/mcp/lan) */,
   ad = {
     installed: [],
     catalog: [],

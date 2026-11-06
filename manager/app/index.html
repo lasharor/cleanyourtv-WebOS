@@ -483,6 +483,7 @@ var kFlow = 'input',
   API = 'http://127.0.0.1:8765',
   SVC = '/media/developer/apps/usr/palm/services/com.cleanyourtv.manager.service';
 var napi = null,
+  mnet = null /* MCP on the network (/api/mcp/lan) */,
   ad = {
     installed: [],
     catalog: [],
@@ -613,7 +614,7 @@ function build() {
     rmRows();
     return;
   }
-  if (view === 'notifyhow' || view === 'voicehow') {
+  if (view === 'notifyhow' || view === 'voicehow' || view === 'mcphow') {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
@@ -876,6 +877,32 @@ function build() {
         push('providers');
       },
     });
+    if (lm.hasKey)
+      /* OpenRouter has a key: only OpenRouter gets the tools */
+      rows.push({
+        label: 'AI acts on the TV',
+        sub: onoff(!!lm.agent) + ' · apps, inputs, approved add-ons',
+        info: {
+          t: 'AI acts on the TV',
+          d: 'The AI may open apps, switch inputs, show a card and use the tools of the add-ons you approved (Add-ons > Agent tools > Set up from your phone). Turning the TV off asks you first: say yes within 30 seconds. Only OpenRouter gets the tools; a server of yours only answers. Some models cannot use tools; the AI then only answers.',
+        },
+        fn: function () {
+          api('/api/voice/set', { llm: { agent: !lm.agent } }).then(
+            function (x) {
+              if (x.error) {
+                banner(x.error, 'err');
+                return;
+              }
+              vo = x;
+              build();
+              draw();
+            },
+            function () {
+              banner('The service did not answer', 'err');
+            }
+          );
+        },
+      });
     rows.push({
       label: 'Send the text to',
       sub: v.url ? v.url.replace(/^(https?:\/\/[^\/]+).*/, '$1') : 'not set · shows a card only',
@@ -989,6 +1016,63 @@ function build() {
           api('/api/manager/notify-api', { regenerate: true }).then(function (n) {
             napi = n;
             banner('New token created. Open \u201CHow to send\u201D to see it.', 'ok');
+            build();
+            draw();
+          });
+        },
+      });
+    }
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'mcpnet') {
+    var mn = mnet || {};
+    rows.push({
+      label: 'Accept MCP clients from the network',
+      sub: onoff(mn.lan),
+      info: {
+        t: 'MCP on the network',
+        d: 'An AI agent on another computer (Claude Desktop, Cursor, Home Assistant) can use the TV’s tools: open apps, switch inputs, show a card, and the tools of the add-ons you approved. It needs the token. Turning the TV off is never allowed from the network. Off by default.',
+      },
+      fn: function () {
+        api('/api/mcp/lan', { lan: !mn.lan }).then(
+          function (n) {
+            mnet = n;
+            if (st) st.mcp = { lan: !!n.lan };
+            build();
+            draw();
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+    if (mn.lan) {
+      rows.push({
+        label: 'How to connect',
+        sub: 'address, token, client settings',
+        fn: function () {
+          kText =
+            'MCP address (Streamable HTTP):\nhttp://' +
+            mn.ip +
+            ':' +
+            mn.port +
+            '/mcp\n\nHeader:\nAuthorization: Bearer ' +
+            mn.token +
+            '\n\nA client that only starts local programs can use the mcp-remote bridge: npx mcp-remote <address> --allow-http --header "Authorization: Bearer <token>"';
+          push('mcphow');
+        },
+      });
+      rows.push({ label: 'Show as QR code', sub: 'scan with a phone to copy the address and token', fn: openMcpQr });
+      rows.push({
+        label: 'New token',
+        sub: 'the old one stops working',
+        fn: function () {
+          api('/api/mcp/lan', { regenerate: true }).then(function (n) {
+            mnet = n;
+            banner('New token created. Open “How to connect” to see it.', 'ok');
             build();
             draw();
           });
@@ -2118,6 +2202,21 @@ function build() {
         );
       },
     });
+    rows.push({
+      label: 'MCP on the network',
+      sub: onoff(st.mcp && st.mcp.lan) + ' · AI agents on other computers',
+      fn: function () {
+        api('/api/mcp/lan').then(
+          function (n) {
+            mnet = n;
+            push('mcpnet');
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
   } else if (tb === 'addons') {
     addonRows();
   } else if (tb === 'debloat') {
@@ -2759,7 +2858,7 @@ function draw() {
     }
     return;
   }
-  if (view === 'notifyhow' || view === 'voicehow') {
+  if (view === 'notifyhow' || view === 'voicehow' || view === 'mcphow') {
     $('sub').textContent = tr(kText);
     $('sub').style.whiteSpace = 'pre-line';
     $('sub').style.wordBreak = 'break-all';
@@ -2767,6 +2866,10 @@ function draw() {
   }
   if (view === 'notifyapi') {
     $('sub').textContent = tr('Network notifications');
+    return;
+  }
+  if (view === 'mcpnet') {
+    $('sub').textContent = tr('MCP on the network');
     return;
   }
   if (view === 'models') {
@@ -2999,6 +3102,41 @@ function openNotifyQr() {
       if (view !== 'share') return;
       if (!r.pageUrl) {
         $('sharemsg').textContent = tr('The notification listener is not running.');
+        return;
+      }
+      drawQr(r.pageUrl);
+      $('qrbox').style.visibility = 'visible';
+      $('shareurl').textContent = r.pageUrl;
+      $('sharemsg').textContent = tr(
+        'The page opens for ten minutes. It is not encrypted: the token travels over your Wi-Fi, so use a network you trust.'
+      );
+    },
+    function () {
+      $('sharemsg').textContent = tr('The service did not answer.');
+    }
+  );
+}
+/* MCP on the network (helper/toolhub.js): a page on the phone with the address and the token */
+function openMcpQr() {
+  if (!mnet || !mnet.lan) {
+    banner('Switch MCP on the network on first', 'err');
+    return;
+  }
+  shareMode = 'mcp';
+  push('share');
+  $('share').style.display = 'block';
+  $('shareurl').textContent = '';
+  $('qrbox').style.visibility = 'hidden';
+  $('share').querySelector('h2').textContent = tr('MCP address and token');
+  $('share').querySelector('ol').innerHTML = tr(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera and open the page: it shows the address and the token with <b>Copy</b> buttons.</li><li>The token is a <b>secret</b>: anyone who sees this code while it is open can read it.</li>'
+  );
+  $('sharemsg').textContent = tr('Preparing…');
+  api('/api/mcp/lan', { page: true }).then(
+    function (r) {
+      if (view !== 'share' || shareMode !== 'mcp') return;
+      if (!r.pageUrl) {
+        $('sharemsg').textContent = tr('The MCP port is not open.');
         return;
       }
       drawQr(r.pageUrl);
@@ -4994,7 +5132,7 @@ function pollShare(n) {
 }
 function closeShare() {
   $('share').style.display = 'none';
-  if (shareMode === 'notify') {
+  if (shareMode === 'notify' || shareMode === 'mcp') {
     pop();
     return;
   }

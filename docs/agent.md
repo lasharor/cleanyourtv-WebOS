@@ -1,94 +1,138 @@
-# Agent tools (MCP)
+# Tools for the assistant (MCP)
 
-The **Agent tools (MCP)** add-on turns the abilities of the TV's apps and add-ons into tools a language model can call, over the
-[Model Context Protocol](https://modelcontextprotocol.io) (MCP). It does not know any app or add-on by name: each app or add-on
-*signs* a small declaration, and the add-on reads those declarations and serves them as MCP tools.
+The TV can give a language model **tools**: things it may do on the TV, such as open an app, switch an input or skip a song. The
+service serves every tool over the [Model Context Protocol](https://modelcontextprotocol.io) (MCP), so the voice assistant and any
+other MCP client on the TV use the same list.
 
-It is a catalog add-on (installed from the manager, **Add-ons**). Nothing runs until you install it.
+Where the tools come from:
 
-## The scheme
+| Source | What it gives | Needs |
+|---|---|---|
+| The service itself (`helper/coretools.js`) | `list_apps`, `launch_app`, `list_inputs`, `switch_input`, `show_notification`, `power_off` | Nothing: always there |
+| Add-ons that provide `tools` | Whatever the add-on's service returns (see [Add-ons](development/addons.md#tools-for-the-assistant)) | The add-on installed and switched on |
+| Apps and add-ons that **sign** a `tools.json` | The tools they declare | The **Agent tools (MCP)** add-on, and your approval of that app or add-on |
 
-A declaration is a JSON file named `tools.json`, with a `tools` list. Each tool has a `name`, a `description` (what it does, for
-the model), an `inputSchema` (a JSON Schema for its arguments), an optional `confirm` (marks the tool destructive, so a caller
-asks first), and an `invoke` that names how to run it:
+## The voice assistant uses them
+
+In the manager app, **Voice > AI acts on the TV** (or the box on the voice setup page) lets the AI use the tools. It is off by
+default; off, the AI only answers questions as before. Then:
+
+1. Home Assistant still answers first when the routing says so ([Voice](voice.md#home-assistant-assist)).
+2. Otherwise the question goes to OpenRouter with the tools (at most 40). The model may ask for tools; the TV runs them, sends back
+   what they answered and asks again, at most five rounds. The card on the screen says which tool runs.
+3. The model's last words are the answer on the card.
+
+A tool that turns something off or deletes something (`power_off`, or a signed tool with `"confirm": true`) never runs on the
+model's word. The TV shows **Turn the TV off? Say yes within 30 seconds to go ahead.** Hold the mic and say "yes" (also "yeah",
+"ok", "do it", "go ahead"): the TV runs it without asking the model again. Anything else, or 30 seconds of silence, drops it.
+
+Some OpenRouter models cannot use tools. The voice setup page marks the ones that can (**can act**). With a model that cannot, the TV
+asks once more without tools and the AI only answers.
+
+## The MCP endpoint
+
+`POST /api/mcp` on the service answers JSON-RPC 2.0: `initialize`, `ping`, `tools/list`, `tools/call`. It lists the tools of the
+service and of every add-on that provides them; a name that two sources use gets the add-on's id in front (`spotify__next`).
+
+```sh
+# on the TV (ssh)
+curl -X POST localhost:8765/api/mcp -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+curl -X POST localhost:8765/api/mcp \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"switch_input","arguments":{"input":"HDMI_1"}}}'
+```
+
+`tools/list` answers `{tools: [{name, description, inputSchema}]}`; a destructive tool also has `annotations: {destructiveHint: true}`.
+`tools/call` answers `{content: [{type: "text", text}], isError}`. The arguments are checked against the tool's `inputSchema` first. A
+destructive tool is refused here (`isError: true`): only the voice assistant runs it, after you said yes on the TV.
+
+Like the rest of the service API, the endpoint answers on `127.0.0.1` only: programs on the TV can use it. For an agent on another
+computer, switch on **MCP on the network** (below).
+
+## MCP on the network
+
+In the manager app, **More > MCP on the network > Accept MCP clients from the network** opens port 8790 on your network. An MCP client
+on another computer (Claude Desktop, Cursor, Home Assistant, a script) then reaches the same tools at `http://<tv>:8790/mcp` with the
+header `Authorization: Bearer <token>`. Off by default.
+
+- **How to connect** shows the address and the token; **Show as QR code** opens a page on your phone with **Copy** buttons (ten minutes);
+  **New token** replaces the token and the old one stops working.
+- It speaks MCP over HTTP (Streamable HTTP, every reply is JSON, no event stream). A client that only starts local programs can use the
+  `mcp-remote` bridge:
+
+  ```json
+  { "mcpServers": { "tv": { "command": "npx",
+      "args": ["mcp-remote", "http://<tv>:8790/mcp", "--allow-http", "--header", "Authorization: Bearer <token>"] } } }
+  ```
+
+- Tools that turn something off or delete something are never run from the network; only your spoken yes on the TV runs them.
+- A request from a web page (it carries an `Origin`) is refused. Ten wrong tokens lock an address out for ten minutes; at most 60
+  requests a minute. It is plain HTTP, so use it on a network you trust. See [Security](security.md#mcp-on-the-network).
+
+## Signing tools: the agent add-on
+
+The **Agent tools (MCP)** add-on (manager app, **Add-ons**) lets an app or add-on give tools without changing the service: it signs
+a `tools.json`. The add-on knows no app by name; it reads the declarations and gives the approved ones to the service.
+
+### The scheme
 
 ```json
 {
   "tools": [
     {
-      "name": "open_demo",
-      "description": "Open the demo app on the TV.",
-      "inputSchema": { "type": "object", "properties": {}, "required": [] },
-      "invoke": { "kind": "app", "id": "com.example.demo" }
+      "name": "recipes__open",
+      "description": "Open the recipe app at a dish.",
+      "inputSchema": { "type": "object", "properties": { "dish": { "type": "string" } }, "required": ["dish"] },
+      "invoke": { "kind": "app", "id": "com.example.recipes", "params": { "dish": "{dish}" } }
     }
   ]
 }
 ```
 
-A `{name}` in a string of the invoke is replaced by that argument when the tool is called; a value that is exactly `{name}` keeps
-the argument's type (a number stays a number).
+- `name`: a letter, then letters, digits, `_` or `-` (64 at most). `description`: what it does, for the model (300 characters).
+- `inputSchema`: a JSON Schema object; at most 12 arguments, each with a JSON type.
+- `confirm`: `true` for a tool that turns something off or deletes something: it then runs only after a yes.
+- At most 16 tools in one file.
 
-### The three ways to run a tool
+A `{name}` in the invoke is replaced by that argument. In a `path` or `url` the argument is URL-encoded; elsewhere a value that is
+exactly `{name}` keeps the argument's type.
 
 | kind | Fields | What it does |
 |---|---|---|
-| `app` | `id`, `params` | Launches an installed app, with the given launch parameters. |
-| `addon` | `addon`, `path`, `method`, `body` | Calls another service add-on's own endpoint, `POST/GET /api/addons/<addon>/<path>`. |
-| `http` | `url`, `method`, `headers`, `body` | Calls an address — an external service, a phone, your Home Assistant. |
+| `app` | `id`, `params` | Launches the app with launch parameters. |
+| `addon` | `addon`, `path`, `method`, `body` | Calls that add-on's own endpoint, `/api/addons/<addon><path>`. The loader's paths (`install`, `remove`, `repos`, `update`, `catalog`) and `..` are refused. |
+| `http` | `url`, `method`, `headers`, `body` | Calls an address. The scheme and host are fixed in the file (no `{argument}` there); the TV itself (127.0.0.1, localhost, its own address) is refused, and redirects are not followed. |
 
-```json
-{ "invoke": { "kind": "addon", "addon": "spotify", "path": "/control", "method": "POST", "body": { "action": "play_pause" } } }
-{ "invoke": { "kind": "http", "url": "https://example.com/weather?city={city}", "method": "GET" } }
-```
+### Where it looks
 
-An app that wants to be a tool only has to be launchable: its `tools.json` is `{"kind":"app"}`. A service add-on exposes its own
-abilities by pointing at its own `/api/addons/<id>/...` endpoints — the add-on already answers them. Anything else can be an
-`http` tool.
-
-### Where the add-on looks
-
-| Place | |
+| Place | Source |
 |---|---|
-| `/media/developer/cleanyourtv/addons-bundled/<id>/tools.json` | Add-ons that ship with CleanYourTV |
-| `/media/developer/cleanyourtv/addons/<id>/tools.json` | Add-ons installed from the catalog |
-| `/media/developer/apps/usr/palm/applications/<id>/tools.json` and `/usr/palm/applications/<id>/tools.json` | Installed apps |
-| `/media/developer/cleanyourtv/addon-data/agent/tools/<anything>.json` | The registration directory: a declaration dropped at runtime (an installer, a script, another add-on's start) |
+| `addons-bundled/<id>/tools.json`, `addons/<id>/tools.json` in the service folder | `addon:<id>` |
+| `/media/developer/apps/usr/palm/applications/<id>/tools.json` | `app:<id>` |
+| `addon-data/agent/tools/<name>.json` in the service folder | `file:<name>` (a declaration dropped by a script or an installer) |
 
-A `tools.json` that does not parse is ignored and reported; a tool name declared twice keeps the first.
+### Approving
 
-## The MCP endpoint
+Every file is a **source**, and a source gives no tools until you switch it on: manager app, **Add-ons > Agent tools (MCP) > Set up
+from your phone** (port 8799, a 6-digit code on the TV, ten minutes). The page lists each source with its tools and errors. The
+approvals are the add-on's settings in `config.json`.
 
-`POST /api/addons/agent/mcp` answers JSON-RPC 2.0. `GET /api/addons/agent/tools` lists the same tools without JSON-RPC, and
-`POST /api/addons/agent/reload` reads the declarations again.
+The add-on's own endpoints, on the TV:
 
-```sh
-# list the tools (what a language model would receive)
-curl -X POST localhost:8765/api/addons/agent/mcp -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
-
-# call one
-curl -X POST localhost:8765/api/addons/agent/mcp \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"open_demo","arguments":{}}}'
-```
-
-The reply to `tools/list` is `{tools: [{name, description, inputSchema}]}`; a `confirm` tool also carries
-`annotations: {destructiveHint: true}`. The reply to `tools/call` is MCP content:
-`{content: [{type: "text", text: "..."}], isError: false}`.
-
-## Using the tools
-
-The add-on only *exposes* the tools; it is not a language model itself. Two ways to use them:
-
-- **The voice assistant.** The voice feature already has a language model (OpenRouter) in `helper/answers.js`. A small change
-  there can read this add-on's `tools/list`, send the tools to the model, and run the `tools/call` loop, so the remote's voice
-  button acts instead of only answering. That change lives in the service, not in this add-on, and is not done here.
-- **Any MCP client.** A desktop agent (Claude Desktop, Cursor) or your own server can reach the same endpoint on the LAN, exactly
-  like the other short-lived pages (a token, open only while you set it up). The service's origin rules keep the endpoint
-  loopback-only by default.
+| Request | |
+|---|---|
+| `POST /api/addons/agent/mcp` | JSON-RPC for the signed tools alone |
+| `GET /api/addons/agent/tools` | The approved tools |
+| `GET /api/addons/agent/sources` | Every source: `{key, kind, id, approved, error, tools}` |
+| `POST /api/addons/agent/approve {source, approved}` | Switch a source on or off |
+| `POST /api/addons/agent/reload` | Read the files again |
 
 ## Security
 
-The add-on is a convention, not a sandbox: it runs in the service as root, like every service add-on. It asks for the least it
-needs — `net.fetch` (to call add-ons and addresses) and one `luna` call, `applicationManager/launch` (to launch apps). It can
-therefore **launch any app** and **call any address a declaration names**; only install declarations you trust, exactly as you
-only install add-ons you trust. A tool that switches the TV off or changes something in your home should set `"confirm": true`,
-and the caller must honour it.
+The tools act as the service does: as root. What keeps that in hand:
+
+- The assistant uses tools only while **AI acts on the TV** is on, and signed tools only from sources you approved.
+- Destructive tools need your spoken yes on the TV; neither the model nor an MCP client can give it.
+- Signed tools cannot call the service's API or anything else on the TV, and an add-on tool reaches only that add-on's own paths.
+- The agent add-on asks for `net.fetch` and one LG call, `applicationManager/launch`. An add-on's own tools run with that add-on's
+  permissions.
+- Every round is capped: five rounds, 500 tokens a reply, 40 tools, tool results cut to 2,000 characters, 30 seconds a tool.

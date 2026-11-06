@@ -56,7 +56,7 @@ function pollShare(n) {
 }
 function closeShare() {
   $('share').style.display = 'none';
-  if (shareMode === 'notify') {
+  if (shareMode === 'notify' || shareMode === 'mcp') {
     pop();
     return;
   }

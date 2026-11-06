@@ -99,7 +99,7 @@ function draw() {
     }
     return;
   }
-  if (view === 'notifyhow' || view === 'voicehow') {
+  if (view === 'notifyhow' || view === 'voicehow' || view === 'mcphow') {
     $('sub').textContent = tr(kText);
     $('sub').style.whiteSpace = 'pre-line';
     $('sub').style.wordBreak = 'break-all';
@@ -107,6 +107,10 @@ function draw() {
   }
   if (view === 'notifyapi') {
     $('sub').textContent = tr('Network notifications');
+    return;
+  }
+  if (view === 'mcpnet') {
+    $('sub').textContent = tr('MCP on the network');
     return;
   }
   if (view === 'models') {

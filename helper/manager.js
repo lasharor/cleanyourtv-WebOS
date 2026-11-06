@@ -87,6 +87,7 @@ function create(ctx) {
       picker: Object.assign({}, config.get().picker || {}, { mode: inputkey().mode(), released: !!opts.inputKey && !inputkey().on() }),
       voice: voice ? (v => ({ installed: v.installed, enabled: v.enabled, ha: v.ha.configured }))(voice.status()) : null,
       notifyApi: napi ? { enabled: napi.info().enabled, port: napi.info().port } : { enabled: false },
+      mcp: (m => (m && m.lanInfo ? { lan: m.lanInfo().lan } : { lan: false }))(ctx.feature && ctx.feature('mcp')),
       wallpapers: wp ? (w => ({ total: w.total, uploads: w.uploads }))(wp.status()) : null,
       icons: !!(ad && ad.module && ad.module('icons')), // the App icons add-on runs
       lang: config.get().lang || '', // the Language setting: '' follows the TV

@@ -10,6 +10,7 @@ run(async () => {
   process.env.CYTV_ADDONS_BUNDLED = path.join(tmp, 'bundled');
   process.env.CYTV_ADDON_DATA = path.join(tmp, 'addon-data');
   process.env.CYTV_APPS = path.join(tmp, 'apps');
+  process.env.CYTV_AGENT_LOOPBACK = '1'; // the stand-in servers below are on 127.0.0.1; the refusal of the TV itself is checked on its own
   const nc = req('netcompat');
   const mk = p => nc.mkdirp(p);
   const writeJson = (file, obj) => {
@@ -125,10 +126,26 @@ run(async () => {
     },
     util: { lanIp: () => '127.0.0.1', randomInt: nc.randomInt, mkdirp: nc.mkdirp, i18n: req('i18n') },
     env: { lang: () => '', wallpaperSize: () => '4k' },
-    settings: { get: () => ({}), set: () => {} },
+    settings: {
+      get: () => Object.assign({}, saved),
+      set: o => {
+        saved = Object.assign({}, saved, o);
+      },
+    },
   };
+  let saved = {};
   const reg = M.registry(ctx);
-  const r = reg.reload();
+  let r = reg.reload();
+  ok(r.count === 0 && reg.list().length === 0, 'nothing is offered before the person approves a source');
+  const keys = reg
+    .sources()
+    .map(s => s.key)
+    .sort()
+    .join();
+  ok(keys === 'addon:demo,app:com.example.demo,file:dup,file:weather', 'every signed file is a source: ' + keys);
+  for (const s of reg.sources()) reg.approve(s.key, true);
+  ok(saved.approved && saved.approved['addon:demo'] === true, 'an approval is kept in the add-on settings');
+  r = reg.reload();
   ok(r.count === 5, 'five tools discovered: ' + JSON.stringify(reg.list().map(t => t.name)));
   ok(
     reg
@@ -140,6 +157,14 @@ run(async () => {
   const off = reg.list().filter(t => t.name === 'tv_off')[0];
   ok(off && off.annotations && off.annotations.destructiveHint === true, 'a confirm tool is marked destructive');
   ok(/declared twice/.test(reg.errors().join()), 'a name declared twice is reported');
+
+  ok(reg.approve('nope', true).error, 'an unknown source cannot be approved');
+  reg.approve('file:weather', false);
+  ok(
+    !reg.list().some(t => t.name === 'weather_now') && reg.sources().filter(s => s.key === 'file:weather')[0].approved === false,
+    'withdrawing a source takes its tools out at once'
+  );
+  reg.approve('file:weather', true);
 
   // ---- JSON-RPC ----
   const init = await reg.rpc({ jsonrpc: '2.0', id: 2, method: 'initialize' });
@@ -176,6 +201,48 @@ run(async () => {
   ok(tr.id === 3 && tr.result.content && tr.result.content[0].type === 'text', 'tools/call answers with MCP content');
   const u = await reg.call('nope', {});
   ok(u.isError === true && /unknown tool/.test(u.content[0].text), 'an unknown tool is an error');
+  const g2 = await reg.call('demo_greet', {});
+  ok(g2.isError === true && /name is required/.test(g2.content[0].text), 'a required argument that is missing is refused');
+  const g3 = await reg.call('demo_greet', { name: 7 });
+  ok(g3.isError === true && /must be text/.test(g3.content[0].text), 'an argument of the wrong type is refused');
+  const before = launched.length;
+  const c1 = await reg.call('tv_off', {});
+  ok(c1.isError === true && c1.confirm === true && launched.length === before, 'a confirm tool does not run without a yes');
+  const c2 = await reg.rpc({ jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'tv_off', arguments: {} } });
+  ok(c2.result.isError === true && launched.length === before, 'an MCP client cannot confirm it either');
+  const c3 = await reg.call('tv_off', {}, { confirmed: true });
+  ok(c3.isError === false && launched.length === before + 1, 'with the yes it runs');
+  await reg.call('weather_now', { city: 'a b/../c?x=1' });
+  ok(extHits[extHits.length - 1].url === '/weather?city=a%20b%2F..%2Fc%3Fx%3D1', 'an argument is encoded into an address');
+
+  // ---- the TV itself is out of reach ----
+  delete process.env.CYTV_AGENT_LOOPBACK;
+  ok(M.isSelf('127.0.0.1') && M.isSelf('localhost') && M.isSelf('[::1]') && M.isSelf('0.0.0.0'), 'loopback names are the TV itself');
+  ok(M.isSelf('192.168.1.20', '192.168.1.20') && !M.isSelf('192.168.1.30', '192.168.1.20'), 'so is its own LAN address');
+  ok(
+    /the TV itself/.test(
+      M.cleanTool({ name: 'a', description: 'd', inputSchema: {}, invoke: { kind: 'http', url: 'http://127.0.0.1:8765/api/power/off' } })
+        .error
+    ),
+    'an http tool that calls the service is refused'
+  );
+  ok(
+    M.cleanTool({ name: 'a', description: 'd', inputSchema: {}, invoke: { kind: 'http', url: 'http://{host}/x' } }).error,
+    'an argument cannot choose the host'
+  );
+  ok(
+    M.cleanTool({ name: 'a', description: 'd', inputSchema: {}, invoke: { kind: 'addon', addon: 'install', path: '/' } }).error,
+    'an addon tool cannot reach the loader (install, remove, repos, update)'
+  );
+  ok(
+    M.cleanTool({ name: 'a', description: 'd', inputSchema: {}, invoke: { kind: 'addon', addon: 'demo', path: '/../../power/off' } }).error,
+    'an addon path cannot climb out of its add-on'
+  );
+  ok(
+    M.cleanDeclaration({ tools: new Array(M.MAX_PER_SOURCE + 1).fill(0).map((x, i) => ({ name: 't' + i })) }).error,
+    'a source declares a limited number of tools'
+  );
+  process.env.CYTV_AGENT_LOOPBACK = '1';
 
   // ---- the service's endpoints ----
   const mod = S.create(ctx);
@@ -189,6 +256,16 @@ run(async () => {
   const z = fake('/nope', 'GET');
   await mod.handle(z.req, z.res, '/nope', async () => ({}));
   ok(z.res.code === 404, 'anything else is 404');
+  ok(
+    mod.tools && typeof mod.tools.list === 'function' && mod.tools.list().length === 5,
+    'the service gives its tools to the voice assistant'
+  );
+  const sx = fake('/sources', 'GET');
+  await mod.handle(sx.req, sx.res, '/sources', async () => ({}));
+  ok(JSON.parse(sx.res.out).sources.length === 4, 'GET /sources lists every signed file');
+  const ax = fake('/approve', 'POST');
+  await mod.handle(ax.req, ax.res, '/approve', async () => ({ source: 'app:com.example.demo', approved: false }));
+  ok(JSON.parse(ax.res.out).ok === true && !mod.tools.list().some(t => t.name === 'open_app'), 'POST /approve takes a source out');
 
   // ---- the manifest ----
   const addons = req('addons');
@@ -198,6 +275,7 @@ run(async () => {
     chk.manifest &&
       chk.manifest.permissions.join() === 'net.fetch,luna' &&
       chk.manifest.luna.length === 1 &&
+      chk.manifest.provides.join() === 'tools' &&
       chk.manifest.entry.service === 'service.js',
     'the manifest is accepted and asks for the network and one luna call'
   );

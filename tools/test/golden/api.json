@@ -525,6 +525,9 @@
     "voice": ""
    },
    "lang": "",
+   "mcp": {
+    "lan": false
+   },
    "notifyApi": {
     "enabled": false,
     "port": 8767
@@ -827,6 +830,7 @@
    "lgPaused": false,
    "listening": false,
    "llm": {
+    "agent": false,
     "enabled": false,
     "hasKey": false,
     "lastVia": "",

@@ -12,7 +12,7 @@ function build() {
     rmRows();
     return;
   }
-  if (view === 'notifyhow' || view === 'voicehow') {
+  if (view === 'notifyhow' || view === 'voicehow' || view === 'mcphow') {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
@@ -275,6 +275,32 @@ function build() {
         push('providers');
       },
     });
+    if (lm.hasKey)
+      /* OpenRouter has a key: only OpenRouter gets the tools */
+      rows.push({
+        label: 'AI acts on the TV',
+        sub: onoff(!!lm.agent) + ' · apps, inputs, approved add-ons',
+        info: {
+          t: 'AI acts on the TV',
+          d: 'The AI may open apps, switch inputs, show a card and use the tools of the add-ons you approved (Add-ons > Agent tools > Set up from your phone). Turning the TV off asks you first: say yes within 30 seconds. Only OpenRouter gets the tools; a server of yours only answers. Some models cannot use tools; the AI then only answers.',
+        },
+        fn: function () {
+          api('/api/voice/set', { llm: { agent: !lm.agent } }).then(
+            function (x) {
+              if (x.error) {
+                banner(x.error, 'err');
+                return;
+              }
+              vo = x;
+              build();
+              draw();
+            },
+            function () {
+              banner('The service did not answer', 'err');
+            }
+          );
+        },
+      });
     rows.push({
       label: 'Send the text to',
       sub: v.url ? v.url.replace(/^(https?:\/\/[^\/]+).*/, '$1') : 'not set · shows a card only',
@@ -388,6 +414,63 @@ function build() {
           api('/api/manager/notify-api', { regenerate: true }).then(function (n) {
             napi = n;
             banner('New token created. Open \u201CHow to send\u201D to see it.', 'ok');
+            build();
+            draw();
+          });
+        },
+      });
+    }
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'mcpnet') {
+    var mn = mnet || {};
+    rows.push({
+      label: 'Accept MCP clients from the network',
+      sub: onoff(mn.lan),
+      info: {
+        t: 'MCP on the network',
+        d: 'An AI agent on another computer (Claude Desktop, Cursor, Home Assistant) can use the TV’s tools: open apps, switch inputs, show a card, and the tools of the add-ons you approved. It needs the token. Turning the TV off is never allowed from the network. Off by default.',
+      },
+      fn: function () {
+        api('/api/mcp/lan', { lan: !mn.lan }).then(
+          function (n) {
+            mnet = n;
+            if (st) st.mcp = { lan: !!n.lan };
+            build();
+            draw();
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+    if (mn.lan) {
+      rows.push({
+        label: 'How to connect',
+        sub: 'address, token, client settings',
+        fn: function () {
+          kText =
+            'MCP address (Streamable HTTP):\nhttp://' +
+            mn.ip +
+            ':' +
+            mn.port +
+            '/mcp\n\nHeader:\nAuthorization: Bearer ' +
+            mn.token +
+            '\n\nA client that only starts local programs can use the mcp-remote bridge: npx mcp-remote <address> --allow-http --header "Authorization: Bearer <token>"';
+          push('mcphow');
+        },
+      });
+      rows.push({ label: 'Show as QR code', sub: 'scan with a phone to copy the address and token', fn: openMcpQr });
+      rows.push({
+        label: 'New token',
+        sub: 'the old one stops working',
+        fn: function () {
+          api('/api/mcp/lan', { regenerate: true }).then(function (n) {
+            mnet = n;
+            banner('New token created. Open “How to connect” to see it.', 'ok');
             build();
             draw();
           });
@@ -1510,6 +1593,21 @@ function build() {
           function (n) {
             napi = n;
             push('notifyapi');
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+    rows.push({
+      label: 'MCP on the network',
+      sub: onoff(st.mcp && st.mcp.lan) + ' · AI agents on other computers',
+      fn: function () {
+        api('/api/mcp/lan').then(
+          function (n) {
+            mnet = n;
+            push('mcpnet');
           },
           function () {
             banner('The service did not answer', 'err');
