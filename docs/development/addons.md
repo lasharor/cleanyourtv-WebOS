@@ -335,6 +335,7 @@ you left it. Any app can open a page with `luna://com.webos.applicationManager/l
 
 | Add-on | What it is |
 |---|---|
+| `agent` | **Agent tools (MCP)**: a bridge between the TV and a language model, built on a scheme instead of a fixed list. Installed apps and add-ons sign the scheme with a small `tools.json`; the add-on turns each ability into an MCP tool and answers `tools/list` and `tools/call` over JSON-RPC at `/api/addons/agent/mcp`. Nothing app-specific is hardcoded: an app becomes a launch tool, a service add-on a set of tools that call its own endpoints, an external service a tool that calls an address. The permission `luna` is for `applicationManager/launch` only. See [Agent](../agent.md). |
 | `bigclock` | A full-screen clock (a page add-on, the smallest example). |
 | `dnscheck` | Asks the TV's own resolver for the hosts the debloat blocks and shows each as Blocked or Reachable (issue 92). A host that does not exist, or resolves to 0.0.0.0, 127.x or ::, counts as blocked; a control host (example.com) tells whether DNS works at all, and when it does not, no host is called blocked. Add your own hosts with `curl -X POST localhost:8765/api/addons/dnscheck/hosts -d '{"hosts":["ads.example.net"]}'` on the TV. |
 | `sysinfo` | Memory, swap, load and uptime of the TV, live, from `/proc`. |

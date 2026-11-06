@@ -1,0 +1,14 @@
+{
+  "id": "agent",
+  "name": "Agent tools (MCP)",
+  "version": "1.0.0",
+  "kind": "service",
+  "description": "Turns the abilities the TV's apps and add-ons sign into MCP tools a language model can call.",
+  "about": "One bridge between the TV and a language model, built on a scheme instead of a fixed list. Installed apps and add-ons sign the scheme with a small tools.json that names their abilities; this add-on turns each into an MCP tool and answers list and call over JSON-RPC at /api/addons/agent/mcp. An app can become a launch tool, a service add-on a set of tools that call its own endpoints, an external service a tool that calls an address. The voice assistant, or any MCP client, can then use those tools to act on the TV.",
+  "entry": {
+    "service": "service.js"
+  },
+  "permissions": ["net.fetch", "luna"],
+  "luna": [{ "uri": "luna://com.webos.applicationManager/launch" }],
+  "minService": "1.6.17"
+}
