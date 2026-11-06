@@ -1,0 +1,132 @@
+{
+  "name": "Moon",
+  "author": "capegf",
+  "description": "A moonlit autumn launcher with a four-app glass dock, warm focus, app-colour rails and room for weather.",
+  "extends": "classic",
+  "colors": {
+    "night": "#06081a",
+    "panel": "#17162d",
+    "ink": "#fffaf2",
+    "accent": "#f1b66f",
+    "focus": "#fff7e8",
+    "pill": "#ffffff"
+  },
+  "surface": {
+    "pillAlpha": 0.14,
+    "pillRing": 0.24,
+    "pillRadius": 34,
+    "menuAlpha": 0.94
+  },
+  "clock": {
+    "layout": "inline",
+    "anchor": "top",
+    "align": "left",
+    "x": 96,
+    "y": 54,
+    "scale": 1.4,
+    "dateScale": 1.08
+  },
+  "bar": {
+    "style": "pill",
+    "labels": "show",
+    "anchor": "top",
+    "align": "right",
+    "x": 96,
+    "y": 54,
+    "size": 58,
+    "gap": 14
+  },
+  "shelf": {
+    "show": true,
+    "align": "left",
+    "x": 96,
+    "y": 600,
+    "scale": 0.78,
+    "dockAlign": false
+  },
+  "dock": {
+    "anchor": "bottom",
+    "align": "center",
+    "y": 90,
+    "count": 4,
+    "w": 405,
+    "h": 210,
+    "gap": 36,
+    "radius": 34,
+    "panel": 0.1,
+    "panelPad": 30,
+    "tileAlpha": 1,
+    "tileFrost": 0,
+    "tileFrostColor": "#ffffff",
+    "lift": 7,
+    "focusScale": 1.045
+  },
+  "grid": {
+    "mode": "push",
+    "dockUp": 216,
+    "clipTop": 210,
+    "cols": 4,
+    "tileH": 210,
+    "gapX": 36,
+    "gapY": 60,
+    "align": "left",
+    "x": 96,
+    "width": 1728,
+    "overlayDim": 0
+  },
+  "tile": {
+    "gloss": 0.18,
+    "border": 0.12,
+    "ringWidth": 4,
+    "ringOffset": 4
+  },
+  "effects": {
+    "glow": 0.18,
+    "wallpaper": "moon.jpg",
+    "wallpaperDim": 0.05,
+    "speed": 1
+  },
+  "strip": {
+    "show": false
+  },
+  "slots": [
+    {
+      "id": "under-clock",
+      "anchor": "top",
+      "align": "left",
+      "x": 96,
+      "y": 178,
+      "w": 900,
+      "h": 148,
+      "grid": "keep"
+    },
+    {
+      "id": "clock-side",
+      "anchor": "top",
+      "align": "left",
+      "x": 654,
+      "y": 54,
+      "w": 430,
+      "h": 102,
+      "grid": "keep"
+    },
+    {
+      "id": "side",
+      "anchor": "top",
+      "align": "right",
+      "x": 96,
+      "y": 190,
+      "w": 520,
+      "h": 350
+    },
+    {
+      "id": "row",
+      "anchor": "top",
+      "align": "left",
+      "x": 96,
+      "y": 370,
+      "w": 1100,
+      "h": 160
+    }
+  ]
+}

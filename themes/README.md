@@ -63,6 +63,14 @@ A phone-style lock screen: a greeting and a big clock top left, and a small, tra
 
 Folder: [`lockscreen/`](lockscreen/)
 
+### Moon
+
+A moonlit autumn landscape with a four-app glass dock, warm focus, app-colour rails and places for cards around the clock.
+
+[![Moon](moon/preview.jpg)](moon/preview.jpg)
+
+Folder: [`moon/`](moon/)
+
 ### Horizon
 
 A row of seven square apps along the bottom of a dusk landscape, the clock on the left and the buttons on the right at the top. Down moves the row up and shows all apps below it.
