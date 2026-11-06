@@ -9,6 +9,7 @@
       "preview": "preview.jpg",
       "kind": "page",
       "permissions": [],
+      "luna": [],
       "files": {
         "addon.json": "e82a2d9b9353500c67c87797538914299a6cc5b22029084714c5033a2206f205",
         "index.html": "ad47a31114832658c41cbbcb46ef2e4cdb9be8ab7cad4308cdea90a2d9da784f"
@@ -23,6 +24,7 @@
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [],
+      "luna": [],
       "files": {
         "addon.json": "5b8aecd48cb3813a404cb93391482d5f1be54e2504a0be77feb9696b3f82fde0",
         "index.html": "f844a216c574a7bf965ad85e3d13cadae06c9b5f18cd8f9d04d30577e41f25c8",
@@ -40,6 +42,7 @@
       "permissions": [
         "net.fetch"
       ],
+      "luna": [],
       "files": {
         "addon.json": "b16b363150bbe9dc1ba3b6fc7a98073f8ed11c11996507691d33ce75a67b00c9",
         "phone.js": "7f64427c617e10baac60e6c711b7a86ad74929f39409f2b603f7526fb85f3a3d",
@@ -57,6 +60,10 @@
       "permissions": [
         "net.fetch",
         "luna"
+      ],
+      "luna": [
+        "luna://com.webos.applicationManager/getAppInfo",
+        "luna://com.webos.applicationManager/launch"
       ],
       "files": {
         "addon.json": "46c4c4f785042586eab9bf04b46c9588a243008eb9a7f9c474af364c88b2f176",
@@ -80,6 +87,7 @@
       "permissions": [
         "net.fetch"
       ],
+      "luna": [],
       "files": {
         "addon.json": "d50da41d5dbc0548a22338ff21e1e7d22791173a86b146682308dc97ff568b63",
         "photos.js": "81051e7844fc059e22cb12b4e9c1df339fff4ade4640ffcff46e3987a11ad91b",
@@ -97,6 +105,9 @@
       "permissions": [
         "net.fetch",
         "luna"
+      ],
+      "luna": [
+        "luna://com.webos.applicationManager/launch"
       ],
       "files": {
         "addon.json": "59870d7b02a11fd24e91bd5673a558c72c533472971e32241effe689b41615be",
@@ -119,6 +130,7 @@
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [],
+      "luna": [],
       "files": {
         "addon.json": "02cb4add590dfa7ee9d950123d59752a44cf7e1c1613cf1b36e9f5c891a133b0",
         "index.html": "cbc683b2bf5aab30023e05284f12a1652a422b7c7dbec2efe4bbcb375756aca6",
@@ -137,9 +149,14 @@
         "luna",
         "key.guide"
       ],
+      "luna": [
+        "luna://com.webos.service.iepg/getChannelList",
+        "luna://com.webos.epgdb/find",
+        "luna://com.webos.applicationManager/launch"
+      ],
       "files": {
         "addon.json": "5b3ff2aeaa688b0f9d9ce89c69d7738f77852d9d343e9fdce90418d7e1419718",
-        "page/index.html": "d6453c3c9c4cd720db613efe9bd73cd05a017b4f13cd7fef457341e96fc05557",
+        "page/index.html": "43171bd774e7001c47189369fd6d6a75845855e79056e3055f96f809c32c02e5",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
@@ -156,6 +173,7 @@
       "permissions": [
         "net.fetch"
       ],
+      "luna": [],
       "files": {
         "addon.json": "29c29a4faaac4a9434080f1405a9e6f187341f9253ca623df6f7ed185743e616",
         "phone.js": "d9f96764f349e821469a600bb1bf338057e4af1230f5367d939b05ede7d60a5e",
@@ -173,6 +191,7 @@
       "permissions": [
         "net.fetch"
       ],
+      "luna": [],
       "files": {
         "addon.json": "f1423c5588a116d0014f7ce48e1da86b45a7a224821aecf7c756f01cb16c4220",
         "cards/forecast/card.css": "d10d6c560e1c7232c283dfe361e4e18699b38008394c2e29ed8ab0f57d474845",

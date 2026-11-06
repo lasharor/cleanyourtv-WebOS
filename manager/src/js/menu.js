@@ -437,6 +437,64 @@ function build() {
     });
     return;
   }
+  if (view === 'addonrepos') {
+    ad.repos.forEach(function (x) {
+      rows.push({
+        label: x.name,
+        sub: x.url + (x.official ? ' · the project’s own' : ''),
+        fn: function () {
+          ad.repoSel = x.name;
+          push('addonrepo');
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Add from your phone', sub: 'user/repo, or the address of a folder with an index.json', fn: openRepoDialog });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'addonrepo') {
+    var rp = repoSel() || {};
+    rows.push({ label: rp.name || '', sub: rp.url || '', fn: function () {} });
+    if (rp.official)
+      rows.push({ label: 'The project’s own repository always stays', sub: 'it cannot be removed', dim: true, fn: function () {} });
+    else
+      rows.push({
+        label: 'Remove this repository',
+        sub: 'what you installed from it stays installed',
+        fn: function () {
+          addonDo('/api/addons/repos', { remove: rp.name }, rp.name + ' removed');
+        },
+      });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* before anything from another repository: what it means, then Cancel (the default) or the deliberate button that says what it does */
+  if (view === 'confirm-addon' || view === 'confirm-repo') {
+    var pe = ad.pend || {},
+      isRepo = view === 'confirm-repo',
+      warn = trustAbout(isRepo ? [] : pe.items),
+      wl = 'Code from outside the project';
+    rows.push({ label: 'Cancel', about: warn, ablabel: wl, fn: pop });
+    rows.push({
+      label: isRepo
+        ? 'Add a repository, from my phone'
+        : pe.all
+          ? 'Update code from other repositories'
+          : 'Install code from ' + (pe.repo || ''),
+      sub: isRepo ? '' : pe.all ? '' : pe.name,
+      about: warn,
+      ablabel: wl,
+      fn: function () {
+        pop();
+        if (isRepo) openRepoPair();
+        else if (pe.all) addonDo('/api/addons/update', { confirm: true }, 'Add-ons updated');
+        else addonDo('/api/addons/install', { id: pe.id, repo: pe.repo, confirm: true }, pe.name + ' installed');
+      },
+    });
+    return;
+  }
   if (view === 'addon') {
     var a1 = addonSel() || {};
     rows.push({
@@ -1388,6 +1446,26 @@ function build() {
   }
 }
 
+/* an entry of a service older than the repositories has no `official`: everything it lists is the project's */
+function isOfficial(e) {
+  return e.official !== false;
+}
+/* the warning before code from another repository is installed or a repository is added, with what each add-on may do */
+function trustAbout(items) {
+  var out = [
+    tr('The code of an add-on runs as root on the TV and can read and change anything on it and on your network.'),
+    tr('The checksum only shows that a file is the one the repository published. It does not show that its author is trustworthy.'),
+    tr('Only continue for people and projects you trust. The CleanYourTV project has not reviewed these add-ons.'),
+    tr('Every repository is contacted whenever the add-ons list or a picture is opened, so its operator sees the TV’s address.'),
+  ];
+  (items || []).forEach(function (x) {
+    var can = (x.can || []).map(function (c) {
+      return tr(c);
+    });
+    out.push(x.name + ' ' + x.version + ' (' + x.repo + ') ' + tr('may') + ': ' + can.join(', ') + '.');
+  });
+  return out.join('\n\n');
+}
 function addonRows() {
   if (ad.paused)
     rows.push({
@@ -1419,13 +1497,44 @@ function addonRows() {
     rows.push({
       label: e.name,
       pv: e.preview ? e.id : '',
+      pvu: e.preview && !isOfficial(e) ? '/api/addons/preview/' + e.id + '?repo=' + e.repo : '',
       about: e.about || e.description,
-      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version,
+      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version + (isOfficial(e) ? '' : ' \u00B7 from ' + e.repo),
       fn: function () {
-        addonDo('/api/addons/install', { id: e.id }, e.name + ' installed');
+        if (isOfficial(e)) return addonDo('/api/addons/install', { id: e.id, repo: e.repo }, e.name + ' installed');
+        ad.pend = { id: e.id, repo: e.repo, name: e.name, items: [e] };
+        push('confirm-addon');
       },
     });
   });
+  if (
+    ad.reposOk &&
+    ad.catalog.some(function (e) {
+      return e.update;
+    })
+  )
+    rows.push({
+      label: 'Update all add-ons',
+      sub: 'each from the repository it was installed from',
+      fn: function () {
+        var other = ad.catalog.filter(function (e) {
+          return e.update && !isOfficial(e);
+        });
+        if (!other.length) return addonDo('/api/addons/update', {}, 'Add-ons updated');
+        ad.pend = { all: true, items: other };
+        push('confirm-addon');
+      },
+    });
+  if (ad.reposOk) {
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Repositories',
+      sub: ad.repos.length + (ad.repos.length === 1 ? ' source of add-ons' : ' sources of add-ons') + ' \u00B7 add your own',
+      fn: function () {
+        push('addonrepos');
+      },
+    });
+  }
   if (bookPages().length) {
     rows.push({ sep: true });
     rows.push({
