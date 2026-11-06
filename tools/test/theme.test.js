@@ -161,6 +161,14 @@ run(async () => {
     'slotted'
   );
   const rs = themeMod.resolve(slotted).slots;
+  const horizon = JSON.parse(fs.readFileSync(path.join(tdir, 'horizon', 'theme.json'), 'utf8'));
+  const rightColumn = themeMod.resolve(themeMod.normalize(horizon, 'horizon')).slots.filter(slot => slot.stack === 'right-column');
+  ok(
+    rightColumn.map(slot => slot.id).join(',') === 'side,side-middle,side-bottom' &&
+      rightColumn.every(slot => slot.name && slot.w === '520px') &&
+      rightColumn.map(slot => slot.t).join(',') === '150px,375px,600px',
+    'Horizon keeps the existing right slot and adds two named positions in its stack'
+  );
   ok(
     rs.length === 3 &&
       rs[0].l === '102px' &&

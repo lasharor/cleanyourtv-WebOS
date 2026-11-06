@@ -130,11 +130,15 @@ function haIds() {
     if (c.type === 'ha-entities')
       String(c.entities || '')
         .split(/[\s,]+/)
-        .forEach(function (x) {
-          if (x) ids.push(x);
+        .filter(function (id) {
+          return id;
+        })
+        .slice(0, 12)
+        .forEach(function (id) {
+          if (ids.indexOf(id) < 0) ids.push(id);
         });
   }
-  return ids.slice(0, 20);
+  return ids.slice(0, 96);
 }
 /* asks the service for the states the cards show, when they are older than 30 s or the list changed */
 function haPoll() {
@@ -906,11 +910,54 @@ function drawCards() {
     st.setProperty('--ch', sl.h);
     el._card = c;
     el._slot = sl.id;
+    el._stack = sl.stack;
     box.appendChild(el);
   });
   tickCards();
   /* glass cards: the scene behind them (scenes.js) */
   if (window.SCENES) SCENES.glassCards();
+}
+/* Keep cards at their natural size when they fit. The last declared slot sets the bottom of each stack. */
+function fitCardStacks(els, slots) {
+  var stacks = Object.create(null);
+  slots.forEach(function (slot) {
+    if (!slot.stack) return;
+    var stack = stacks[slot.stack] || (stacks[slot.stack] = { slots: {}, bottom: 0, cards: [] });
+    stack.slots[slot.id] = parseFloat(slot.t);
+    stack.bottom = Math.max(stack.bottom, parseFloat(slot.t) + parseFloat(slot.h));
+  });
+  Array.prototype.forEach.call(els, function (el) {
+    var stack = stacks[el._stack];
+    if (stack && el.style.display !== 'none') stack.cards.push(el);
+  });
+  Object.keys(stacks).forEach(function (id) {
+    var stack = stacks[id],
+      cards = stack.cards,
+      gap = 16;
+    if (!cards.length) return;
+    cards.sort(function (a, b) {
+      return stack.slots[a._slot] - stack.slots[b._slot];
+    });
+    var top = stack.slots[cards[0]._slot];
+    cards.forEach(function (el) {
+      if (el._card.type === 'ha-entities') el.style.maxHeight = 'none';
+    });
+    var heights = cards.map(function (el) {
+        return el.offsetHeight;
+      }),
+      total = heights.reduce(function (sum, height) {
+        return sum + height;
+      }, 0),
+      scale = Math.max(0, Math.min(1, (stack.bottom - top - gap * (cards.length - 1)) / (total || 1)));
+    cards.forEach(function (el, index) {
+      var right = el.getAttribute('data-align') === 'right';
+      if (document.documentElement.dir === 'rtl') right = !right;
+      el.style.top = top + 'px';
+      el.style.transformOrigin = right ? 'top right' : 'top left';
+      el.style.transform = scale < 1 ? 'scale(' + scale + ')' : '';
+      top += heights[index] * scale + gap;
+    });
+  });
 }
 /* the clock tick: cards that change with the time redraw themselves */
 function tickCards() {
@@ -921,6 +968,7 @@ function tickCards() {
   for (pass = 0; pass < 2; pass++)
     for (i = 0; i < els.length; i++)
       if (/^(ha-)?weather$/.test(els[i]._card.type) === (pass === 0)) cardType(els[i]._card.type).draw(els[i], els[i]._card);
+  fitCardStacks(els, TH.slots || []);
   haPoll();
 }
 /* the cards that OK can do something with: they join the top row (with the buttons) for the remote */

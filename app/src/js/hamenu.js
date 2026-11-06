@@ -44,8 +44,9 @@ var HAM_DOMAINS = [
 ];
 var hamReady = null; /* Home Assistant set up on the TV? null until asked */
 var hamNames = {}; /* entity id -> its name, from the lists already loaded */
+/* Horizon supplies Right column (Top), Right column (Middle) and Right column (Bottom) in its theme data. */
 function hamPlace(sl) {
-  return HAM_PLACES[sl.id] ? t(HAM_PLACES[sl.id]) : sl.id;
+  return t(sl.name || HAM_PLACES[sl.id] || sl.id);
 }
 function hamKind(type) {
   for (var i = 0; i < HAM_KINDS.length; i++) if (HAM_KINDS[i][0] === type) return t(HAM_KINDS[i][1]);
