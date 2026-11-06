@@ -27,6 +27,8 @@ const D = P.D,
   TMP = V + '/tmp';
 const SERVICE_DIR = P.SERVICE_DIR,
   ENV = P.ENV;
+// Where LG's voice service puts the remote's audio when its reply does not say: /tmp on the G2; the 65UR91 (webOS 25 on a 2023 board) answers with
+// /var/voiceinput/voiceinput_remote1.soc, so the path in the reply always wins.
 const SOCKET = '/tmp/voiceinput_remote1.soc',
   RATE = 16000;
 
@@ -264,14 +266,29 @@ const WINDOW = (RATE / 10) * 2,
   SPEECH_LEVEL = 300,
   QUIET_AFTER = 12,
   WAIT_WINDOWS = 70,
-  MAX_WINDOWS = 150;
+  MAX_WINDOWS = 150,
+  REFUSED_FOR = 8000, // LG's service refuses the stream until the mic button is held: it is asked again for this long
+  CAPTURE_LIMIT = 25000,
+  NO_REPLY = 1500;
+const HOLD = "Hold the remote's mic button while you speak";
+
+// One reply of the stream subscription (luna-send -i prints one JSON object per line): where the audio is, or that it was refused.
+function streamReply(line) {
+  let o;
+  try {
+    o = JSON.parse(line);
+  } catch (_) {
+    return null;
+  }
+  if (!o || typeof o !== 'object') return null;
+  if (o.returnValue === false) return { error: ((o.errorCode || '') + ' ' + (o.errorText || '')).trim() || 'refused' };
+  return { socket: typeof o.socketPath === 'string' ? o.socketPath : '' };
+}
+
 function capture() {
+  const spawn = ctx.spawn || cp.spawn,
+    connectTo = ctx.connect || net.connect;
   return new Promise((resolve, reject) => {
-    const stream = cp.spawn(
-      'luna-send',
-      ['-i', '-f', 'luna://com.webos.service.voiceinput/startStreaming', '{"deviceType":"remote","keyType":"thinQtv","subscribe":true}'],
-      { env: ENV, stdio: [luna.keepStdinOpen() ? 'pipe' : 'ignore', 'ignore', 'ignore'] }
-    );
     const chunks = [];
     let buf = Buffer.alloc(0),
       windows = 0,
@@ -279,42 +296,93 @@ function capture() {
       quiet = 0,
       done = false,
       sock = null,
-      tries = 0;
+      tries = 0,
+      stream = null,
+      socket = '',
+      since = 0,
+      again = null;
+    const stop = () => {
+      try {
+        stream && stream.kill();
+      } catch (_) {}
+      stream = null;
+    };
     const finish = err => {
       if (done) return;
       done = true;
       clearInterval(retry);
+      clearTimeout(again);
+      clearTimeout(limit);
+      clearTimeout(fallback);
       try {
         sock && sock.destroy();
       } catch (_) {}
-      try {
-        stream.kill();
-      } catch (_) {}
+      stop();
       if (err) return reject(err);
       resolve(started < 0 ? null : Buffer.concat(chunks).slice(Math.max(0, (started - 3) * WINDOW))); // a little lead-in before the first word
     };
-    stream.on('error', finish);
     const t0 = Date.now();
+    // the reply says where the audio is; a refusal (errorCode 10000 while the mic button is not held) is asked again for a while
+    const open = () => {
+      const p = spawn(
+        'luna-send',
+        ['-i', 'luna://com.webos.service.voiceinput/startStreaming', '{"deviceType":"remote","keyType":"thinQtv","subscribe":true}'],
+        { env: ENV, stdio: [luna.keepStdinOpen() ? 'pipe' : 'ignore', 'pipe', 'ignore'] }
+      );
+      stream = p;
+      p.on('error', finish);
+      let out = '';
+      p.stdout.on('data', d => {
+        out += d;
+        let i;
+        while ((i = out.indexOf('\n')) >= 0) {
+          const r = streamReply(out.slice(0, i));
+          out = out.slice(i + 1);
+          if (!r || done || p !== stream) continue;
+          if (r.error) {
+            if (socket) continue; // the stream is open already
+            refusedOnce = true;
+            stop();
+            if (Date.now() - t0 < (ctx.refusedFor || REFUSED_FOR)) again = setTimeout(open, 700);
+            else finish(new Error(HOLD));
+            return;
+          }
+          if (!socket) {
+            socket = r.socket || SOCKET;
+            since = Date.now();
+          }
+        }
+      });
+    };
+    const limit = setTimeout(() => finish(), CAPTURE_LIMIT);
+    // no reply that can be read (another luna-send, another firmware): the old fixed place, as before the reply was read
+    let refusedOnce = false;
+    const fallback = setTimeout(() => {
+      if (!socket && !refusedOnce && !done) {
+        socket = SOCKET;
+        since = Date.now();
+      }
+    }, NO_REPLY);
     let got = false;
     const connect = () => {
       tries++;
-      const s = net.connect(SOCKET);
+      const s = connectTo(socket);
       s.on('connect', () => {
         sock = s;
       });
       s.on('error', () => {
-        if (tries > 20) finish(new Error('the microphone stream did not open'));
+        if (tries > 20) finish(new Error('the microphone stream did not open (' + socket + ')'));
       });
       // the socket file outlives a session: a connection that is closed again before any audio came means the stream was not started yet
       s.on('close', () => {
-        if (!got && !done && Date.now() - t0 < 10000) {
+        if (!got && !done && Date.now() - since < 10000) {
           sock = null;
           try {
             s.destroy();
           } catch (_) {}
           return;
         }
-        finish();
+        finish(got ? null : new Error('no audio came from the microphone stream (' + socket + ')'));
       });
       s.on('data', d => {
         got = true;
@@ -335,8 +403,9 @@ function capture() {
       });
     };
     const retry = setInterval(() => {
-      if (!sock && !done) connect();
+      if (socket && !sock && !done) connect();
     }, 600);
+    open();
   });
 }
 
@@ -702,7 +771,7 @@ function create(c) {
     setInterval(syncLg, 20000);
     setTimeout(syncLg, 5000);
   };
-  return { name: 'voice', prefix: '/api/voice/', handle, start, status, installed, listen, syncLg };
+  return { name: 'voice', prefix: '/api/voice/', handle, start, status, installed, listen, syncLg, capture };
 }
 async function handle(req, res, u, body) {
   const json = (o, code) => {
@@ -775,4 +844,4 @@ async function handle(req, res, u, body) {
   res.writeHead(404);
   res.end();
 }
-module.exports = { create };
+module.exports = { create, streamReply };
