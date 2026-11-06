@@ -79,6 +79,13 @@
    "preview": "midnight/preview.jpg"
   },
   {
+   "id": "nord",
+   "name": "Nord",
+   "author": "gasparegas",
+   "description": "The Nord palette: dark polar nights, cool frost blue highlights and crisp white text.",
+   "preview": "nord/preview.jpg"
+  },
+  {
    "id": "oled",
    "name": "OLED black",
    "author": "CleanYourTV",
