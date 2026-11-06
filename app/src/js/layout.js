@@ -363,7 +363,7 @@ setInterval(function () {
   if (appsStamp === null || (window.LIVE && LIVE.on) || moving) return;
   api('/api/apps/stamp').then(
     function (x) {
-      if (x) setCardsIdleMinutes(x.cardsIdleMinutes);
+      if (x && typeof x.cardsIdleMinutes === 'number') setCardsIdleMinutes(x.cardsIdleMinutes);
       if (x && typeof x.stamp === 'number' && x.stamp !== appsStamp) {
         appsStamp = x.stamp;
         load();

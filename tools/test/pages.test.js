@@ -1,21 +1,40 @@
 // The pages that run on the TV (launcher, manager, picker, notification card): nothing newer than Chromium 68 (webOS 5), and fixes that
 // must not come back.
 const fs = require('fs'),
-  path = require('path');
+  path = require('path'),
+  vm = require('vm');
 const { root, ok, run } = require('./lib');
-
-const vm = require('vm');
 
 run(async () => {
   const cardsSource = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'cards.js'), 'utf8');
-  let dimmed = false, timer, delay, keydown;
+  let dimmed = false,
+    timer,
+    delay,
+    keydown;
   const idleContext = {
     document: {
-      body: { classList: { add: () => { dimmed = true; }, remove: () => { dimmed = false; } } },
-      addEventListener: (event, fn) => { if (event === 'keydown') keydown = fn; },
+      body: {
+        classList: {
+          add: () => {
+            dimmed = true;
+          },
+          remove: () => {
+            dimmed = false;
+          },
+        },
+      },
+      addEventListener: (event, fn) => {
+        if (event === 'keydown') keydown = fn;
+      },
     },
-    setTimeout: (fn, ms) => { timer = fn; delay = ms; return 1; },
-    clearTimeout: () => { timer = null; },
+    setTimeout: (fn, ms) => {
+      timer = fn;
+      delay = ms;
+      return 1;
+    },
+    clearTimeout: () => {
+      timer = null;
+    },
   };
   vm.runInNewContext(cardsSource.slice(cardsSource.indexOf('var cardsIdleMinutes'), cardsSource.indexOf('/* OLED care:')), idleContext);
   for (const minutes of [3, 5, 10]) {
@@ -30,6 +49,26 @@ run(async () => {
   ok(!dimmed && timer, 'a key press wakes cards and restarts the timer');
   idleContext.setCardsIdleMinutes(0);
   ok(!dimmed && !timer, 'switching off card dimming cancels the timer');
+  const stackContext = { document: { documentElement: { dir: 'ltr' } } };
+  vm.createContext(stackContext);
+  vm.runInContext(
+    cardsSource.slice(cardsSource.indexOf('function fitCardStacks'), cardsSource.indexOf('/* the clock tick: cards')),
+    stackContext
+  );
+  const stackSlots = [150, 375, 600].map((top, index) => ({ id: 's' + index, stack: 'side', t: top + 'px', h: '209px' }));
+  const stackCards = [392, 114, 114].map((height, index) => ({
+    _slot: 's' + index,
+    _stack: 'side',
+    _card: { type: 'ha-entities' },
+    offsetHeight: height,
+    style: {},
+    getAttribute: () => 'right',
+  }));
+  stackContext.fitCardStacks(stackCards, stackSlots);
+  ok(
+    stackCards.map(card => card.style.top).join(',') === '150px,558px,688px' && stackCards.every(card => card.style.transform === ''),
+    'a tall card above two short cards keeps its size when the whole stack fits'
+  );
   const pages = ['app', 'manager/app', 'picker/app', 'notify/app', 'helper/addons-bundled/iptv/page', 'addons/catalog/tuner/page'].map(d =>
     path.join(root, d, 'index.html')
   );

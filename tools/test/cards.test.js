@@ -81,6 +81,16 @@ run(async () => {
       p.j.types.some(t => t.type === 'template' && t.fields.some(f => f.key === 'text')),
     'the state lists the slots (named in the language), the saved cards and the card types with their options'
   );
+  const background = p.j.types.find(t => t.type === 'ha-entities').fields.find(f => f.key === 'background');
+  ok(
+    background.kind === 'choice' && background.choices.map(choice => choice[0]).join(',') === ',dark',
+    'the phone offers the theme default and dark backgrounds for an HA entity list'
+  );
+  for (const choice of ['dark', '']) {
+    await phone('POST', '/api/save', { cards: { side: { type: 'ha-entities', entities: 'sensor.test', background: choice } } }, code);
+    p = await phone('GET', '/api/state', undefined, code);
+    ok(p.j.cards.side.background === choice, 'the phone can save dark and return to the theme background');
+  }
   p = await phone(
     'POST',
     '/api/save',
@@ -131,8 +141,12 @@ run(async () => {
       return rs.end(
         JSON.stringify([
           { entity_id: 'light.living', state: 'on', attributes: { friendly_name: 'Living room' } },
-          { entity_id: 'sensor.temp', state: '8.4', attributes: { friendly_name: 'Outside', unit_of_measurement: '°C' } },
-          { entity_id: 'lock.door', state: 'locked', attributes: {} },
+          {
+            entity_id: 'sensor.temp',
+            state: '8.4',
+            attributes: { friendly_name: 'Outside', unit_of_measurement: '°C', icon: 'mdi:thermometer' },
+          },
+          { entity_id: 'lock.door', state: 'locked', attributes: { icon: 'mdi:<invalid>' } },
           {
             entity_id: 'weather.home',
             state: 'rainy',
@@ -194,6 +208,9 @@ run(async () => {
       /Bearer tok/.test(calls[0]),
     'the states come from one request with the Voice token; a missing entity is unavailable and a bad id is left out'
   );
+  const iconReply = await call(cards, '/api/cards/ha', 'POST', { ids: ['light.living', 'sensor.temp', 'lock.door'] });
+  const icons = iconReply.j.states.map(entity => entity.icon);
+  ok(icons[0] === undefined && icons[1] === 'mdi:thermometer' && icons[2] === undefined, 'only valid MDI names are forwarded');
   await call(cards, '/api/cards/ha', 'POST', { ids: ['sensor.temp'] });
   ok(calls.filter(c => /states/.test(c)).length === 1, 'the states are kept for a while, however many cards ask');
   r = await call(cards, '/api/cards/ha/toggle', 'POST', { id: 'light.living' });

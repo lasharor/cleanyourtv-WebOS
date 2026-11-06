@@ -1,0 +1,26 @@
+{
+ "name": "Nord",
+ "author": "gasparegas",
+ "description": "The Nord palette: dark polar nights, cool frost blue highlights and crisp white text.",
+ "colors": {
+  "night": "#2e3440",
+  "panel": "#3b4252",
+  "ink": "#eceff4",
+  "accent": "#88c0d0",
+  "pill": "#4c566a"
+ },
+ "surface": {
+  "pillAlpha": 0.5,
+  "pillRing": 0.15,
+  "rowRadius": 24
+ },
+ "dock": {
+  "radius": 32,
+  "tileFrost": 0.18,
+  "tileFrostColor": "#4c566a"
+ },
+ "effects": {
+  "glowColor": "accent",
+  "glow": 0.55
+ }
+}

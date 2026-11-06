@@ -365,6 +365,17 @@ function slots(list) {
       h: num(o.h, 30, 1080, 120),
       card: typeof o.card === 'string' && /^[a-z][a-z0-9-]{0,30}$/.test(o.card) ? o.card : '',
       keep: o.grid === 'keep',
+      name:
+        typeof o.name === 'string'
+          ? o.name
+              .replace(/[<>\x00-\x1f]/g, '')
+              .trim()
+              .slice(0, 60)
+          : '',
+      stack:
+        o.anchor === 'top' && (o.align === 'left' || o.align === 'right') && typeof o.stack === 'string' && SLOT_ID.test(o.stack)
+          ? o.stack
+          : '',
     });
   }
   return out;
@@ -579,7 +590,7 @@ function resolve(t, accent) {
   if (v.slots && v.slots.length)
     out.slots = v.slots.map(sl => {
       const o = place(sl.anchor, sl.align, sl.x, sl.y);
-      return {
+      const slot = {
         id: sl.id,
         align: sl.align,
         l: o.l,
@@ -592,6 +603,7 @@ function resolve(t, accent) {
         card: sl.card,
         keep: sl.keep,
       };
+      return Object.assign(slot, sl.name ? { name: sl.name } : {}, sl.stack ? { stack: sl.stack } : {});
     });
   // only a theme with a typeface has this key, so the replies for the other themes stay as they were
   // only a theme that lines the name up with the dock carries this; the dock's own width at a given app count is worked out on the page

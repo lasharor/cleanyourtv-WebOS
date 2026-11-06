@@ -451,6 +451,9 @@
  "Restarts the TV; LG’s own Home is Home after it starts. You can switch back here.": "Restarts the TV; LG’s own Home is Home after it starts. You can switch back here.",
  "Restarts the TV; this launcher is Home after it starts.": "Restarts the TV; this launcher is Home after it starts.",
  "Right column": "Right column",
+ "Right column (Bottom)": "Right column (Bottom)",
+ "Right column (Middle)": "Right column (Middle)",
+ "Right column (Top)": "Right column (Top)",
  "Running apps": "Running apps",
  "Save": "Save",
  "Save albums and sync": "Save albums and sync",
@@ -607,6 +610,8 @@
  "The weather (from a weather card)": "The weather (from a weather card)",
  "Theme": "Theme",
  "Theme default": "Theme default",
+ "Card background": "Card background",
+ "Dark background": "Dark background",
  "Theme options": "Theme options",
  "Then paste your M3U playlist address. This page closes by itself.": "Then paste your M3U playlist address. This page closes by itself.",
  "there are %d uploads already: remove some first": "there are %d uploads already: remove some first",
@@ -1050,5 +1055,9 @@
  "%s of daylight": "%s of daylight",
  "Photo: %s": "Photo: %s",
  "Voice is not available on this TV": "Voice is not available on this TV",
- "its kernel is 32-bit": "its kernel is 32-bit"
+ "its kernel is 32-bit": "its kernel is 32-bit",
+ "Dim inactive cards": "Dim inactive cards",
+ "3 minutes": "3 minutes",
+ "5 minutes": "5 minutes",
+ "10 minutes": "10 minutes"
 }

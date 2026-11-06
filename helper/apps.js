@@ -485,7 +485,7 @@ function create(ctx) {
     if (u === '/api/apps/stamp') {
       const reply = { stamp: await stampNow() };
       const options = config.options();
-      if (options.cardsIdleDim !== false) reply.cardsIdleMinutes = options.cardsIdleMinutes || 3;
+      reply.cardsIdleMinutes = options.cardsIdleDim === false ? 0 : options.cardsIdleMinutes || 3;
       return web.json(res, reply);
     }
     if (u === '/api/inputs') return web.json(res, await inputsWithTuner());

@@ -35,10 +35,11 @@ folder of the GitHub repository (the `main` branch):
 | Large print | Eight columns of big tiles and larger text. |
 | Still | No animation and a quiet glow. |
 | Bloom | A flower wallpaper with the dock in a glass panel at the bottom. Down moves the dock up and the apps appear below it, centred. It has slots for cards. |
-| Horizon | A row of seven square apps along the bottom of a dusk landscape, the clock on the left and the buttons on the right at the top. Down moves the row up and shows all apps below it. It has slots for cards. |
+| Horizon | A row of seven square apps along the bottom of a dusk landscape, the clock on the left and the buttons on the right at the top. Down moves the row up and shows all apps below it. The right column has three card positions, each configurable from the Cards phone page. |
 | Pixel | Pixel art: a blocky typeface, square tiles and buttons, a yellow focus box and a sunset over a lake drawn in big pixels. Moves without animation, like an old console. |
 | Couch | After [couch-tv](https://github.com/Seagey/couch-tv): five landscapes take turns every 20 seconds behind a large glass clock, the scenery in front of the digits; the date above the clock, round buttons top right, the apps on glass at the bottom; cards on frosted glass. Uses `clock.style`, `effects.scenes` and `cards.style`. |
 | Lock Screen | A phone-style lock screen: a greeting and a big clock top left, and a small, translucent dock low in the corner over a calm blue landscape, so the picture fills the screen. Down moves the dock up and shows all apps below it. Turn Wallpapers on for your own photos. It has slots for cards (Customise > Cards): the greeting is one, and there is a place under the clock. |
+| Moon | A moonlit autumn landscape with a four-app glass dock, warm focus, app-colour rails and places for cards around the clock. |
 
 ![Classic, Compact, Large print and Midnight](screenshots/themes-1.jpg)
 
@@ -320,6 +321,8 @@ list in `theme.json`:
 | `id` | lower-case letters, digits and `-` | The name of the place. Use `greeting` (above the clock), `under-clock` (under the clock), `clock-side` (beside the clock), `side` (a column on the right) or `row` (above the dock) where they fit: the card a user chose stays when they switch to another theme with the same slot, and these five have a name in every language. |
 | `anchor`, `align`, `x`, `y` | as for the clock | Where the slot's box is, counted from that side of the 1920 x 1080 screen; `x` is not used when centred. |
 | `w`, `h` | px | The size of the box. |
+| `name` | optional text | A label for the position in the Cards menus and phone page. |
+| `stack` | optional slot-style identifier | Top-anchored slots with the same stack ID form a column. Give them the same side, offset and width. Visible cards are laid out with equal gaps, using the bottom edge of the last slot as the column limit. |
 | `card` | a card type, for example `greeting` | What the slot shows until the user chooses something else. Without it the slot starts empty. |
 | `grid` | `keep` or `hide` | `keep` leaves the card on screen while the app grid is open; by default it fades out then. |
 
