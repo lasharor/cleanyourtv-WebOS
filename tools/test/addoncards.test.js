@@ -25,8 +25,25 @@ run(async () => {
     actions: [
       { name: 'prev', label: 'Previous' },
       { name: 'toggle', label: 'Play or pause' },
+      { name: 'open', label: 'Open' },
+      { name: 'settings', label: 'Settings' },
     ],
-    options: [{ key: 'title', kind: 'text', label: 'Title', default: 'Hi' }],
+    drawer: { page: 'drawer.html', action: 'open', label: 'Demo drawer' },
+    settings: { action: 'settings', title: 'Demo settings' },
+    options: [
+      { key: 'title', kind: 'text', label: 'Title', default: 'Hi' },
+      { key: 'place', kind: 'place', label: 'City' },
+      {
+        key: 'unit',
+        kind: 'choice',
+        label: 'Unit',
+        default: 'c',
+        choices: [
+          ['c', 'Celsius'],
+          ['f', 'Fahrenheit'],
+        ],
+      },
+    ],
   };
   const man = {
     id: 'demo',
@@ -38,7 +55,7 @@ run(async () => {
     cards: [card],
   };
   const m0 = addons.check(man, '1.6.15');
-  ok(m0.manifest && m0.manifest.cards[0].poll === 5 && m0.manifest.cards[0].actions.length === 2, 'a manifest with a card is accepted');
+  ok(m0.manifest && m0.manifest.cards[0].poll === 5 && m0.manifest.cards[0].actions.length === 4, 'a manifest with a card is accepted');
   const bad = (patch, re, name) => {
     const r = addons.check(Object.assign({}, man, { cards: [Object.assign({}, card, patch)] }), '1.6.15');
     ok(r.error && re.test(r.error), name + ': ' + (r.error || 'accepted'));
@@ -50,6 +67,43 @@ run(async () => {
   bad({ actions: [{ name: 'Bad Name' }] }, /action has a name/, 'an action name with capitals or spaces is refused');
   bad({ actions: [{ name: 'a' }, { name: 'a' }] }, /two actions/, 'two actions with one name are refused');
   bad({ actions: new Array(9).fill(0).map((_, i) => ({ name: 'a' + i })) }, /at most 8/, 'more than 8 actions are refused');
+  bad({ drawer: 'x' }, /drawer is an object/, 'a drawer that is not an object is refused');
+  bad({ drawer: { page: 'card.html', action: 'prev' } }, /not the card page/, 'a drawer page equal to the card page is refused');
+  bad({ drawer: { page: '../x.html', action: 'prev' } }, /\.html file/, 'an unsafe drawer page is refused');
+  bad({ drawer: { page: 'drawer.txt', action: 'prev' } }, /\.html file/, 'a drawer page that is not html is refused');
+  bad({ drawer: { page: 'drawer.html', action: 'nope' } }, /drawer action must be one/, 'an undeclared drawer action is refused');
+  bad({ settings: 'x' }, /settings is an object/, 'settings that is not an object is refused');
+  bad({ settings: { action: 'nope' } }, /settings action must be one/, 'an undeclared settings action is refused');
+  bad({ settings: { action: 'prev' }, options: [] }, /settings needs options/, 'settings without options is refused');
+  bad(
+    { drawer: { page: 'drawer.html', action: 'prev' }, settings: { action: 'prev' } },
+    /different actions/,
+    'one action for both is refused'
+  );
+  const dm = addons.check(
+    Object.assign({}, man, {
+      cards: [
+        Object.assign({}, card, { drawer: { page: 'drawer.html', action: 'prev', label: 'Weather' }, settings: { action: 'toggle' } }),
+      ],
+    }),
+    '1.6.15'
+  );
+  ok(
+    dm.manifest &&
+      dm.manifest.cards[0].drawer.page === 'drawer.html' &&
+      dm.manifest.cards[0].settings.action === 'toggle' &&
+      dm.manifest.cards[0].settings.title === 'Demo card',
+    'a card can declare a drawer and settings'
+  );
+  const plain = addons.check(
+    Object.assign({}, man, { cards: [Object.assign({}, card, { drawer: undefined, settings: undefined })] }),
+    '1.6.15'
+  );
+  ok(plain.manifest.cards[0].drawer === null && plain.manifest.cards[0].settings === null, 'a card without them has null');
+  ok(
+    cc.clean(Object.assign({}, card, { drawer: { page: 'd.html', action: 'prev' } })).card.drawer === null,
+    'a downloaded card ignores a drawer'
+  );
   ok(addons.check(Object.assign({}, man, { cards: [card, card] }), '1.6.15').error, 'two cards with one id are refused');
   ok(addons.check(Object.assign({}, man, { cards: [1, 2, 3, 4, 5] }), '1.6.15').error, 'at most 4 cards');
   ok(addons.check(Object.assign({}, man, { cards: undefined }), '1.6.15').manifest.cards.length === 0, 'an add-on without cards has none');
@@ -78,6 +132,7 @@ run(async () => {
 exports.create = () => ({
   cards: {
     feed: (id, opt) => (opt.title === 'boom' ? Promise.reject(new Error('it broke')) : opt.title === 'big' ? { x: 'y'.repeat(200000) } : { id, title: opt.title, n: seen.length }),
+    places: (q, lang) => q === 'boom' ? Promise.reject(new Error('down')) : q === 'dirty' ? { places: [null, 'Rome', 7, { name: 'NaNville', lat: NaN, lon: 1 }, { name: 'Far', lat: 200, lon: 1 }, { name: 'Wide', lat: 1, lon: 181 }, { name: 'L'.repeat(90), area: 'A'.repeat(200), lat: 1.234, lon: 2.345 }, { name: '<b>Oslo</b>' + String.fromCharCode(7), area: '<i>No</i>', lat: 59.914, lon: 10.756 }, { name: 'Str', lat: '1', lon: 2 }] } : { places: q === 'many' ? Array.from({ length: 15 }, (_, i) => ({ name: 'P' + i, area: '', lat: 1, lon: 2 })) : [{ name: 'Paris', area: 'France', lat: 48.85, lon: 2.35, lang }] },
     action: (id, opt, name, arg) => { seen.push([id, opt.title, name, arg]); return { ok: true, seen: seen.length }; },
   },
   handle: (q, r) => r.end('{}'),
@@ -108,8 +163,129 @@ exports.create = () => ({
     cards.packs()['demo-card'].addon === 'demo' && cards.packs()['demo-card'].poll === 5,
     'the launcher is told it comes from an add-on, with its poll'
   );
+  ok(
+    ty.drawer &&
+      ty.drawer.label === 'Demo drawer' &&
+      ty.settings &&
+      ty.settings.title === 'Demo settings' &&
+      !JSON.stringify(r.j).includes('drawer.html'),
+    'the card status (translated state) tells the drawer label and the settings title, not the page: ' + JSON.stringify(ty)
+  );
+  // the launcher needs the page name to open the drawer: /api/apps carries it (a file in the card's folder), the card status does not
+  const appsApi = req('apps').create({
+    config,
+    luna: async () => ({ returnValue: true, apps: [] }),
+    version: '1.6.15',
+    feature: n => (n === 'cards' ? cards : null),
+  });
+  const ar = await call(appsApi, '/api/apps');
+  ok(
+    ar.j.cardPacks &&
+      ar.j.cardPacks['demo-card'] &&
+      ar.j.cardPacks['demo-card'].drawer.page === 'drawer.html' &&
+      ar.j.cardPacks['demo-card'].drawer.action === 'open',
+    '/api/apps tells the launcher the drawer page of the card: ' + JSON.stringify(ar.j.cardPacks)
+  );
+  // the launcher's settings panel and csUnset read exactly these fields of an option
+  const ops = ar.j.cardPacks['demo-card'].options;
+  ok(
+    ops.length > 0 &&
+      ops.every(
+        o =>
+          typeof o.key === 'string' && typeof o.kind === 'string' && 'def' in o && typeof o.label === 'string' && Array.isArray(o.choices)
+      ),
+    '/api/apps options carry key, kind, def, label and choices: ' + JSON.stringify(ops)
+  );
+  const uo = ops.filter(o => o.kind === 'choice')[0];
+  ok(!uo || (uo.choices.length > 0 && uo.def === uo.choices[0][0]), 'a choice has its raw [value, label] pairs and a default');
   r = await call(cards, '/api/cards/set', 'POST', { slot: 'side', type: 'x-demo-card' });
   ok(r.j.ok === true, 'it can be chosen for a place');
+
+  // ---- the city search of the settings panel: answered by the service of the card's add-on ----
+  r = await call(cards, '/api/cards/places', 'POST', { type: 'x-demo-card', q: ' Pa ' });
+  ok(
+    r.j.places.length === 1 && r.j.places[0].name === 'Paris' && r.j.places[0].lat === 48.85,
+    'the place search is answered by the add-on: ' + r.out
+  );
+  r = await call(cards, '/api/cards/places', 'POST', { type: 'x-nope', q: 'Pa' });
+  ok(r.j.places.length === 0 && !r.j.error, 'an unknown type has no search');
+  r = await call(cards, '/api/cards/places', 'POST', { type: 'x-demo-card', q: 'P' });
+  ok(r.j.places.length === 0, 'one letter is not searched');
+  r = await call(cards, '/api/cards/places', 'POST', { type: 'x-demo-card', q: 'many' });
+  ok(r.j.places.length === 10, 'at most ten places');
+  r = await call(cards, '/api/cards/places', 'POST', { type: 'x-demo-card', q: 'dirty' });
+  ok(
+    r.j.places.length === 2 &&
+      r.j.places[0].name.length === 40 &&
+      r.j.places[0].area.length === 80 &&
+      r.j.places[0].lat === 1.23 &&
+      r.j.places[0].lon === 2.35,
+    'a long name and area are cut, coordinates rounded; null, string, NaN, out-of-range and non-number entries are dropped: ' + r.out
+  );
+  ok(
+    r.j.places[1].name === 'bOslo/b' && r.j.places[1].area === 'iNo/i' && r.j.places[1].lat === 59.91,
+    'markup and control characters are taken out of a place: ' + r.out
+  );
+  r = await call(cards, '/api/cards/places', 'POST', { type: 'x-demo-card', q: 'boom' });
+  ok(r.j.error === 'City search is not available now.' && r.j.places.length === 0, 'a search that fails says so: ' + r.out);
+
+  // ---- the launcher's own settings for the card (Customise > Weather): the same options on every place that has the card ----
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { place: 'Oslo', lat: 59.91, lon: 10.75, unit: 'f' } });
+  ok(
+    r.j.ok === true && r.j.cards.side.place === 'Oslo' && r.j.cards.other.place === 'Oslo' && r.j.cards.other.unit === 'f',
+    'the city and the unit are set on every place with the card: ' + r.out
+  );
+  ok(r.j.cards.side.lat === 59.91 && r.j.cards.side.title === 'Hello', 'with its coordinates, and the other options stay');
+  ok(config.get().cards.side.unit === 'f', 'and they are saved in the settings');
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { unit: 'k' } });
+  ok(r.j.error && config.get().cards.side.unit === 'f', 'a value that is not a choice of the card is refused');
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { place: 'Oslo' } });
+  ok(r.j.error && /coordinates/.test(r.j.error), 'a city without coordinates is refused');
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { place: 'X', lat: 99, lon: 0 } });
+  ok(r.j.error, 'coordinates out of range are refused');
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { place: '<b>Rome</b>', lat: 41.9, lon: 12.5 } });
+  ok(
+    config.get().cards.side.place === 'bRome/b',
+    'angle brackets are stripped from a city name when it is set: ' + config.get().cards.side.place
+  );
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-nothing', set: { unit: 'f' } });
+  ok(r.j.error === 'unknown card type', 'an unknown card type is refused');
+  r = await call(cards, '/api/cards/options', 'POST', { type: 'x-demo-card', set: { secret: 'x' } });
+  ok(!r.j.error && config.get().cards.side.secret === undefined, 'an option the card does not declare is dropped');
+  // only a card of an add-on that declares settings can be changed from the launcher's panel
+  req('netcompat').mkdirp(path.join(tmp, 'cardpacks', 'dl-card'));
+  fs.writeFileSync(
+    path.join(tmp, 'cardpacks', 'dl-card', 'card.json'),
+    JSON.stringify({
+      id: 'dl-card',
+      name: 'Downloaded',
+      version: '1.0.0',
+      template: '# {{opt.who}}',
+      options: [{ key: 'who', kind: 'text', label: 'Who', default: 'W' }],
+    })
+  );
+  const config2 = memoryConfig({ cards: { a: { type: 'x-dl-card', who: 'W' }, b: { type: 'x-plain-card', who: 'W' } } });
+  const plainCard = Object.assign({}, card, {
+    id: 'plain-card',
+    drawer: null,
+    settings: null,
+    options: [{ key: 'who', kind: 'text', label: 'Who', default: 'W' }],
+  });
+  const cards2 = req('cards').create({
+    config: config2,
+    feature: n => (n === 'addons' ? { cardsOf: () => [{ addon: 'demo', dir: tmp, mod: null, card: plainCard }] } : null),
+    version: '1.6.15',
+  });
+  r = await call(cards2, '/api/cards/options', 'POST', { type: 'x-dl-card', set: { who: 'Hacked' } });
+  ok(
+    r.j.error === 'this card has no settings' && config2.get().cards.a.who === 'W',
+    'a downloaded card is not changed through the panel: ' + r.out
+  );
+  r = await call(cards2, '/api/cards/options', 'POST', { type: 'x-plain-card', set: { who: 'Hacked' } });
+  ok(
+    r.j.error === 'this card has no settings' && config2.get().cards.b.who === 'W',
+    'a card of an add-on without settings is not changed: ' + r.out
+  );
   r = await call(cards, '/api/cards/remove', 'POST', { id: 'demo-card' });
   ok(r.code === 400 && /add-on/.test(r.j.error), 'a card of an add-on is not removed as a downloaded one: ' + r.out);
 
@@ -160,6 +336,10 @@ exports.create = () => ({
   // ---- the actions ----
   r = await call(cards, '/api/cards/action', 'POST', { slot: 'side', name: 'toggle', arg: 'x'.repeat(300) });
   ok(r.j.ok === true && r.j.seen === 1, 'a declared action reaches the add-on');
+  r = await call(cards, '/api/cards/action', 'POST', { slot: 'side', name: 'open' });
+  ok(r.j.error === 'no such action', "the action of the drawer is the launcher's, not the add-on's");
+  r = await call(cards, '/api/cards/action', 'POST', { slot: 'side', name: 'settings' });
+  ok(r.j.error === 'no such action', 'so is the action of the settings');
   r = await call(cards, '/api/cards/action', 'POST', { slot: 'side', name: 'delete-everything' });
   ok(r.j.error === 'no such action', 'an action the card did not declare does not');
   r = await call(cards, '/api/cards/action', 'POST', { slot: 'nowhere', name: 'toggle' });

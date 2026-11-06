@@ -115,7 +115,7 @@ var INFO = {
   'Remove the playlist': 'Deletes the playlist address, the channel list, the guide and your favourites from the TV.',
   'Yes, remove the playlist': 'Deletes the playlist and everything stored for it on the TV. You can set it up again.',
   'Learn the Guide key':
-    'Records the Guide button\u2019s code. Afterwards it opens the Live TV channel guide over whatever is running (only while Live TV is on). Clear it to get LG\u2019s guide back.',
+    'Records the Guide button\u2019s code. Afterwards it opens the TV guide (LG tuner) when that add-on is on, else the Live TV channel guide, over whatever is running. It does nothing while both are off. Clear it to get LG\u2019s guide back.',
   'Input key shows':
     'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher\u2019s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.',
   'Learn the Home key': 'Optional. Records the Home button\u2019s code. The Home key keeps working exactly as before.',

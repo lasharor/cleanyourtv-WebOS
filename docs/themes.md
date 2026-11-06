@@ -259,6 +259,9 @@ in Waterline the clock sits on the water with a reflection under it. Each scene 
 [couch-tv](https://github.com/Seagey/couch-tv) (MIT; the scenes were generated for that project and are free to use, the typeface is
 Antonio under the SIL Open Font License, see `THIRD-PARTY.md`).
 
+With the couch scenes, an add-on that provides scenes can bring other photos for them: the **Seasons** add-on (Add-ons > Get more)
+shows photos for the time of year in place of the five landscapes. See [Add-ons](development/addons.md#providing-something-to-the-service-scenes).
+
 `effects.scenes` `custom` lets a theme bring its own landscape images instead of the five built-in ones. Add a `"scenes"` array to
 `theme.json` and put the image files in the theme folder:
 

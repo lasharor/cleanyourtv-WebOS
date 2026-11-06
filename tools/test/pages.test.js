@@ -15,6 +15,10 @@ run(async () => {
       if (fs.existsSync(file)) pages.push(file);
     });
   });
+  // the pages of the cards of add-ons (the weather drawer) are held to the same rules
+  ['drawer.html', 'drawer.js', 'drawer.css'].forEach(f =>
+    pages.push(path.join(root, 'addons', 'catalog', 'weather', 'cards', 'forecast', f))
+  );
   const rules = [
     [/\?\?|\?\.[A-Za-z_\[(]/, 'optional chaining or ??'],
     [/\|\|=|&&=/, 'logical assignment'],
@@ -172,4 +176,41 @@ run(async () => {
     /var states = \['off'\]\.concat\(\s*pr\.modes\.filter\(function \(m\) \{\s*return seen\[m\];/.test(mm),
     'the preload State row offers only the modes the TV itself uses'
   );
+  // a card of an add-on: its declared drawer and settings actions are the launcher's (the sheet and the settings panel)
+  const rd = f => fs.readFileSync(path.join(root, ...f.split('/')), 'utf8');
+  const wcards = rd('app/src/js/cards.js'),
+    winput = rd('app/src/js/input.js'),
+    wmgr = rd('manager/src/js/input.js');
+  ok(
+    /function cardBtnRoute/.test(wcards) && /csSettings\(/.test(wcards) && /csOpen\(el\)/.test(wcards) && /CS\.on/.test(winput),
+    'the declared settings and drawer actions of a card open the generic panel and sheet (cardBtnRoute)'
+  );
+  ok(
+    !fs.existsSync(path.join(root, 'app', 'src', 'js', 'wxdrawer.js')) &&
+      !/x-forecast|wxdrawer|\bwxd\b|\bWXD\b|wxq|wxMenu|wxSet/i.test(
+        ['js/cards.js', 'js/menus.js', 'js/input.js', 'js/cardsheet.js', 'js/cardsettings.js', 'css/cardsheet.css']
+          .map(p => rd('app/src/' + p))
+          .concat([rd('helper/cards.js'), rd('helper/apps.js')])
+          .join('\n')
+      ),
+    'the launcher has no code of the weather add-on (no wxdrawer, no x-forecast, no wx names)'
+  );
+  ok(
+    /p\.open === 'cardspair'/.test(wmgr) && /openCardsPair\(\)/.test(wmgr),
+    "the manager opens the cards' phone page (QR code) at once when asked"
+  );
+  // the card sheet host: wired into the launcher, generic (no word of any one card)
+  const cshtml = rd('app/src/index.html'),
+    csjs = rd('app/src/js/cardsheet.js'),
+    cscss = rd('app/src/css/cardsheet.css');
+  ok(
+    /@include js\/cardsheet\.js/.test(cshtml) && /@include css\/cardsheet\.css/.test(cshtml) && /<div id="cs"><\/div>/.test(cshtml),
+    'the launcher includes the card sheet (script, style and its element)'
+  );
+  ok(
+    /CS\.on/.test(winput) && /csKey\(k, e\)/.test(winput) && /csClose\(\)/.test(winput),
+    'the keys go to the card sheet while it is open, and a relaunch closes it'
+  );
+  ok(!/weather|wx|forecast/i.test(csjs) && !/weather|wx|forecast/i.test(cscss), 'the card sheet names no card (it is generic)');
+  ok(/e\.source !== CS\.frame\.contentWindow/.test(csjs), 'the card sheet listens only to its own frame');
 });

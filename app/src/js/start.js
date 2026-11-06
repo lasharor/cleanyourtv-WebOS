@@ -13,7 +13,7 @@ try {
   }
 } catch (e) {}
 load();
-PAGER.load();
+var pagesLoaded = PAGER.load();
 refreshSoon();
-wantInputs();
+wantInputs(pagesLoaded);
 api('/api/frontend-ok', { version: VERSION }).catch(function () {}); // lets the manager know an updated launcher started

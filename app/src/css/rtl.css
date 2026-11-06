@@ -109,3 +109,13 @@
   margin-right: 0;
   margin-left: 20px;
 }
+/* the card sheet comes from the left */
+[dir="rtl"] #cs .pn {
+  right: auto;
+  left: 0;
+  border-radius: 0 40px 40px 0;
+  transform: translateX(-100%);
+}
+[dir="rtl"] #cs.in .pn {
+  transform: none;
+}

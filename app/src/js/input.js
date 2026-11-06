@@ -43,7 +43,7 @@ function options(e) {
 /* Pointer focus follows real pointer movement only: a tile sliding under a still cursor, a cursor jitter when
    the remote is picked up, or a pointer move right after a button press must not steal the focus. */
 document.addEventListener('mousemove', function (ev) {
-  if (stack.length || LIVE.on || PAGER.on || Date.now() - lastKey < 1500) return;
+  if (stack.length || LIVE.on || PAGER.on || CS.on || Date.now() - lastKey < 1500) return;
   if (lastMX < 0) {
     lastMX = ev.clientX;
     lastMY = ev.clientY;
@@ -62,6 +62,20 @@ document.addEventListener('keydown', function (e) {
   /* a right-to-left layout: Left moves to what is on the left, which is the next tile in the row (Live TV keeps left-to-right) */
   if (rtl() && !LIVE.on && (k === 37 || k === 39)) k = 76 - k;
   lastKey = Date.now();
+  /* a card's sheet has the keys while it is open (it undoes the swap above itself) */
+  if (CS.on) {
+    csKey(k, e);
+    return;
+  }
+  /* a city typed in a card's settings: OK searches, Back closes the field, the rest types */
+  if (e.target && e.target.id === 'csq') {
+    if (k === 13) csFind(CSQ_TYPE, e.target.value);
+    if (k === 13 || k === 461 || k === 27) {
+      csSearchEnd();
+      e.preventDefault();
+    }
+    return;
+  }
   if (PAGER.on) {
     PAGER.key(e);
     return;
@@ -187,15 +201,38 @@ var liveGuard = 0,
 function guarded() {
   return LIVE.on && Date.now() < liveGuard;
 }
+/* the Guide button goes to the TV guide add-on (LG tuner) when it is on, else to Live TV's guide: the two do not depend on each other */
+/* the app that was in front when the Guide button was pressed (guidekey.sh passes it as "from"): Back in the guide returns to it */
+var guideFrom = '';
+function noteGuideFrom(p) {
+  guideFrom = p && /^[A-Za-z0-9._-]{3,80}$/.test(p.from || '') && p.from !== 'com.webos.app.home' ? p.from : '';
+}
+function guidePage() {
+  for (var i = 0; i < PAGES.length; i++) if (PAGES[i].guide) return PAGES[i].id;
+  return '';
+}
 /* launching Home with {inputs:true} opens the Inputs list */
-function wantInputs() {
+function wantInputs(pages) {
   var p = {};
   try {
     p = JSON.parse(webOSSystem.launchParams || '{}');
   } catch (e) {}
+  /* the Guide button: which page has the guide is known once the add-on pages are loaded */
+  if (p && p.guide && !p.inputs && pages) {
+    $('homepage').style.visibility = 'hidden'; /* no flash of the dashboard on the way to the guide */
+    pages.then(function () {
+      wantInputs();
+      if (!PAGER.on) $('homepage').style.visibility = 'visible';
+    });
+    return;
+  }
   if (p && p.inputs) {
     closeMenus();
     inputsMenu();
+  } else if (p && p.guide && guidePage()) {
+    noteGuideFrom(p);
+    closeMenus();
+    PAGER.go(guidePage(), null, true);
   } else if (p && p.live && liveOn()) {
     closeMenus();
     liveGuard = Date.now() + 5000;
@@ -208,7 +245,13 @@ document.addEventListener('webOSRelaunch', function () {
   try {
     p = JSON.parse(webOSSystem.launchParams || '{}');
   } catch (e) {}
+  csClose();
   logLine('launcher relaunch ' + JSON.stringify(p).slice(0, 120) + (LIVE.on ? ' (live on)' : ''));
+  if (p && p.guide && guidePage() && PAGER.on && PAGER.id === guidePage()) {
+    noteGuideFrom(p);
+    PAGER.send({ cytv: 'guide' });
+    return;
+  } /* the Guide button while the TV guide is open */
   if (LIVE.on && p && p.guide && liveOn()) {
     LIVE.toggleGuide();
     return;
@@ -218,11 +261,11 @@ document.addEventListener('webOSRelaunch', function () {
     LIVE.resume();
     return;
   }
+  csSearchEnd();
   if (PAGER.on && !(p && p.live)) PAGER.home(); /* Home pressed: back to the first page */
   load();
   refreshSoon();
-  PAGER.load();
-  wantInputs();
+  wantInputs(PAGER.load());
 });
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) {

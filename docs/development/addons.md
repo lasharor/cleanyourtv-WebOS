@@ -105,7 +105,7 @@ rotation, the dimming and the Picture size setting; a source only supplies photo
 
 An add-on with `"provides": ["cards"]` can bring cards for Home. A downloadable card (see [Making a card](cards.md)) is data that the launcher draws; a card
 of an add-on is a card with its own page, as a page card is, plus what a closed frame cannot do alone: it gets **data** from the add-on's service,
-and its **buttons** send the add-on **actions**. The frame stays closed: no network, no access to the launcher or the service, no keys.
+and its **buttons** send the add-on **actions**. The frame is a sandboxed iframe (`sandbox allow-scripts`) under a policy with `connect-src 'none'`, and it holds no keys. It does not talk to the service: the launcher is the only one that does, for it (the feed, the actions, the options).
 
 `addon.json` lists the cards (at most 4), each checked like a `card.json` with `page` (never `template`), and two more things:
 
@@ -155,11 +155,65 @@ Each button the card declared becomes a target of the remote in the top row of H
 card asks for its data again a few times in the seconds after. A name the card did not declare is ignored. Routes: `POST /api/cards/feed {slot}` and
 `POST /api/cards/action {slot, name, arg}` ([API](../api.md)).
 
+## Providing something to the service: scenes
+
+An add-on with `"provides": ["scenes"]` brings photos for the couch scenes (a theme with `effects.scenes` `couch`, such as Couch): while
+it runs and has scenes, they take the place of the five landscapes that ship with the launcher. `helper/scenes.js` asks the running,
+switched-on add-ons that provide it, in order, and takes the first one with a non-empty list. The object is `scenes` on the module
+`create()` returns:
+
+| Member | What it does |
+|---|---|
+| `list({cc})` | The scenes to show now (or a promise of them): `[{id, credit, darkSky}]`, at most 20. `id`: letters, digits, `-`, `_`, `.`; `credit`: a short line Home shows in the bottom corner (the photographer); `darkSky`: a bright sky, so the top buttons turn dark. `cc` is the TV's country as the launcher reads it (two or three letters, or empty). |
+| `file(id, kind)` | The absolute path of the photo (`kind` `image`, 1920 x 1080) or of its blurred copy for the glass clock and the glass cards (`glass`): a JPEG, PNG or WebP on the TV, at most 8 MB, or `''`. |
+
+The launcher asks `POST /api/scenes {cc}` when the theme starts the couch scenes and every 30 minutes (every minute while no add-on has
+scenes) and draws them as custom scenes: no cut-out, the clock in front of the photo with a darker shade at the top. The photos come
+from `GET /api/scenes/photo/<add-on>/<id>/<image|glass>`, so the launcher needs no network for them; an add-on that downloads them keeps
+them on the TV. Without such an add-on the list is empty and nothing changes.
+
 ### A phone page of the add-on
 
 A service that has a `settings(o)` function (the same contract as a photo source's: it opens a short-lived page on the LAN and answers `{url, code, qr, seconds}`, or closes it
 for `{stop: true}`) gets a **Set up from your phone** row on its screen in the manager's Add-ons (`POST /api/addons/<id>/settings`, `settings: true` in the add-on's entry of
 `GET /api/addons`). The weather add-on needs none (the city is an option on the Cards page); the Spotify add-on uses it for the sign-in.
+
+### A drawer and settings
+
+A card of an add-on can declare two more things in its `card.json` (or its entry in `addon.json`). The launcher draws neither; it only hosts them, so no code of one add-on is in the launcher:
+
+```json
+"drawer": { "page": "drawer.html", "action": "open", "label": "Forecast" },
+"settings": { "action": "settings", "title": "Weather" }
+```
+
+- `drawer`: `page` is a second page of the card (in the card's folder, served like `card.html`), `action` the name of a button of the card, and `label` its text for the remote's focus. OK or a click on that button opens the **sheet**: the page in a sandboxed frame (`connect-src 'none'`, no keys) at the right edge of Home, with the rest of Home dimmed.
+- `settings`: `action` is the name of a button that opens **Customise > Top & cards > `title`**, a panel the launcher builds from the card's `options`: a `place` option becomes a city row (typed with the TV's keyboard, searched, then picked from a list), a `choice` option a row that turns to the next value, and other kinds are set on the phone page (a **More on your phone** row). The panel sets the options for every place that holds the card. The row appears for any card that declares `settings`.
+- The `action` names of `drawer` and `settings` belong to the launcher: it answers them itself and they are never sent to the add-on's service. A sheet page cannot trigger them with an `action` message either.
+
+The **sheet protocol**. The page draws; the launcher owns the keys, the focus, Back and, for tabs, Left and Right. The launcher checks the page's `option` and `action` messages: an `action` runs only if its name is one of the card's declared `actions` (and not the `drawer` or `settings` action), and an `option` is sent to the service, which keeps only the options the card declares.
+
+| Direction | Message | Meaning |
+|---|---|---|
+| launcher -> page | `{cytvCard: ctx}` | The context a card page gets (its options, size, language, `data` from the service) with `ctx.sheet = true`; sent when the page loads, when it says `ready`, and again when something changed (the newest is checked every two seconds). |
+| launcher -> page | `{cytvSheet: {select: i}}` | The tab `i` of the tab row was chosen (Left or Right on a tab target, or OK on one). |
+| launcher -> page | `{cytvSheet: {act: name}}` | OK on the target `name`. |
+| launcher -> page | `{cytvSheet: {focus: name}}` | The focus moved to the target `name`. |
+| page -> launcher | `{cytvCard: 'ready'}` | The page is loaded: send the context. |
+| page -> launcher | `{cytvSheet: 'targets', targets: [{name, x, y, w, h, r, tab}], focus}` | Where the things the remote can reach are, in percent of the sheet (`r`: corner radius in pixels, 0 to 60; `tab`: the index in the tab row, or -1 when it is not a tab). At most 24, `name` up to 40 characters. `focus` names the target to focus; without it the focus stays where it was. The launcher moves the focus between targets with the arrows and draws the ring. |
+| page -> launcher | `{cytvSheet: 'option', set: {...}}` | Set options of the card, for every place that holds it (checked like the settings panel's). |
+| page -> launcher | `{cytvSheet: 'action', name, arg}` | Run one of the card's `actions` (sent to the service as a button's). |
+| page -> launcher | `{cytvSheet: 'close'}` | Close the sheet. |
+
+Back (or a click on the dimmed Home) closes the sheet, and it closes by itself after five minutes.
+
+The city field of the settings panel searches through the service: the `cards` of an add-on can have the optional hook `places(q, lang)`, which answers `{places: [{name, area, lat, lon}]}` (at most 10 are used; `q` is two to 60 characters). `POST /api/cards/places {type, q}` calls it; with no hook the answer is an empty list. The service must know these keys, so raise the add-on's `minService` to the version that brought `drawer` and `settings`.
+
+## The Guide key
+
+An add-on with the permission `key.guide` in its manifest is a guide of its own (the TV guide for LG's tuner is one): while it is running and switched on, the learned
+Guide key opens its page, with Live TV (IPTV) on or off, and its screen in the manager's Add-ons has a **Learn the Guide key** row. Without such an add-on the key opens the
+Live TV guide, as before.
 
 ## Permissions for LG's services
 
@@ -245,9 +299,10 @@ left out stays installed and running but has no button.
 | `sysinfo` | Memory, swap, load and uptime of the TV, live, from `/proc`. |
 | `immich` | Photos from your Immich albums as the Home wallpaper, a photo source (see above): the sync, the albums and the phone page (port 8795) moved here from Wallpapers. A TV that had Immich before hands its settings and photos to it once. |
 | `unsplash` | A new random photo from Unsplash as the Home wallpaper, a live photo source (see above): the Access Key, the 3-minute pace, the credit line and the phone page (port 8796). Pictures stay on Unsplash's host; nothing is saved on the TV. |
-| `weather` | The **Weather forecast** card for Home, a card of an add-on (see above): the weather at a city you choose on the phone page, with buttons for the remote (Now, Hours, Days). From Open-Meteo, no key; only the coordinates leave the TV, at most every 30 minutes. |
+| `weather` | The **Weather forecast** card for Home, a card of an add-on (see above): the weather at a city you choose on the TV (Customise > Top & cards > Weather, where **Look** is Minimal: one number, one icon, one phrase, or Rich: the next hours too) or on the phone page. Its card declares a `drawer` (Now, Hours, Days: the add-on's own page) and `settings` (the city, unit and look), see [A drawer and settings](#a-drawer-and-settings); with no city the whole card is one button that opens the settings. From Open-Meteo, no key; only the coordinates leave the TV, at most every 30 minutes. |
 | `spotify` | The **Spotify now playing** card for Home, a card of an add-on (see above): the cover, title and artist of what plays on your Spotify account, with previous, play or pause, next and the output as buttons for the remote (Premium); the cover opens the Spotify app on the song (permission `luna`), the output button answers with a menu of the devices (the add-on also wakes the speakers of the network that Spotify does not list, over mDNS, as the Spotify apps do). Your own Spotify developer app (its Client ID; sign-in with PKCE), set up from your phone (page on port 8797): Add-ons > Spotify now playing > Set up from your phone. The tokens stay in the add-on's settings. |
 | `jellyfin` | The **Continue watching** card for Home, a card of an add-on (see above): the films and episodes you did not finish on your Jellyfin server (and, as an option, the next episode of a series you follow), with their pictures (wide stills or posters) and a bar for how far you got. Each one is a button: OK opens your Jellyfin app (the official one, Litefin or Moonfin: the first one installed, or the one chosen in the card's options) with `{itemId, serverId, tmdbId, mediaType, title}` as launch parameters. Litefin opens the title by its TMDB id (after 2.0.20); the other apps read no launch parameters on webOS and open on their Home. Set up from your phone (page on port 8798): the address, user name and password; only the access token is kept, in the add-on's settings. The permission `luna` is for `getAppInfo` and `launch`. Needs service 1.6.17. |
+| `seasons` | **Seasons**: photos for the couch scenes that follow the calendar, an add-on that provides scenes (see above): Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of the season (winter from 21 December, spring from 20 March, summer from 21 June, autumn from 23 September); south of the equator the seasons turn around, and the tulip fields of spring show only in the Netherlands and Belgium (by the country the launcher sends). The photos are from Unsplash (free to use under the Unsplash License), with the photographer in the corner; the list is in `photos.js`. It keeps the set in use and the first two of every set on the TV (about 8 MB, so each set shows at least two without network) and contacts Unsplash's image host only while it is installed and switched on: at its start, every six hours and when the set or the country changes. `GET /api/addons/seasons/status` says what it has. |
 | `tuner` | **TV guide (LG tuner)**: a guide for the TV's own tuner (antenna, cable): the channels, what is on now and next and the schedule of the selected channel, read from the data LG's own guide uses; OK opens LG's Live TV on the channel. A page add-on of its own, with the permission `luna` for three LG services. Its page is built from the same guide code as Live TV (`addons/catalog/tuner/src/index.html` includes the files of `helper/addons-bundled/iptv/src`), so the two guides stay alike; it needs neither Live TV nor a playlist. Needs service 1.6.17. |
 
 ## Versions

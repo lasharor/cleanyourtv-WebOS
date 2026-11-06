@@ -51,7 +51,7 @@ run(async () => {
   const luna = async (uri, payload, o) => {
     calls.push({ uri, payload, o });
     if (uri.indexOf('/getChannelList') > 0)
-      return { returnValue: true, names: NAMES, values: [row('a1', '1', 'Alpha'), row('b2', '2', 'Beta')] };
+      return { returnValue: true, names: NAMES, values: [row('a1', '1', 'Alpha'), row('b2', '102', 'Beta')] };
     if (uri.indexOf('applicationManager/launch') > 0)
       return payload.params && payload.params.channelId === '3_zz' ? { returnValue: false, errorText: 'no' } : { returnValue: true };
     const q = payload.query;
@@ -89,6 +89,9 @@ run(async () => {
     r.j.groups.join() === 'LG tuner' &&
       r.j.channels.length === 2 &&
       c0[0] === 1 &&
+      r.j.channels[1][0] === 2 &&
+      r.j.channels[1][13] === '102' &&
+      c0[13] === '1' &&
       c0[1] === 'a1' &&
       c0[2] === 'Alpha' &&
       c0[3] === 'LG tuner' &&
