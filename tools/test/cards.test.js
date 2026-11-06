@@ -141,7 +141,11 @@ run(async () => {
       return rs.end(
         JSON.stringify([
           { entity_id: 'light.living', state: 'on', attributes: { friendly_name: 'Living room' } },
-          { entity_id: 'sensor.temp', state: '8.4', attributes: { friendly_name: 'Outside', unit_of_measurement: '°C', icon: 'mdi:thermometer' } },
+          {
+            entity_id: 'sensor.temp',
+            state: '8.4',
+            attributes: { friendly_name: 'Outside', unit_of_measurement: '°C', icon: 'mdi:thermometer' },
+          },
           { entity_id: 'lock.door', state: 'locked', attributes: { icon: 'mdi:<invalid>' } },
           {
             entity_id: 'weather.home',
