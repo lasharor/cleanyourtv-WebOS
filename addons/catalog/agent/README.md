@@ -1,11 +1,10 @@
 # The agent add-on and its scheme
 
 The add-on knows **no app or add-on by name**. It reads the abilities that the installed apps and add-ons *sign* with a small
-declaration file, and turns each ability into an MCP tool that a language model can call. Nothing is hardcoded here.
+declaration file, turns each into an MCP tool, and gives the approved ones to the service ("provides": ["tools"]): the voice
+assistant and the service's MCP endpoint `/api/mcp` then offer them. The full page is `docs/agent.md`.
 
 ## The scheme: a `tools.json` file
-
-A declaration is a JSON file named `tools.json`:
 
 ```json
 {
@@ -21,35 +20,31 @@ A declaration is a JSON file named `tools.json`:
 }
 ```
 
-Every tool has a `name` (a letter, then letters, digits, `_` or `-`), a `description` (what it does, for the model), an
-`inputSchema` (a JSON Schema for the arguments), an optional `confirm` (mark the tool as destructive, so the caller asks first)
-and an `invoke` that names how to run it. `{name}` in a string of the invoke is replaced by that argument; a value that is
-exactly `{name}` keeps the argument's type.
+- `name`: a letter, then letters, digits, `_` or `-` (64 at most); `description`: what it does, for the model (300 at most).
+- `inputSchema`: a JSON Schema object, at most 12 arguments, each with a JSON type. The arguments are checked against it.
+- `confirm: true`: the tool turns something off or deletes something. It runs only with `{confirmed: true}`, which the voice assistant
+  passes after the person said yes on the TV; an MCP client cannot pass it.
+- At most 16 tools in one file.
+
+`{name}` in the invoke is replaced by that argument: URL-encoded in a `path` or `url`; elsewhere a value that is exactly `{name}`
+keeps the argument's type.
 
 ## The three ways to run a tool (`invoke`)
 
 | kind | Fields | What it does |
 |---|---|---|
 | `app` | `id`, `params` | Launches an installed app, with the given launch parameters. |
-| `addon` | `addon`, `path`, `method`, `body` | Calls another service add-on's own endpoint (`/api/addons/<addon>/<path>`). |
-| `http` | `url`, `method`, `headers`, `body` | Calls an address (an external service, a phone, your Home Assistant…). |
+| `addon` | `addon`, `path`, `method`, `body` | Calls that add-on's own endpoint (`/api/addons/<addon><path>`); not the loader's paths, no `..`. |
+| `http` | `url`, `method`, `headers`, `body` | Calls an address. The host is fixed in the file; the TV itself is refused; no redirects. |
 
-```json
-{ "invoke": { "kind": "addon", "addon": "spotify", "path": "/control", "method": "POST", "body": { "action": "play_pause" } } }
-{ "invoke": { "kind": "http", "url": "https://example.com/weather?city={city}", "method": "GET" } }
-```
+## Sources and approval
 
-## Where the add-on looks
+Each file is a source: `addon:<id>` (`addons-bundled/<id>/tools.json`, `addons/<id>/tools.json`), `app:<id>`
+(`/media/developer/apps/usr/palm/applications/<id>/tools.json`) or `file:<name>` (`addon-data/agent/tools/<name>.json`, a declaration
+dropped at runtime). A source gives no tools until it is approved on the phone page (`settings(o)`, port 8799) or with
+`POST /api/addons/agent/approve {source, approved}`. A file that does not parse is listed with its error; a name used twice keeps the first.
 
-- `/media/developer/cleanyourtv/addons-bundled/<id>/tools.json` — the add-ons that ship with CleanYourTV
-- `/media/developer/cleanyourtv/addons/<id>/tools.json` — add-ons installed from the catalog
-- `/media/developer/apps/usr/palm/applications/<id>/tools.json` and `/usr/palm/applications/<id>/tools.json` — installed apps
-- `/media/developer/cleanyourtv/addon-data/agent/tools/<anything>.json` — the registration directory, for a declaration dropped at
-  runtime (an app's installer, a script, another add-on's start)
+## Endpoints
 
-A `tools.json` that does not parse is ignored and reported; a tool name declared twice keeps the first.
-
-## The MCP endpoint
-
-`POST /api/addons/agent/mcp` answers JSON-RPC 2.0: `initialize`, `ping`, `tools/list`, `tools/call`. See `docs/agent.md` for the
-frames and for how the voice assistant or a desktop MCP client reaches them.
+`POST /api/addons/agent/mcp` (JSON-RPC 2.0 for the signed tools alone), `GET /tools`, `GET /sources`, `POST /approve`, `POST /reload`,
+all under `/api/addons/agent`.

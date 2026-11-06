@@ -305,6 +305,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       'fstrim',
       'addons',
       'screensaver',
+      'mcp',
     ];
     const okTv = tv.sdk === '10.2.2' && tv.pickerMode === 'overlay' && tv.notifyWindow === 'topui';
     const okSv = JSON.stringify(sv.features) === JSON.stringify(want) && !Object.keys(sv.failed).length;

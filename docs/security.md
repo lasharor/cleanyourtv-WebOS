@@ -23,6 +23,8 @@ local network on request, and an optional notification endpoint is off by defaul
 | 8800 | Add-on repositories page | The same, for adding a repository of add-ons from your phone (ten minutes); see [Add-on repositories](development/addon-repos.md) |
 | 8798 | Jellyfin page | The same, for the Jellyfin add-on (server address, user name and password; the TV keeps only the access token); see [Cards](launcher.md#cards) |
 | 8799 | Phone remote (a catalog add-on) | Only while the add-on is on **and** a phone is paired or its pairing screen is open; every phone needs a token from a one-time code; see [Phone remote](phone-remote.md) |
+| 8790 | MCP on the network | Only when you switch it on in the manager app (More > MCP on the network); needs a token; see [MCP on the network](#mcp-on-the-network) |
+| 8799 | Agent tools page | The same, for the agent add-on: which apps and add-ons may give the voice assistant their tools; see [Agent tools](agent.md) |
 
 What the setup changes on the TV is listed in [What it changes on the TV](tv-changes.md).
 
@@ -37,6 +39,16 @@ It is plain HTTP: the token can be read by anyone who can watch the traffic on y
 token so a phone can copy them. The address is created when the code is shown (96 bits of randomness), follows the same allow list, and stops
 working after ten minutes, when notifications are switched off or the service restarts. Anyone who sees the code on the screen, or can read
 the traffic, can read the token while it is open; **New token** replaces it.
+
+## MCP on the network
+
+Off until switched on in the manager app (**More > MCP on the network**). It then listens on port 8790 for `POST /mcp` (MCP over HTTP,
+JSON-RPC 2.0) with `Authorization: Bearer <token>`: a random 192-bit token kept in `config.json` (`mcp`), readable by root only. It
+exposes the same tools as `/api/mcp` on the TV and nothing else of the service: an agent with the token can **open apps, switch inputs,
+show cards and use the tools of the add-ons you approved**. Tools that turn something off or delete something (`power_off`) are refused
+from the network. A request that carries an `Origin` header (a web page in a browser) is refused, wrong tokens lock an address out for ten
+minutes, and requests are limited to 60 a minute and 64 KB. It is plain HTTP: anyone who can watch your network can read the token, so
+use it on a network you trust. **Show as QR code** and **New token** work as for network notifications.
 
 ## Themes
 

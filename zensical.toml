@@ -30,6 +30,7 @@ nav = [
     { "Key remapping" = "key-remap.md" },
     { "Picture notifications" = "notifications.md" },
     { "Voice (optional)" = "voice.md" },
+    { "Tools for the assistant (MCP)" = "agent.md" },
     { "Debloat" = "debloat.md" },
     { "The manager app" = "manager.md" },
     { "Languages" = "languages.md" },

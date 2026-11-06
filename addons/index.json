@@ -3,9 +3,9 @@
     {
       "id": "agent",
       "name": "Agent tools (MCP)",
-      "version": "1.0.0",
-      "description": "Turns the abilities the TV's apps and add-ons sign into MCP tools a language model can call.",
-      "about": "One bridge between the TV and a language model, built on a scheme instead of a fixed list. Installed apps and add-ons sign the scheme with a small tools.json that names their abilities; this add-on turns each into an MCP tool and answers list and call over JSON-RPC at /api/addons/agent/mcp. An app can become a launch tool, a service add-on a set of tools that call its own endpoints, an external service a tool that calls an address. The voice assistant, or any MCP client, can then use those tools to act on the TV.",
+      "version": "1.1.0",
+      "description": "Turns the abilities the TV's apps and add-ons sign into tools the voice assistant and MCP clients can use.",
+      "about": "One bridge between the TV and a language model, built on a scheme instead of a fixed list. Installed apps and add-ons sign the scheme with a small tools.json that names their abilities; this add-on turns each into an MCP tool, gives them to the voice assistant and answers list and call over JSON-RPC at /api/addons/agent/mcp. Nothing is used until you approve it: open Set up from your phone and switch on the apps and add-ons whose tools the assistant may use. Tools that turn something off or delete something ask you first, and you say yes on the TV.",
       "preview": "",
       "kind": "service",
       "permissions": [
@@ -16,10 +16,11 @@
         "luna://com.webos.applicationManager/launch"
       ],
       "files": {
-        "README.md": "3c35ea82c262a56ccd56b9d9454e153fd70c13731e99a04ad4597f7b2d05410f",
-        "addon.json": "5b527325a9ed1e1828c0e2e1b173df1329fa302aeab680339d2b4aee3032bd22",
-        "service.js": "17ec01896387830f0f885d74f6a9fc0d584e68848889396ebe988149a7330d0f",
-        "tools.js": "6effd3855c8490347ed59e39ef81a6e8079943c88c26cea94b50d7feee954dfe"
+        "README.md": "bed75309bb810cad4474e25bae28a92702d4e5a846052e3b9a9e64487537005d",
+        "addon.json": "21873ffe90b24e38eee61ce6f5602fa2bb55473e872c08bee81ec0297e3d00e6",
+        "phone.js": "af017a1aeac1ba9afa3af3151fd04a20139635347046875fba0add948de36ae5",
+        "service.js": "983f532cf8279da93a8ea6998c25de33fa6b6285b40a8a9158fab90cbc4114cc",
+        "tools.js": "515c83df002577387ceb237ae6302478351318355fba3a305f65986fec2bc421"
       }
     },
     {

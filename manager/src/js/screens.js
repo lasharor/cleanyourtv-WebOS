@@ -48,6 +48,41 @@ function openNotifyQr() {
     }
   );
 }
+/* MCP on the network (helper/toolhub.js): a page on the phone with the address and the token */
+function openMcpQr() {
+  if (!mnet || !mnet.lan) {
+    banner('Switch MCP on the network on first', 'err');
+    return;
+  }
+  shareMode = 'mcp';
+  push('share');
+  $('share').style.display = 'block';
+  $('shareurl').textContent = '';
+  $('qrbox').style.visibility = 'hidden';
+  $('share').querySelector('h2').textContent = tr('MCP address and token');
+  $('share').querySelector('ol').innerHTML = tr(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera and open the page: it shows the address and the token with <b>Copy</b> buttons.</li><li>The token is a <b>secret</b>: anyone who sees this code while it is open can read it.</li>'
+  );
+  $('sharemsg').textContent = tr('Preparing…');
+  api('/api/mcp/lan', { page: true }).then(
+    function (r) {
+      if (view !== 'share' || shareMode !== 'mcp') return;
+      if (!r.pageUrl) {
+        $('sharemsg').textContent = tr('The MCP port is not open.');
+        return;
+      }
+      drawQr(r.pageUrl);
+      $('qrbox').style.visibility = 'visible';
+      $('shareurl').textContent = r.pageUrl;
+      $('sharemsg').textContent = tr(
+        'The page opens for ten minutes. It is not encrypted: the token travels over your Wi-Fi, so use a network you trust.'
+      );
+    },
+    function () {
+      $('sharemsg').textContent = tr('The service did not answer.');
+    }
+  );
+}
 /* Add-ons (helper/addons.js): the ones on the TV and the project's catalog */
 function loadAddons() {
   Promise.all([
