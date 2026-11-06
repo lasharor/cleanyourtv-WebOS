@@ -100,4 +100,60 @@ run(async () => {
   }
   ok(back.length === 12 && sb.r === 1 && sb.c === 0, 'twenty notches up go back through every tile and stop at the first');
   ok(back[0] === seen[11], 'the way back starts at the tile before the last');
+
+  // ---- the pointer on the home screen (input.js pointerMoved): when a move of the cursor may move the focus ----
+  const inp = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'input.js'), 'utf8');
+  const pm = { lastMX: -1, lastMY: -1, pointerLive: false };
+  vm.createContext(pm);
+  vm.runInContext(source(inp, 'pointerMoved'), pm, { filename: 'pointerMoved' });
+  ok(typeof pm.pointerMoved === 'function', 'input.js has pointerMoved');
+  ok(pm.pointerMoved(500, 500) === false && pm.lastMX === 500, 'the first move only notes where the cursor is');
+  ok(pm.pointerMoved(510, 505) === false, 'a jitter under 24 px does nothing (the remote picked up)');
+  ok(pm.pointerMoved(530, 505) === true, 'a real move of 24 px or more moves the focus');
+  ok(pm.pointerMoved(536, 505) === true, 'after that a move of 6 px counts, so a cursor coming to rest over a tile focuses it');
+  ok(pm.pointerMoved(538, 506) === false, 'a move under 4 px still does nothing');
+  pm.pointerLive = false; // a button was pressed
+  ok(pm.pointerMoved(546, 506) === false, 'after a button press a small move does nothing again');
+
+  // ---- the pointer showing again (input.js pointerShow): where it shows comes with the next move, which focuses what is under it ----
+  const ps = { lastMX: 120, lastMY: 980, pointerLive: true, cursorEvents: false, pointerShown: true, pointerShownAt: 0 };
+  vm.createContext(ps);
+  vm.runInContext(source(inp, 'pointerShow') + ';' + source(inp, 'pointerMoved'), ps, { filename: 'pointerShow' });
+  ok(typeof ps.pointerShow === 'function', 'input.js has pointerShow');
+  ps.pointerLive = false; // the pointer was over the dock (120,980) and a button was pressed
+  ps.pointerShow(false);
+  ok(ps.pointerShown === false && ps.cursorEvents === true, 'the pointer hides');
+  ps.pointerShow(true);
+  ok(ps.pointerShown === true && ps.pointerShownAt > 0 && ps.pointerLive === true, 'it shows again');
+  ok(
+    ps.pointerMoved(960, 540) === true && ps.lastMX === 960 && ps.lastMY === 540,
+    'it shows in the middle (LG G5), not where it hid: that first move focuses what is under it there'
+  );
+  ok(ps.pointerMoved(962, 541) === false && ps.pointerMoved(966, 541) === true, 'after that a move of 4 px or more counts');
+  ps.lastMX = 958; // it hid 2 px from the middle
+  ps.lastMY = 540;
+  ps.pointerLive = false;
+  ps.pointerShow(true);
+  ok(ps.pointerMoved(960, 540) === true, 'the first move after it shows counts at any distance');
+
+  // ---- the wheel on Home (menus.js wheelHome): the notch that brings the hidden pointer back does not move the focus ----
+  const wh = { cursorEvents: true, pointerShown: false, pointerShownAt: 0, steps: [], homeStep: d => wh.steps.push(d) };
+  vm.createContext(wh);
+  vm.runInContext(source(js, 'wheelHome'), wh, { filename: 'wheelHome' });
+  ok(
+    wh.wheelHome(1) === true && wh.steps.join() === '1',
+    'a notch while the pointer stays hidden moves one tile (a TV whose wheel does not show it)'
+  );
+  wh.pointerShown = true;
+  wh.pointerShownAt = Date.now() - 30; // the pointer showed 30 ms ago: this is the notch that showed it
+  ok(
+    wh.wheelHome(1) === false && wh.steps.join() === '1' && wh.pointerShownAt === 0,
+    'the notch right after the pointer shows does not move'
+  );
+  ok(wh.wheelHome(1) === true && wh.wheelHome(-1) === true && wh.steps.join() === '1,1,-1', 'while it shows, each notch moves one tile');
+  wh.pointerShownAt = Date.now() - 900;
+  ok(wh.wheelHome(1) === true, 'a notch long after the pointer showed moves');
+  wh.cursorEvents = false;
+  wh.pointerShown = false;
+  ok(wh.wheelHome(1) === true, 'a TV without pointer events: every notch moves, as before');
 });
