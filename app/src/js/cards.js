@@ -97,8 +97,18 @@ var HA_ICON = {
   play: '<circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/>',
   dot: '<circle cx="12" cy="12" r="3"/>',
 };
-function haIcon(d, icon) {
-  var glyph = window.HA_MDI && window.HA_MDI[icon];
+var haMdiRequested = false;
+function haGlyph(icon) {
+  if (!icon) return;
+  if (window.HA_MDI) return window.HA_MDI[icon];
+  if (haMdiRequested) return;
+  haMdiRequested = true;
+  var script = document.createElement('script');
+  script.src = 'mdi-glyphs.js';
+  script.onload = tickCards;
+  document.head.appendChild(script);
+}
+function haIcon(d, glyph) {
   if (typeof glyph === 'number') return '<span class="ha-mdi" aria-hidden="true">&#' + glyph + ';</span>';
   var k =
     d === 'light'
@@ -405,7 +415,8 @@ var CARD_TYPES = {
         e = HA.by[id],
         name = String(o.name || (e && e.name) || id).slice(0, 60),
         st = e ? haState(e) : HA.err ? t(HA.err) : id ? '\u2026' : t('Choose an entity from your phone'),
-        key = id + '|' + name + '|' + st + '|' + (e ? e.state : '') + '|' + (e && e.icon ? e.icon : '');
+        glyph = e && haGlyph(e.icon),
+        key = id + '|' + name + '|' + st + '|' + (e ? e.state : '') + '|' + glyph;
       haHide(el, !id || HA.err === HA_NOT_SET);
       el._o = { action: 'card', label: name };
       el.classList.toggle('on', !!e && e.state === 'on');
@@ -413,7 +424,7 @@ var CARD_TYPES = {
       el._k = key;
       el.innerHTML =
         '<div class="ha-i">' +
-        haIcon(e ? e.domain : id.split('.')[0], e && e.icon) +
+        haIcon(e ? e.domain : id.split('.')[0], glyph) +
         '</div><div class="ha-tx"><div class="ha-s"></div><div class="ha-n"></div></div>';
       el.querySelector('.ha-s').textContent = st;
       el.querySelector('.ha-n').textContent = name;
@@ -450,7 +461,7 @@ var CARD_TYPES = {
           .slice(0, 12),
         rows = ids.map(function (id) {
           var e = HA.by[id];
-          return [e ? e.name : id, e ? haState(e) : '\u2026', e ? e.domain : id.split('.')[0], e && e.icon];
+          return [e ? e.name : id, e ? haState(e) : '\u2026', e ? e.domain : id.split('.')[0], e && haGlyph(e.icon)];
         }),
         title = String(o.title || '').slice(0, 60),
         key = title + JSON.stringify(rows) + HA.err;

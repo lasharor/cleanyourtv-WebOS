@@ -7,6 +7,36 @@ const { root, ok, run } = require('./lib');
 
 run(async () => {
   const cardsSource = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'cards.js'), 'utf8');
+  const mdiScripts = [];
+  let mdiRedraws = 0;
+  const mdiContext = {
+    window: {},
+    document: {
+      createElement: tag => ({ tag }),
+      head: { appendChild: script => mdiScripts.push(script) },
+    },
+    tickCards: () => mdiRedraws++,
+    lineSvg: () => 'domain icon',
+  };
+  vm.runInNewContext(cardsSource.slice(cardsSource.indexOf('var HA_ICON'), cardsSource.indexOf("/* an entity's state")), mdiContext);
+  const homePage = fs.readFileSync(path.join(root, 'app', 'index.html'), 'utf8');
+  ok(!/<script[^>]+src=["']mdi-glyphs\.js/.test(homePage), 'the launcher does not load the MDI map at startup');
+  mdiContext.haGlyph();
+  ok(!mdiScripts.length, 'an entity without an icon does not request the MDI map');
+  const pending = mdiContext.haGlyph('mdi:cat');
+  mdiContext.haGlyph('mdi:water');
+  ok(
+    mdiScripts.length === 1 && mdiScripts[0].tag === 'script' && mdiScripts[0].src === 'mdi-glyphs.js',
+    'concurrent icon lookups request the bundled map only once'
+  );
+  ok(mdiContext.haIcon('sensor', pending) === 'domain icon', 'the domain icon is shown while the map is loading');
+  mdiContext.window.HA_MDI = { 'mdi:cat': 123 };
+  mdiScripts[0].onload();
+  ok(
+    mdiRedraws === 1 && mdiContext.haIcon('sensor', mdiContext.haGlyph('mdi:cat')).indexOf('&#123;') >= 0,
+    'loading the map redraws cards and makes the glyph available'
+  );
+  ok(mdiContext.haIcon('sensor', mdiContext.haGlyph('mdi:unknown')) === 'domain icon', 'unknown glyphs keep the domain icon');
   const stackContext = { document: { documentElement: { dir: 'ltr' } } };
   vm.createContext(stackContext);
   vm.runInContext(
