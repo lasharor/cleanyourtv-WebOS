@@ -41,7 +41,18 @@ var CS_PURE = (function () {
     }
     return null;
   }
-  return { csNext: csNext, csTabStep: csTabStep, csUnset: csUnset };
+  // the target of a name, or null
+  function csNamed(list, name) {
+    for (var i = 0; name && i < list.length; i++) if (list[i].name === name) return list[i];
+    return null;
+  }
+  // a move from the page into the tab row lands on the tab the page shows (when it said which), not the nearest one
+  function csLand(list, cur, next, tab) {
+    if (!next || next.tab < 0 || !cur || cur.tab >= 0 || !(tab >= 0)) return next;
+    for (var i = 0; i < list.length; i++) if (list[i].tab === tab) return list[i];
+    return next;
+  }
+  return { csNext: csNext, csTabStep: csTabStep, csUnset: csUnset, csNamed: csNamed, csLand: csLand };
 })();
 if (typeof window !== 'undefined') window.CS_PURE = CS_PURE;
 /* @dom */
@@ -50,8 +61,8 @@ if (typeof window !== 'undefined') window.CS_PURE = CS_PURE;
    frame like the card's own. The page draws; the launcher owns the keys and the focus: the page tells where its targets are (percent of
    its frame), the launcher moves the focus between them with the arrows, draws the ring over them and tells the page what happened
    (select, act, focus). Messages: launcher -> page {cytvCard: ctx} and {cytvSheet: {select: i | act: name | focus: name}}; page -> launcher
-   {cytvCard: 'ready'}, {cytvSheet: 'targets', targets, focus}, 'option' (set), 'action' (name, arg), 'close'. */
-var CS = { on: false, el: null, frame: null, targets: [], cur: null, idleT: 0, slot: '', ctxK: '', tick: 0, ov: null };
+   {cytvCard: 'ready'}, {cytvSheet: 'targets', targets, focus, back, tab}, 'option' (set), 'action' (name, arg), 'close'. */
+var CS = { on: false, el: null, frame: null, targets: [], cur: null, back: '', tab: -1, idleT: 0, slot: '', ctxK: '', tick: 0, ov: null };
 /* the live card element of the place the sheet was opened from (Home redraws its cards, which makes new elements) */
 function csCardEl() {
   var els = $('cards').children;
@@ -88,6 +99,8 @@ function csOpen(cardEl) {
   CS.slot = cardEl._slot;
   CS.targets = [];
   CS.cur = null;
+  CS.back = '';
+  CS.tab = -1;
   CS.ctxK = '';
   var box = CS.el;
   box.className = 'on';
@@ -128,6 +141,8 @@ function csClose() {
   CS.ov = null;
   CS.targets = [];
   CS.cur = null;
+  CS.back = '';
+  CS.tab = -1;
 }
 /* OLED care, as for the cards: a sheet nobody uses closes after five minutes */
 function csIdle() {
@@ -138,8 +153,10 @@ function csPct(v) {
   v = Number(v);
   return isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
 }
-/* the targets the page told: kept only as far as they are well formed; the focus stays where it was if that target is still there */
-function csTargets(list, focus) {
+/* the targets the page told: kept only as far as they are well formed; the focus stays where it was if that target is still there.
+   back: the target Back presses instead of closing the sheet (a page that is not on its first tab goes back to it); tab: the tab the
+   page shows, where Up from the page lands in the tab row */
+function csTargets(list, focus, back, tab) {
   var ok = [],
     keep = CS.cur ? CS.cur.name : '';
   (Array.isArray(list) ? list : []).slice(0, 24).forEach(function (b) {
@@ -157,6 +174,8 @@ function csTargets(list, focus) {
     });
   });
   CS.targets = ok;
+  CS.back = typeof back === 'string' && back.length <= 40 ? back : '';
+  CS.tab = typeof tab === 'number' && tab >= 0 && tab === Math.floor(tab) ? tab : -1;
   var want = typeof focus === 'string' && focus ? focus : keep;
   CS.cur = null;
   ok.forEach(function (b) {
@@ -209,7 +228,12 @@ function csKey(k, e) {
   var rl = typeof rtl === 'function' && rtl();
   if (rl && (k === 37 || k === 39)) k = 76 - k;
   e.preventDefault();
-  if (k === 461 || k === 27 || k === 8) return csClose();
+  if (k === 461 || k === 27 || k === 8) {
+    var bk = CS_PURE.csNamed(CS.targets, CS.back);
+    if (!bk) return csClose();
+    csFocus(bk, true);
+    return csActivate(bk);
+  }
   if (k === 13) return csActivate(CS.cur);
   var dir = k === 37 ? 'left' : k === 38 ? 'up' : k === 39 ? 'right' : k === 40 ? 'down' : '';
   if (!dir || !CS.targets.length) return;
@@ -217,6 +241,8 @@ function csKey(k, e) {
   var n = CS_PURE.csTabStep(CS.targets, CS.cur, dir, rl);
   if (n) return csFocus(n, true);
   n = CS_PURE.csNext(CS.targets, CS.cur, dir);
+  /* from the page into the tab row: the tab the page shows */
+  n = CS_PURE.csLand(CS.targets, CS.cur, n, CS.tab);
   if (n) csFocus(n, false);
 }
 /* a click on the dimmed Home closes the sheet */
@@ -231,7 +257,7 @@ window.addEventListener('message', function (e) {
   csIdle();
   if (d.cytvCard === 'ready') return csSendCtx(true);
   var m = d.cytvSheet;
-  if (m === 'targets') csTargets(d.targets, d.focus);
+  if (m === 'targets') csTargets(d.targets, d.focus, d.back, d.tab);
   else if (m === 'close') csClose();
   else if (m === 'option' && d.set && typeof d.set === 'object') {
     var el = csCardEl();

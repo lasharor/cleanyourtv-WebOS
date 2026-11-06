@@ -77,6 +77,36 @@
       }
     },
     {
+      "id": "markets",
+      "name": "Stocks and crypto",
+      "version": "1.0.0",
+      "description": "Two cards for Home: a watchlist of stocks and indices, and one of crypto coins, with a chart and details on OK.",
+      "about": "Two cards for Home: Stocks (shares, ETFs and indices of any exchange, like AAPL, ^GSPC or TEVA.TA) and Crypto (coins by their symbol, like BTC or ETH). Choose a ready list on the TV (Customise > Stocks or Crypto) or type your own on the phone page (Cards > Set up from your phone). Each card is one button for the remote: OK opens a drawer with Watchlist, Chart and Details, where the range of the chart can be changed. Stock prices come from Yahoo Finance's public chart service (no key, may be delayed, for personal use) at most every 5 minutes while a market is open; crypto prices from CoinGecko's public API (no key) at most every 2 minutes. Only the symbols you chose leave the TV.",
+      "preview": "",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "luna": [],
+      "files": {
+        "addon.json": "70dbacdc0209e5d5bcd3a76369e295d901f96f790a66d6112e3d07e78be476ae",
+        "cards/crypto/card.css": "c5f273e0f32b19cf0e599f711a6f444bc12e8d08443fa286fa87c8f62c870658",
+        "cards/crypto/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
+        "cards/crypto/card.js": "0fb004bea11e10a233a5caf765383d7aa65a6e9cda62c8f426f8540c8ec34a0b",
+        "cards/crypto/drawer.css": "e2d56fad8d47e9cd7089bbc2215a3e68105d2920f6ad627ee7e73589643b37e9",
+        "cards/crypto/drawer.html": "23d4a3120edfe92312fc55c95e1c5ec661f4eac1f3004026b4d532a5a3ea3eae",
+        "cards/crypto/drawer.js": "1deb198c033f00def0e82afab788b5053db3bc9d696e5b0f7eccc8a54860e8f1",
+        "cards/stocks/card.css": "c5f273e0f32b19cf0e599f711a6f444bc12e8d08443fa286fa87c8f62c870658",
+        "cards/stocks/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
+        "cards/stocks/card.js": "0fb004bea11e10a233a5caf765383d7aa65a6e9cda62c8f426f8540c8ec34a0b",
+        "cards/stocks/drawer.css": "e2d56fad8d47e9cd7089bbc2215a3e68105d2920f6ad627ee7e73589643b37e9",
+        "cards/stocks/drawer.html": "23d4a3120edfe92312fc55c95e1c5ec661f4eac1f3004026b4d532a5a3ea3eae",
+        "cards/stocks/drawer.js": "1deb198c033f00def0e82afab788b5053db3bc9d696e5b0f7eccc8a54860e8f1",
+        "markets.js": "46209583f525c76f5634d520ba0651d37a61150d2b8bf6698327b2a884a9c9f8",
+        "service.js": "768e56c759c880e7db19fdd7a912355259cbc9596058449ec17a08a1d3a0acb6"
+      }
+    },
+    {
       "id": "phoneremote",
       "name": "Phone remote",
       "version": "1.0.1",
@@ -98,7 +128,7 @@
       "files": {
         "addon.json": "4e5f3eab4b00b15608f4c0b05dd3bd8161748cc1844052a1ed038bd6e60806c9",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "440ed9aa4e4c5ad9f5dab07f90a3290ec44d03ade6f1a826263ab1f829e0b746",
+        "page/index.html": "1ec8f041a24209c00074be6ff28339da470866b8377e06a61c8525b68109cc56",
         "page.js": "985cedb9ca9b6038eff61f4ac45f0db1a803b0ee6b0adcf99430c9b0dec926ee",
         "remotekeys.js": "2f65affbb6a6ff057947d81a553ee3d2063d293edaed4cdcb4a0019b380ea8d3",
         "service.js": "b78115301ab56e0c4244279b420ff4ab76da4686fc33fb49332c96a0d4a83c3e",
@@ -190,7 +220,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "e82ae83da3a14b481ed1ebc6f2c81c6221a9ce92a492a44fe27112f30c192f69",
+        "page/index.html": "44c3b574410742790df253663c40d5a623ac61c28049ac2d3b933e9ddab36dda",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"

@@ -1,0 +1,343 @@
+/* The markets drawer (drawer.js), as in the design (the "Markets Cards for CleanYourTV" artifact): the page is the whole panel of the
+   sheet, 760x1080 px of the launcher's canvas (the launcher clips its corners and draws the focus ring over the buttons). Nothing animates;
+   no flex gap or grid gap (Chromium before 84): sibling margins. Right-to-left rules at the end. */
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  box-sizing: border-box;
+  padding: 48px 52px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(16, 21, 30, 0.94);
+  color: #fff;
+  font-family: sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+#app {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ltr {
+  direction: ltr;
+}
+.s2 {
+  color: rgba(255, 255, 255, 0.72);
+}
+.up {
+  color: #4ade9a;
+}
+.dn {
+  color: #ff7a6e;
+}
+.fl {
+  color: rgba(255, 255, 255, 0.7);
+}
+.ln {
+  display: block;
+  flex: none;
+}
+.badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  margin-right: 14px;
+  flex: none;
+}
+
+/* the header: the card's name and how fresh the prices are; the range and Close */
+.dh {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex: none;
+}
+.pl {
+  font-size: 38px;
+  font-weight: 600;
+  min-width: 0;
+  margin-right: 14px;
+}
+.pl small {
+  display: block;
+  font-size: 21px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.62);
+  margin-top: 4px;
+}
+.pl small.off {
+  color: #f0b54a;
+}
+.bt {
+  display: flex;
+  flex: none;
+}
+.p {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 22px;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 22px;
+  margin-left: 14px;
+  white-space: nowrap;
+}
+
+/* the chosen symbol */
+.hero {
+  display: flex;
+  align-items: center;
+  margin-top: 30px;
+  flex: none;
+}
+.badge.bg {
+  width: 84px;
+  height: 84px;
+  font-size: 30px;
+  margin-right: 22px;
+}
+.hero .big {
+  font-size: 80px;
+  font-weight: 200;
+  line-height: 1;
+  white-space: nowrap;
+}
+.hero .hx {
+  margin-left: 24px;
+  font-size: 24px;
+  min-width: 0;
+}
+.hero .hx b {
+  display: block;
+  font-size: 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hero .hx span {
+  white-space: nowrap;
+}
+
+/* the three tabs */
+.tabs {
+  display: flex;
+  margin-top: 30px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 30px;
+  padding: 5px;
+  flex: none;
+}
+.tabs div {
+  flex: 1;
+  text-align: center;
+  height: 52px;
+  line-height: 52px;
+  border-radius: 26px;
+  font-size: 23px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.tabs div.on {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-weight: 600;
+}
+.bd {
+  flex: 1;
+  min-height: 0;
+  margin-top: 22px;
+  overflow: hidden;
+  position: relative;
+}
+.empty {
+  font-size: 25px;
+  color: rgba(255, 255, 255, 0.72);
+  padding: 20px 18px;
+}
+
+/* Watchlist */
+.wl .r {
+  display: flex;
+  align-items: center;
+  height: 78px;
+  padding: 0 18px;
+  border-radius: 18px;
+  font-size: 25px;
+}
+.wl .r + .r {
+  margin-top: 4px;
+}
+.wl .r.sel {
+  background: rgba(255, 255, 255, 0.07);
+}
+.wl .r .nm {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.wl .r .nm b {
+  font-weight: 600;
+}
+.wl .r .nm small {
+  display: block;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wl .r .ln {
+  margin: 0 20px;
+}
+.wl .r .pr {
+  width: 150px;
+  text-align: right;
+  white-space: nowrap;
+}
+.wl .r .ch {
+  width: 120px;
+  text-align: right;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Chart */
+.chart {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 22px;
+  padding: 20px 22px;
+}
+.chart .ch2 {
+  display: flex;
+  justify-content: space-between;
+  font-size: 20px;
+}
+.chart .cv {
+  margin-top: 12px;
+}
+.chart .rg {
+  display: flex;
+  margin-top: 16px;
+}
+.chart .rg div {
+  height: 48px;
+  line-height: 48px;
+  padding: 0 22px;
+  border-radius: 24px;
+  font-size: 21px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-right: 10px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.chart .rg div.on {
+  background: #fff;
+  color: #0d131b;
+  font-weight: 600;
+  text-shadow: none;
+}
+
+/* Details: two columns of tiles, then the range as a bar */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -7px;
+}
+.stats .t {
+  box-sizing: border-box;
+  width: calc(50% - 14px);
+  margin: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 16px 20px;
+}
+.stats .t .l {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.62);
+}
+.stats .t .v {
+  font-size: 30px;
+  font-weight: 500;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* a long value (a range in shekels) in a smaller size, so it is not cut */
+.stats .t.sm .v {
+  font-size: 25px;
+  line-height: 35px;
+}
+.yr {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 16px 20px;
+  margin-top: 14px;
+}
+.yr .yh {
+  font-size: 18px;
+  display: flex;
+  justify-content: space-between;
+}
+.rng {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #ff7a6e, #f0d36b, #4ade9a);
+  margin-top: 14px;
+}
+.rng i {
+  position: absolute;
+  top: -6px;
+  width: 6px;
+  height: 20px;
+  border-radius: 3px;
+  background: #fff;
+  margin-left: -3px;
+}
+.src {
+  font-size: 17px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 14px;
+}
+
+/* right-to-left: the badges move to the other side of their text (the charts and bars keep their left-to-right scale) */
+[dir="rtl"] .pl {
+  margin-right: 0;
+  margin-left: 14px;
+}
+[dir="rtl"] .p {
+  margin-left: 0;
+  margin-right: 14px;
+}
+[dir="rtl"] .badge {
+  margin-right: 0;
+  margin-left: 14px;
+}
+[dir="rtl"] .badge.bg {
+  margin-left: 22px;
+}
+[dir="rtl"] .hero .hx {
+  margin-left: 0;
+  margin-right: 24px;
+}
+[dir="rtl"] .wl .r .pr,
+[dir="rtl"] .wl .r .ch {
+  text-align: left;
+}
+[dir="rtl"] .chart .rg div {
+  margin-right: 0;
+  margin-left: 10px;
+}

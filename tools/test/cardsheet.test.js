@@ -34,6 +34,22 @@ run(async () => {
   ok(P.csTabStep(list, by('c0'), 'right', false) === null, 'a target that is no tab does not step');
   ok(P.csTabStep(list, by('now'), 'down', false) === null, 'up and down do not step tabs');
 
+  // back: the target Back presses instead of closing; tab: Up from the page lands on the tab shown
+  ok(
+    nm(P.csNamed(list, 'now')) === 'now' && P.csNamed(list, '') === null && P.csNamed(list, 'gone') === null,
+    'csNamed finds a target by name, or none'
+  );
+  ok(nm(P.csLand(list, by('c0'), by('now'), 2)) === 'days', 'up from the page lands on the tab the page shows');
+  ok(nm(P.csLand(list, by('c0'), by('now'), -1)) === 'now', 'without a tab from the page, the nearest tab');
+  ok(
+    nm(P.csLand(list, by('now'), by('hours'), 2)) === 'hours' && nm(P.csLand(list, by('c0'), by('unit'), 2)) === 'unit',
+    'only a move from the page into the tab row is changed'
+  );
+  ok(
+    /csNamed\(CS\.targets, CS\.back\)[\s\S]*?if \(!bk\) return csClose\(\)/.test(src),
+    'Back presses the back target, and closes the sheet when there is none'
+  );
+
   const csrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'cards.js'), 'utf8');
   const m = csrc.match(/function cardBtnRoute[\s\S]*?\n\}\r?\n/);
   ok(!!m, 'cards.js has cardBtnRoute');
