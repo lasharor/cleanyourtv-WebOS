@@ -1021,5 +1021,7 @@
  "Cooler than it is": "Cooler than it is",
  "As it is": "As it is",
  "%s of daylight": "%s of daylight",
- "Photo: %s": "Photo: %s"
+ "Photo: %s": "Photo: %s",
+ "Voice is not available on this TV": "Voice is not available on this TV",
+ "its kernel is 32-bit": "its kernel is 32-bit"
 }

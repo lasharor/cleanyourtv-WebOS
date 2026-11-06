@@ -90,7 +90,16 @@ function build() {
     var ha = v.ha || {},
       haOk = !!ha.configured,
       HR = { 'ha-first': 'Home Assistant first, then the AI', 'ha-only': 'Home Assistant only', 'ai-only': 'The AI only' };
-    if (!v.installed) {
+    if (!v.installed && v.unsupported) {
+      /* a 32-bit kernel cannot start the 64-bit recogniser: nothing is offered to download */
+      rows.push({
+        label: 'Voice is not available on this TV',
+        sub: 'its kernel is 32-bit',
+        info: { t: 'Voice is not available on this TV', d: v.unsupported },
+        dim: true,
+        fn: function () {},
+      });
+    } else if (!v.installed) {
       rows.push({
         label: 'Install voice',
         sub: wk ? 'installing…' : 'downloads about 80 MB',

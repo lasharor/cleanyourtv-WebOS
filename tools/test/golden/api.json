@@ -816,6 +816,7 @@
    "pairedAt": 0,
    "pairing": false,
    "suppressLg": false,
+   "unsupported": "",
    "url": ""
   },
   "cors": "null",
