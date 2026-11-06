@@ -104,6 +104,8 @@ same place.
 | Home Assistant weather | A `weather.*` entity: the sky now with an icon, the temperature (from an outside temperature sensor if you choose one, otherwise the entity's own), humidity and wind, and the forecast for the next days or hours from `weather.get_forecasts` (Home Assistant 2023.9 and newer; older versions are read from the `forecast` attribute). Asked every five minutes, the forecast at most every 15 minutes. It also feeds `{{weather.temp}}`, `{{weather.text}}` and the greeting's weather line. |
 | Text | Your own text. `{{greeting}}`, `{{time}}`, `{{date}}` and `{{weekday}}` are filled in and kept up to date, and `{{weather.temp}}` and `{{weather.text}}` with a weather card on Home; `**bold**`, `*italic*` and a line starting with `#` for a heading. In three sizes. |
 
+The single entity and entity list cards use an entity's `mdi:` icon when Home Assistant provides it and the bundled icon set contains it. Otherwise they use the standard icon for that entity type.
+
 **Customise** > **Home Assistant** (the first row, in themes with places for cards) chooses the cards with
 the remote: for each place the kind of card (Home Assistant entity, entities, camera, greeting or empty, and the Home Assistant weather card where the launcher has it) and what it shows,
 picked from the entities Home Assistant has (a weather entity and a temperature sensor for the weather card; for the entity cards

@@ -852,7 +852,16 @@ body.wpon {
 .card-ha-entity.f .ha-n {
   color: inherit;
 }
-.ha-i svg {
+@font-face {
+  font-family: 'CYTV MDI';
+  src: url('mdi.woff2') format('woff2');
+}
+.ha-mdi {
+  font: normal 48px/1 'CYTV MDI';
+  -webkit-font-smoothing: antialiased;
+}
+.ha-i svg,
+.ha-i .ha-mdi {
   display: block;
   width: 48px;
   height: 48px;
@@ -893,12 +902,16 @@ body.wpon {
 .ha-row + .ha-row {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
-.ha-ri svg {
+.ha-ri svg,
+.ha-ri .ha-mdi {
   display: block;
   width: 28px;
   height: 28px;
   margin-right: 14px;
   color: var(--ink2);
+}
+.ha-ri .ha-mdi {
+  font-size: 28px;
 }
 .ha-rn {
   flex: 1;

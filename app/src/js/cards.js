@@ -97,7 +97,9 @@ var HA_ICON = {
   play: '<circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/>',
   dot: '<circle cx="12" cy="12" r="3"/>',
 };
-function haIcon(d) {
+function haIcon(d, icon) {
+  var glyph = window.HA_MDI && window.HA_MDI[icon];
+  if (typeof glyph === 'number') return '<span class="ha-mdi" aria-hidden="true">&#' + glyph + ';</span>';
   var k =
     d === 'light'
       ? 'light'
@@ -399,7 +401,7 @@ var CARD_TYPES = {
         e = HA.by[id],
         name = String(o.name || (e && e.name) || id).slice(0, 60),
         st = e ? haState(e) : HA.err ? t(HA.err) : id ? '\u2026' : t('Choose an entity from your phone'),
-        key = id + '|' + name + '|' + st + '|' + (e ? e.state : '');
+        key = id + '|' + name + '|' + st + '|' + (e ? e.state : '') + '|' + (e && e.icon ? e.icon : '');
       haHide(el, !id || HA.err === HA_NOT_SET);
       el._o = { action: 'card', label: name };
       el.classList.toggle('on', !!e && e.state === 'on');
@@ -407,7 +409,7 @@ var CARD_TYPES = {
       el._k = key;
       el.innerHTML =
         '<div class="ha-i">' +
-        haIcon(e ? e.domain : id.split('.')[0]) +
+        haIcon(e ? e.domain : id.split('.')[0], e && e.icon) +
         '</div><div class="ha-tx"><div class="ha-s"></div><div class="ha-n"></div></div>';
       el.querySelector('.ha-s').textContent = st;
       el.querySelector('.ha-n').textContent = name;
@@ -444,7 +446,7 @@ var CARD_TYPES = {
           .slice(0, 12),
         rows = ids.map(function (id) {
           var e = HA.by[id];
-          return [e ? e.name : id, e ? haState(e) : '\u2026', e ? e.domain : id.split('.')[0]];
+          return [e ? e.name : id, e ? haState(e) : '\u2026', e ? e.domain : id.split('.')[0], e && e.icon];
         }),
         title = String(o.title || '').slice(0, 60),
         key = title + JSON.stringify(rows) + HA.err;
@@ -461,7 +463,7 @@ var CARD_TYPES = {
       if (title) el.querySelector('.ha-title').textContent = title;
       var rs = el.querySelectorAll('.ha-row');
       rows.forEach(function (r, i) {
-        rs[i].querySelector('.ha-ri').innerHTML = haIcon(r[2]);
+        rs[i].querySelector('.ha-ri').innerHTML = haIcon(r[2], r[3]);
         rs[i].querySelector('.ha-rn').textContent = r[0];
         rs[i].querySelector('.ha-rs').textContent = r[1];
       });

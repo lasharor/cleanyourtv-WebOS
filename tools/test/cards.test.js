@@ -141,8 +141,8 @@ run(async () => {
       return rs.end(
         JSON.stringify([
           { entity_id: 'light.living', state: 'on', attributes: { friendly_name: 'Living room' } },
-          { entity_id: 'sensor.temp', state: '8.4', attributes: { friendly_name: 'Outside', unit_of_measurement: '°C' } },
-          { entity_id: 'lock.door', state: 'locked', attributes: {} },
+          { entity_id: 'sensor.temp', state: '8.4', attributes: { friendly_name: 'Outside', unit_of_measurement: '°C', icon: 'mdi:thermometer' } },
+          { entity_id: 'lock.door', state: 'locked', attributes: { icon: 'mdi:<invalid>' } },
           {
             entity_id: 'weather.home',
             state: 'rainy',
@@ -204,6 +204,9 @@ run(async () => {
       /Bearer tok/.test(calls[0]),
     'the states come from one request with the Voice token; a missing entity is unavailable and a bad id is left out'
   );
+  const iconReply = await call(cards, '/api/cards/ha', 'POST', { ids: ['light.living', 'sensor.temp', 'lock.door'] });
+  const icons = iconReply.j.states.map(entity => entity.icon);
+  ok(icons[0] === undefined && icons[1] === 'mdi:thermometer' && icons[2] === undefined, 'only valid MDI names are forwarded');
   await call(cards, '/api/cards/ha', 'POST', { ids: ['sensor.temp'] });
   ok(calls.filter(c => /states/.test(c)).length === 1, 'the states are kept for a while, however many cards ask');
   r = await call(cards, '/api/cards/ha/toggle', 'POST', { id: 'light.living' });

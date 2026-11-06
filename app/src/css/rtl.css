@@ -97,7 +97,8 @@
   direction: ltr;
   unicode-bidi: isolate;
 }
-[dir="rtl"] .ha-ri svg {
+[dir="rtl"] .ha-ri svg,
+[dir="rtl"] .ha-ri .ha-mdi {
   margin-right: 0;
   margin-left: 14px;
 }
@@ -105,7 +106,8 @@
   margin-left: 0;
   margin-right: 16px;
 }
-[dir="rtl"] .ha-i svg {
+[dir="rtl"] .ha-i svg,
+[dir="rtl"] .ha-i .ha-mdi {
   margin-right: 0;
   margin-left: 20px;
 }
