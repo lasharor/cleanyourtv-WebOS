@@ -47,7 +47,10 @@ program.
 
 Where Home is a stand-in but the screen saver needs the folder mount (a QML screen saver, the likely case on webOS 5 and 6), the app
 manager is restarted at boot *after* Home came up, and Home is opened again afterwards (`reload-home.sh`), because the restart takes
-down the page in `webapp-mgr`. The setup itself only mounts; such a TV gets the new screen saver from its next boot.
+down the page in `webapp-mgr`. The setup itself never restarts the app manager for the screen saver: such a TV keeps LG's screen saver until its next boot
+and gets ours then (a folder mounted without that restart would hide LG's files from an app manager that has not read the new
+manifest, and the TV would have no screen saver at all). A native saver (the stand-in) and a TV where the Home takeover restarted
+the app manager get ours at once.
 
 ## When it appears
 
