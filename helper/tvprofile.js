@@ -30,6 +30,10 @@
 //                  starting their program. LG's native Home is then never started from the program the stand-in replaces, so the stand-in
 //                  does not run (55UR78006LK, issue 72; OLED55BX3LB, issue 84). Not used to choose the way: other TVs with CRIU may run the
 //                  stand-in fine. The setup tries the stand-in first and, when the launcher does not come up, the mount way (bootstrap.sh).
+//   wakeRefocus    the launcher may ask the service to give it the remote back after a wake (POST /api/refocus, picker.makeRefocus):
+//                  on webOS 26 (SDK 11) the compositor sends Home no keyboard after its relaunch by the boot manager and the remote does
+//                  nothing until Back is held (OLED65C54LA, 43.21.77). Seen only on SDK 11; newer ones are assumed to work the same way.
+//                  The launcher asks only when it is shown without the focus, so a TV without the problem never sees the picker.
 // To support a new kind of TV, change the rules here and add a case to tools/test/tvprofile.test.js.
 //
 // In the service: tvprofile.create({luna}) -> { get(), refresh() }, saved in tv.json.
@@ -83,6 +87,7 @@ function decide(facts, compat) {
             : '',
     criu: /(^|\s)criu_enabled(\s|=|$)/.test(String(f.cmdline || '')),
     homeTakeover: /^com\.webos\.app\.home native$/.test(homeKind) ? 'standin' : 'mount',
+    wakeRefocus: major >= 11,
   };
 }
 const readJson = (file, d) => {

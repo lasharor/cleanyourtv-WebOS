@@ -320,7 +320,15 @@ var LIVE = (function () {
     api(LIVE_API + '/open', { id: c.id }).then(
       function (r) {
         if (r && r.error) toastL(t(r.error));
-        else o.exit();
+        else {
+          /* a channel of the TV's own tuner has no stream here: it is remembered so the guide opens on it next time */
+          try {
+            localStorage.setItem('live.tuned', String(c.num));
+          } catch (e) {}
+          /* LG's Live TV is in front now. The page stays where it is, with the guide closed, so the Guide button finds it ready and opens the
+             guide at once instead of going through the launcher's Home first */
+          closeList();
+        }
       },
       function () {
         toastL(t('The helper is not reachable.'));
@@ -506,12 +514,23 @@ var LIVE = (function () {
   }
   function openList() {
     L.open = true;
-    var c = byNum[cur];
+    var c = byNum[cur],
+      tuned = 0;
+    try {
+      tuned = +localStorage.getItem('live.tuned') || 0;
+    } catch (e) {}
+    if (!c && tuned) c = byNum[tuned];
     L.g = 0;
     if (c && c.cats[0]) {
       var gi = groups.indexOf(c.cats[0]);
       if (gi >= 0) L.g = gi + 3;
-    }
+    } else if (
+      groups.length &&
+      !chans.some(function (x) {
+        return x.url;
+      })
+    )
+      L.g = 3; /* a guide with no streams (the TV's tuner): its own tab */
     L.list = listFor(L.g);
     L.ci = Math.max(0, L.list.indexOf(c));
     drawList();
@@ -596,7 +615,7 @@ var LIVE = (function () {
         '" data-j="' +
         j +
         '"><div class="n">' +
-        c.num +
+        (L.g >= 3 && c.lg ? c.lg : c.num) +
         '</div>' +
         (c.logo ? '<img class="lg" src="' + lesc(c.logo) + '" alt="">' : '<div class="lg"></div>') +
         '<div class="t"><div class="nm">' +
@@ -1018,6 +1037,7 @@ var LIVE = (function () {
                 alt: (r[12] || []).map(function (a) {
                   return { url: a[0], q: a[1] };
                 }),
+                lg: r[13] || '' /* the number a source has for the channel itself (the TV's tuner), shown in the tab of its group */,
               };
             });
             byNum = {};
@@ -1201,7 +1221,9 @@ var LIVE = (function () {
           relist();
           return;
         }
-        closeList();
+        /* the TV guide of the tuner has no player under it to go back to: Back leaves the page (the launcher goes back to the TV) */
+        if (ADDON !== 'iptv') o.exit();
+        else closeList();
         return;
       } else if (k >= 48 && k <= 57) {
         closeList();

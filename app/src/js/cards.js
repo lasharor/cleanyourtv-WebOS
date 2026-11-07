@@ -35,7 +35,7 @@ var WX_ICON = {
   storm: '<path d="M7 15h10.5a4 4 0 0 0 .4-8 6 6 0 0 0-11.6 1.5A3.3 3.3 0 0 0 7 15z"/><path d="M12.5 15l-2 4h3l-2 4"/>',
 };
 /* WMO weather codes as Open-Meteo gives them: an icon and a word */
-function wxKind(code, day) {
+function wthKind(code, day) {
   if (code === 0) return [day === false ? 'moon' : 'sun', t('Clear')];
   if (code <= 2) return ['part', t('Partly cloudy')];
   if (code === 3) return ['cloud', t('Cloudy')];
@@ -54,14 +54,14 @@ function lineSvg(p) {
     '</svg>'
   );
 }
-function wxSvg(k) {
+function wthSvg(k) {
   return lineSvg(WX_ICON[k]);
 }
-function wxText(w) {
-  return w && w.now ? w.now.temp + '° · ' + wxKind(w.now.code, w.now.day)[1] : '';
+function wthText(w) {
+  return w && w.now ? w.now.temp + '° · ' + wthKind(w.now.code, w.now.day)[1] : '';
 }
 /* the weather of a card's place: what is known now (or null), asking the service when it is older than ten minutes */
-function wxFor(o) {
+function wthFor(o) {
   var lat = +o.lat,
     lon = +o.lon,
     unit = o.unit === 'f' ? 'f' : 'c';
@@ -97,7 +97,19 @@ var HA_ICON = {
   play: '<circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/>',
   dot: '<circle cx="12" cy="12" r="3"/>',
 };
-function haIcon(d) {
+var haMdiRequested = false;
+function haGlyph(icon) {
+  if (!icon) return;
+  if (window.HA_MDI) return window.HA_MDI[icon];
+  if (haMdiRequested) return;
+  haMdiRequested = true;
+  var script = document.createElement('script');
+  script.src = 'mdi-glyphs.js';
+  script.onload = tickCards;
+  document.head.appendChild(script);
+}
+function haIcon(d, glyph) {
+  if (typeof glyph === 'number') return '<span class="ha-mdi" aria-hidden="true">&#' + glyph + ';</span>';
   var k =
     d === 'light'
       ? 'light'
@@ -128,11 +140,15 @@ function haIds() {
     if (c.type === 'ha-entities')
       String(c.entities || '')
         .split(/[\s,]+/)
-        .forEach(function (x) {
-          if (x) ids.push(x);
+        .filter(function (id) {
+          return id;
+        })
+        .slice(0, 12)
+        .forEach(function (id) {
+          if (ids.indexOf(id) < 0) ids.push(id);
         });
   }
-  return ids.slice(0, 20);
+  return ids.slice(0, 96);
 }
 /* asks the service for the states the cards show, when they are older than 30 s or the list changed */
 function haPoll() {
@@ -275,7 +291,7 @@ function cardMarkup(src, opt) {
     date: dateText(),
     weekday: dateText({ weekday: 'long' }),
     'weather.temp': WX_LAST && WX_LAST.now ? WX_LAST.now.temp + '\u00B0' : '',
-    'weather.text': WX_LAST && WX_LAST.now ? wxKind(WX_LAST.now.code, WX_LAST.now.day)[1] : '',
+    'weather.text': WX_LAST && WX_LAST.now ? wthKind(WX_LAST.now.code, WX_LAST.now.day)[1] : '',
   };
   /* what was filled in for a downloaded card, as {{opt.<key>}} */
   for (var k0 in opt || {}) vars['opt.' + k0] = String(opt[k0]);
@@ -325,7 +341,7 @@ var CARD_TYPES = {
     },
     draw: function (el, o) {
       var s = greetText(String(o.name || '').slice(0, 40)),
-        l2 = o.line === 'date' ? dateText() : o.line === 'weather' ? wxText(WX_LAST) : '',
+        l2 = o.line === 'date' ? dateText() : o.line === 'weather' ? wthText(WX_LAST) : '',
         key = s + '|' + l2;
       if (el._k === key) return;
       el._k = key;
@@ -340,15 +356,15 @@ var CARD_TYPES = {
       return t('Weather');
     },
     draw: function (el, o) {
-      var w = wxFor(o),
+      var w = wthFor(o),
         place = String(o.place || '').slice(0, 40),
         h;
       if (!w) h = '<div class="wx-none"></div>';
       else {
-        var k = wxKind(w.now.code, w.now.day);
+        var k = wthKind(w.now.code, w.now.day);
         h =
           '<div class="wx-now"><span class="wx-i">' +
-          wxSvg(k[0]) +
+          wthSvg(k[0]) +
           '</span><span class="wx-t">' +
           w.now.temp +
           '°</span></div><div class="wx-p"></div>';
@@ -366,7 +382,7 @@ var CARD_TYPES = {
                   '<div><span>' +
                   wd +
                   '</span>' +
-                  wxSvg(wxKind(d.code, true)[0]) +
+                  wthSvg(wthKind(d.code, true)[0]) +
                   '<b>' +
                   d.max +
                   '°</b> <small>' +
@@ -383,7 +399,7 @@ var CARD_TYPES = {
       el.innerHTML = h;
       var p = el.querySelector('.wx-p') || el.querySelector('.wx-none');
       p.textContent = w
-        ? (place ? place + ' · ' : '') + wxKind(w.now.code, w.now.day)[1]
+        ? (place ? place + ' · ' : '') + wthKind(w.now.code, w.now.day)[1]
         : o.lat === undefined
           ? t('Choose a place from your phone')
           : place;
@@ -399,7 +415,8 @@ var CARD_TYPES = {
         e = HA.by[id],
         name = String(o.name || (e && e.name) || id).slice(0, 60),
         st = e ? haState(e) : HA.err ? t(HA.err) : id ? '\u2026' : t('Choose an entity from your phone'),
-        key = id + '|' + name + '|' + st + '|' + (e ? e.state : '');
+        glyph = e && haGlyph(e.icon),
+        key = id + '|' + name + '|' + st + '|' + (e ? e.state : '') + '|' + glyph;
       haHide(el, !id || HA.err === HA_NOT_SET);
       el._o = { action: 'card', label: name };
       el.classList.toggle('on', !!e && e.state === 'on');
@@ -407,7 +424,7 @@ var CARD_TYPES = {
       el._k = key;
       el.innerHTML =
         '<div class="ha-i">' +
-        haIcon(e ? e.domain : id.split('.')[0]) +
+        haIcon(e ? e.domain : id.split('.')[0], glyph) +
         '</div><div class="ha-tx"><div class="ha-s"></div><div class="ha-n"></div></div>';
       el.querySelector('.ha-s').textContent = st;
       el.querySelector('.ha-n').textContent = name;
@@ -444,10 +461,11 @@ var CARD_TYPES = {
           .slice(0, 12),
         rows = ids.map(function (id) {
           var e = HA.by[id];
-          return [e ? e.name : id, e ? haState(e) : '\u2026', e ? e.domain : id.split('.')[0]];
+          return [e ? e.name : id, e ? haState(e) : '\u2026', e ? e.domain : id.split('.')[0], e && haGlyph(e.icon)];
         }),
         title = String(o.title || '').slice(0, 60),
         key = title + JSON.stringify(rows) + HA.err;
+      el.classList.toggle('ha-dark', o.background === 'dark');
       haHide(el, !ids.length || HA.err === HA_NOT_SET);
       if (el._k === key) return;
       el._k = key;
@@ -460,7 +478,7 @@ var CARD_TYPES = {
       if (title) el.querySelector('.ha-title').textContent = title;
       var rs = el.querySelectorAll('.ha-row');
       rows.forEach(function (r, i) {
-        rs[i].querySelector('.ha-ri').innerHTML = haIcon(r[2]);
+        rs[i].querySelector('.ha-ri').innerHTML = haIcon(r[2], r[3]);
         rs[i].querySelector('.ha-rn').textContent = r[0];
         rs[i].querySelector('.ha-rs').textContent = r[1];
       });
@@ -537,7 +555,7 @@ var CARD_TYPES = {
       if (w.now.wind !== null) facts.push(Math.round(w.now.wind) + (w.now.windUnit ? ' ' + w.now.windUnit : ''));
       h =
         '<div class="hw-now"><div class="hw-top"><span class="wx-i">' +
-        wxSvg(k[0]) +
+        wthSvg(k[0]) +
         '</span><span class="hw-t">' +
         hawNum(w.now.temp) +
         unit +
@@ -566,7 +584,7 @@ var CARD_TYPES = {
                 '<div><span class="hw-d">' +
                 lab +
                 '</span>' +
-                wxSvg(hawKind(f.cond)[0]) +
+                wthSvg(hawKind(f.cond)[0]) +
                 '<b>' +
                 hawNum(f.hi) +
                 '\u00B0</b>' +
@@ -677,23 +695,20 @@ function cardButtons(el, list) {
       look: n.look === 'ring' || n.look === 'fill' ? n.look : '',
     });
   });
-  /* the page says percent of its frame; the frame can sit inside the card's margins (glass cards), so the targets are moved there */
-  var f = el._f,
-    cw = el.offsetWidth,
-    ch = el.offsetHeight;
-  if (f && cw && ch && f.offsetWidth && (f.offsetLeft || f.offsetTop || f.offsetWidth !== cw || f.offsetHeight !== ch))
-    ok.forEach(function (b) {
-      b.x = ((f.offsetLeft + (b.x * f.offsetWidth) / 100) / cw) * 100;
-      b.y = ((f.offsetTop + (b.y * f.offsetHeight) / 100) / ch) * 100;
-      b.w = ((b.w * f.offsetWidth) / 100 / cw) * 100;
-      b.h = ((b.h * f.offsetHeight) / 100 / ch) * 100;
-    });
   var key = JSON.stringify(ok);
   if (el._bk === key) return;
   el._bk = key;
   (el._btns || []).forEach(function (b) {
     if (b.parentNode) b.parentNode.removeChild(b);
   });
+  if (!el._bw) {
+    /* the box of the buttons is the box of the frame (CARD_FRAME_BOX, and the glass inset in home.css for .card-bw), so the page's percentages
+       are the wrapper's: they are stored as they come, never moved to the card (a slim slot is shorter than the frame's 44px) */
+    el._bw = document.createElement('div');
+    el._bw.className = 'card-bw';
+    el._bw.style.cssText = CARD_FRAME_BOX + ';pointer-events:none';
+    el.appendChild(el._bw);
+  }
   el._btns = ok.map(function (b) {
     var d = document.createElement('div');
     d.className = 'card-btn' + (b.look ? ' card-btn-' + b.look : '');
@@ -701,8 +716,9 @@ function cardButtons(el, list) {
       (b.r ? 'border-radius:' + b.r + 'px;' : '') + 'left:' + b.x + '%;top:' + b.y + '%;width:' + b.w + '%;height:' + b.h + '%';
     d._o = { action: 'cardbtn', label: b.label, fixed: true };
     d._btn = { card: el, name: b.name };
+    d.style.pointerEvents = 'auto';
     hit(d);
-    el.appendChild(d);
+    el._bw.appendChild(d);
     return d;
   });
   if (window.refreshTop) refreshTop();
@@ -710,8 +726,30 @@ function cardButtons(el, list) {
 /* OK on a button: the add-on gets the action, then the card is asked for its data again (the answer to a button shows within seconds).
    An answer can carry {menu: {title, action, items: [{id, label, sub, active}]}}: it is shown as a menu, and a row sends that action
    again with its id as the argument (the Spotify card's "Play on"); {said} is a short notice. */
+function cardBtnRoute(pk, name) {
+  if (pk && pk.drawer && pk.drawer.action === name) return 'sheet';
+  if (pk && pk.settings && pk.settings.action === name) return 'settings';
+  return 'addon';
+}
 function cardBtnAct(d) {
-  cardAction(d._btn.card, d._btn.name, '');
+  var el = d._btn.card,
+    name = d._btn.name,
+    pk = el._pk,
+    route = cardBtnRoute(pk, name);
+  /* the add-on's declared drawer action opens the launcher's sheet (cardsheet.js), its settings action the launcher's panel
+     (cardsettings.js); a drawer whose required option is unset opens the settings first */
+  if (route === 'sheet') {
+    if (pk.settings && el._card && CS_PURE.csUnset(el._card, pk)) route = 'settings';
+    else {
+      csOpen(el);
+      return;
+    }
+  }
+  if (route === 'settings') {
+    if (typeof csSettings === 'function') csSettings(el._card ? el._card.type : pk.type);
+    return;
+  }
+  cardAction(el, name, '');
 }
 function cardAction(el, name, arg) {
   api('/api/cards/action', { slot: el._slot, name: name, arg: arg, lang: LANG }).then(
@@ -796,6 +834,9 @@ function cardFeedAll() {
   var els = $('cards') ? $('cards').children : [];
   for (var i = 0; i < els.length; i++) cardFeed(els[i]);
 }
+/* the page of a card is at least 44px high, centred on its place: a strip taller than a slim slot is drawn whole, not cut (the buttons
+   sit in a box of the same size, so their percentages stay the page's) */
+var CARD_FRAME_BOX = 'position:absolute;left:0;top:50%;width:100%;height:100%;min-height:44px;transform:translateY(-50%)';
 function cardFrame(id, pk) {
   return {
     draw: function (el, o) {
@@ -803,11 +844,12 @@ function cardFrame(id, pk) {
       /* a card with its own page: the glass style (cards.style) gives it the frosted panel too, its page inside the margins */
       if (!/\bcard-frame\b/.test(el.className)) el.className += ' card-frame';
       if (!el._f) {
+        el.style.overflow = 'visible';
         var f = document.createElement('iframe');
         f.setAttribute('sandbox', 'allow-scripts');
         f.setAttribute('tabindex', '-1');
         f.setAttribute('scrolling', 'no');
-        f.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none';
+        f.style.cssText = CARD_FRAME_BOX + ';border:0;background:transparent;pointer-events:none';
         f.onload = function () {
           cardFrameSend(el);
         };
@@ -879,11 +921,54 @@ function drawCards() {
     st.setProperty('--ch', sl.h);
     el._card = c;
     el._slot = sl.id;
+    el._stack = sl.stack;
     box.appendChild(el);
   });
   tickCards();
   /* glass cards: the scene behind them (scenes.js) */
   if (window.SCENES) SCENES.glassCards();
+}
+/* Keep cards at their natural size when they fit. The last declared slot sets the bottom of each stack. */
+function fitCardStacks(els, slots) {
+  var stacks = Object.create(null);
+  slots.forEach(function (slot) {
+    if (!slot.stack) return;
+    var stack = stacks[slot.stack] || (stacks[slot.stack] = { slots: {}, bottom: 0, cards: [] });
+    stack.slots[slot.id] = parseFloat(slot.t);
+    stack.bottom = Math.max(stack.bottom, parseFloat(slot.t) + parseFloat(slot.h));
+  });
+  Array.prototype.forEach.call(els, function (el) {
+    var stack = stacks[el._stack];
+    if (stack && el.style.display !== 'none') stack.cards.push(el);
+  });
+  Object.keys(stacks).forEach(function (id) {
+    var stack = stacks[id],
+      cards = stack.cards,
+      gap = 16;
+    if (!cards.length) return;
+    cards.sort(function (a, b) {
+      return stack.slots[a._slot] - stack.slots[b._slot];
+    });
+    var top = stack.slots[cards[0]._slot];
+    cards.forEach(function (el) {
+      if (el._card.type === 'ha-entities') el.style.maxHeight = 'none';
+    });
+    var heights = cards.map(function (el) {
+        return el.offsetHeight;
+      }),
+      total = heights.reduce(function (sum, height) {
+        return sum + height;
+      }, 0),
+      scale = Math.max(0, Math.min(1, (stack.bottom - top - gap * (cards.length - 1)) / (total || 1)));
+    cards.forEach(function (el, index) {
+      var right = el.getAttribute('data-align') === 'right';
+      if (document.documentElement.dir === 'rtl') right = !right;
+      el.style.top = top + 'px';
+      el.style.transformOrigin = right ? 'top right' : 'top left';
+      el.style.transform = scale < 1 ? 'scale(' + scale + ')' : '';
+      top += heights[index] * scale + gap;
+    });
+  });
 }
 /* the clock tick: cards that change with the time redraw themselves */
 function tickCards() {
@@ -894,6 +979,7 @@ function tickCards() {
   for (pass = 0; pass < 2; pass++)
     for (i = 0; i < els.length; i++)
       if (/^(ha-)?weather$/.test(els[i]._card.type) === (pass === 0)) cardType(els[i]._card.type).draw(els[i], els[i]._card);
+  fitCardStacks(els, TH.slots || []);
   haPoll();
 }
 /* the cards that OK can do something with: they join the top row (with the buttons) for the remote */

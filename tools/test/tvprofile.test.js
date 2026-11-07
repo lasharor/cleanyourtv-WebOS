@@ -67,6 +67,14 @@ run(async () => {
       tv.decide({ home: 'com.webos.app.home native', cmdline: 'criu_enabled' }).homeTakeover === 'standin',
     'CRIU on the kernel command line is reported (issues 72 and 84) but does not change the way: the setup tries the stand-in first'
   );
+  ok(
+    tv.decide({ sdk: '11.2.0' }).wakeRefocus === true &&
+      tv.decide({ sdk: '12.0.0' }).wakeRefocus === true &&
+      tv.decide({ sdk: '10.2.2' }).wakeRefocus === false &&
+      tv.decide({ sdk: '6.5.3' }).wakeRefocus === false &&
+      tv.decide({}).wakeRefocus === false,
+    'webOS 26 (SDK 11) and newer give the launcher the remote back after a wake (OLED65C54LA); older and unknown TVs never start the picker for it'
+  );
   // Issue 21: ARC remained silent after SAM restarted, although the controller was active.
   const arc = { model: 'OLED65C35LA.AEU', sdk: '11.2.0', home: 'com.webos.app.home flutter' };
   ok(

@@ -50,7 +50,7 @@ function create(opts) {
     const id = String(e.entity_id || ''),
       a = e.attributes || {},
       domain = id.split('.')[0];
-    return {
+    const entity = {
       id,
       name: String(a.friendly_name || id).slice(0, 60),
       state: String(e.state === undefined ? '' : e.state).slice(0, 60),
@@ -58,10 +58,12 @@ function create(opts) {
       domain,
       can: TOGGLE.indexOf(domain) >= 0 || RUN.indexOf(domain) >= 0,
     };
+    if (typeof a.icon === 'string' && /^mdi:[a-z0-9-]{1,100}$/.test(a.icon)) return Object.assign(entity, { icon: a.icon });
+    return entity;
   };
   async function states(ids) {
     if (!ready()) return { error: 'Home Assistant is not set up' };
-    const want = (Array.isArray(ids) ? ids : []).filter(i => typeof i === 'string' && ID.test(i)).slice(0, 20);
+    const want = (Array.isArray(ids) ? ids : []).filter(i => typeof i === 'string' && ID.test(i)).slice(0, 96);
     try {
       const by = {};
       for (const e of await list()) by[e.entity_id] = e;

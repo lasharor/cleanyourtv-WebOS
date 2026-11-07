@@ -32,6 +32,8 @@ function hit(e) {
       held = false;
       return;
     }
+    var p = posOf(e); /* the focus goes to what was clicked, so the highlight shows what opens */
+    if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
     act(e);
   });
 }
@@ -41,17 +43,46 @@ function options(e) {
 }
 
 /* Pointer focus follows real pointer movement only: a tile sliding under a still cursor, a cursor jitter when
-   the remote is picked up, or a pointer move right after a button press must not steal the focus. */
-document.addEventListener('mousemove', function (ev) {
-  if (stack.length || LIVE.on || PAGER.on || Date.now() - lastKey < 1500) return;
+   the remote is picked up, or a pointer move right after a button press must not steal the focus. The first move after a button press
+   needs 24 px; after that every move of 4 px or more counts, so a cursor that comes to rest over a tile always focuses it (before, a
+   cursor nudged less than 24 px over a tile left the focus elsewhere, while a click opened the tile under it). The first position after
+   the pointer shows counts at once (pointerShow); the first one after the page loads is only noted. */
+var pointerLive = false;
+function pointerMoved(x, y) {
   if (lastMX < 0) {
-    lastMX = ev.clientX;
-    lastMY = ev.clientY;
-    return;
+    lastMX = x;
+    lastMY = y;
+    return pointerLive;
   }
-  if (Math.abs(ev.clientX - lastMX) + Math.abs(ev.clientY - lastMY) < 24) return;
-  lastMX = ev.clientX;
-  lastMY = ev.clientY;
+  if (Math.abs(x - lastMX) + Math.abs(y - lastMY) < (pointerLive ? 4 : 24)) return false;
+  lastMX = x;
+  lastMY = y;
+  pointerLive = true;
+  return true;
+}
+/* webOS says when the pointer shows and hides (cursorStateChange, detail.visibility): it hides when a button is pressed and shows when
+   the remote is moved. While it is hidden, pointer events are not the user's (a tile sliding under it). Where it shows comes with the
+   next move, a moment after the event (an LG G5 puts it back in the middle of the screen, not where it hid): that move focuses what is
+   under it at any distance, as on LG's own Home, and every move after that counts. A TV that does not send the event keeps the 1.5 s
+   after a button press instead. */
+var cursorEvents = false,
+  pointerShown = true,
+  pointerShownAt = 0; /* when it last showed: a turn of the wheel shows it, and that notch comes a moment after (menus.js wheelHome) */
+function pointerShow(on) {
+  cursorEvents = true;
+  pointerShown = !!on;
+  if (!on) return;
+  pointerShownAt = Date.now();
+  pointerLive = true;
+  lastMX = -1;
+}
+document.addEventListener('cursorStateChange', function (ev) {
+  pointerShow(ev.detail && ev.detail.visibility);
+});
+document.addEventListener('mousemove', function (ev) {
+  if (stack.length || LIVE.on || PAGER.on || CS.on) return;
+  if (cursorEvents ? !pointerShown : Date.now() - lastKey < 1500) return;
+  if (!pointerMoved(ev.clientX, ev.clientY)) return;
   var el = ev.target.closest ? ev.target.closest('.tile,.pill,.card-btn') : null,
     p = el && posOf(el);
   if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
@@ -61,7 +92,25 @@ document.addEventListener('keydown', function (e) {
   var k = e.keyCode;
   /* a right-to-left layout: Left moves to what is on the left, which is the next tile in the row (Live TV keeps left-to-right) */
   if (rtl() && !LIVE.on && (k === 37 || k === 39)) k = 76 - k;
-  lastKey = Date.now();
+  /* 1536 and 1537: webOS's keys for the pointer showing and hiding, not a button of the remote */
+  if (k !== 1536 && k !== 1537) {
+    lastKey = Date.now();
+    pointerLive = false;
+  }
+  /* a card's sheet has the keys while it is open (it undoes the swap above itself) */
+  if (CS.on) {
+    csKey(k, e);
+    return;
+  }
+  /* a city typed in a card's settings: OK searches, Back closes the field, the rest types */
+  if (e.target && e.target.id === 'csq') {
+    if (k === 13) csFind(CSQ_TYPE, e.target.value);
+    if (k === 13 || k === 461 || k === 27) {
+      csSearchEnd();
+      e.preventDefault();
+    }
+    return;
+  }
   if (PAGER.on) {
     PAGER.key(e);
     return;
@@ -187,15 +236,38 @@ var liveGuard = 0,
 function guarded() {
   return LIVE.on && Date.now() < liveGuard;
 }
+/* the Guide button goes to the TV guide add-on (LG tuner) when it is on, else to Live TV's guide: the two do not depend on each other */
+/* the app that was in front when the Guide button was pressed (guidekey.sh passes it as "from"): Back in the guide returns to it */
+var guideFrom = '';
+function noteGuideFrom(p) {
+  guideFrom = p && /^[A-Za-z0-9._-]{3,80}$/.test(p.from || '') && p.from !== 'com.webos.app.home' ? p.from : '';
+}
+function guidePage() {
+  for (var i = 0; i < PAGES.length; i++) if (PAGES[i].guide) return PAGES[i].id;
+  return '';
+}
 /* launching Home with {inputs:true} opens the Inputs list */
-function wantInputs() {
+function wantInputs(pages) {
   var p = {};
   try {
     p = JSON.parse(webOSSystem.launchParams || '{}');
   } catch (e) {}
+  /* the Guide button: which page has the guide is known once the add-on pages are loaded */
+  if (p && p.guide && !p.inputs && pages) {
+    $('homepage').style.visibility = 'hidden'; /* no flash of the dashboard on the way to the guide */
+    pages.then(function () {
+      wantInputs();
+      if (!PAGER.on) $('homepage').style.visibility = 'visible';
+    });
+    return;
+  }
   if (p && p.inputs) {
     closeMenus();
     inputsMenu();
+  } else if (p && p.guide && guidePage()) {
+    noteGuideFrom(p);
+    closeMenus();
+    PAGER.go(guidePage(), null, true);
   } else if (p && p.live && liveOn()) {
     closeMenus();
     liveGuard = Date.now() + 5000;
@@ -203,12 +275,39 @@ function wantInputs() {
     LIVE.enter(!!p.guide);
   }
 }
+/* webOS 26: when the TV wakes, LG's boot manager relaunches Home with {boot:true}, but the compositor sends it no keyboard: the page
+   is shown without the focus and every key is lost until Back is held. Then the service lets the picker take the remote for a moment
+   and give it back (POST /api/refocus, only on TVs that need it); tried twice at most. */
+var wakeTries = 0;
+function checkWakeFocus(first) {
+  if (first) wakeTries = 0;
+  setTimeout(
+    function () {
+      if (document.hidden || document.hasFocus() || wakeTries >= 2) return;
+      wakeTries++;
+      logLine('launcher shown without the remote after a wake (' + wakeTries + ')');
+      api('/api/refocus', {})
+        .then(function (r) {
+          if (r && r.done) checkWakeFocus(false);
+        })
+        .catch(function () {});
+    },
+    first ? 800 : 1500
+  );
+}
 document.addEventListener('webOSRelaunch', function () {
   var p = {};
   try {
     p = JSON.parse(webOSSystem.launchParams || '{}');
   } catch (e) {}
+  csClose();
   logLine('launcher relaunch ' + JSON.stringify(p).slice(0, 120) + (LIVE.on ? ' (live on)' : ''));
+  if (p && p.boot) checkWakeFocus(true);
+  if (p && p.guide && guidePage() && PAGER.on && PAGER.id === guidePage()) {
+    noteGuideFrom(p);
+    PAGER.send({ cytv: 'guide' });
+    return;
+  } /* the Guide button while the TV guide is open */
   if (LIVE.on && p && p.guide && liveOn()) {
     LIVE.toggleGuide();
     return;
@@ -218,11 +317,11 @@ document.addEventListener('webOSRelaunch', function () {
     LIVE.resume();
     return;
   }
+  csSearchEnd();
   if (PAGER.on && !(p && p.live)) PAGER.home(); /* Home pressed: back to the first page */
   load();
   refreshSoon();
-  PAGER.load();
-  wantInputs();
+  wantInputs(PAGER.load());
 });
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) {

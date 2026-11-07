@@ -96,6 +96,62 @@ run(async () => {
     'SDK 11 and newer, where the hidden picker has not been tried, start it when pressed (issue 6)'
   );
   ok(picker.modeOf({}, 'ondemand') === 'ondemand' && picker.modeOf({}, 'overlay') === 'overlay', "the TV profile's default is used");
+
+  // Giving the remote back to Home after a wake (webOS 26): the picker is started with {focusonly:true}, closed once it reports the
+  // focus (or after the wait), never twice at once and not again right away.
+  {
+    let t = 0,
+      calls = [],
+      up = [],
+      refocus;
+    const rl = async (uri, params) => {
+      const m = uri.split('/').pop();
+      calls.push(m + (params && params.params ? ' ' + JSON.stringify(params.params) : ''));
+      if (m === 'running') return { running: up.map(id => ({ id })) };
+      if (m === 'launch') {
+        setTimeout(() => refocus.noteFocus(), 20); // the picker reports its focus
+        return { returnValue: true };
+      }
+      if (m === 'closeByAppId') return { returnValue: true };
+      return {};
+    };
+    refocus = picker.makeRefocus(rl, { now: () => t, sleep: async () => {}, waitMs: 2000, gapMs: 4000 });
+    const t0 = Date.now();
+    let r = await refocus();
+    ok(
+      r.done && r.focused && Date.now() - t0 < 1000 && calls.join(',') === 'running,launch {"focusonly":true},closeByAppId',
+      'the picker is started in focus-only mode and closed as soon as it reports the focus'
+    );
+    calls = [];
+    r = await refocus();
+    ok(!r.done && r.reason === 'too soon' && !calls.length, 'not again within a few seconds');
+    t += 5000;
+    const a = refocus(),
+      b = await refocus();
+    await a;
+    ok(!b.done && b.reason === 'busy' && calls.filter(c => /^launch/.test(c)).length === 1, 'never two at once');
+    t += 5000;
+    calls = [];
+    up = ['com.cleanyourtv.picker'];
+    r = await refocus();
+    ok(
+      r.done && calls.join(',') === 'running,closeByAppId,launch {"focusonly":true},closeByAppId',
+      'a picker kept ready in the background is closed first (it would only fire its relaunch)'
+    );
+    up = [];
+    t += 5000;
+    const quiet = picker.makeRefocus(
+      async uri => (/launch$/.test(uri) || /closeByAppId$/.test(uri) ? { returnValue: true } : { running: [] }),
+      { now: () => t, sleep: async () => {}, waitMs: 50 }
+    );
+    r = await quiet();
+    ok(r.done && r.focused === false, 'a picker that never reports the focus is closed after the wait');
+    const broken = picker.makeRefocus(async uri => (/launch$/.test(uri) ? { returnValue: false, errorText: 'no app' } : { running: [] }), {
+      now: () => t,
+    });
+    r = await broken();
+    ok(!r.done && r.reason === 'no app', 'a picker that does not start is reported, nothing is closed');
+  }
   ok(
     picker.modeOf({ mode: 'overlay' }, 6) === 'overlay' &&
       picker.modeOf({ mode: 'launcher' }, 10) === 'launcher' &&

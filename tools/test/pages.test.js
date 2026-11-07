@@ -1,10 +1,102 @@
 // The pages that run on the TV (launcher, manager, picker, notification card): nothing newer than Chromium 68 (webOS 5), and fixes that
 // must not come back.
 const fs = require('fs'),
-  path = require('path');
+  path = require('path'),
+  vm = require('vm');
 const { root, ok, run } = require('./lib');
 
 run(async () => {
+  const cardsSource = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'cards.js'), 'utf8');
+  const mdiScripts = [];
+  let mdiRedraws = 0;
+  const mdiContext = {
+    window: {},
+    document: {
+      createElement: tag => ({ tag }),
+      head: { appendChild: script => mdiScripts.push(script) },
+    },
+    tickCards: () => mdiRedraws++,
+    lineSvg: () => 'domain icon',
+  };
+  vm.runInNewContext(cardsSource.slice(cardsSource.indexOf('var HA_ICON'), cardsSource.indexOf("/* an entity's state")), mdiContext);
+  const homePage = fs.readFileSync(path.join(root, 'app', 'index.html'), 'utf8');
+  ok(!/<script[^>]+src=["']mdi-glyphs\.js/.test(homePage), 'the launcher does not load the MDI map at startup');
+  mdiContext.haGlyph();
+  ok(!mdiScripts.length, 'an entity without an icon does not request the MDI map');
+  const pending = mdiContext.haGlyph('mdi:cat');
+  mdiContext.haGlyph('mdi:water');
+  ok(
+    mdiScripts.length === 1 && mdiScripts[0].tag === 'script' && mdiScripts[0].src === 'mdi-glyphs.js',
+    'concurrent icon lookups request the bundled map only once'
+  );
+  ok(mdiContext.haIcon('sensor', pending) === 'domain icon', 'the domain icon is shown while the map is loading');
+  mdiContext.window.HA_MDI = { 'mdi:cat': 123 };
+  mdiScripts[0].onload();
+  ok(
+    mdiRedraws === 1 && mdiContext.haIcon('sensor', mdiContext.haGlyph('mdi:cat')).indexOf('&#123;') >= 0,
+    'loading the map redraws cards and makes the glyph available'
+  );
+  ok(mdiContext.haIcon('sensor', mdiContext.haGlyph('mdi:unknown')) === 'domain icon', 'unknown glyphs keep the domain icon');
+  const stackContext = { document: { documentElement: { dir: 'ltr' } } };
+  vm.createContext(stackContext);
+  vm.runInContext(
+    cardsSource.slice(cardsSource.indexOf('function fitCardStacks'), cardsSource.indexOf('/* the clock tick: cards')),
+    stackContext
+  );
+  const stackSlots = [150, 375, 600].map((top, index) => ({ id: 's' + index, stack: 'side', t: top + 'px', h: '209px' }));
+  const stackCards = [392, 114, 114].map((height, index) => ({
+    _slot: 's' + index,
+    _stack: 'side',
+    _card: { type: 'ha-entities' },
+    offsetHeight: height,
+    style: {},
+    getAttribute: () => 'right',
+  }));
+  stackContext.fitCardStacks(stackCards, stackSlots);
+  ok(
+    stackCards.map(card => card.style.top).join(',') === '150px,558px,688px' && stackCards.every(card => card.style.transform === ''),
+    'a tall card above two short cards keeps its size when the whole stack fits'
+  );
+  // webOS 26: after a wake the launcher is shown without the focus and asks the service for the remote (POST /api/refocus), twice at most
+  {
+    const inputSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'input.js'), 'utf8');
+    const fn = inputSrc.slice(inputSrc.indexOf('var wakeTries'), inputSrc.indexOf("document.addEventListener('webOSRelaunch'"));
+    const wake = async (focusAfter, hidden) => {
+      const asked = [];
+      let focus = false;
+      const timers = [];
+      const sb = {
+        document: { hidden: !!hidden, hasFocus: () => focus },
+        setTimeout: f => timers.push(f),
+        logLine: () => {},
+        api: p => {
+          asked.push(p);
+          if (asked.length >= focusAfter) focus = true;
+          return Promise.resolve({ done: true });
+        },
+      };
+      vm.runInNewContext(fn + ';checkWakeFocus(true);', sb);
+      for (let i = 0; i < 10 && timers.length; i++) {
+        timers.shift()();
+        await new Promise(r => setImmediate(r));
+      }
+      return asked;
+    };
+    let asked = await wake(1);
+    ok(asked.length === 1 && asked[0] === '/api/refocus', 'a launcher shown without the focus after a wake asks for the remote once');
+    asked = await wake(99);
+    ok(asked.length === 2, 'and once more when that did not help, never more');
+    const focused = [];
+    vm.runInNewContext(fn + ';checkWakeFocus(true);', {
+      document: { hidden: false, hasFocus: () => true },
+      setTimeout: f => f(),
+      logLine: () => {},
+      api: p => (focused.push(p), Promise.resolve({ done: true })),
+    });
+    ok(!focused.length, 'a launcher that has the focus asks nothing');
+    asked = await wake(1, true);
+    ok(asked.length === 0, 'nor one that is hidden');
+  }
   const pages = ['app', 'manager/app', 'picker/app', 'notify/app', 'helper/addons-bundled/iptv/page', 'addons/catalog/tuner/page'].map(d =>
     path.join(root, d, 'index.html')
   );
@@ -15,6 +107,10 @@ run(async () => {
       if (fs.existsSync(file)) pages.push(file);
     });
   });
+  // the pages of the cards of add-ons (the weather drawer) are held to the same rules
+  ['drawer.html', 'drawer.js', 'drawer.css'].forEach(f =>
+    pages.push(path.join(root, 'addons', 'catalog', 'weather', 'cards', 'forecast', f))
+  );
   const rules = [
     [/\?\?|\?\.[A-Za-z_\[(]/, 'optional chaining or ??'],
     [/\|\|=|&&=/, 'logical assignment'],
@@ -169,7 +265,44 @@ run(async () => {
   // Experimental > Preloaded apps: the State row steps only through the modes this TV uses (PR 149)
   const mm = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'menu.js'), 'utf8');
   ok(
-    /var states = \['off'\]\.concat\(\s*pr\.modes\.filter\(function \(m\) \{\s*return seen\[m\];/.test(mm),
+    /var states = \['off'\]\.concat\(\s*preSet\.modes\.filter\(function \(m\) \{\s*return seen\[m\];/.test(mm),
     'the preload State row offers only the modes the TV itself uses'
   );
+  // a card of an add-on: its declared drawer and settings actions are the launcher's (the sheet and the settings panel)
+  const rd = f => fs.readFileSync(path.join(root, ...f.split('/')), 'utf8');
+  const wcards = rd('app/src/js/cards.js'),
+    winput = rd('app/src/js/input.js'),
+    wmgr = rd('manager/src/js/input.js');
+  ok(
+    /function cardBtnRoute/.test(wcards) && /csSettings\(/.test(wcards) && /csOpen\(el\)/.test(wcards) && /CS\.on/.test(winput),
+    'the declared settings and drawer actions of a card open the generic panel and sheet (cardBtnRoute)'
+  );
+  ok(
+    !fs.existsSync(path.join(root, 'app', 'src', 'js', 'wxdrawer.js')) &&
+      !/x-forecast|wxdrawer|\bwxd\b|\bWXD\b|wxq|wxMenu|wxSet/i.test(
+        ['js/cards.js', 'js/menus.js', 'js/input.js', 'js/cardsheet.js', 'js/cardsettings.js', 'css/cardsheet.css']
+          .map(p => rd('app/src/' + p))
+          .concat([rd('helper/cards.js'), rd('helper/apps.js')])
+          .join('\n')
+      ),
+    'the launcher has no code of the weather add-on (no wxdrawer, no x-forecast, no wx names)'
+  );
+  ok(
+    /p\.open === 'cardspair'/.test(wmgr) && /openCardsPair\(\)/.test(wmgr),
+    "the manager opens the cards' phone page (QR code) at once when asked"
+  );
+  // the card sheet host: wired into the launcher, generic (no word of any one card)
+  const cshtml = rd('app/src/index.html'),
+    csjs = rd('app/src/js/cardsheet.js'),
+    cscss = rd('app/src/css/cardsheet.css');
+  ok(
+    /@include js\/cardsheet\.js/.test(cshtml) && /@include css\/cardsheet\.css/.test(cshtml) && /<div id="cs"><\/div>/.test(cshtml),
+    'the launcher includes the card sheet (script, style and its element)'
+  );
+  ok(
+    /CS\.on/.test(winput) && /csKey\(k, e\)/.test(winput) && /csClose\(\)/.test(winput),
+    'the keys go to the card sheet while it is open, and a relaunch closes it'
+  );
+  ok(!/weather|wx|forecast/i.test(csjs) && !/weather|wx|forecast/i.test(cscss), 'the card sheet names no card (it is generic)');
+  ok(/e\.source !== CS\.frame\.contentWindow/.test(csjs), 'the card sheet listens only to its own frame');
 });

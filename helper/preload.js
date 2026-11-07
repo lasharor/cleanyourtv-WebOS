@@ -5,7 +5,7 @@
 // you change it; options.preloadPolicy in config.json keeps the choices as {id: {enabled, mode, type}}.
 // Facts from a real TV (webOS 25), see docs/debloat.md:
 //  - setPreloadPolicy {application:{id, ...}, permanent} changes the policy at run time only, nothing is kept over a reboot, so the
-//    service sets it again after every boot and every 5 minutes (LG may reset it);
+//    service sets it again after every boot, every wake from standby and every 5 minutes (LG may reset it);
 //  - an omitted isEnabled becomes false, so isEnabled is always sent; mode and type the daemon never checks ("bogus" was stored), so
 //    they are checked here; isAllowed cannot be changed through the API, only read;
 //  - an app with an extPolicy (Home) is managed by LG and is left alone.
@@ -17,6 +17,7 @@ const fs = require('fs'),
   os = require('os'),
   path = require('path');
 const web = require('./web');
+const paths = require('./paths');
 
 const SVC = 'luna://com.webos.service.preloadmanager/';
 const AM = 'luna://com.webos.applicationManager/';
@@ -24,16 +25,22 @@ const MODES = ['partial', 'semi-full', 'full', 'criu'];
 const TYPES = ['periodic', 'oneshot'];
 const DELAY = 90000; // after boot, once the apps have finished starting: set the policy and close what already runs
 const EVERY = 300000; // the daemon looks every 5 minutes
+const TICK = 10000; // the wake check
+const WAKE = 45000; // a gap this long between two ticks: the TV was suspended
+const WAKE_AGAIN = 30000; // LG may set its policy a while after the wake
 const SAFE = /^com\.(cleanyourtv\.|webos\.app\.(home|hdmi|livetv|tvhotkey))/; // never Home, inputs, Live TV or our own apps are closed
 
 const isId = id => typeof id === 'string' && /^[A-Za-z0-9._-]{1,80}$/.test(id);
 // the ids from a request: strings that look like app ids, once each, never one of SAFE
 const clean = list => (Array.isArray(list) ? list : []).filter((id, i, a) => isId(id) && !SAFE.test(id) && a.indexOf(id) === i);
 
-// ctx.baseFile: where the policy of the TV's boot is kept (in /tmp: a reboot starts a new one)
+// ctx.baseFile: where LG's own policy is kept, written once at the first reading, before the service changed anything. It lives in the
+// service folder, so it stays over reboots, standby and updates (it was in /tmp, which a restart of the service or a reboot loses and
+// the next reading would then record what the service had set). The file of /tmp is taken over once.
 function create(ctx) {
   const { luna, config } = ctx;
-  const baseFile = ctx.baseFile || path.join(os.tmpdir(), 'cytv-preload-base.json');
+  const baseFile = ctx.baseFile || paths.PRELOAD_BASE;
+  const oldFile = ctx.oldBaseFile || path.join(os.tmpdir(), 'cytv-preload-base.json');
 
   // the policy as the TV has it: {apps: [{id, enabled, allowed, mode, type, memory, managed}]}, or {error}
   async function read() {
@@ -54,18 +61,57 @@ function create(ctx) {
     };
   }
 
-  // what each app had when the TV booted: the first reading after the boot, before the service changed anything
-  function base(apps) {
-    let b = {};
+  // the firmware of this TV (tv.json, read by the TV profile): a firmware update may change LG's own policy
+  const firmware = () => {
     try {
-      b = JSON.parse(fs.readFileSync(baseFile, 'utf8'));
-    } catch (_) {}
-    if (b && typeof b === 'object' && Object.keys(b).length) return b;
+      return String((ctx.profile && ctx.profile.get().firmware) || '');
+    } catch (_) {
+      return '';
+    }
+  };
+
+  // what each app had before the service changed anything: the file kept by the first reading ever (or the older one of /tmp). It is
+  // marked with the firmware it was read on (the key "@firmware" is a mark, never an id); after a firmware update it is dropped, so the next reading takes
+  // LG's new policy and Reset does not go back to the old values.
+  function base(apps) {
+    const load = f => {
+      try {
+        const x = JSON.parse(fs.readFileSync(f, 'utf8'));
+        return x && typeof x === 'object' && Object.keys(x).length ? x : null;
+      } catch (_) {
+        return null;
+      }
+    };
+    const save = b => {
+      try {
+        fs.writeFileSync(baseFile, JSON.stringify(b));
+      } catch (_) {}
+    };
+    const fw = firmware();
+    let b = load(baseFile),
+      stale = false;
+    if (b && fw && b['@firmware'] && b['@firmware'] !== fw) {
+      console.log('preload: the firmware changed (' + b['@firmware'] + ' to ' + fw + "), LG's policy is read again");
+      try {
+        fs.unlinkSync(baseFile);
+      } catch (_) {}
+      b = null;
+      stale = true; // the older file of /tmp is as old as the dropped one
+    }
+    if (b) {
+      if (fw && !b['@firmware']) save(Object.assign({}, b, { '@firmware': fw })); // a file from before the mark: this firmware
+      return b;
+    }
+    b = stale ? null : load(oldFile);
+    if (b) {
+      if (fw) b['@firmware'] = fw;
+      save(b);
+      return b;
+    }
     b = {};
     apps.forEach(a => (b[a.id] = { enabled: a.enabled, mode: a.mode, type: a.type }));
-    try {
-      fs.writeFileSync(baseFile, JSON.stringify(b));
-    } catch (_) {}
+    if (fw) b['@firmware'] = fw;
+    save(b);
     return b;
   }
 
@@ -195,16 +241,47 @@ function create(ctx) {
       if (!w.enabled) await close([b.id]);
       return '';
     });
+    syncTick();
     web.json(res, await status(result));
   }
 
+  const run = closeNow => () => apply(closeNow).catch(e => console.error('preload: ' + e.message));
+  // A TV in standby is suspended and Node's timers do not count that time, so the 5 minute check above comes 5 awake minutes after a
+  // wake, while LG sets its own policy again at the wake. A jump of the wall clock is a wake: set the choices at once, and once more
+  // when LG has finished.
+  // The check runs only while at least one app has a saved choice (a choice made or reset in the manager starts or stops it at once), so a
+  // TV with no choices has no extra timer.
+  let last = 0,
+    ticker = null;
+  function tick(now) {
+    const woke = last && now - last > WAKE;
+    last = now;
+    if (!woke) return false;
+    console.log('preload: the TV woke up, setting the policy');
+    run(false)();
+    const t = setTimeout(run(false), WAKE_AGAIN);
+    if (t.unref) t.unref();
+    return true;
+  }
+  function syncTick() {
+    if (Object.keys(saved()).length) {
+      if (ticker) return;
+      last = Date.now();
+      ticker = setInterval(() => tick(Date.now()), TICK);
+      if (ticker.unref) ticker.unref();
+    } else if (ticker) {
+      clearInterval(ticker);
+      ticker = null;
+      last = 0;
+    }
+  }
   const start = () => {
-    const run = closeNow => () => apply(closeNow).catch(e => console.error('preload: ' + e.message));
     for (const t of [setTimeout(run(false), 20000), setTimeout(run(true), DELAY)]) if (t.unref) t.unref();
-    const i = setInterval(run(false), EVERY);
-    if (i.unref) i.unref();
+    const every = setInterval(run(false), EVERY);
+    if (every.unref) every.unref();
+    syncTick();
   };
-  return { name: 'preload', paths: ['/api/preload'], handle, start, apply, status };
+  return { name: 'preload', paths: ['/api/preload'], handle, start, apply, status, tick, ticking: () => !!ticker };
 }
 
 module.exports = { create, clean, MODES, TYPES };

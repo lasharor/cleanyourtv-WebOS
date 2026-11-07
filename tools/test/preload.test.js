@@ -131,4 +131,81 @@ run(async () => {
   ok(r.closed.join() === 'netflix' && /no service/.test(r.error), 'without the preload manager the older list still works');
   x = await call(pre, '/api/preload');
   ok(x.j.available === false, 'and the screen says it is not available');
+
+  // a wake from standby (the wall clock jumps, Node's timers do not): LG sets its policy again, the choices come back at once
+  t = tv();
+  t.front = 'x';
+  pre = P.create({
+    config: memoryConfig({ options: { preloadPolicy: { netflix: { enabled: false, mode: 'partial', type: 'periodic' } } } }),
+    luna: t.luna,
+    baseFile: path.join(tmp, 'base4.json'),
+  });
+  await pre.apply(false);
+  ok(pre.tick(1000) === false && pre.tick(11000) === false, 'wake: ticks 10 s apart are no wake');
+  get(t, 'netflix').isEnabled = true; // what LG does at the wake
+  ok(pre.tick(20000000) === true, 'wake: a long gap is a wake');
+  await new Promise(r => setTimeout(r, 50));
+  ok(get(t, 'netflix').isEnabled === false, 'wake: the saved choice is set again at once');
+
+  // the baseline of LG's policy is taken over from the older file in /tmp, then kept in its own file
+  t = tv();
+  const oldF = path.join(tmp, 'old-base.json'),
+    newF = path.join(tmp, 'new-base.json');
+  require('fs').writeFileSync(oldF, JSON.stringify({ netflix: { enabled: true, mode: 'partial', type: 'periodic' } }));
+  pre = P.create({ config: memoryConfig(), luna: t.luna, baseFile: newF, oldBaseFile: oldF });
+  x = await call(pre, '/api/preload');
+  ok(
+    x.j.apps.filter(a => a.id === 'netflix')[0].base.enabled === true && require('fs').existsSync(newF),
+    'baseline: the older file of /tmp is taken over'
+  );
+  require('fs').unlinkSync(oldF);
+  x = await call(pre, '/api/preload');
+  ok(x.j.apps.filter(a => a.id === 'netflix')[0].base.enabled === true, 'baseline: kept after the older file is gone');
+  // the wake check runs only while an app has a saved choice, and starts or stops at once when a choice is made or reset
+  t = tv();
+  t.front = 'x';
+  pre = P.create({ config: memoryConfig(), luna: t.luna, baseFile: path.join(tmp, 'base5.json') });
+  pre.start();
+  ok(pre.ticking() === false, 'tick: no choices, no tick');
+  await call(pre, '/api/preload', 'POST', { id: 'netflix', enabled: false });
+  ok(pre.ticking() === true, 'tick: a choice starts it at once');
+  await call(pre, '/api/preload', 'POST', { id: 'youtube.leanback.v4', enabled: false });
+  await call(pre, '/api/preload', 'POST', { id: 'netflix', reset: true });
+  ok(pre.ticking() === true, 'tick: still on while another choice is saved');
+  await call(pre, '/api/preload', 'POST', { id: 'youtube.leanback.v4', reset: true });
+  ok(pre.ticking() === false, 'tick: reset of the last choice stops it');
+  pre = P.create({
+    config: memoryConfig({ options: { preloadPolicy: { netflix: { enabled: false, mode: 'partial', type: 'periodic' } } } }),
+    luna: t.luna,
+    baseFile: path.join(tmp, 'base6.json'),
+  });
+  pre.start();
+  ok(pre.ticking() === true, 'tick: a choice saved before the start runs it from the start');
+
+  // a firmware update drops the saved baseline: the next reading takes LG's new policy; the same firmware keeps it
+  t = tv();
+  const fwF = path.join(tmp, 'fw-base.json');
+  const fsx = require('fs');
+  fsx.writeFileSync(fwF, JSON.stringify({ '@firmware': '1.0', netflix: { enabled: false, mode: 'full', type: 'oneshot' } }));
+  let fw = '1.0';
+  pre = P.create({
+    config: memoryConfig(),
+    luna: t.luna,
+    baseFile: fwF,
+    oldBaseFile: path.join(tmp, 'none.json'),
+    profile: { get: () => ({ firmware: fw }) },
+  });
+  x = await call(pre, '/api/preload');
+  ok(x.j.apps.filter(a => a.id === 'netflix')[0].base.mode === 'full', 'firmware: the same firmware keeps the baseline');
+  fw = '2.0';
+  x = await call(pre, '/api/preload');
+  const nb = x.j.apps.filter(a => a.id === 'netflix')[0].base;
+  ok(nb.enabled === true && nb.mode === 'partial', 'firmware: a new firmware takes the new policy of LG');
+  ok(JSON.parse(fsx.readFileSync(fwF, 'utf8'))['@firmware'] === '2.0', 'firmware: and the file carries the new version');
+  fsx.writeFileSync(fwF, JSON.stringify({ netflix: { enabled: false, mode: 'full', type: 'oneshot' } }));
+  x = await call(pre, '/api/preload');
+  ok(
+    x.j.apps.filter(a => a.id === 'netflix')[0].base.mode === 'full' && JSON.parse(fsx.readFileSync(fwF, 'utf8'))['@firmware'] === '2.0',
+    'firmware: a file from before the mark is kept and marked'
+  );
 });

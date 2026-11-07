@@ -100,7 +100,9 @@ var INFO = {
   'Learn the Input key':
     'Reads the code of your remote\u2019s Input button from the hook, then tests that our list opens. The default is 241. Clear goes back to it.',
   'Add-ons':
-    'Features that are installed on their own: Live TV ships with CleanYourTV, others come from the project\u2019s catalog. Each file is checked against the catalog before it is installed. Install, switch off or remove them here.',
+    'Features that are installed on their own: Live TV ships with CleanYourTV, others come from repositories: the project\u2019s own and any you add (Repositories). Each file is checked against the repository\u2019s index before it is installed, and add-ons from other repositories ask first because they run as root. Install, switch off or remove them here.',
+  Repositories:
+    'The places add-ons come from. The project\u2019s own always stays; add someone else\u2019s with the address user/repo (GitHub) or an https folder, typed on your phone. Code from another repository runs as root on your TV: you are asked first.',
   'Live TV': 'Settings for Live TV: switch it on or off, set up or remove your playlist, refresh the guide and learn the Guide key.',
   'Show Live TV':
     'On: the launcher has a Live TV button and tile, the Inputs list has Live TV, and the Guide key can open the channel guide. Off: all of that is hidden and LG\u2019s own player and guide are used. Your playlist is kept.',
@@ -113,7 +115,7 @@ var INFO = {
   'Remove the playlist': 'Deletes the playlist address, the channel list, the guide and your favourites from the TV.',
   'Yes, remove the playlist': 'Deletes the playlist and everything stored for it on the TV. You can set it up again.',
   'Learn the Guide key':
-    'Records the Guide button\u2019s code. Afterwards it opens the Live TV channel guide over whatever is running (only while Live TV is on). Clear it to get LG\u2019s guide back.',
+    'Records the Guide button\u2019s code. Afterwards it opens the TV guide (LG tuner) when that add-on is on, else the Live TV channel guide, over whatever is running. It does nothing while both are off. Clear it to get LG\u2019s guide back.',
   'Input key shows':
     'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher\u2019s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.',
   'Learn the Home key': 'Optional. Records the Home button\u2019s code. The Home key keeps working exactly as before.',

@@ -67,10 +67,20 @@ function create(ctx) {
     }
     if (p === '/channels') {
       const g = group(),
-        list = await t.load();
+        list = await t.load(),
+        used = {};
+      // the number the viewer sees on LG's own guide (101), not the place in the list; a second channel with the same major number
+      // (101-1, 101-2) gets a decimal, so every channel keeps a number of its own
+      const numberOf = (c, i) => {
+        let n = c.major || parseInt(c.n, 10) || i + 1;
+        if (used[n]) n = n + (c.minor || used[n]) / 100;
+        used[n] = (used[n] || 0) + 1;
+        return n;
+      };
       return json({
         groups: list.length ? [g] : [],
-        channels: list.map((c, i) => [i + 1, c.id, c.name, g, '', '', c.id, '', '', '', 0, [g], []]),
+        // the place in the list is the number (All channels); the number on LG's own guide goes last, for the tab of the tuner
+        channels: list.map((c, i) => [i + 1, c.id, c.name, g, '', '', c.id, '', '', '', 0, [g], [], String(numberOf(c, i))]),
       });
     }
     if (p === '/epg') {

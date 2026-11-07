@@ -655,7 +655,8 @@ body.wpon {
   background-image: none;
 }
 /* the credit a photo source asks for (Unsplash: the photographer), small, in the bottom right corner */
-#wpc {
+#wpc,
+#scredit {
   position: absolute;
   right: 40px;
   bottom: 24px;
@@ -851,7 +852,16 @@ body.wpon {
 .card-ha-entity.f .ha-n {
   color: inherit;
 }
-.ha-i svg {
+@font-face {
+  font-family: "CYTV MDI";
+  src: url("mdi.woff2") format("woff2");
+}
+.ha-mdi {
+  font: normal 48px/1 "CYTV MDI";
+  -webkit-font-smoothing: antialiased;
+}
+.ha-i svg,
+.ha-i .ha-mdi {
   display: block;
   width: 48px;
   height: 48px;
@@ -892,12 +902,16 @@ body.wpon {
 .ha-row + .ha-row {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
-.ha-ri svg {
+.ha-ri svg,
+.ha-ri .ha-mdi {
   display: block;
   width: 28px;
   height: 28px;
   margin-right: 14px;
   color: var(--ink2);
+}
+.ha-ri .ha-mdi {
+  font-size: 28px;
 }
 .ha-rn {
   flex: 1;
@@ -1176,6 +1190,10 @@ body.scenes-on {
 .s-dawn .gclock {
   top: 230px;
 }
+/* a scene of an add-on (scenes.js): a photo without a cut-out, darker at the top for the clock and the date, a little at the bottom */
+.s-addon .shade {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.08) 45%, rgba(0, 0, 0, 0) 65%, rgba(0, 0, 0, 0.28) 100%);
+}
 /* Custom theme scenes: clock and date position come from CSS variables set per-scene by scenes.js */
 .s-custom .gclock {
   top: var(--scene-clock-top, 150px);
@@ -1266,8 +1284,19 @@ body.scenes-on {
 [data-cards="glass"] .card-ha-camera {
   padding: 0;
 }
-/* a card with its own page on glass: the page inside the margins of the panel (cards.js moves the targets of its buttons along) */
-[data-cards="glass"] .card-frame > iframe {
+.card-ha-entities.ha-dark,
+[data-cards="glass"] .card-ha-entities.ha-dark {
+  background-color: rgba(12, 18, 28, 0.6);
+  background-image: none !important;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+}
+.card-ha-entities.ha-dark .ha-ri {
+  --ink2: rgba(255, 255, 255, 0.9);
+}
+/* a card with its own page on glass: the page inside the margins of the panel, and the box of its buttons (.card-bw) the same */
+[data-cards="glass"] .card-frame > iframe,
+[data-cards="glass"] .card-frame > .card-bw {
   left: 18px !important;
   top: 16px !important;
   width: calc(100% - 36px) !important;
@@ -1310,7 +1339,7 @@ body.scenes-on {
 }
 .card-btn.f {
   background: rgba(255, 255, 255, 0.14);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.9); /* inside: a button as big as its card would lose a ring outside it to the card's clip */
 }
 /* the focus the card asks for: a ring around a cover, a filled round button (the Spotify card, as it was drawn by the launcher itself) */
 .card-btn-ring,
