@@ -112,9 +112,14 @@ function create(ctx) {
     return JSON.stringify(r).indexOf('"' + SA + '"') >= 0;
   }
   async function close() {
-    // killApp is what closes a page webapp-mgr opened for us; closeByAppId is the app manager's own way (webOS 6 needed it for Home)
-    await luna(WEBMGR + 'killApp', { appId: SA });
-    await luna(AM + 'closeByAppId', { id: SA });
+    // killApp is what closes a page webapp-mgr opened for us; closeByAppId is the app manager's own way (webOS 6 needed it for Home).
+    // Each is tried on its own: one that fails must not keep the other from running.
+    try {
+      await luna(WEBMGR + 'killApp', { appId: SA });
+    } catch (_) {}
+    try {
+      await luna(AM + 'closeByAppId', { id: SA });
+    } catch (_) {}
     return true;
   }
 

@@ -203,6 +203,24 @@ run(async () => {
     x.code === 200 && calls.some(u => /webappmanager\/killApp/.test(u)),
     'POST /api/screensaver/dismiss: the page is closed through webapp-mgr'
   );
+  {
+    // webapp-mgr's killApp failing must not stop the app manager's own way out, nor turn the dismissal into an error
+    const seen = [];
+    const g = saver.create({
+      config: { get: () => ({}) },
+      luna: async uri => {
+        seen.push(uri);
+        if (/killApp/.test(uri)) throw new Error('killApp refused');
+        return { returnValue: true };
+      },
+      feature: () => null,
+    });
+    const d = await call(g, '/api/screensaver/dismiss', 'POST');
+    ok(
+      d.code === 200 && seen.some(u => /closeByAppId/.test(u)),
+      'dismiss: closeByAppId still runs when killApp fails, and the page gets {returnValue: true}'
+    );
+  }
   x = await call(f, '/api/screensaver/active', 'POST');
   ok(
     x.code === 200 && x.j.returnValue === true && f.lastActive() > 0,
