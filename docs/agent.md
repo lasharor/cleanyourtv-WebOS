@@ -28,7 +28,7 @@ Where the tools come from:
 | `get_volume` | The volume, mute, the maximum and the sound output | |
 | `tv_info` | Model, webOS (SDK) version, firmware, CleanYourTV version, power state, whether an update is available (from the last check; it does not check) | |
 | `most_used_apps` | The apps used most, from the launcher's usage counts | `limit?` (1-20, 5) |
-| `get_weather` | The weather now and the next days (Open-Meteo); without a place, the place of the weather card on Home | `place?`, `unit?`: `c` or `f` |
+| `get_weather` | The weather now and the next days (Open-Meteo); without a place, the place of a card on Home (the weather card first, else a downloaded forecast card) | `place?`, `unit?`: `c` or `f` |
 | `new_conversation` | The voice assistant forgets the conversation so far | |
 | `power_off` | Turns the TV off (destructive: only by voice, after a yes) | |
 
