@@ -75,7 +75,8 @@ if (cmd === 'kind') {
   fs.writeFileSync(a[2], JSON.stringify(h, null, 1));
 } else if (cmd === 'saver') {
   // saver <stock screen saver appinfo.json> <out>
-  // our page replaces LG's screen saver: a web app that covers the running app and, as an overlay, gives it back when the page closes
+  // our page replaces LG's screen saver: a web app that covers the running app with LG's own window type (screenSaver, below), so
+  // tvpowerd counts it as the screen saver, and gives the app back when the page closes
   var s = rj(a[1], {});
   ['nativeLifeCycleInterfaceVersion', 'containerBasedApp', 'supportQuickStart', 'windowGroup', 'qmlIncludePath', 'qtModules'].forEach(
     function (k) {
