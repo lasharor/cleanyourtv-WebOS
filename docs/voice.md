@@ -23,6 +23,7 @@ code; **Remove voice** deletes everything again.
 | Step | How |
 |---|---|
 | Choose the button | **Voice** > **Learn the voice button**. Try the remote's microphone button; if the hook does not see it, any spare button works. Then switch **Listen on the voice button** on. |
+| From the phone remote | The mic button of the [phone remote](phone-remote.md) asks the same assistant: speak into the phone's keyboard (no speech download needed) or let the TV listen on its remote, and read the answer on the phone. |
 | Try without a button | **Voice** > **Try it now**, or `curl -X POST localhost:8765/api/voice/listen`. On some TVs (the 65UR91, webOS 25 on a 2023 board) LG's service opens the microphone only while the mic button is held: hold it within 8 seconds, or the card says **Hold the remote's mic button while you speak**. |
 | Send the text to a server | `curl -X POST localhost:8765/api/voice/set -d '{"url":"http://server:port/path","token":"optional"}'` |
 | Pause LG's voice assistant | **Voice** > **Switch off LG's voice assistant**. It pauses LG's `voiceconductor` process while voice is on, so LG's own screen and its cloud recognition do not start on the same button. A reboot or turning the switch off undoes it. |

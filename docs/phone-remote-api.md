@@ -66,6 +66,9 @@ The TV answers with `ready`, or with `denied` and closes the connection.
 | `ack` | `n`, `ok` (true or false), `e` (the reason when `ok` is false) | answer to an action that carried an `n` |
 | `err` | `n`, `e: "slow down"` | the client sent too fast, the action was **not** run |
 | `bye` | | answer to `logout`; the connection closes |
+| `vstat` | `ok`, `installed`, `unsupported`, `answers`, `listening` | answer to `vstat` |
+| `answer` | `text`, `answer`, `via`, `error` | answer to `ask` |
+| `vlive` | `state`, and `text`, `answer`, `via`, `error` or `e` | each step after `listen`, until `done` or `error` |
 
 | Close code | Meaning |
 |---|---|
@@ -95,6 +98,10 @@ this address (10 in a minute). While the add-on is off, or nothing is paired and
 | `live` | `num`: a channel number, 1 to 99999 | opens Live TV and keys in the channel number (about 3.5 seconds later) |
 | `liveSetup` | | opens Live TV on the TV, where a playlist is added |
 | `tvpower` | `a`: `off` (screen off, TV keeps running), `standby`, `reboot` or `shutdown` | the power drawer's four calls. After `shutdown` the TV answers nothing and only its own remote brings it back |
+| `vstat` | | asks what [voice](voice.md) can do on the TV; answered with `vstat`: `ok` (false: the service has no voice API), `installed`, `unsupported`, `answers` (an AI chat, Home Assistant or a server is set up), `listening` |
+| `ask` | `text`: up to 1000 characters | sends a question to the TV's voice assistant, as `POST /api/voice/ask` (the TV shows its card too). Answered with `answer`: `text`, `answer`, `via` (`ha` or `ai`), `error` (`empty`, `busy` while the last question is still out, or the service's own message). Waits up to 45 seconds |
+| `listen` | | the TV listens on its remote's microphone (`POST /api/voice/listen`). The TV sends `vlive` for each step: `state` is `listening`, `recognising`, `thinking` (with `text`, the words), then `done` (`text`, `answer`, `via`, `error`) or `error` (`e`: `voice is not installed`, `already listening`, `nothing heard`, `nothing recognised`, `timed out`, ...) |
+| `vstop` | | stops sending `vlive` (the drawer was closed); the TV finishes on its own |
 
 Add `"n": <number>` to any action to get an `ack` for it. Without `n` the TV runs the action and says nothing. The typing actions (`text`, `del`, `enter`) are run **one after the other** in the order they were sent, so typed text arrives in order (a
 single action gives up after a time-out and answers `timed out`). The other actions are not queued.

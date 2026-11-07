@@ -44,6 +44,17 @@ const ACTIONS = (() => {
   while ((m = re.exec(block))) out.push(m[1]);
   return out;
 })();
+// the mic's messages (vstat, ask, listen, vstop): they go to the service's voice API, not to the key adapter
+const VOICE = (() => {
+  const i = service.indexOf('const VOICE = {'),
+    j = service.indexOf('\n  };', i),
+    block = service.slice(i, j),
+    out = [];
+  const re = /^\s{4}([a-zA-Z]+):/gm;
+  let m;
+  while ((m = re.exec(block))) out.push(m[1]);
+  return out;
+})();
 const before = (() => {
   const out = [],
     re = /m\.t === '(\w+)'/g;
@@ -94,7 +105,8 @@ run(async () => {
   ok(docServer.length >= 6, 'the page lists the messages from the TV (' + docServer.length + ')');
 
   // the client's messages: the actions, and the four handled before an action
-  const codeClient = ACTIONS.concat(['ping', 'power', 'logout']);
+  const codeClient = ACTIONS.concat(VOICE, ['ping', 'power', 'logout']);
+  ok(VOICE.join(',') === 'vstat,ask,listen,vstop', 'the mic has its four messages: ' + VOICE.join(','));
   ok(
     only(docClient, codeClient).length === 0,
     'every client message in the page is one the service answers: missing ' + only(docClient, codeClient).join(', ')
@@ -105,7 +117,7 @@ run(async () => {
   );
   ok(doc.indexOf('"t": "hello"') >= 0 && before.indexOf('hello') >= 0, 'the first message (hello) is in both');
   ok(
-    only(codeClient, ACTIONS).join(',') === 'ping,power,logout',
+    only(codeClient, ACTIONS.concat(VOICE)).join(',') === 'ping,power,logout',
     'the messages before an action are the three the page names (ping, power, logout)'
   );
 

@@ -18,13 +18,31 @@ depends on how far it went down: see [Turning the TV on](#turning-the-tv-on).
     in `Reboot` and it was back on, awake, about a minute later with its uptime reset, and **Shut down** switched it off completely: after
     that it answers nothing on the network and a Wake-on-LAN packet does not bring it back, so its own remote is the only way on.
 
-The phone page has four tabs: **Remote**, **Touchpad**, **Apps** and **Live**. The Remote has a round pad with a large OK and Menu, **123**, Back and Home in its four corners, then volume, Mute and channel, and one playback bar. **123** opens a sheet with the number keys, Exit and the four colour keys. The last row of both the Remote and the Touchpad holds **Inputs** (the TV's ports) and **Keyboard** (a drawer, below). When the TV
+The phone page has four tabs: **Remote**, **Touchpad**, **Apps** and **Live**. The Remote has a round pad with a large OK and Menu, **123**, Back and Home in its four corners, then volume, Mute and channel, and one playback bar. **123** opens a sheet with the number keys, Exit and the four colour keys. The last row of both the Remote and the Touchpad holds **Inputs** (the TV's ports), the **mic** (Voice, below) and **Keyboard** (a drawer, below). When the TV
 cannot be reached the line under the TV name says so ("Can't reach the TV": it may be off, or the phone may be on another network) and the page retries by itself. Every short message (opening an app, not connected, the TV did not come on) shows in that line for a few seconds and then goes back to the real status: nothing is drawn over the keys. The page is always left to right,
 also in an Arabic or Hebrew phone, so the arrows do not swap sides.
 
 **Touchpad.** A swipe moves the TV's pointer as you move, a tap is OK, a tap with two fingers is Back, and two fingers moving scroll. The rail on the right of the pad scrolls too: drag its thumb up or down, and it springs back to the middle when you let go. Both work with a mouse as well (drag, click, wheel; a right click is Back). The first time, the TV asks you to **allow** the connection on its screen: allow it once and the key is kept in the add-on's own data
 folder (`/media/developer/cleanyourtv/addon-data/phoneremote/ssap-key`, mode 600). Until it is allowed (or if the TV refuses) the pad
 falls back to the arrow keys, at a slower pace.
+
+**Voice.** The round orange button between **Inputs** and **Keyboard** (on the Remote and the Touchpad) asks the TV's
+[voice assistant](voice.md): the AI chat, Home Assistant or your server, whichever is set up. The first tap asks where you speak, and the
+label under the button says what was chosen:
+
+- **On this phone**: a box opens with the phone's keyboard. Tap the microphone **on the keyboard** (Gboard, the iPhone keyboard, Samsung
+  and others have one) and speak, or type, then send. A web page on plain HTTP, as this one is, may not open the microphone itself, but
+  the keyboard's dictation works in any text box. This needs no speech download on the TV.
+- **On the TV remote**: the TV listens through its remote's microphone (it needs **Voice** installed in the manager). The drawer follows
+  the TV: **Listening on the TV**, **Recognising**, **Thinking**, then the answer. On TVs where LG opens the microphone only while the
+  button is held, hold the remote's mic button while you speak.
+
+The question and the answer show on the phone, labelled with what answered (**Home Assistant** or **AI**), and on the TV as its usual card.
+**Ask again** sends the last question once more; the mic button under the answer starts a new one. **Remember my choice** (on by
+default) keeps the place for the next tap; switched off, the question comes every time. A **hold** on the mic button asks again, and so
+does the chip at the top of the drawer. **This remote** (tap the TV's name) has two rows for it: **Voice** (where you speak) and **Show
+answers here** (off: the drawer closes once the question is sent, and the answer shows only on the TV); when the TV cannot listen on its
+remote it says why there. The choice is kept on the phone (`localStorage`, `cytv-voice`) and goes with **Log out of this TV**.
 
 **Keyboard.** The **Keyboard** button (last row of the Remote and the Touchpad) opens a drawer (the same kind as Inputs and Numbers) and brings up the phone's keyboard. What you type goes to the TV as you type, and the line under the TV name says "Typing live on TV". **Clear**, **Delete** (hold to repeat) and **Enter** (sends Enter to the TV and closes the drawer) sit under the box.
 
