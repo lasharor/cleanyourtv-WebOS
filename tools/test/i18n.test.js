@@ -140,4 +140,31 @@ run(async () => {
     I.tr('nl', '1 photos') === '1 foto' && I.tr('nl', '4 photos') === '4 foto’s' && I.tr('en', '1 photos') === '1 photo',
     'the service picks plural forms too (its own rules: Node 8 has no Intl.PluralRules)'
   );
+  // the manager's rows ({label, sub, about}) are translated where the list draws them: their texts must be in en.json, or no language
+  // can translate them (the Add-ons screen stayed English in Dutch)
+  const { rowTexts } = require(path.join(root, 'tools', 'i18n.js'));
+  const sample = rowTexts(
+    "rows.push({ label: 'Page of the book', sub: onoff(x) + ' · Home is page 1' });\n" +
+      "rows.push({ label: a.enabled ? 'Switch off' : 'Switch on', sub:\n  (s === 'running' ? 'on' : 'off') + (b ? ' · ships with CleanYourTV' : ''),\n  fn: f });\n" +
+      "rows.push({ label: name === 'input' ? 'Skip' : 'Close', sub: HR[r || 'ha-first'], about: 'com.webos.app.hdmi' });\n" +
+      "rows.push({ label: 'Update to ' + v, sub: lm.model || 'openrouter/auto' });"
+  );
+  ok(
+    ['Page of the book', 'Home is page 1', 'Switch off', 'Switch on', 'on', 'off', 'ships with CleanYourTV', 'Skip', 'Close'].every(
+      k => sample.indexOf(k) >= 0
+    ) && !['input', 'ha-first', 'com.webos.app.hdmi', 'Update to', 'openrouter/auto'].some(k => sample.indexOf(k) >= 0),
+    'the texts of the manager rows are found, not values, keys or pieces of a built text: ' + JSON.stringify(sample)
+  );
+  const enKeys = JSON.parse(fs.readFileSync(path.join(root, 'i18n', 'en.json'), 'utf8'));
+  const mgrSrc = B.plain(
+    fs
+      .readdirSync(path.join(root, 'manager', 'src', 'js'))
+      .map(f => fs.readFileSync(path.join(root, 'manager', 'src', 'js', f), 'utf8'))
+      .join('\n')
+  );
+  const absent = rowTexts(mgrSrc).filter(k => !Object.prototype.hasOwnProperty.call(enKeys, k));
+  ok(
+    absent.length === 0,
+    'en.json lists every text of the manager rows (node tools/i18n.js --sync): ' + JSON.stringify(absent.slice(0, 5))
+  );
 });
