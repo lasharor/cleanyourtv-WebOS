@@ -194,6 +194,14 @@ function kLearn(name) {
               );
               return;
             }
+            if (l.state === 'blind') {
+              api('/api/manager/options', { inputKey: false });
+              kShow(
+                'The hook is in LG’s input service, but no button reaches it on this TV, so keys cannot be learned. The Input key stays with LG’s picker.\nUse Share log to report this.',
+                [{ label: 'Close', fn: closeKeys }]
+              );
+              return;
+            }
             if (l.state === 'timeout') {
               kShow('Nothing was pressed.', [
                 {

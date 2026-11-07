@@ -117,15 +117,23 @@ function ensure(enabled, key) {
   }
 }
 const HOOKLOG = P.HOOK_LOG;
+// a button as the hook logs it in lginput2 (one line per press and per release)
+const KEYLINE = /keyid=\d+, state=\d+ uinput_code=\d+/;
+let blind = false;
 // What the hook reports about itself: did it find LG's input function and install?
 function hookInfo() {
   let t = '';
   try {
     t = fs.readFileSync(HOOKLOG, 'utf8');
   } catch (_) {}
+  const sawKeys = KEYLINE.test(t);
+  if (sawKeys) blind = false;
   return {
     attached: /InputHook initialized/.test(t) && /lib_main returned: 0/.test(t),
-    sawKeys: /lginput_uinput_send_button called/.test(t),
+    sawKeys,
+    // attached, yet a whole learning step went by without one button in its log: LG's input service on this TV does not pass the
+    // remote's buttons through the function the hook replaces (55UN6950ZUA, issue 185). Kept until a button shows up in the log.
+    blind,
     errors: t
       .split('\n')
       .filter(l => /\[(ERRO|FAIL|WARN)/.test(l))
@@ -171,7 +179,8 @@ function startLearn(name) {
 function learnState() {
   if (!learn) return { state: 'idle' };
   if (learn.result) return Object.assign({ state: 'got', name: learn.name }, learn.result);
-  if (!hookInfo().attached) return { state: 'unsupported', name: learn.name };
+  const info = hookInfo();
+  if (!info.attached) return { state: 'unsupported', name: learn.name };
   let t = '';
   try {
     const fd = fs.openSync(HOOKLOG, 'r'),
@@ -193,8 +202,14 @@ function learnState() {
       }
     }
   }
+  const over = Date.now() - learn.at > 45000;
+  // not even the OK press that started the step reached the hook: the buttons go another way on this TV, pressing again will not help
+  if (over && !info.sawKeys) {
+    blind = true;
+    return { state: 'blind', name: learn.name };
+  }
   return {
-    state: Date.now() - learn.at > 45000 ? 'timeout' : 'waiting',
+    state: over ? 'timeout' : 'waiting',
     name: learn.name,
     seconds: Math.round((Date.now() - learn.at) / 1000),
   };
