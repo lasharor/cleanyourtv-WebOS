@@ -546,7 +546,7 @@ poll();
     const s = http.createServer(lanHandler);
     s.setTimeout(30000);
     return new Promise(resolve => {
-      s.once('error', e => {
+      s.once('error', (/** @type {NodeJS.ErrnoException} */ e) => {
         lanError =
           e && e.code === 'EADDRINUSE'
             ? 'port ' + lanPort() + ' is used by another program on the TV'
