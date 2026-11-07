@@ -15,7 +15,7 @@ uninstall. Optional features contact other services only when you switch them on
 | `/media/developer/apps/usr/palm/applications/` | The apps `com.cleanyourtv.manager`, `.picker` and `.notify` |
 | `/media/developer/apps/usr/palm/services/com.cleanyourtv.manager.service/` | The installed package contents |
 | `/var/lib/webosbrew/init.d/` | Boot scripts `10-cleanyourtv-home` and, with debloat on, `15-cleanyourtv-debloat` (links into the folder above) |
-| `/home/root/.config/lginputhook/keybinds.json` | Our binds for the Input key, the voice and Guide keys and any [remapped buttons](key-remap.md); other binds are left alone |
+| `/home/root/.config/lginputhook/keybinds.json` | Our binds for the Input key, the voice and Guide keys, the Home key while a page of the launcher's [book](development/addons.md#pages-home-is-page-1-of-a-book) shows, and any [remapped buttons](key-remap.md); other binds are left alone |
 | `/home/root/.local/bin/cytv-addons` | Only if you run `cytv-addons.js shortcut`: a one-line command for [add-on repositories](development/addon-repos.md) over SSH. The uninstall removes it |
 | `/media/developer/cytv-setup.log` | The setup log |
 

@@ -1,6 +1,8 @@
 // Input key: injects the bundled inputhook (see third-party/inputhook) into LG's input processes and binds the remote's
 // Input button (id 241) to scripts/inputkey.sh, which opens the Inputs picker overlay. Removing our bind gives the key
 // back to LG's own picker. Other binds in keybinds.json are left alone.
+// The same file also holds the Home key while a page of the launcher's book shows (book.js): the key is learned in the manager,
+// no code is assumed, and the bind exists only while a page shows.
 const fs = require('fs'),
   nc = require('./netcompat'),
   exec = require('./exec'),
@@ -21,7 +23,8 @@ const DEFAULT_KEY = '241',
   COMMAND = 'sh ' + D + '/inputkey.sh',
   VOICE_COMMAND = 'sh ' + D + '/voicekey.sh',
   GUIDE_COMMAND = 'sh ' + D + '/guidekey.sh',
-  REMAP_COMMAND = 'sh ' + D + '/remapkey.sh '; // + the code: one bind per remapped key (remap.js)
+  REMAP_COMMAND = 'sh ' + D + '/remapkey.sh ', // + the code: one bind per remapped key (remap.js)
+  BOOK_COMMAND = 'sh ' + D + '/bookhome.sh'; // the Home key while a page of the book shows (book.js)
 
 function procs() {
   const out = [];
@@ -47,7 +50,7 @@ const hooked = pid => {
   }
 };
 
-function writeBinds(on, key, vkey, gkey, rkeys) {
+function writeBinds(on, key, vkey, gkey, rkeys, bkey) {
   let b = {};
   try {
     b = JSON.parse(fs.readFileSync(BINDS, 'utf8'));
@@ -59,6 +62,7 @@ function writeBinds(on, key, vkey, gkey, rkeys) {
       ((b[k].command === COMMAND && (!on || k !== key)) ||
         (b[k].command === VOICE_COMMAND && (!vkey || k !== vkey)) ||
         (b[k].command === GUIDE_COMMAND && (!gkey || k !== gkey)) ||
+        (b[k].command === BOOK_COMMAND && (!bkey || k !== bkey)) ||
         (typeof b[k].command === 'string' && b[k].command === REMAP_COMMAND + k && rkeys.indexOf(k) < 0))
     )
       delete b[k]; // our binds only, wherever they were
@@ -68,6 +72,10 @@ function writeBinds(on, key, vkey, gkey, rkeys) {
   // a remapped key never takes over a key that already does something of ours. `key` arrives even while the Input key is off (its module
   // always passes the code it would use), so it is only in the way when it is really bound (`on`)
   for (const k of rkeys) if (!(on && k === key) && k !== vkey && k !== gkey) b[k] = { action: 'exec', command: REMAP_COMMAND + k };
+  // the Home key, only while a page of the book shows; never over a key that is already ours (a remote whose Home code was learned
+  // wrong must not take the Input or the voice button away)
+  if (bkey && bkey !== String(key) && bkey !== vkey && bkey !== gkey && rkeys.indexOf(bkey) < 0)
+    b[bkey] = { action: 'exec', command: BOOK_COMMAND };
   if (JSON.stringify(b) === before) return;
   nc.mkdirp(CFGDIR);
   fs.writeFileSync(BINDS + '.tmp', JSON.stringify(b));
@@ -88,16 +96,22 @@ let remapFn = () => []; // the codes of the remapped keys (remap.js)
 const setRemapKeys = f => {
   remapFn = f;
 };
+// the code of the remote's Home button while a page of the launcher's book shows, or '' (book.js); learned in the manager, never guessed
+let bookKey = '';
+const setBookKey = code => {
+  bookKey = String(code || '');
+};
 function ensure(enabled, key) {
   const vkey = voiceFn(),
     gkey = guideFn(),
-    rkeys = remapFn().map(String);
+    rkeys = remapFn().map(String),
+    bkey = bookKey;
   try {
-    writeBinds(enabled, String(key || DEFAULT_KEY), vkey ? String(vkey) : '', gkey ? String(gkey) : '', rkeys);
+    writeBinds(enabled, String(key || DEFAULT_KEY), vkey ? String(vkey) : '', gkey ? String(gkey) : '', rkeys, bkey);
   } catch (e) {
     console.error('inputhook: keybinds:', e.message);
   }
-  if (!(enabled || vkey || gkey || rkeys.length) || busy || !fs.existsSync(HOOK + '/ezinject')) return;
+  if (!(enabled || vkey || gkey || rkeys.length || bkey) || busy || !fs.existsSync(HOOK + '/ezinject')) return;
   const todo = procs().filter(p => !hooked(p.pid));
   if (!todo.length) return;
   busy = true;
@@ -203,6 +217,7 @@ module.exports = {
   setVoiceKey,
   setGuideKey,
   setRemapKeys,
+  setBookKey,
   ensure,
   status,
   markSaved,

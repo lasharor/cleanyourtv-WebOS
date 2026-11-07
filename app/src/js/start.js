@@ -14,6 +14,10 @@ try {
 } catch (e) {}
 load();
 var pagesLoaded = PAGER.load();
+/* a launcher that starts again shows Home: the service is told so before a launch parameter can turn to a page ({live:true}) */
+pagesLoaded.then(function () {
+  PAGER.report();
+});
 refreshSoon();
 wantInputs(pagesLoaded);
 api('/api/frontend-ok', { version: VERSION }).catch(function () {}); // lets the manager know an updated launcher started

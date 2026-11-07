@@ -835,7 +835,7 @@ function build() {
     });
     rows.push({
       label: 'Learn the Home key',
-      sub: 'optional · ' + (st.keys && st.keys.home ? 'now: ' + st.keys.home : 'not learned'),
+      sub: 'for the pages of the book \u00B7 ' + (st.keys && st.keys.home ? 'now: ' + st.keys.home : 'now: 773 (the usual code)'),
       fn: function () {
         openKeys('home');
       },
