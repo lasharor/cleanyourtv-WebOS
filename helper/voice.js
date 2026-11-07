@@ -872,6 +872,7 @@ function pairPage(msg, done, token, lang, only) {
     'Choose a model',
     'Saved. You can close this page.',
     'No AI provider yet: add OpenRouter or a server of your own.',
+    'no connection to the TV',
   ].forEach(k => (data.s[k] = i18n.tr(lang, k)));
   const json = JSON.stringify(data).replace(/</g, '\\u003c');
   return `${head}<div id=main><p style="color:#aaa;font-size:15px;margin:0">${T('AI providers are asked from the top. If one does not answer, the next one is asked.')}</p>
@@ -902,7 +903,7 @@ function draft(p){return{id:p.id,type:p.type,base:p.base,key:p.key,model:p.model
 function same(b){return String(b).toLowerCase().replace(/\\/+$/,'').replace(/\\/v1$/,'')}
 function check(p){var e={};if(p.type==='server'){if(!/^https?:\\/\\/\\S+$/.test(p.base))e.base=tx('Enter an http:// or https:// address');else if(list.some(function(q){return q!==p&&q.type==='server'&&same(q.base)===same(p.base)}))e.base=tx('This address is already in the list')}
 if(p.type==='openrouter'&&!p.key&&(!p.hasKey||p.clearKey))e.key=tx('OpenRouter needs a key');if(!p.model)e.model=tx('Choose a model');p.err=e;return!Object.keys(e).length}
-function loadModels(p){if(p.type==='server'&&!/^https?:\\/\\/\\S+$/.test(p.base))return;p.models=null;p.mErr='';p.loading=true;draw();post('models',draft(p)).then(function(r){p.loading=false;if(r.error)p.mErr=r.error;else{p.models=r.models;if(!p.model&&r.models.length)p.model=r.models[0].id}draw()},function(){p.loading=false;p.mErr='?';draw()})}
+function loadModels(p){if(p.type==='server'&&!/^https?:\\/\\/\\S+$/.test(p.base))return;p.models=null;p.mErr='';p.loading=true;draw();post('models',draft(p)).then(function(r){p.loading=false;if(r.error)p.mErr=r.error;else{p.models=r.models;if(!p.model&&r.models.length)p.model=r.models[0].id}draw()},function(){p.loading=false;p.mErr=tx('no connection to the TV');draw()})}
 function field(p,label,hint,input,errKey){return el('div',{},[el('label',{},[document.createTextNode(label+' '),hint?el('small',{text:hint}):null]),input,p.err[errKey]?el('p',{class:'e',text:p.err[errKey]}):null])}
 function card(p,i){var srv=p.type==='server',last=list.length-1,c=el('div',{class:'card'});
 c.appendChild(el('div',{class:'top'},[el('div',{class:'n',text:String(i+1)}),el('div',{class:'t'},[el('b',{text:srv?tx('Your own server'):tx('OpenRouter')}),el('span',{class:i?'':'f',text:i?tx('If the one above does not answer'):tx('Answers first')})]),
@@ -910,7 +911,7 @@ el('button',{type:'button',class:'ib','aria-label':tx('Move up'),text:'\\u25B2',
 el('button',{type:'button',class:'ib','aria-label':tx('Remove'),text:'\\u2715',onclick:function(){p.ask=true;draw()}})]));
 var b=c.querySelectorAll('.ib');if(!i)b[0].disabled=true;if(i===last)b[1].disabled=true;
 if(p.ask)c.appendChild(el('div',{class:'ask'},[el('span',{text:tx('Remove this provider?')}),el('button',{type:'button',text:tx('Yes'),onclick:function(){list.splice(list.indexOf(p),1);draw()}}),el('button',{type:'button',class:'sec',text:tx('No'),onclick:function(){p.ask=false;draw()}})]));
-if(srv){c.appendChild(field(p,tx('Address'),tx('usually ends in /v1'),el('input',{type:'url',value:p.base,placeholder:'http://computer:11434/v1',class:p.err.base?'bad':'',oninput:function(e){p.base=e.target.value.trim()},onchange:function(){check(p);loadModels(p)}}),'base'));
+if(srv){c.appendChild(field(p,tx('Address'),tx('usually ends in /v1'),el('input',{type:'url',value:p.base,placeholder:'http://computer:11434/v1',class:p.err.base?'bad':'',oninput:function(e){p.base=e.target.value.trim()},onchange:function(){check(p);p.err={base:p.err.base};if(!p.err.base)delete p.err.base;setTimeout(function(){draw();loadModels(p)},0)}}),'base'));
 c.appendChild(field(p,tx('Name'),tx('optional'),el('input',{type:'text',value:p.name||'',oninput:function(e){p.name=e.target.value}}),'name'))}
 var kh=p.hasKey&&!p.clearKey?tx('(one is saved; leave empty to keep it)'):srv?tx('(only if your server asks for one; most do not)'):'';
 c.appendChild(field(p,tx('API key'),kh,el('input',{type:'password',autocomplete:'off',placeholder:srv?'':'sk-or-...',class:p.err.key?'bad':'',oninput:function(e){p.key=e.target.value.trim()}}),'key'));
@@ -926,13 +927,13 @@ c.appendChild(el('button',{type:'button',class:'sec',text:p.testing?tx('Testingâ
 if(p.res)c.appendChild(el('div',{class:p.res.ok?'ok':'no',text:p.res.ok?'\\u2713 '+tx('Answered in %s s',(p.res.ms/1000).toFixed(1)):'\\u2717 '+p.res.error}));
 return c}
 function move(i,d){var j=i+d;if(j<0||j>=list.length)return;var t=list[i];list[i]=list[j];list[j]=t;draw()}
-function draw(){var box=document.getElementById('cards');box.textContent='';if(!list.length)box.appendChild(el('p',{class:'e',style:'color:#aaa',text:tx('No AI provider yet: add OpenRouter or a server of your own.')}));list.forEach(function(p,i){box.appendChild(card(p,i))});document.getElementById('addor').style.display=list.some(function(p){return p.type==='openrouter'})?'none':''}
+function draw(){var box=document.getElementById('cards');list.forEach(function(q){var k=Object.keys(q.err);if(k.length){check(q);var e={};k.forEach(function(x){if(q.err[x])e[x]=q.err[x]});q.err=e}});var ae=document.activeElement,fs=box.querySelectorAll('input,select,textarea'),fi=-1,cur=null;for(var i=0;i<fs.length;i++)if(fs[i]===ae)fi=i;try{cur=ae&&ae.selectionStart}catch(e){}box.textContent='';if(!list.length)box.appendChild(el('p',{class:'e',style:'color:#aaa',text:tx('No AI provider yet: add OpenRouter or a server of your own.')}));list.forEach(function(p,i){box.appendChild(card(p,i))});document.getElementById('addor').style.display=list.some(function(p){return p.type==='openrouter'})?'none':'';if(fi>=0){var nf=box.querySelectorAll('input,select,textarea')[fi];if(nf){nf.focus();try{if(cur!=null)nf.setSelectionRange(cur,cur)}catch(e){}}}}
 function add(type){var p={id:'',type:type,name:'',base:'',model:type==='openrouter'?'openrouter/auto':'',waitS:type==='openrouter'?30:25,off:false,hasKey:false,key:'',clearKey:false,models:null,mErr:'',res:null,err:{},ask:false};list.push(p);draw();if(type==='openrouter')loadModels(p);var cs=document.querySelectorAll('.card');var last=cs[cs.length-1];last.scrollIntoView({behavior:'smooth',block:'center'});var f=last.querySelector('input');if(f)f.focus()}
 document.getElementById('addor').onclick=function(){add('openrouter')};document.getElementById('addsrv').onclick=function(){add('server')};
 document.getElementById('save').onclick=function(){var ok=true;list.forEach(function(p){if(!check(p))ok=false});draw();var er=document.getElementById('err');er.textContent='';if(!ok){var b=document.querySelector('.bad');if(b)b.scrollIntoView({block:'center'});return}
 var body={llm:{enabled:document.getElementById('enabled').checked,system:document.getElementById('system').value,providers:list.map(function(p){var o={type:p.type,name:p.name,model:p.model,waitS:p.waitS,off:p.off};if(p.id)o.id=p.id;if(p.type==='server')o.base=p.base;if(p.key)o.key=p.key;if(p.clearKey&&!p.key)o.clearKey=true;return o})},ha:{route:document.getElementById('haroute').value},url:document.getElementById('url').value};
 var tk=document.getElementById('token').value;if(tk)body.token=tk;
-post('save-json',body).then(function(r){if(r.error){er.textContent=r.error;return}document.getElementById('main').innerHTML='<p class=m></p>';document.querySelector('#main .m').textContent=tx('Saved. You can close this page.')},function(){er.textContent='?'})};
+post('save-json',body).then(function(r){if(r.error){er.textContent=r.error;return}document.getElementById('main').innerHTML='<p class=m></p>';document.querySelector('#main .m').textContent=tx('Saved. You can close this page.')},function(){er.textContent=tx('no connection to the TV')})};
 draw();list.forEach(function(p){if(p.type==='openrouter'||p.base)loadModels(p)})})();</script>`;
 }
 function startPair(only) {

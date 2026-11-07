@@ -202,6 +202,14 @@ run(async () => {
   });
   ok(/"providers":\[\{"id":"/.test(vpage) && /"hasKey":true/.test(vpage), 'the voice page carries the providers');
   ok(vpage.indexOf('sk-or-page-secret') < 0, 'the voice page never carries a key');
+  const pageScript = vpage.slice(vpage.indexOf('<script>') + 8, vpage.lastIndexOf('</script>'));
+  let compiles = true;
+  try {
+    new Function(pageScript); // eslint-disable-line no-new-func
+  } catch (e) {
+    compiles = e.message;
+  }
+  ok(pageScript.length > 1000 && compiles === true, 'the voice page script compiles (' + compiles + ')');
   ok(
     /"waitS":30/.test(vpage) && /"waits":\[[0-9,]*\b30\b/.test(vpage),
     'OpenRouter’s default wait (30 s) is one of the choices the page offers'
