@@ -64,7 +64,7 @@ function create(ctx) {
   // What Home has behind it now, in Home's own order (app/src/js/scenes.js, wall.js, theme.js), so the saver shows the same:
   //   1. the theme's scenes: an add-on's scenes where one provides them (Seasons), else the five landscapes of the launcher (couch),
   //      or the theme's own scenes (custom); they take the place of the wallpaper and of Wallpapers, as on Home
-  //   2. Wallpapers switched on: the library (uploads, source add-ons, live sources)
+  //   2. Wallpapers switched on and something in the library: the library (uploads, source add-ons, live sources)
   //   3. the theme's wallpaper
   //   4. nothing: the clock on black
   // An entry is a library id, or a path on this service that the page loads as it is; credits holds the line a photo comes with.
@@ -97,7 +97,11 @@ function create(ctx) {
       } catch (_) {}
       return { photos: COUCH.map(id => '/api/screensaver/scene/' + id), credits: {}, from: 'scenes' };
     }
-    if (c.wall && c.wall.on) return { photos: photos(), credits: {}, from: 'wallpapers' };
+    // Wallpapers on with an empty library: Home's wall.js switches its layer off (sync() -> off()) and the theme's wallpaper shows
+    if (c.wall && c.wall.on) {
+      const lib = photos();
+      if (lib.length) return { photos: lib, credits: {}, from: 'wallpapers' };
+    }
     if (t && t.wallpaper)
       return { photos: ['/api/theme/wallpaper/' + t.wallpaper.id + '/' + t.wallpaper.file], credits: {}, from: 'theme' };
     return { photos: [], credits: {}, from: '' };
