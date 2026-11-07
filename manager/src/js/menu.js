@@ -1385,7 +1385,7 @@ function build() {
       label: 'Screen saver',
       sub: onoff(st.saver && st.saver.enabled) + (st.saver && st.saver.replaced ? ' \u00B7 ours now' : ' \u00B7 LG\u2019s own'),
       fn: function () {
-        push('home');
+        push('confirm-saver');
       },
     });
     rows.push({ label: 'Live TV', sub: onoff(st.options.liveTv !== false), fn: openLiveTv });

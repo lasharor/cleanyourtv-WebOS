@@ -236,6 +236,16 @@ run(async () => {
       ok(n.status === 0, s + ' is valid shell');
     }
   }
+  // ---- the manager: every "Screen saver" row (CleanYourTV as Home, Features) opens the switch's confirm screen ----
+  {
+    const menu = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'menu.js'), 'utf8');
+    const rows = menu.split("label: 'Screen saver'").slice(1);
+    ok(
+      rows.length === 2 && rows.every(r => /^[\s\S]{0,400}?push\('confirm-saver'\)/.test(r)),
+      'both "Screen saver" rows of the manager open the confirm screen of the switch (rows: ' + rows.length + ')'
+    );
+  }
+
   const boot = fs.readFileSync(path.join(root, 'scripts', 'bootstrap.sh'), 'utf8');
   ok(/20-cleanyourtv-screensaver/.test(boot), 'the setup installs the screen saver boot script');
   ok(/screensaver-appinfo\.orig\.json/.test(boot), "the setup saves LG's screen saver manifest before it is replaced");
