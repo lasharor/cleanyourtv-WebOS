@@ -41,7 +41,7 @@ Folder: [`classic/`](classic/)
 
 ### Cinema
 
-A dark living-room layout with wide app tiles, a quiet top bar and a cool focus ring.
+A dark living-room layout with wide app tiles, a soft pill top bar and the focused app's dimmed icon in the background.
 
 [![Cinema](cinema/preview.jpg)](cinema/preview.jpg)
 

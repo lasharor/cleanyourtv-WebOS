@@ -1,7 +1,7 @@
 {
   "name": "Cinema",
   "author": "CleanYourTV",
-  "description": "A polished dark living-room layout with wide app tiles, quiet colours and a bright focus ring.",
+  "description": "A dark living-room layout with wide app tiles and a dimmed icon of the focused app in the background.",
   "extends": "classic",
   "colors": {
     "night": "#090a0d",
@@ -76,6 +76,7 @@
   },
   "effects": {
     "glow": 0.24,
+    "focusIcon": true,
     "glowColor": "accent",
     "speed": 0.85
   },
@@ -83,3 +84,4 @@
     "show": false
   }
 }
+

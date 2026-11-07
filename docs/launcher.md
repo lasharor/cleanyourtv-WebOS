@@ -8,7 +8,7 @@ same on every supported webOS version.
 ## The screen
 
 - **Dock.** Up to four apps, large, on the first row.
-- **Top shelf.** The name of the focused app and an ambient glow taken from its icon.
+- **Top shelf.** The name of the focused app and an ambient glow taken from its icon. Cinema also shows that app's icon, dimmed, in the background while an app is focused.
 - **Grid.** All other apps, sorted by how often you use each one, A to Z, or your own custom static order. An app you install (from the Homebrew
   Channel or the LG store) appears within a few seconds by itself, also while Home is on screen; one you never opened yet sorts last
   when the grid is sorted by use.
@@ -211,3 +211,4 @@ Settings are stored on the TV in `/media/developer/cleanyourtv/config.json`:
 
 See [`config.example.json`](https://github.com/lasharor/cleanyourtv-WebOS/blob/main/config.example.json). Change settings in
 the launcher; the file is read and written by the service.
+

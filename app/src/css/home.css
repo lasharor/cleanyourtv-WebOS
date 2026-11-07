@@ -113,6 +113,22 @@ body {
   opacity: var(--glow-op);
 }
 
+#focus-art {
+  position: absolute;
+  z-index: 1;
+  left: 600px;
+  top: 170px;
+  width: 720px;
+  height: 720px;
+  object-fit: contain;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity calc(0.25s * var(--spd)) linear;
+}
+#focus-art.on {
+  opacity: 0.12;
+}
+
 #top {
   position: absolute;
   left: 0;
@@ -1373,3 +1389,4 @@ body.scenes-on {
   box-shadow: none;
   transform: scale(1.1);
 }
+

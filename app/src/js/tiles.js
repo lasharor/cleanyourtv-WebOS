@@ -90,6 +90,28 @@ function retryTileIcons() {
   });
 }
 
+/* Cinema: use the selected app's existing icon as a quiet, full-screen backdrop. */
+function updateFocusArt(e) {
+  var art = $('focus-art'),
+    a = e && e._a,
+    o = e && e._o,
+    id = a && !a.sys && !a.input ? a.id : o && o.app ? o.app : '',
+    src = '';
+  if (!art) return;
+  if (TH && TH.focusIcon && id) {
+    src = (e && e._i && e._i.src) || (id === '__live' ? LIVE_ICON : API + '/icon/' + encodeURIComponent(id) + (a && a.iv ? '?v=' + a.iv : ''));
+  }
+  if (src) {
+    if (art._src !== src) {
+      art._src = src;
+      art.src = src;
+    }
+    art.classList.add('on');
+  } else {
+    art.classList.remove('on');
+  }
+}
+
 /* ---------- ambient glow: two layers cross-fade, updated only once focus settles ---------- */
 function glowNow(e) {
   var col = TH.glow || e.style.getPropertyValue('--c') || '74,84,112';
@@ -120,3 +142,4 @@ function inputTile(d, a) {
   d.children[2].textContent = named ? port : '';
   return d;
 }
+
