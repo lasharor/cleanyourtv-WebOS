@@ -1367,6 +1367,7 @@ function build() {
         api('/api/mcp/tools').then(
           function (r) {
             mtools = r;
+            mtOpen = {}; /* every visit starts with the groups closed */
             push('mcptools');
           },
           function () {
@@ -1528,7 +1529,7 @@ function build() {
           );
         },
         left: function () {
-          mtToggle(g, true);
+          mtToggle(g);
         },
       });
       g.items.forEach(function (it) {
@@ -1555,7 +1556,7 @@ function build() {
             mtSet({ key: it.key, on: !it.on });
           },
           left: function () {
-            mtToggle(g, true);
+            mtToggle(g);
           },
         });
       });
@@ -3330,25 +3331,33 @@ function mtKeys(g) {
     return it.key;
   });
 }
-/* open or close a group; closing one with New tools in it clears the badges (they were seen). focus: back on the group's row */
-function mtToggle(g, focus) {
-  var was = !!mtOpen[g.id];
-  if (was) delete mtOpen[g.id];
-  else mtOpen[g.id] = true;
-  var seen =
-    was &&
-    g.items.some(function (it) {
-      return it.fresh;
-    });
+/* open or close a group. One group is open at a time (opening one closes the other), so the list stays short to scroll. A group with New
+   tools that is closed clears its badges (they were seen). The focus stays on the group's row. */
+function mtToggle(g) {
+  var was = !!mtOpen[g.id],
+    closing = was ? [g.id] : Object.keys(mtOpen);
+  mtOpen = {};
+  if (!was) mtOpen[g.id] = true;
+  var seen = [];
+  ((mtools && mtools.groups) || []).forEach(function (x) {
+    if (
+      closing.indexOf(x.id) >= 0 &&
+      x.items.some(function (it) {
+        return it.fresh;
+      })
+    )
+      seen.push(x);
+  });
   build();
-  if (focus || was)
-    for (var i = 0; i < rows.length; i++)
-      if (rows[i].group === g.id && rows[i].state) {
-        idx = i;
-        break;
-      }
+  for (var i = 0; i < rows.length; i++)
+    if (rows[i].group === g.id && rows[i].state) {
+      idx = i;
+      break;
+    }
   draw();
-  if (seen) mtSet({ seen: g.id, keys: mtKeys(g) });
+  seen.forEach(function (x) {
+    mtSet({ seen: x.id, keys: mtKeys(x) });
+  });
 }
 /* one change: saved at once, then the screen drawn again from what the service says now */
 function mtSet(body, said) {
