@@ -20,4 +20,5 @@ pagesLoaded.then(function () {
 });
 refreshSoon();
 wantInputs(pagesLoaded);
+watchOpen();
 api('/api/frontend-ok', { version: VERSION }).catch(function () {}); // lets the manager know an updated launcher started

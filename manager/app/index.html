@@ -1139,8 +1139,8 @@ function build() {
         label: 'Open page',
         sub: a1.inBook ? 'shows it now · Back returns to Home' : 'not in the book · shows it now · Back returns to Home',
         fn: function () {
-          /* Home turns to the page ({page: id}, app/src/js/input.js), also when it is out of the book */
-          api('/api/launch', { id: 'com.webos.app.home', params: { page: a1.id } }).catch(function () {});
+          /* the service launches Home with {page, t} and tells the launcher at once (helper/book.js), also for a page out of the book */
+          api('/api/book/open', { id: a1.id }).catch(function () {});
         },
       });
     if (a1.bookable) {

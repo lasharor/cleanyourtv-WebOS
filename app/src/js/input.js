@@ -247,7 +247,61 @@ function guidePage() {
   return '';
 }
 /* launching Home with {inputs:true} opens the Inputs list; {page:<add-on id>} turns to that add-on's page, in the book or not (manager > Open page) */
+/* The launch parameters handled last. webOS shows Home (visibilitychange) about a second before it delivers webOSRelaunch, and
+   launchParams already hold the new ones then: a {page} that is new turns the page at the show (pageOnShow), and the relaunch that
+   follows finds the page open. Parameters that did not change are left to the relaunch: Home shown again by closing an app keeps
+   the parameters of its last launch. */
+var seenParams = '';
+/* the t of the last open handled (POST /api/book/open sends it with the launch and on GET /api/book/open): each open turns once, so the
+   relaunch webOS delivers late (40 s seen) does not turn to the page again after you left it */
+var pageT = 0;
+function turnTo(id, t) {
+  if (typeof t === 'number') {
+    if (t <= pageT) return false;
+    pageT = t;
+  }
+  if (PAGER.index(id) <= 0) return false;
+  closeMenus();
+  PAGER.go(id, null, true);
+  return true;
+}
+/* The service tells the launcher of an open at once (GET /api/book/open waits for one): Home's own relaunch and visibility events can
+   come seconds late, while its requests are answered. Only opens made after this launcher started count. */
+var openSince = Date.now();
+function watchOpen() {
+  api('/api/book/open?since=' + openSince).then(
+    function (r) {
+      if (r && typeof r.t === 'number' && r.t > openSince) {
+        openSince = r.t;
+        if (r.id && r.fresh && !turnTo(r.id, r.t) && PAGER.index(r.id) < 0)
+          /* an add-on the launcher does not know yet (switched on a moment ago) */
+          PAGER.load().then(function () {
+            if (PAGER.index(r.id) > 0) {
+              closeMenus();
+              PAGER.go(r.id, null, true);
+            }
+          });
+      }
+      watchOpen();
+    },
+    function () {
+      setTimeout(watchOpen, 5000);
+    }
+  );
+}
+function pageOnShow() {
+  var raw = webOSSystem.launchParams || '',
+    p = {};
+  if (raw === seenParams) return;
+  seenParams = raw;
+  try {
+    p = JSON.parse(raw || '{}');
+  } catch (e) {}
+  if (!p || p.inputs || typeof p.page !== 'string') return;
+  turnTo(p.page, p.t);
+}
 function wantInputs(pages) {
+  if (pages) seenParams = webOSSystem.launchParams || '';
   var p = {};
   try {
     p = JSON.parse(webOSSystem.launchParams || '{}');
@@ -264,9 +318,8 @@ function wantInputs(pages) {
   if (p && p.inputs) {
     closeMenus();
     inputsMenu();
-  } else if (p && typeof p.page === 'string' && PAGER.index(p.page) > 0) {
-    closeMenus();
-    PAGER.go(p.page, null, true);
+  } else if (p && typeof p.page === 'string') {
+    turnTo(p.page, p.t);
   } else if (p && p.guide && guidePage()) {
     noteGuideFrom(p);
     closeMenus();
@@ -343,6 +396,7 @@ document.addEventListener('visibilitychange', function () {
     /* hidden in those 5 s and only shown again later: the TV really went elsewhere */
     if (liveBlip && LIVE.on) LIVE.exit();
     liveBlip = false;
+    pageOnShow(); /* before the refresh below, which keeps the page busy for most of a second */
     load();
     refreshSoon();
     WALL.shown();

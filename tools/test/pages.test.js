@@ -144,7 +144,7 @@ run(async () => {
     const addonsSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'addons.js'), 'utf8'),
       inputSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'input.js'), 'utf8');
     const pagerSrc = addonsSrc.slice(addonsSrc.indexOf('var addonBar'), addonsSrc.indexOf("window.addEventListener('message'"));
-    const wantSrc = inputSrc.slice(inputSrc.indexOf('function wantInputs'), inputSrc.indexOf('/* webOS 26: when the TV wakes'));
+    const wantSrc = inputSrc.slice(inputSrc.indexOf('var seenParams'), inputSrc.indexOf('/* webOS 26: when the TV wakes'));
     const addon = (id, inBook, claims) => ({
       id,
       name: id,
@@ -172,7 +172,13 @@ run(async () => {
       webOSSystem: { launchParams: '{}' },
       JSON,
     };
-    vm.runInNewContext(pagerSrc + ';PAGER.draw = function () {};this.P = PAGER;' + wantSrc + ';this.want = wantInputs;', sb);
+    vm.runInNewContext(
+      pagerSrc +
+        ';PAGER.draw = function () {};this.P = PAGER;' +
+        wantSrc +
+        ';this.want = wantInputs;this.shown = pageOnShow;this.watchOpen = watchOpen;',
+      sb
+    );
     const P = sb.P;
     P.load();
     ok(
@@ -196,13 +202,59 @@ run(async () => {
     sb.webOSSystem.launchParams = JSON.stringify({ page: 'nope' });
     sb.want({ then: f => f() });
     ok(!went.length, 'an add-on without a page is ignored');
+    // webOS shows Home about a second before webOSRelaunch, with the new launchParams already set: a new {page} turns at the show
+    went.length = 0;
+    sb.webOSSystem.launchParams = JSON.stringify({ keepAlive: true, page: 'phoneremote' });
+    sb.shown();
+    ok(went.length === 1 && went[0][0] === 'phoneremote', 'Home shown with a new {page} turns to it before the relaunch arrives');
+    sb.shown();
+    ok(went.length === 1, 'shown again with the same parameters (an app closed): no second turn');
+    sb.want({ then: f => f() });
+    went.length = 0;
+    sb.shown();
+    ok(!went.length, 'nor after the relaunch handled them');
+    sb.webOSSystem.launchParams = JSON.stringify({ keepAlive: true });
+    sb.shown();
+    ok(!went.length, 'Home shown without a page does not turn');
+    // each open (its t) turns once: the relaunch webOS delivers late does not turn again after you left the page
+    sb.webOSSystem.launchParams = JSON.stringify({ keepAlive: true, page: 'phoneremote', t: 5000 });
+    sb.shown();
+    ok(went.length === 1, 'an open with a t turns at the show');
+    sb.want({ then: f => f() });
+    ok(went.length === 1, 'and its relaunch, late or not, does not turn again');
+    sb.webOSSystem.launchParams = JSON.stringify({ keepAlive: true, page: 'phoneremote', t: 6000 });
+    sb.want({ then: f => f() });
+    ok(went.length === 2, 'a newer open turns again');
+    // the service tells the launcher of an open at once (GET /api/book/open), before webOS delivers the relaunch
+    const replies = [
+      { id: 'phoneremote', t: 9000, fresh: true },
+      { id: 'phoneremote', t: 9500, fresh: false },
+    ];
+    const asked = [];
+    sb.api = p => {
+      asked.push(p);
+      const r = replies.shift();
+      return { then: f => (r ? f(r) : null) };
+    };
+    sb.openSince = 8000;
+    went.length = 0;
+    sb.watchOpen();
+    ok(
+      asked[0] === '/api/book/open?since=8000' && asked[1] === '/api/book/open?since=9000',
+      'the launcher waits for opens, one after another'
+    );
+    ok(went.length === 1 && went[0][0] === 'phoneremote', 'an open the service reports turns the page at once');
+    ok(asked[2] === '/api/book/open?since=9500' && went.length === 1, 'an open older than 10 s (fresh false) is not acted on');
+    sb.webOSSystem.launchParams = JSON.stringify({ keepAlive: true, page: 'phoneremote', t: 9000 });
+    sb.want({ then: f => f() });
+    ok(went.length === 1, 'the relaunch of that open, when webOS delivers it, does not turn again');
     ok(
       /PAGER\.on && !\(p && \(p\.live \|\| p\.page\)\)\) PAGER\.home\(\)/.test(inputSrc),
       'a relaunch with {page: id} does not first turn back to Home'
     );
     const menuSrc = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'menu.js'), 'utf8');
     ok(
-      /label: 'Open page'[\s\S]{0,400}api\('\/api\/launch', \{ id: 'com\.webos\.app\.home', params: \{ page: a1\.id \} \}\)/.test(menuSrc),
+      /label: 'Open page'[\s\S]{0,700}api\('\/api\/book\/open', \{ id: a1\.id \}\)/.test(menuSrc),
       'the manager offers Open page and launches Home with {page: id}'
     );
   }

@@ -304,9 +304,13 @@ top, left, centre or right) that you choose, which wins over the theme. The butt
 choice is stored in `config.json` (`book`: `order`, `hidden`, `strip`, `position`) and written with `POST /api/addons/book`. A page that is
 left out stays installed and running but has no button.
 
-Each running page add-on also has **Open page** there: the manager launches Home with `{"page": "<add-on id>"}` and Home turns to that page
-at once, also when it is left out of the book (then it comes after the last page and Back returns to Home). Any app can open a page the
-same way: `luna://com.webos.applicationManager/launch` with `{"id": "com.webos.app.home", "params": {"page": "<add-on id>"}}`.
+Each running page add-on also has **Open page** there (`POST /api/book/open {id}`): the service launches Home with
+`{"page": "<add-on id>", "t": <time>}` and Home turns to that page at once, also when it is left out of the book (then it comes after the
+last page and Back returns to Home). The launcher does not wait for webOS to tell it about the launch: webOS can hold Home's relaunch and
+visibility events for seconds (12 to 40 s on a webOS 25 TV), so the launcher keeps a request open on `GET /api/book/open` and the service
+answers it the moment a page is opened. Each `t` turns the page once, so a relaunch that arrives late does not bring the page back after
+you left it. Any app can open a page with `luna://com.webos.applicationManager/launch` and `{"id": "com.webos.app.home", "params": {"page":
+"<add-on id>"}}` too; then Home turns when webOS delivers the launch.
 
 ## API
 
