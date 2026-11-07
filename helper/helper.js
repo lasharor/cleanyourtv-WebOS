@@ -59,6 +59,8 @@ load('wallpapers', () => require('./wallpapers').create(ctx));
 load('scenes', () => require('./scenes').create(ctx));
 load('cards', () => require('./cards').create(ctx));
 const inputkey = load('inputkey', () => require('./inputkey').create(ctx));
+// the Home key while a page of the launcher's book shows: needs inputkey (the hook and its binds)
+load('book', () => require('./book').create(ctx));
 if (notify) load('notifyapi', () => require('./notifyapi').create(ctx));
 const manager = load('manager', () => require('./manager').create(ctx));
 load('remap', () => require('./remap').create(ctx));

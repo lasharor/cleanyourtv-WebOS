@@ -33,6 +33,9 @@ Choose a button in the list to change what it does or to give it back to LG. You
 - A button that never reaches the hook cannot be learned. Learning then times out after 45 seconds. Some buttons may be handled in
   other parts of the TV, so this is tried per remote and per firmware, and the answer is the one the TV gives when you press the button.
   On the test TV (remote LGE MR23) the Netflix, Prime Video, Alexa, microphone and colour keys all reached the hook.
+- On some TVs no button reaches the hook at all, although it attached (LG 55UN6950ZUA, webOS 5.6.2, issue 185): LG's input service
+  there passes the remote's buttons another way. When a learning step ends without a single button in the hook's log, the manager says
+  so instead of "No button was pressed", and **Add a button** shows *no button reaches the hook on this TV*. Use Share log to report it.
 
 ## An app that opens on an Android box
 

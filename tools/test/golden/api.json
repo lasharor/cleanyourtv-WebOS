@@ -415,6 +415,7 @@
     "bound": false,
     "hook": {
      "attached": false,
+     "blind": false,
      "errors": [],
      "sawKeys": false
     },
@@ -499,6 +500,7 @@
     "bound": false,
     "hook": {
      "attached": false,
+     "blind": false,
      "errors": [],
      "sawKeys": false
     },
@@ -601,6 +603,7 @@
     "bound": false,
     "hook": {
      "attached": false,
+     "blind": false,
      "errors": [],
      "sawKeys": false
     },

@@ -49,24 +49,27 @@ function kStep(n) {
       { label: 'Close', fn: closeKeys },
     ]);
   if (n === 'home')
-    return kShow('The Home key (optional).\nChoose Start, then press the Home button on your remote.', [
-      {
-        label: 'Start',
-        sub: k.home ? 'now: ' + k.home : '',
-        fn: function () {
-          kLearn('home');
+    return kShow(
+      'The Home key.\nIt turns back to the first page of the book while a page shows (Live TV, an add-on\u2019s page). Most remotes send 773, which is used until another code is learned: learn it if Home does nothing on a page. Choose Start, then press the Home button on your remote.',
+      [
+        {
+          label: 'Start',
+          sub: k.home ? 'now: ' + k.home : 'now: 773 (the usual code)',
+          fn: function () {
+            kLearn('home');
+          },
         },
-      },
-      {
-        label: 'Clear',
-        sub: 'forget the code',
-        dim: !k.home,
-        fn: function () {
-          if (k.home) kClear('home');
+        {
+          label: 'Clear',
+          sub: 'forget the code',
+          dim: !k.home,
+          fn: function () {
+            if (k.home) kClear('home');
+          },
         },
-      },
-      { label: 'Close', fn: closeKeys },
-    ]);
+        { label: 'Close', fn: closeKeys },
+      ]
+    );
   if (n === 'voice')
     return kShow(
       'The voice button.\nChoose Start, then press the button you want to use for voice. The remote\u2019s microphone button may not reach the hook; any spare button works.',
@@ -123,7 +126,7 @@ function kStep(n) {
           kShow(
             'Done.\nInput key ' +
               ((s.keys || {}).input || '241') +
-              '.\nThe Home key is optional: learn it from the main list if you want it recorded.',
+              '.\nThe Home key turns back to Home from a page of the book (773 unless another code is learned): learn it from the main list if Home does nothing on a page.',
             [{ label: 'Close', fn: closeKeys }]
           );
         },
@@ -190,6 +193,14 @@ function kLearn(name) {
               api('/api/manager/options', { inputKey: false });
               kShow(
                 'The hook did not attach on this firmware, so keys cannot be learned. The Input key stays with LG\u2019s picker.\nUse Share log to report this.',
+                [{ label: 'Close', fn: closeKeys }]
+              );
+              return;
+            }
+            if (l.state === 'blind') {
+              api('/api/manager/options', { inputKey: false });
+              kShow(
+                'The hook is in LG’s input service, but no button reaches it on this TV, so keys cannot be learned. The Input key stays with LG’s picker.\nUse Share log to report this.',
                 [{ label: 'Close', fn: closeKeys }]
               );
               return;

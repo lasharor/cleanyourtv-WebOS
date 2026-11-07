@@ -51,9 +51,11 @@ longer controlled a set-top box and eARC stopped working (issue 23).
 Remotes differ. In the manager app, **Input key** > **Learn the Input key** reads the code of the button you press and tests that
 the picker opens. **Clear** restores the default.
 
-The switch in the same menu removes the bind and gives the button back to LG's own picker. The optional **Learn the Home key** is under **CleanYourTV as Home**.
+The switch in the same menu removes the bind and gives the button back to LG's own picker. **Learn the Home key** is under **CleanYourTV as Home**: it is what makes the Home button turn back to the first page while a page of the [book](development/addons.md#pages-home-is-page-1-of-a-book) shows. Until a code is learned, 773 (the Home button of the usual remotes) is used; learn it if Home does nothing on a page.
 
 Other buttons can open an app or an input: see [Key remapping](key-remap.md). The Guide button can be bound the same way; that is part of [Live TV](live-tv.md#the-guide-button) (manager app > **Live TV** > **Learn the Guide key**).
 
 !!! note "When the hook is not attached"
     On some firmware the hook cannot attach. The manager then shows the Input key as not available and LG's picker is used.
+    On some TVs the hook attaches but no button reaches it (LG 55UN6950ZUA, issue 185). Learning the Input key then says so, switches
+    the Input key off and leaves the key with LG's picker; the Input key row shows *no button reaches the hook on this TV*.
