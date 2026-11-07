@@ -10,6 +10,7 @@ var addonBar = []; /* topbar entries: add-ons with placement "topbar", they open
 var stripOn = true; /* the strip that shows the pages on Home (manager > Add-ons) */
 var stripPos = ''; /* where the user put it ('' leaves that to the theme) */
 var PAGES = []; /* the add-on pages after Home: {id, label, icon, page, claims} */
+var LOOSE = []; /* pages switched out of the book (manager > the add-on > Page of the book): only "Open page" or {page:<id>} shows them */
 var PAGER = {
   on: false /* true while a page other than Home shows */,
   id: '',
@@ -19,6 +20,7 @@ var PAGER = {
     return api('/api/addons').then(
       function (x) {
         var pages = [],
+          loose = [],
           bar = [],
           strip = true;
         ((x && x.addons) || [])
@@ -27,8 +29,8 @@ var PAGER = {
             return a.order - b.order;
           })
           .forEach(function (a) {
-            if (a.status !== 'running' || !a.enabled || !a.page || !a.tile || !a.inBook) return;
-            pages.push({
+            if (a.status !== 'running' || !a.enabled || !a.page || !a.tile) return;
+            (a.inBook ? pages : loose).push({
               id: a.id,
               label: a.tile.label || a.name,
               icon: a.tile.icon || 'addon',
@@ -36,12 +38,13 @@ var PAGER = {
               claims: a.claims || [],
               guide: (a.permissions || []).indexOf('key.guide') >= 0,
             });
-            if (a.tile.placement === 'topbar')
+            if (a.inBook && a.tile.placement === 'topbar')
               bar.push({ label: a.tile.label || a.name, icon: a.tile.icon || 'addon', action: 'addon', addon: a.id, fixed: true });
           });
         strip = !(x && x.book && x.book.strip === false);
         var pos = (x && x.book && x.book.position) || '';
         var sig = JSON.stringify([pages, bar, strip, pos]);
+        LOOSE = loose;
         if (sig === JSON.stringify([PAGES, addonBar, stripOn, stripPos])) return;
         PAGES = pages;
         addonBar = bar;
@@ -110,13 +113,20 @@ var PAGER = {
       s.appendChild(e);
     });
   },
+  /* where a page is: 0 Home, 1.. the pages of the book; a page out of the book comes after the last one, so it slides in from the right */
   index: function (id) {
     for (var i = 0; i < PAGES.length; i++) if (PAGES[i].id === id) return i + 1;
+    for (var j = 0; j < LOOSE.length; j++) if (LOOSE[j].id === id) return PAGES.length + 1;
     return id ? -1 : 0;
   },
+  find: function (id) {
+    var all = PAGES.concat(LOOSE);
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+    return null;
+  },
   claims: function (what) {
-    for (var i = 0; i < PAGES.length; i++) if (PAGES[i].id === PAGER.id) return PAGES[i].claims.indexOf(what) >= 0;
-    return false;
+    var p = PAGER.find(PAGER.id);
+    return !!p && p.claims.indexOf(what) >= 0;
   },
   /* the page for a number or colour button; false for any other key */
   pageKey: function (e) {
@@ -168,7 +178,7 @@ var PAGER = {
       nf.setAttribute('allow', 'autoplay');
       nf.style.transform = instant ? 'none' : 'translate3d(' + (fwd ? 1920 : -1920) + 'px,0,0)';
       if (instant) nf.style.transition = 'none';
-      nf.src = PAGER.url(PAGES[to - 1], params);
+      nf.src = PAGER.url(PAGER.find(id), params);
       nf.onload = function () {
         try {
           nf.contentWindow.focus();
