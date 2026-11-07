@@ -629,7 +629,7 @@ run(async () => {
   const chk = req('addons').check(man, '1.6.17');
   ok(
     chk.manifest &&
-      chk.manifest.provides.join() === 'cards' &&
+      chk.manifest.provides.join() === 'cards,tools' &&
       chk.manifest.permissions.join() === 'net.fetch,luna' &&
       chk.manifest.luna.length === 1,
     'the manifest is accepted and asks for the network and one luna call'

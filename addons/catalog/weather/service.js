@@ -131,7 +131,66 @@ function create(ctx) {
       return { error: 'City search is not available now.' };
     }
   }
-  return { cards: { feed, action, places }, handle: (q, r) => r.end('{}') };
+  // ---- the tool for the voice assistant and MCP clients ("provides": ["tools"]): the drawer's forecast, one tool with an action ----
+  const TOOL = {
+    name: 'weather',
+    description:
+      'A detailed forecast (Open-Meteo). action forecast: now (feels like, humidity, wind, UV, air quality, sunrise, sunset), the next hours and the next days, for a place by name; find_place: the places with that name.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['forecast', 'find_place'] },
+        place: { type: 'string', description: 'a city, such as Haifa' },
+        unit: { type: 'string', enum: ['c', 'f'] },
+        days: { type: 'number', description: 'for forecast: how many days, 1 to 7 (3 if not given)' },
+      },
+      required: ['action', 'place'],
+    },
+  };
+  const done = v => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v) }], isError: false });
+  const bad = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });
+  const word = (code, day) => kind(code, day)[1].toLowerCase();
+  async function callTool(name, args) {
+    if (name !== 'weather') return bad('unknown tool: ' + name);
+    const x = args && typeof args === 'object' ? args : {};
+    const place = String(x.place || '').trim();
+    if (place.length < 2) return bad('say a place');
+    let hits;
+    try {
+      hits = await w.search(place, 'en');
+    } catch (e) {
+      return bad('the place search is not available now');
+    }
+    if (x.action === 'find_place') return done(hits.map(p => ({ name: p.name, area: p.area, lat: p.lat, lon: p.lon })));
+    if (x.action !== 'forecast') return bad('action is forecast or find_place');
+    if (!hits.length) return bad('no place called ' + place.slice(0, 60));
+    const p = hits[0],
+      unit = x.unit === 'f' ? 'f' : 'c',
+      deg = unit === 'f' ? '\u00b0F' : '\u00b0C';
+    const r = await w.get(p.lat, p.lon, unit);
+    if (r.error) return bad(r.error);
+    const d = r.detail || {},
+      week = d.week || [],
+      n = Math.max(1, Math.min(7, Math.round(+x.days) || 3));
+    const t = v => (typeof v === 'number' ? v + deg : null);
+    return done({
+      place: p.name + (p.area ? ', ' + p.area : ''),
+      now: {
+        temp: t(r.now.temp),
+        sky: word(r.now.code, r.now.day),
+        feels: t(d.feels),
+        humidity: typeof d.humidity === 'number' ? d.humidity + '%' : null,
+        wind: typeof d.wind === 'number' ? d.wind + (unit === 'f' ? ' mph' : ' km/h') : null, // Fahrenheit asks for mph
+        uv: d.uv,
+        airQuality: d.air && typeof d.air.aqi === 'number' ? d.air.aqi + ' (European AQI)' : null,
+        sunrise: week[0] ? week[0].sunrise : '',
+        sunset: week[0] ? week[0].sunset : '',
+      },
+      hours: (d.hours || []).slice(0, 6).map(h => ({ time: h.t, temp: t(h.temp), sky: word(h.code, h.day), rain: h.rain + '%' })),
+      days: week.slice(0, n).map(x2 => ({ date: x2.date, sky: word(x2.code, true), max: t(x2.max), min: t(x2.min), rain: x2.rain + '%' })),
+    });
+  }
+  return { cards: { feed, action, places }, tools: { list: () => [TOOL], call: callTool }, handle: (q, r) => r.end('{}') };
 }
 
 module.exports = { create };
