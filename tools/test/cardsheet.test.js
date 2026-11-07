@@ -26,6 +26,10 @@ run(async () => {
   ok(nm(P.csNext(list, by('unit'), 'right')) === 'close', 'right from unit reaches close');
   ok(P.csNext(list, by('close'), 'right') === null, 'right from close finds nothing');
   ok(P.csNext(list, by('c0'), 'down') === null, 'down from the last row finds nothing');
+  // left and right stay in the row: Close above and to the right of the last range button is not beside it
+  const row = [t('close', 80, 4, 16, 6, -1), t('r0', 4, 30, 15, 6, -1), t('r4', 70, 30, 15, 6, -1)];
+  ok(P.csNext(row, row[2], 'right') === null, 'right from the last button of a row finds nothing (so the page edge can act)');
+  ok(P.csNext(row, row[2], 'left') === row[1] && P.csNext(row, row[2], 'up') === row[0], 'left stays in the row, up reaches Close');
 
   ok(nm(P.csTabStep(list, by('now'), 'right', false)) === 'hours', 'right from the first tab steps to the second');
   ok(nm(P.csTabStep(list, by('hours'), 'left', false)) === 'now', 'left steps back');
@@ -46,8 +50,25 @@ run(async () => {
     'only a move from the page into the tab row is changed'
   );
   ok(
-    /csNamed\(CS\.targets, CS\.back\)[\s\S]*?if \(!bk\) return csClose\(\)/.test(src),
-    'Back presses the back target, and closes the sheet when there is none'
+    /csNamed\(CS\.targets, CS\.back\)[\s\S]*?if \(CS\.back\) return csPost\(\{ cytvSheet: \{ act: CS\.back \} \}\);\s*return csClose\(\)/.test(
+      src
+    ),
+    'Back presses the back target; a back that is no target is sent as an action of the page; with none Back closes the sheet'
+  );
+  // edges: what an arrow sends when no target lies that way; CH+ and CH- go to the page
+  const ed = P.csEdges({ left: 'prev', right: 'next', up: '', down: 5, x: 'y' });
+  ok(
+    ed.left === 'prev' && ed.right === 'next' && !('up' in ed) && !('down' in ed) && !('x' in ed),
+    'csEdges keeps the four directions with a name'
+  );
+  ok(Object.keys(P.csEdges(null)).length === 0 && Object.keys(P.csEdges({ left: 'a'.repeat(41) })).length === 0, 'and nothing else');
+  ok(
+    /if \(n\) csFocus\(n, false\);\s*else if \(CS\.edges\[dir\]\) csPost\(\{ cytvSheet: \{ act: CS\.edges\[dir\] \} \}\)/.test(src),
+    'an arrow with no target that way sends the edge action'
+  );
+  ok(
+    /k === 33 \|\| k === 34\) return csPost\(\{ cytvSheet: \{ key: k === 33 \? 'chup' : 'chdown' \} \}\)/.test(src),
+    'CH+ and CH- are passed to the page'
   );
 
   const csrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'cards.js'), 'utf8');

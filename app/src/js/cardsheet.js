@@ -15,6 +15,9 @@ var CS_PURE = (function () {
         p = dir === 'up' ? -dy : dir === 'down' ? dy : dir === 'left' ? -dx : dx,
         c = dir === 'up' || dir === 'down' ? Math.abs(dx) : Math.abs(dy);
       if (p <= 0.5) continue;
+      // left and right stay in the row: a target that does not overlap it vertically is not beside it (Close above the last button is
+      // not "right" of it, so the page's right edge can step to its next item)
+      if ((dir === 'left' || dir === 'right') && (t.y >= from.y + from.h || t.y + t.h <= from.y)) continue;
       var d = p + 2 * c;
       if (!best || d < bestD) {
         best = t;
@@ -52,7 +55,16 @@ var CS_PURE = (function () {
     for (var i = 0; i < list.length; i++) if (list[i].tab === tab) return list[i];
     return next;
   }
-  return { csNext: csNext, csTabStep: csTabStep, csUnset: csUnset, csNamed: csNamed, csLand: csLand };
+  // the edges a page names: the action a direction sends when no target lies that way ({left, right, up, down}, names up to 40)
+  function csEdges(e) {
+    var out = {};
+    if (e && typeof e === 'object')
+      ['left', 'right', 'up', 'down'].forEach(function (d) {
+        if (typeof e[d] === 'string' && e[d] && e[d].length <= 40) out[d] = e[d];
+      });
+    return out;
+  }
+  return { csNext: csNext, csTabStep: csTabStep, csUnset: csUnset, csNamed: csNamed, csLand: csLand, csEdges: csEdges };
 })();
 if (typeof window !== 'undefined') window.CS_PURE = CS_PURE;
 /* @dom */
@@ -60,9 +72,23 @@ if (typeof window !== 'undefined') window.CS_PURE = CS_PURE;
    A card of an add-on can bring a second page (card.json "drawer"). OK on the card's drawer button opens it from the right edge in a sandboxed
    frame like the card's own. The page draws; the launcher owns the keys and the focus: the page tells where its targets are (percent of
    its frame), the launcher moves the focus between them with the arrows, draws the ring over them and tells the page what happened
-   (select, act, focus). Messages: launcher -> page {cytvCard: ctx} and {cytvSheet: {select: i | act: name | focus: name}}; page -> launcher
-   {cytvCard: 'ready'}, {cytvSheet: 'targets', targets, focus, back, tab}, 'option' (set), 'action' (name, arg), 'close'. */
-var CS = { on: false, el: null, frame: null, targets: [], cur: null, back: '', tab: -1, idleT: 0, slot: '', ctxK: '', tick: 0, ov: null };
+   (select, act, focus). Messages: launcher -> page {cytvCard: ctx} and {cytvSheet: {select: i | act: name | focus: name | key: 'chup' | 'chdown'}}; page -> launcher
+   {cytvCard: 'ready'}, {cytvSheet: 'targets', targets, focus, back, tab, edges}, 'option' (set), 'action' (name, arg), 'close'. */
+var CS = {
+  on: false,
+  el: null,
+  frame: null,
+  targets: [],
+  cur: null,
+  back: '',
+  tab: -1,
+  edges: {},
+  idleT: 0,
+  slot: '',
+  ctxK: '',
+  tick: 0,
+  ov: null,
+};
 /* the live card element of the place the sheet was opened from (Home redraws its cards, which makes new elements) */
 function csCardEl() {
   var els = $('cards').children;
@@ -101,6 +127,7 @@ function csOpen(cardEl) {
   CS.cur = null;
   CS.back = '';
   CS.tab = -1;
+  CS.edges = {};
   CS.ctxK = '';
   var box = CS.el;
   box.className = 'on';
@@ -143,6 +170,7 @@ function csClose() {
   CS.cur = null;
   CS.back = '';
   CS.tab = -1;
+  CS.edges = {};
 }
 /* OLED care, as for the cards: a sheet nobody uses closes after five minutes */
 function csIdle() {
@@ -154,9 +182,10 @@ function csPct(v) {
   return isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
 }
 /* the targets the page told: kept only as far as they are well formed; the focus stays where it was if that target is still there.
-   back: the target Back presses instead of closing the sheet (a page that is not on its first tab goes back to it); tab: the tab the
-   page shows, where Up from the page lands in the tab row */
-function csTargets(list, focus, back, tab) {
+   back: what Back presses instead of closing the sheet: a target, or an action of the page that is not a target (a list view goes back
+   to its list); tab: the tab the page shows, where Up from the page lands in the tab row; edges: the action an arrow sends when no
+   target lies that way (the next item past the last button) */
+function csTargets(list, focus, back, tab, edges) {
   var ok = [],
     keep = CS.cur ? CS.cur.name : '';
   (Array.isArray(list) ? list : []).slice(0, 24).forEach(function (b) {
@@ -176,6 +205,7 @@ function csTargets(list, focus, back, tab) {
   CS.targets = ok;
   CS.back = typeof back === 'string' && back.length <= 40 ? back : '';
   CS.tab = typeof tab === 'number' && tab >= 0 && tab === Math.floor(tab) ? tab : -1;
+  CS.edges = CS_PURE.csEdges(edges);
   var want = typeof focus === 'string' && focus ? focus : keep;
   CS.cur = null;
   ok.forEach(function (b) {
@@ -230,10 +260,15 @@ function csKey(k, e) {
   e.preventDefault();
   if (k === 461 || k === 27 || k === 8) {
     var bk = CS_PURE.csNamed(CS.targets, CS.back);
-    if (!bk) return csClose();
-    csFocus(bk, true);
-    return csActivate(bk);
+    if (bk) {
+      csFocus(bk, true);
+      return csActivate(bk);
+    }
+    if (CS.back) return csPost({ cytvSheet: { act: CS.back } });
+    return csClose();
   }
+  /* CH+ and CH- go to the page (it may page a list or step to the next item) */
+  if (k === 33 || k === 34) return csPost({ cytvSheet: { key: k === 33 ? 'chup' : 'chdown' } });
   if (k === 13) return csActivate(CS.cur);
   var dir = k === 37 ? 'left' : k === 38 ? 'up' : k === 39 ? 'right' : k === 40 ? 'down' : '';
   if (!dir || !CS.targets.length) return;
@@ -244,6 +279,7 @@ function csKey(k, e) {
   /* from the page into the tab row: the tab the page shows */
   n = CS_PURE.csLand(CS.targets, CS.cur, n, CS.tab);
   if (n) csFocus(n, false);
+  else if (CS.edges[dir]) csPost({ cytvSheet: { act: CS.edges[dir] } });
 }
 /* a click on the dimmed Home closes the sheet */
 document.addEventListener('click', function (ev) {
@@ -257,7 +293,7 @@ window.addEventListener('message', function (e) {
   csIdle();
   if (d.cytvCard === 'ready') return csSendCtx(true);
   var m = d.cytvSheet;
-  if (m === 'targets') csTargets(d.targets, d.focus, d.back, d.tab);
+  if (m === 'targets') csTargets(d.targets, d.focus, d.back, d.tab, d.edges);
   else if (m === 'close') csClose();
   else if (m === 'option' && d.set && typeof d.set === 'object') {
     var el = csCardEl();

@@ -159,13 +159,7 @@ run(async () => {
     'three symbols have prices, the unknown one is listed as missing: ' + JSON.stringify(d.missing)
   );
   ok(
-    a.s === 'AAPL' &&
-      a.n === 'Apple Inc.' &&
-      a.x === 'NasdaqGS' &&
-      a.cur === 'USD' &&
-      a.t === 'stock' &&
-      a.p === 342.37 &&
-      a.prev === 344.17,
+    a.s === 'AAPL' && a.n === 'Apple' && a.x === 'NasdaqGS' && a.cur === 'USD' && a.t === 'stock' && a.p === 342.37 && a.prev === 344.17,
     'a stock: name, exchange, currency, price and previous close: ' + JSON.stringify(a).slice(0, 200)
   );
   ok(a.cp === -0.52 && Math.abs(a.c + 1.8) < 1e-6, "today's change in percent and in price");
@@ -223,6 +217,29 @@ run(async () => {
   ok(asked.mchart === 2, 'and keeps those lines');
   d = await svc.cards.feed('crypto', { list: 'two', vs: 'xxx' });
   ok(d.vs === 'USD', 'a currency that is not offered is dollars');
+
+  // ---- the drawer's own chart (action "chart"): fetched now, answered in the feed, never a setting of the card ----
+  const optC = { list: 'custom', symbols: 'btc,eth', vs: 'eur', range: '1d' };
+  ok((await svc.cards.action('crypto', optC, 'chart', 'ETH:30d')).error === undefined, 'the drawer asks for a coin over 30 days');
+  d = await svc.cards.feed('crypto', optC);
+  ok(
+    d.chart && d.chart.s === 'ETH' && d.chart.range === '30d' && d.chart.sp.length === 120 && d.range === '1d',
+    'the feed answers it as chart, the card keeps its 1D line'
+  );
+  ok(
+    (await svc.cards.action('crypto', optC, 'chart', 'ETH:9y')).error && (await svc.cards.action('crypto', optC, 'open', '')).error,
+    'a range or action it does not know is refused'
+  );
+  ok((await svc.cards.action('stocks', { list: 'custom', symbols: 'AAPL' }, 'chart', 'aapl:1y')).error === undefined, 'a stock too');
+  d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL', range: '1d' });
+  ok(d.chart && d.chart.s === 'AAPL' && d.chart.range === '1y', 'over a year');
+  ok(
+    mk.shortName('Microsoft Corporation') === 'Microsoft' &&
+      mk.shortName('Tesla, Inc.') === 'Tesla' &&
+      mk.shortName('Bitcoin') === 'Bitcoin' &&
+      d.q[0].n === 'Apple',
+    'names lose their legal form so they fit a row'
+  );
 
   // ---- the words ----
   lang = 'nl';
@@ -323,11 +340,20 @@ run(async () => {
     );
   const dr = fs.readFileSync(path.join(cardDir, 'drawer.js'), 'utf8');
   ok(
-    ['close', 'tab0', 'tab1', 'tab2'].every(n => dr.indexOf("'" + n + "'") >= 0) && !/id=\?"range/.test(dr) && /MAX_TARGETS = 24/.test(dr),
-    'the drawer targets are close, the tabs and what is in view, at most 24 (no range button in the header)'
+    /MAX_TARGETS = 24/.test(dr) && !/tab0|cytvSheet: 'option'/.test(dr),
+    'the drawer has no tabs and never sets an option of the card (the card keeps its own line)'
+  );
+  ok(
+    /\['list', 'prev', 'next'\]\.forEach/.test(dr) && /id="list"/.test(dr) && /id="prev"/.test(dr) && /id="next"/.test(dr),
+    'back to the list and the previous and next symbol are buttons too (a click, the pointer)'
+  );
+  ok(
+    /var key = JSON\.stringify\(\[msg\.targets, msg\.back, msg\.edges\]\)/.test(dr) &&
+      /focus = s\.focus;\s*reveal\(\);\s*post\(false\)/.test(dr),
+    'a focus move does not send the same buttons again (that rebuilt the click layer and lost clicks)'
   );
 
-  // the drawer run with a minimal stand-in for the page
+  // the drawer run with a minimal stand-in for the page: the list, a symbol, a range from the service, the next symbol, back, paging
   {
     const posts = [],
       listeners = {},
@@ -338,7 +364,9 @@ run(async () => {
       (els[id] = {
         id,
         scrollTop: 0,
+        clientHeight: 800,
         style: {},
+        className: '',
         _h: '',
         set innerHTML(v) {
           this._h = v;
@@ -347,63 +375,66 @@ run(async () => {
           return this._h;
         },
         getBoundingClientRect: rect,
-        getAttribute: () => '0',
+        getAttribute: () => '',
         querySelectorAll: () => [],
-        querySelector: () => null,
       });
     const sandbox = {
       parent: { postMessage: m => posts.push(m) },
       window: { innerWidth: 760, innerHeight: 1080, addEventListener: (n, f) => (listeners[n] = f) },
       document: {
         documentElement: {},
-        body: { style: {} },
-        getElementById: id => (/^(app|bd|range|close|tab[0-2])$/.test(id) ? el(id) : null),
-        querySelector: () => null,
+        body: { style: {}, className: '' },
+        getElementById: id => (/^(app|mood|lst|close)$/.test(id) ? el(id) : null),
+        querySelectorAll: () => [],
       },
     };
     require('vm').runInNewContext(dr, sandbox);
     const send = m => listeners.message({ data: m });
+    const last = () => posts.filter(m => m.cytvSheet === 'targets').pop();
     ok(posts[0] && posts[0].cytvCard === 'ready', 'the drawer says ready');
-    const feed = await (async () => {
-      const x = JSON.parse(JSON.stringify(cryptoD));
-      x.at = Date.now();
-      return x;
-    })();
-    send({
-      cytvCard: { opt: { range: '1d', vs: 'eur' }, data: feed, lang: 'en', clock: { hour: 'numeric', minute: '2-digit' }, dir: 'ltr' },
+    const feed = JSON.parse(JSON.stringify(cryptoD));
+    feed.at = Date.now();
+    const ctx = data => ({
+      cytvCard: { opt: { range: '30d', vs: 'eur' }, data, lang: 'en', clock: { hour: 'numeric', minute: '2-digit' }, dir: 'ltr' },
     });
-    let tg = posts.filter(m => m.cytvSheet === 'targets').pop();
+    send(ctx(feed));
+    let tg = last();
     ok(
       tg &&
-        tg.focus === 'tab0' &&
-        ['close', 'tab0', 'tab1', 'tab2'].every(n => tg.targets.some(x => x.name === n)) &&
-        !tg.targets.some(x => x.name === 'range'),
-      'it opens on Watchlist'
+        tg.focus === 'c0' &&
+        tg.back === '' &&
+        !Object.keys(tg.edges).length &&
+        (els.app.innerHTML.match(/class="row/g) || []).length === 2,
+      'it opens on the list (a row per coin; Back closes the drawer)'
     );
-    ok(
-      (els.app.innerHTML.match(/class="r( sel)?"/g) || []).length === 2 && /Bitcoin/.test(els.app.innerHTML),
-      'Watchlist has a row per coin'
-    );
-    ok(!/24H/.test(els.app.innerHTML) && /✕/.test(els.app.innerHTML), 'the header has Close and no range (the ranges are under the chart)');
+    ok(!/class="pb"/.test(els.app.innerHTML) && /Bitcoin/.test(els.app.innerHTML), 'the list has no big price of a symbol nobody chose');
     send({ cytvSheet: { act: 'c1' } });
-    ok(/class="chart"/.test(els.app.innerHTML) && /ETH · 24H/.test(els.app.innerHTML), 'OK on a row shows the Chart of that coin');
-    send({ cytvSheet: { act: 'r2' } });
+    tg = last();
     ok(
-      posts.some(m => m.cytvSheet === 'option' && m.set && m.set.range === '30d'),
-      'a range button sets the range option'
+      /<h1>ETH<\/h1>/.test(els.app.innerHTML) && /class="ch"/.test(els.app.innerHTML) && /Market cap/.test(els.app.innerHTML),
+      'OK on a row opens that coin: the chart and the numbers on one page'
     );
-    send({ cytvSheet: { act: 'r3' } });
-    ok(posts.filter(m => m.cytvSheet === 'option').pop().set.range === '1y', 'and another range button another range');
-    send({ cytvSheet: { select: 2 } });
     ok(
-      /All-time range/.test(els.app.innerHTML) && /Market cap/.test(els.app.innerHTML) && /Data by CoinGecko/.test(els.app.innerHTML),
-      'Details: the tiles, the range and the source'
+      tg.back === 'list' && tg.edges.left === 'prev' && tg.edges.right === 'next' && tg.focus === 'r2',
+      'in a coin, Back goes to the list, the arrows past the edge step coins, and the focus is on the range shown (30D)'
     );
-    send({ cytvSheet: { act: 'close' } });
+    send({ cytvSheet: { act: 'r0' } });
+    const askChart = posts.filter(m => m.cytvSheet === 'action').pop();
     ok(
-      posts.some(m => m.cytvSheet === 'close'),
-      'Close asks the launcher to close'
+      askChart && askChart.name === 'chart' && askChart.arg === 'ETH:1d' && /class="ch loading"/.test(els.app.innerHTML),
+      'another range is asked from the service (action chart) and the old line shows dimmed meanwhile'
     );
+    const withChart = JSON.parse(JSON.stringify(feed));
+    withChart.chart = { s: 'ETH', range: '1d', sp: [1, 2, 3, 2.5], rc: 1.5 };
+    send(ctx(withChart));
+    ok(/class="ch"/.test(els.app.innerHTML) && /past day/.test(els.app.innerHTML), 'the answer is drawn when it arrives');
+    send({ cytvSheet: { act: 'prev' } });
+    ok(/<h1>BTC<\/h1>/.test(els.app.innerHTML) && /1 \/ 2/.test(els.app.innerHTML), 'the previous coin, with where you are');
+    send({ cytvSheet: { act: 'list' } });
+    tg = last();
+    ok(tg.focus === 'c0' && tg.back === '' && /class="row/.test(els.app.innerHTML), 'Back returns to the list on the row of that coin');
+    send({ cytvSheet: { key: 'chdown' } });
+    ok(last().focus === 'c1', 'CH- pages down the list (as far as it goes)');
   }
   const card = fs.readFileSync(path.join(cardDir, 'card.js'), 'utf8'),
     cardCss = fs.readFileSync(path.join(cardDir, 'card.css'), 'utf8');

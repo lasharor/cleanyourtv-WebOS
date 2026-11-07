@@ -319,4 +319,15 @@ function create(opts) {
   return { stocks, crypto };
 }
 
-module.exports = { create, stockList, coinList, thin, STOCK_RANGES, CRYPTO_RANGES, VS, MINOR };
+// a company's name without its legal form, so it fits a row: "Microsoft Corporation" -> "Microsoft", "Tesla, Inc." -> "Tesla"
+function shortName(n) {
+  let s = String(n || '').trim();
+  for (let i = 0; i < 2; i++)
+    s = s.replace(
+      /,?\s+(Inc\.?|Incorporated|Corporation|Corp\.?|Company|Co\.|Ltd\.?|Limited|plc|PLC|Holdings|Group|N\.V\.|S\.A\.|AG|SE)$/i,
+      ''
+    );
+  return s.replace(/[,\s]+$/, '') || String(n || '');
+}
+
+module.exports = { create, stockList, coinList, thin, shortName, STOCK_RANGES, CRYPTO_RANGES, VS, MINOR };
