@@ -642,7 +642,7 @@ function applyLlm(cur, b) {
     if (p.type === 'openrouter' && !p.key) return 'OpenRouter needs a key';
     if (p.type === 'server' && !p.base) return 'enter the address of your server';
     const q = provider(p);
-    q.name = p.name; // empty: the default name (OpenRouter, or the server's host)
+    q.name = p.name; // kept empty when none was given: the default (OpenRouter, or the server's host) is derived when read, so it follows a new address
     return q;
   };
   // The calls from before providers (scripts, the docs of version 1.6: {"llm":{"key":"sk-or-...","model":"..."}}, clearKey) act on
@@ -835,6 +835,7 @@ function pairPage(msg, done, token, lang, only) {
       hasKey: !!p.key,
     })),
     waits: WAITS,
+    max: MAX_PROVIDERS,
     s: {},
   };
   [
@@ -927,7 +928,7 @@ c.appendChild(el('button',{type:'button',class:'sec',text:p.testing?tx('Testingâ
 if(p.res)c.appendChild(el('div',{class:p.res.ok?'ok':'no',text:p.res.ok?'\\u2713 '+tx('Answered in %s s',(p.res.ms/1000).toFixed(1)):'\\u2717 '+p.res.error}));
 return c}
 function move(i,d){var j=i+d;if(j<0||j>=list.length)return;var t=list[i];list[i]=list[j];list[j]=t;draw()}
-function draw(){var box=document.getElementById('cards');list.forEach(function(q){var k=Object.keys(q.err);if(k.length){check(q);var e={};k.forEach(function(x){if(q.err[x])e[x]=q.err[x]});q.err=e}});var ae=document.activeElement,fs=box.querySelectorAll('input,select,textarea'),fi=-1,cur=null;for(var i=0;i<fs.length;i++)if(fs[i]===ae)fi=i;try{cur=ae&&ae.selectionStart}catch(e){}box.textContent='';if(!list.length)box.appendChild(el('p',{class:'e',style:'color:#aaa',text:tx('No AI provider yet: add OpenRouter or a server of your own.')}));list.forEach(function(p,i){box.appendChild(card(p,i))});document.getElementById('addor').style.display=list.some(function(p){return p.type==='openrouter'})?'none':'';if(fi>=0){var nf=box.querySelectorAll('input,select,textarea')[fi];if(nf){nf.focus();try{if(cur!=null)nf.setSelectionRange(cur,cur)}catch(e){}}}}
+function draw(){var box=document.getElementById('cards');list.forEach(function(q){var k=Object.keys(q.err);if(k.length){check(q);var e={};k.forEach(function(x){if(q.err[x])e[x]=q.err[x]});q.err=e}});var ae=document.activeElement,fs=box.querySelectorAll('input,select,textarea'),fi=-1,cur=null;for(var i=0;i<fs.length;i++)if(fs[i]===ae)fi=i;try{cur=ae&&ae.selectionStart}catch(e){}box.textContent='';if(!list.length)box.appendChild(el('p',{class:'e',style:'color:#aaa',text:tx('No AI provider yet: add OpenRouter or a server of your own.')}));list.forEach(function(p,i){box.appendChild(card(p,i))});var full=list.length>=D.max;document.getElementById('addor').style.display=full||list.some(function(p){return p.type==='openrouter'})?'none':'';document.getElementById('addsrv').style.display=full?'none':'';if(fi>=0){var nf=box.querySelectorAll('input,select,textarea')[fi];if(nf){nf.focus();try{if(cur!=null)nf.setSelectionRange(cur,cur)}catch(e){}}}}
 function add(type){var p={id:'',type:type,name:'',base:'',model:type==='openrouter'?'openrouter/auto':'',waitS:type==='openrouter'?30:25,off:false,hasKey:false,key:'',clearKey:false,models:null,mErr:'',res:null,err:{},ask:false};list.push(p);draw();if(type==='openrouter')loadModels(p);var cs=document.querySelectorAll('.card');var last=cs[cs.length-1];last.scrollIntoView({behavior:'smooth',block:'center'});var f=last.querySelector('input');if(f)f.focus()}
 document.getElementById('addor').onclick=function(){add('openrouter')};document.getElementById('addsrv').onclick=function(){add('server')};
 document.getElementById('save').onclick=function(){var ok=true;list.forEach(function(p){if(!check(p))ok=false});draw();var er=document.getElementById('err');er.textContent='';if(!ok){var b=document.querySelector('.bad');if(b)b.scrollIntoView({block:'center'});return}
@@ -970,7 +971,8 @@ function startPair(only) {
         }
         const act = p.slice(token.length + 2);
         if (act === 'save-json') {
-          const set = { llm: o.llm || {}, ha: { route: (o.ha && o.ha.route) || 'ha-first' }, url: typeof o.url === 'string' ? o.url : '' };
+          const set = { llm: o.llm || {}, url: typeof o.url === 'string' ? o.url : '' };
+          if (o.ha && typeof o.ha.route === 'string') set.ha = { route: o.ha.route }; // the routing only when sent
           if (typeof o.token === 'string' && o.token) set.token = o.token;
           const err = applySet(set);
           if (err) return json(400, { error: i18n.tr(lg, err) });

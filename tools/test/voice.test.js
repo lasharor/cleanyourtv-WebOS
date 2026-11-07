@@ -247,6 +247,13 @@ run(async () => {
     'saving the page sets the list in its order; the OpenRouter key is kept, the server has its own'
   );
   ok(r.j.ha.url === ha.url && r.j.ha.hasToken && r.j.ha.route === 'ha-only', 'saving the Voice page keeps Home Assistant');
+  await sleep(2100);
+  r = await vask('pair');
+  await sleep(100);
+  vp = r.j.url.replace(/^http:\/\/[^/]+/, '');
+  sv = await jpost(vp + '/save-json', { llm: { enabled: true } });
+  r = await vask('status', null, 'GET');
+  ok(sv.code === 200 && r.j.ha.route === 'ha-only', 'a save that does not send the routing keeps it');
   ok(JSON.stringify(r.j).indexOf('server-key-1') < 0 && JSON.stringify(r.j).indexOf('sk-or-page') < 0, 'the status never contains a key');
   await sleep(2100);
   r = await vask('pair');
@@ -383,6 +390,49 @@ run(async () => {
   ok(r.j.llm.providers.map(p => p.id).join() === [or2Id, deadId, olId].join(), 'the order is set');
   r = await vask('ask', { text: 'from openrouter', card: false });
   ok(r.j.provider === or2Id && r.j.answer === 'The AI says hello', 'OpenRouter answers first now');
+  // review of #208: only a connection never made skips a provider; the 1.6 status pair is OpenRouter's; no redirect with a key
+  const big = await serve((q, rs) => {
+    q.on('data', () => {});
+    q.on('end', () => {
+      rs.writeHead(200, { 'content-type': 'application/json' });
+      rs.end(JSON.stringify({ choices: [{ message: { content: 'x'.repeat(1100000) } }] })); // over the 1 MB an answer may have
+    });
+  });
+  const seenAt = [];
+  const elsewhere = await serve((q, rs) => {
+    seenAt.push(q.headers.authorization || '');
+    rs.writeHead(200, { 'content-type': 'application/json' });
+    rs.end(JSON.stringify({ data: [{ id: 'stolen' }] }));
+  });
+  const redir = await serve((q, rs) => {
+    q.on('data', () => {});
+    q.on('end', () => {
+      rs.writeHead(302, { location: elsewhere.url + '/v1/models' });
+      rs.end();
+    });
+  });
+  r = await vask('set', {
+    llm: {
+      providers: [
+        { type: 'server', name: 'Too much', base: big.url + '/v1', model: 'm' },
+        { type: 'server', name: 'Moved', base: redir.url + '/v1', key: 'moved-key', model: 'm' },
+        { id: or2Id, type: 'openrouter', model: 'm/or' },
+      ],
+    },
+  });
+  ps = r.j.llm.providers;
+  ok(r.j.llm.model === 'm/or' && r.j.llm.hasKey, 'the status for 1.6 readers: the key and the model are both OpenRouter’s');
+  r = await vask('ask', { text: 'say a lot', card: false });
+  r = await vask('status', null, 'GET');
+  ok(
+    r.j.llm.providers[0].last && r.j.llm.providers[0].last.ok === false && !r.j.llm.providers[0].skippedUntil,
+    'an answer that is too large fails, but the provider is not skipped (it was reached)'
+  );
+  r = await vask('models?id=' + ps[1].id, null, 'GET');
+  ok(r.code === 502 && seenAt.length === 0, 'the model list does not follow a redirect, so the key goes nowhere else');
+  big.server.close();
+  redir.server.close();
+  elsewhere.server.close();
   // everything fails: one error per provider, and the card says where to look
   r = await vask('set', {
     llm: {

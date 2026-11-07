@@ -17,7 +17,7 @@ function request(url, headers, payload, ms, extra) {
       headers,
       body: payload === undefined ? undefined : JSON.stringify(payload),
       idleMs: ms || 30000,
-      redirects: 0,
+      redirects: 0, // on purpose: a key (Bearer) or a token must never follow a redirect to another address
       anyStatus: true,
       maxBytes: 1 << 20,
       bigText: 'the answer is too large',
@@ -122,7 +122,10 @@ const UNREACHABLE = /^(ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|ENETUNREACH|EAI_AGAIN
 async function askOne(p, turns, system, ms, maxTokens) {
   let answer = '',
     tool = false;
+  const t0 = Date.now();
   for (let attempt = 0; attempt < 2 && !answer; attempt++) {
+    const left = ms - (Date.now() - t0); // the retry gets only what is left of this provider's time
+    if (left < 1000) throw failed('no answer in time', 'answer');
     const messages = [
       {
         role: 'system',
@@ -140,10 +143,12 @@ async function askOne(p, turns, system, ms, maxTokens) {
     if (or) payload.reasoning = { exclude: true };
     let r;
     try {
-      r = await request(apiOf(p) + '/chat/completions', headers, payload, ms, { totalMs: ms, connectMs: CONNECT_MS });
+      r = await request(apiOf(p) + '/chat/completions', headers, payload, left, { totalMs: left, connectMs: CONNECT_MS });
     } catch (e) {
+      // 2. only a connection that was never made is 'connect' (skipped for a minute); an answer that is too large, a connection
+      // dropped mid-answer or any other failure is the answer's ('answer'), so a working server is asked again next time
       if (e.code === 'connect' || UNREACHABLE.test(e.code || '')) throw failed('could not connect', 'connect');
-      throw failed(e.message, e.code === 'timeout' ? 'answer' : 'connect');
+      throw failed(e.message, 'answer');
     }
     let o = {};
     try {
@@ -245,9 +250,14 @@ const llmStatus = () => {
       };
     }),
     lastVia,
-    // for readers from before providers (version 1.6: the manager, scripts): an OpenRouter key is saved, the model that answers first
+    // for readers from before providers (version 1.6: scripts): OpenRouter's key and model, as 1.6 reported them; without an
+    // OpenRouter provider, the model of the one asked first
     hasKey: l.providers.some(p => p.type === 'openrouter' && !!p.key),
-    model: (l.providers.filter(usable)[0] || l.providers[0] || { model: 'openrouter/auto' }).model,
+    model: (
+      l.providers.filter(p => p.type === 'openrouter')[0] ||
+      l.providers.filter(usable)[0] ||
+      l.providers[0] || { model: 'openrouter/auto' }
+    ).model,
   };
 };
 
@@ -322,7 +332,12 @@ async function haAgents() {
 }
 
 // ---- the models of one provider: of OpenRouter a short list for the TV and everything for the phone; of a server, everything ----
-const modelCache = {};
+const modelCache = {}; // by provider type, address and whether a key is sent; at most 20 (drafts tried on the phone page)
+const keepModels = (ck, v) => {
+  const ks = Object.keys(modelCache);
+  if (ks.length >= 20) delete modelCache[ks.sort((a, b) => modelCache[a].at - modelCache[b].at)[0]];
+  return (modelCache[ck] = v);
+};
 const MAJOR = ['anthropic', 'openai', 'google', 'meta-llama', 'mistralai', 'deepseek', 'qwen', 'x-ai'];
 function models(pIn) {
   const p = provider(pIn || {}),
@@ -339,6 +354,7 @@ function models(pIn) {
       headers,
       idleMs: 15000,
       connectMs: CONNECT_MS,
+      redirects: 0, // a server's key must not follow a redirect to another address
       maxBytes: 8 << 20,
       bigText: 'the model list is too large',
       statusText: st => name + ' answered ' + st,
@@ -375,14 +391,14 @@ function models(pIn) {
         seen = {};
       if (p.type === 'server') {
         all.sort((a, b) => a.id.localeCompare(b.id));
-        return (modelCache[ck] = { at: Date.now(), all, picks: all.slice(0, 40) }); // a server of yours: the models it has
+        return keepModels(ck, { at: Date.now(), all, picks: all.slice(0, 40) }); // a server of yours: the models it has
       }
       for (const m of all.slice().sort((a, b) => b.created - a.created)) {
         const prov = m.id.split('/')[0];
         if (m.id.includes(':') || !MAJOR.includes(prov)) continue;
         if ((seen[prov] = (seen[prov] || 0) + 1) <= 3) picks.push(m);
       }
-      return (modelCache[ck] = { at: Date.now(), all: all.sort((a, b) => a.id.localeCompare(b.id)), picks });
+      return keepModels(ck, { at: Date.now(), all: all.sort((a, b) => a.id.localeCompare(b.id)), picks });
     });
 }
 
