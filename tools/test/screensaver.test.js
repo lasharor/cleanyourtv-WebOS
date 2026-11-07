@@ -204,6 +204,37 @@ run(async () => {
     'POST /api/screensaver/dismiss: the page is closed through webapp-mgr'
   );
   {
+    // the timer while the saver is replaced (helper/screensaver.js tick): no two checks at once, and while the page is down the
+    // running list is read every third tick (30 s), not every ten seconds all day
+    const procDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-proc-'));
+    fs.writeFileSync(path.join(procDir, 'mounts'), 'x ' + P.SCREENSAVER_APP + ' ext4 rw 0 0\n');
+    const wasProc = P.PROC;
+    P.PROC = procDir;
+    let lists = 0,
+      release = null;
+    const slow = saver.create({
+      config: { get: () => ({}) },
+      luna: async uri => {
+        if (/listRunningApps/.test(uri)) {
+          lists++;
+          if (release === null) await new Promise(r => (release = r)); // the first reading hangs until released
+          return { running: [] };
+        }
+        return { returnValue: true, appId: 'x' };
+      },
+      feature: () => null,
+    });
+    const first = slow.tick();
+    await slow.tick(); // while the first check still waits for luna
+    release();
+    await first;
+    ok(lists === 1, 'a tick that comes while the previous check still runs does nothing (one reading, not ' + lists + ')');
+    lists = 0;
+    for (let i = 0; i < 6; i++) await slow.tick();
+    ok(lists === 2, 'with the page down, the running list is read every third tick: 2 readings in 6 ticks (' + lists + ')');
+    P.PROC = wasProc;
+  }
+  {
     // webapp-mgr's killApp failing must not stop the app manager's own way out, nor turn the dismissal into an error
     const seen = [];
     const g = saver.create({

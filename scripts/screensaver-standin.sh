@@ -8,7 +8,7 @@
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
 L=${CYTV_DIR:-/media/developer/cleanyourtv}
 LOG=${CYTV_BOOT_LOG:-/tmp/cleanyourtv-boot.log}
-EVERY=${CYTV_SS_SECS:-5}   # seconds between two readings of the running apps
+EVERY=${CYTV_SS_SECS:-10}  # seconds between two readings of the running apps (a luna-send spawn each: not every few seconds all night)
 up() { cut -d' ' -f1 /proc/uptime 2>/dev/null; }
 log() { echo "$(up) saver-standin[$$]: $*" >> $LOG 2>/dev/null; }
 
@@ -26,17 +26,17 @@ else
 fi
 
 # Stay while the page is up; then the screen saver is over and this program ends with it. The running list of the app manager lags by
-# seconds after a start and after a close, so one reading decides nothing (AGENTS.md): a page that has not shown up yet gets ten
-# readings (50 seconds) to appear, and a page that was seen is gone after three readings without it (15 seconds).
+# seconds after a start and after a close, so one reading decides nothing (AGENTS.md): a page that has not shown up yet gets five
+# readings (50 seconds) to appear, and a page that was seen is gone after two readings without it (20 seconds).
 n=0; seen=0; miss=0
-while [ $n -le 8640 ]; do
+while [ $n -le 4320 ]; do
   if luna-send -n 1 -w 3000 luna://com.palm.webappmanager/listRunningApps '{}' </dev/null 2>/dev/null | grep -q 'com.webos.app.screensaver'; then
     [ $seen = 0 ] && log "the page is listed"
     seen=1; miss=0
   else
     miss=$((miss + 1))
-    if [ $seen = 0 ] && [ $miss -ge 10 ]; then log "the page never appeared; the screen saver ends"; exit 1; fi
-    if [ $seen = 1 ] && [ $miss -ge 3 ]; then log "the page is gone; the screen saver ends"; exit 0; fi
+    if [ $seen = 0 ] && [ $miss -ge 5 ]; then log "the page never appeared; the screen saver ends"; exit 1; fi
+    if [ $seen = 1 ] && [ $miss -ge 2 ]; then log "the page is gone; the screen saver ends"; exit 0; fi
   fi
   sleep $EVERY
   n=$((n + 1))

@@ -137,12 +137,30 @@ function create(ctx) {
     activeAt = Date.now();
     saidQuiet = false;
   }
+  // One check at a time: a check whose luna calls are slow (the app manager restarting) must not be joined by the next tick.
+  let busy = false,
+    wasUp = false;
   async function tick() {
+    if (busy) return;
+    busy = true;
+    try {
+      await step();
+    } finally {
+      busy = false;
+    }
+  }
+  async function step() {
     // nothing to watch when LG's screen saver is not replaced: no luna call every ten seconds on those TVs
     if (!replaced()) {
       since = 0;
       homeSince = 0;
       return;
+    }
+    // While the page is down the running list is read every third tick (30 s): the idle timer and a page that just came up do not
+    // need it every ten seconds, all day. While the page is up it is read at every tick (the safety close counts on it).
+    if (!wasUp) {
+      tickN++;
+      if ((tickN - 1) % 3 !== 0) return;
     }
     let up = false;
     try {
@@ -150,10 +168,9 @@ function create(ctx) {
     } catch (_) {
       return;
     }
+    wasUp = up;
     if (!up) {
       since = 0;
-      tickN++;
-      if (tickN % 3 !== 0) return; // an idle timer does not need a luna call every ten seconds
       try {
         const fg = await luna(AM + 'getForegroundAppInfo', {});
         if (fg.appId !== HOME) {
@@ -242,7 +259,8 @@ function create(ctx) {
     web.notFound(res);
   }
 
-  return { name: 'screensaver', prefix: '/api/screensaver', handle, start, photos, close, active, lastActive: () => activeAt };
+  // tick and lastActive are for the tests (tools/test/screensaver.test.js): the timer's step, and when the launcher last reported a key
+  return { name: 'screensaver', prefix: '/api/screensaver', handle, start, photos, close, active, tick, lastActive: () => activeAt };
 }
 
 module.exports = { create, replaced, mayOpen };
