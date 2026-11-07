@@ -109,6 +109,7 @@ same place.
 | Text | Your own text. `{{greeting}}`, `{{time}}`, `{{date}}` and `{{weekday}}` are filled in and kept up to date, and `{{weather.temp}}` and `{{weather.text}}` with a weather card on Home; `**bold**`, `*italic*` and a line starting with `#` for a heading. In three sizes. |
 
 The single entity and entity list cards use an entity's `mdi:` icon when Home Assistant provides it and the bundled icon set contains it. Otherwise they use the standard icon for that entity type.
+The launcher loads the bundled icon map when a card first needs an MDI icon.
 
 **Customise** > **Home Assistant** (the first row, in themes with places for cards) chooses the cards with
 the remote: for each place the kind of card (Home Assistant entity, entities, camera, greeting or empty, and the Home Assistant weather card where the launcher has it) and what it shows,
