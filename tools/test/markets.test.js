@@ -1,32 +1,58 @@
-// The markets add-on (addons/catalog/markets): the Stocks and Crypto cards' data from stand-ins for Yahoo Finance and CoinGecko (prices,
-// lines, details, prices in agorot, unknown symbols), the answers kept and spaced, a failing service, the presets, the words, the
-// manifest, and the pages: ES5, no requests, the sheet protocol of the drawer, and cards/crypto/ the same as cards/stocks/.
+// The markets add-on (addons/catalog/markets): the Stocks and Crypto cards' data from stand-ins for Twelve Data and CoinGecko (prices,
+// lines, details, prices in agorot, unknown symbols), the key (only in the Authorization header, refused, never in an answer), the
+// credits of the free plan (8 a minute, 800 a day: a long list asked in parts), the answers kept and spaced, a failing service, the
+// presets, the phone page for the key, the words, the manifest, and the pages: ES5, no requests, the sheet protocol of the drawer, and
+// cards/crypto/ the same as cards/stocks/.
 const fs = require('fs'),
   path = require('path');
 const { root, ok, serve, req, run, tmp } = require('./lib');
 
 run(async () => {
   const nc = req('netcompat');
-  const now = Math.floor(Date.now() / 1000);
-  // ---- stand-ins: Yahoo (spark, chart) and CoinGecko (markets, market_chart) ----
-  const asked = { spark: 0, chart: 0, markets: 0, mchart: 0 };
+  // the clock the add-on reads, moved forward to start a new minute of credits
+  const realNow = Date.now;
+  let shift = 0;
+  Date.now = () => realNow() + shift;
+  const nextMinute = () => (shift += 61 * 1000);
+  // ---- stand-ins: Twelve Data (quote, time_series) and CoinGecko (markets, market_chart) ----
+  const asked = { quote: 0, series: 0, credits: 0, markets: 0, mchart: 0 };
+  const GOOD = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6';
   let fail = false,
-    lastSpark = '',
+    limit = '',
+    lastTwelve = '',
+    lastAuth = '',
     lastMarkets = '';
-  const META = {
-    AAPL: { currency: 'USD', fullExchangeName: 'NasdaqGS', instrumentType: 'EQUITY', shortName: 'Apple Inc.', open: true },
-    '^GSPC': { currency: 'USD', fullExchangeName: 'SNP', instrumentType: 'INDEX', shortName: 'S&P 500', open: true },
-    'TEVA.TA': { currency: 'ILA', fullExchangeName: 'Tel Aviv', instrumentType: 'EQUITY', shortName: 'TEVA PHARMA IND', open: false },
+  const STOCK = {
+    AAPL: { name: 'Apple Inc.', exchange: 'NASDAQ', currency: 'USD', prev: 344.17, p: 342.37, open: true },
+    SPY: { name: 'SPDR S&P 500 ETF Trust', exchange: 'NYSE', currency: 'USD', prev: 736, p: 737.68, open: true },
+    'TEVA:TASE': { name: 'Teva Pharmaceutical Industries Ltd', exchange: 'TASE', currency: 'ILA', prev: 13180, p: 13300, open: false },
   };
-  const PRICE = { AAPL: [344.17, 342.37], '^GSPC': [7360, 7376.86], 'TEVA.TA': [13180, 13300] };
+  for (const s of 'ABCDEFGHIJ'.split('')) STOCK[s] = { name: s + ' Corp', exchange: 'NYSE', currency: 'USD', prev: 10, p: 11, open: true };
   const COINS = [
     { id: 'bitcoin', symbol: 'btc', name: 'Bitcoin', rank: 1, p: 75974, cp: 0.14 },
     { id: 'ethereum', symbol: 'eth', name: 'Ethereum', rank: 2, p: 2239.04, cp: -0.23 },
     { id: 'eth-clone', symbol: 'eth', name: 'Ether Clone', rank: 900, p: 0.01, cp: 3 },
   ];
-  const json = (res, j) => {
-    res.writeHead(200, { 'content-type': 'application/json' });
+  const json = (res, j, st) => {
+    res.writeHead(st || 200, { 'content-type': 'application/json' });
     res.end(JSON.stringify(j));
+  };
+  // a day of 5-minute points from yesterday's and today's sessions, or n daily points
+  const series = (s, interval, n) => {
+    const x = STOCK[s],
+      out = [];
+    if (interval === '5min') {
+      for (let i = 0; i < 10; i++) out.push({ datetime: '2026-11-05 15:' + (10 + i), close: String(x.prev - 1) });
+      for (let i = 0; i < 70; i++)
+        out.push({
+          datetime: '2026-11-06 ' + (9 + Math.floor(i / 12)) + ':' + (i % 12) * 5,
+          close: String(x.prev + ((x.p - x.prev) * i) / 69),
+        });
+      return out.slice(-n);
+    }
+    for (let i = 0; i < n; i++)
+      out.push({ datetime: '2026-' + (1 + (i % 12)) + '-' + (1 + (i % 28)), close: String(x.p * 1.2 - (x.p * 0.2 * i) / (n - 1)) });
+    return out;
   };
   const srv = await serve((q, res) => {
     if (fail) {
@@ -34,51 +60,43 @@ run(async () => {
       return res.end('{}');
     }
     const u = q.url;
-    let m = /^\/y\/v8\/finance\/chart\/([^?]+)\?/.exec(u);
-    if (m) {
-      asked.chart++;
-      const s = decodeURIComponent(m[1]),
-        x = META[s];
-      if (!x) return json(res, { chart: { result: null, error: { code: 'Not Found' } } });
-      const st = now - 3600,
-        en = x.open ? now + 3600 : now - 1800;
-      return json(res, {
-        chart: {
-          result: [
-            {
-              meta: {
-                currency: x.currency,
-                symbol: s,
-                fullExchangeName: x.fullExchangeName,
-                instrumentType: x.instrumentType,
-                shortName: x.shortName,
-                regularMarketDayHigh: PRICE[s][1] + 2,
-                regularMarketDayLow: PRICE[s][1] - 3,
-                regularMarketVolume: 43750861,
-                fiftyTwoWeekHigh: PRICE[s][1] * 1.2,
-                fiftyTwoWeekLow: PRICE[s][1] * 0.7,
-                currentTradingPeriod: { regular: { start: st, end: en } },
-              },
-              indicators: { quote: [{ open: [PRICE[s][0] + 1] }] },
-            },
-          ],
-        },
-      });
-    }
-    if (/^\/y\/v8\/finance\/spark\?/.test(u)) {
-      asked.spark++;
-      lastSpark = u;
+    const t = /^\/t\/(quote|time_series)\?symbol=([^&]+)(.*)$/.exec(u);
+    if (t) {
+      lastTwelve = u;
+      lastAuth = q.headers.authorization || '';
+      if (lastAuth !== 'apikey ' + GOOD) return json(res, { code: 401, message: 'Invalid API key', status: 'error' }, 401);
+      if (limit) return json(res, { code: 429, message: limit, status: 'error' }, 429);
+      const list = decodeURIComponent(t[2]).split(',');
+      asked[t[1] === 'quote' ? 'quote' : 'series']++;
+      asked.credits += list.length;
+      const one = s => {
+        const x = STOCK[s];
+        if (!x) return { code: 404, message: 'symbol not found: ' + s, status: 'error' };
+        if (t[1] === 'quote')
+          return {
+            symbol: s.split(':')[0],
+            name: x.name,
+            exchange: x.exchange,
+            currency: x.currency,
+            open: String(x.prev + 1),
+            high: String(x.p + 2),
+            low: String(x.p - 3),
+            close: String(x.p),
+            volume: '43750861',
+            previous_close: String(x.prev),
+            is_market_open: x.open,
+            fifty_two_week: { low: String(x.p * 0.7), high: String(x.p * 1.2) },
+          };
+        const iv = /interval=([^&]+)/.exec(t[3])[1],
+          n = +/outputsize=(\d+)/.exec(t[3])[1];
+        return { meta: { symbol: s, interval: iv, currency: x.currency }, values: series(s, iv, n), status: 'ok' };
+      };
+      if (list.length === 1) {
+        const r = one(list[0]);
+        return json(res, r, r.code || 200);
+      }
       const out = {};
-      decodeURIComponent(/symbols=([^&]+)/.exec(u)[1])
-        .split(',')
-        .forEach(s => {
-          if (!PRICE[s]) return;
-          const n = /range=1d/.test(u) ? 78 : 200,
-            close = [];
-          for (let i = 0; i < n; i++) close.push(PRICE[s][0] + ((PRICE[s][1] - PRICE[s][0]) * i) / (n - 1));
-          close.splice(5, 0, null); // a gap in the line
-          out[s] = { symbol: s, previousClose: PRICE[s][0], chartPreviousClose: PRICE[s][0], close };
-        });
+      list.forEach(s => (out[s] = one(s)));
       return json(res, out);
     }
     if (/^\/g\/coins\/markets\?/.test(u)) {
@@ -108,7 +126,7 @@ run(async () => {
         }))
       );
     }
-    m = /^\/g\/coins\/([^/]+)\/market_chart\?/.exec(u);
+    const m = /^\/g\/coins\/([^/]+)\/market_chart\?/.exec(u);
     if (m) {
       asked.mchart++;
       const days = +/days=(\d+)/.exec(u)[1];
@@ -117,40 +135,110 @@ run(async () => {
     res.writeHead(404);
     res.end('{}');
   });
-  process.env.CYTV_YAHOO_URL = srv.url + '/y';
+  process.env.CYTV_TWELVE_URL = srv.url + '/t';
   process.env.CYTV_GECKO_URL = srv.url + '/g';
 
   const addonDir = path.join(root, 'addons', 'catalog', 'markets');
   const mk = require(path.join(addonDir, 'markets.js'));
   const S = require(path.join(addonDir, 'service.js'));
-  let lang = '';
+  let lang = '',
+    settings = {};
+  const logged = [];
   const ctx = {
     id: 'markets',
     dir: addonDir,
     dataDir: path.join(tmp, 'addon-data', 'markets'),
-    log: () => {},
+    log: m => logged.push(m),
     fetch: req('fetch'),
     util: { lanIp: () => '127.0.0.1', randomInt: nc.randomInt, mkdirp: nc.mkdirp, i18n: req('i18n') },
     env: { lang: () => lang, wallpaperSize: () => '4k' },
-    settings: { get: () => ({}), set: () => {} },
+    settings: { get: () => Object.assign({}, settings), set: o => (settings = Object.assign({}, settings, o)) },
   };
   const svc = S.create(ctx);
 
   // ---- the lists as typed ----
   ok(
-    mk.stockList(' aapl, ^gspc teva.ta;AAPL bad!sym').join() === 'AAPL,^GSPC,TEVA.TA',
-    'a stock list is upper-cased, split on commas and spaces, without repeats or bad symbols'
+    mk.stockList(' aapl, brk.b vod:lse;AAPL bad!sym ^gspc').join() === 'AAPL,BRK.B,VOD:LSE',
+    'a stock list is upper-cased, split on commas and spaces, without repeats or bad symbols; an exchange may follow a colon'
   );
   ok(mk.coinList('BTC, eth eth').join() === 'btc,eth', 'a coin list is lower-cased and without repeats');
-  ok(mk.stockList('A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V').length === 20, 'at most 20 symbols (what Yahoo answers in one request)');
+  ok(mk.stockList('A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V').length === 20, 'at most 20 symbols');
   ok(mk.thin([1, null, 2, 3, 4, 5], 3).join() === '1,3,5', 'a line is thinned evenly, the gaps left out, the last point kept');
+  ok(
+    mk.usOpen(Date.UTC(2026, 10, 9, 15, 0)) && // Monday 10:00 in New York (winter time)
+      !mk.usOpen(Date.UTC(2026, 10, 9, 14, 0)) && // 9:00
+      !mk.usOpen(Date.UTC(2026, 10, 9, 21, 0)) && // 16:00
+      mk.usOpen(Date.UTC(2026, 6, 6, 13, 45)) && // Monday 9:45 (summer time)
+      !mk.usOpen(Date.UTC(2026, 6, 6, 13, 15)) &&
+      !mk.usOpen(Date.UTC(2026, 10, 7, 16, 0)), // Saturday
+    'the US market hours, in winter and in summer time, Monday to Friday'
+  );
 
-  // ---- no symbols ----
+  // ---- no symbols, no key ----
   let d = await svc.cards.feed('stocks', { list: 'custom', symbols: ' , ' });
-  ok(d.empty === true && d.labels['Choose your stocks'] && asked.spark === 0, 'with no symbols the card is told so, and asks nobody');
+  ok(d.empty === true && d.labels['Choose your stocks'] && asked.quote === 0, 'with no symbols the card is told so, and asks nobody');
+  d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL' });
+  ok(
+    /Twelve Data key/.test(d.error) && /Set up from your phone/.test(d.error) && !d.q && asked.quote === 0,
+    'without a key the card says where to set it, and asks nobody'
+  );
+
+  // ---- the key on the phone page ----
+  const phone = async (method, p, body, code) => {
+    let out = null;
+    const qq = {
+      method,
+      url: p,
+      headers: { 'x-code': code || '' },
+      on: (ev, f) => {
+        if (ev === 'data' && body) f(Buffer.from(JSON.stringify(body)));
+        if (ev === 'end') f();
+      },
+    };
+    await new Promise(done => {
+      const rs = {
+        writeHead: (st, h) => (out = { st, h }),
+        end: b => {
+          out.body = String(b || '');
+          done();
+        },
+      };
+      svc.handlePhone(qq, rs, '123456', () => 1);
+    });
+    let j = null;
+    try {
+      j = JSON.parse(out.body);
+    } catch (_) {}
+    return { st: out.st, j, body: out.body };
+  };
+  ok(S.PAIR_PORT === 8801, 'the phone page has its own port (8801, after the repositories page)');
+  let r = await phone('GET', '/', null, '');
+  ok(
+    r.st === 200 && /type=password/.test(r.body) && /twelvedata\.com/.test(r.body),
+    'the phone page asks for the key, as a password field'
+  );
+  r = await phone('GET', '/api/state', null, '000000');
+  ok(r.st === 403, 'the phone page needs the code shown on the TV');
+  r = await phone('POST', '/api/save', { key: 'short' }, '123456');
+  ok(r.st === 400 && /does not look like/.test(r.j.error) && asked.quote === 0, 'a key that is not one is refused before any request');
+  r = await phone('POST', '/api/save', { key: 'f'.repeat(32) }, '123456');
+  ok(r.st === 400 && /refused the key/.test(r.j.error) && !settings.key, 'a key Twelve Data refuses is not saved: ' + r.body);
+  r = await phone('POST', '/api/save', { key: GOOD }, '123456');
+  ok(
+    r.st === 200 && settings.key === GOOD && lastAuth === 'apikey ' + GOOD && !/apikey=/.test(lastTwelve),
+    'Test key and save: one quote, the key in the Authorization header only'
+  );
+  r = await phone('GET', '/api/state', null, '123456');
+  ok(
+    r.j.configured === true && r.j.keyHint === '…' + GOOD.slice(-4) && r.body.indexOf(GOOD) < 0 && r.j.used === 1 && r.j.perDay === 800,
+    'the state shows the last four characters of the key and the credits of the day: ' + r.body
+  );
+  r = await phone('POST', '/api/save', { key: '' }, '123456');
+  ok(r.st === 200 && settings.key === GOOD, 'saving with the field empty keeps the key');
+  nextMinute();
 
   // ---- stocks ----
-  d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL,TEVA.TA,^GSPC,NOPE', range: '1d', show: 'pct' });
+  d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL,TEVA:TASE,SPY,NOPE', range: '1d', show: 'pct' });
   const a = d.q && d.q[0],
     t = d.q && d.q[1],
     g = d.q && d.q[2];
@@ -159,37 +247,80 @@ run(async () => {
     'three symbols have prices, the unknown one is listed as missing: ' + JSON.stringify(d.missing)
   );
   ok(
-    a.s === 'AAPL' && a.n === 'Apple' && a.x === 'NasdaqGS' && a.cur === 'USD' && a.t === 'stock' && a.p === 342.37 && a.prev === 344.17,
+    a.s === 'AAPL' && a.n === 'Apple' && a.x === 'NASDAQ' && a.cur === 'USD' && a.t === 'stock' && a.p === 342.37 && a.prev === 344.17,
     'a stock: name, exchange, currency, price and previous close: ' + JSON.stringify(a).slice(0, 200)
   );
   ok(a.cp === -0.52 && Math.abs(a.c + 1.8) < 1e-6, "today's change in percent and in price");
   ok(
-    a.o === 345.17 && a.hi === 344.37 && a.lo === 339.37 && a.v === 43750861 && a.open === true,
-    'open, day range, volume and the market open'
+    a.o === 345.17 && a.hi === 344.37 && a.lo === 339.37 && a.v === 43750861 && a.open === true && a.yhi === 410.844,
+    'open, day range, volume, 52-week high and the market open'
   );
-  ok(a.sp.length === 78 && a.sp.every(v => typeof v === 'number'), 'the line of the day, the gaps left out');
-  ok(t.cur === 'ILS' && t.p === 133 && t.prev === 131.8 && t.open === false, 'Tel Aviv prices in agorot are shown in shekels');
-  ok(g.t === 'index', 'an index is told apart (no currency sign on the card)');
-  ok(d.open === true, 'a market of the list is open');
-  ok(/symbols=AAPL%2CTEVA\.TA%2C%5EGSPC%2CNOPE&range=1d&interval=5m/.test(lastSpark), 'one spark request for the whole list: ' + lastSpark);
-  const sp0 = asked.spark,
-    ch0 = asked.chart;
-  await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL,TEVA.TA,^GSPC,NOPE', range: '1d' });
-  ok(asked.spark === sp0 && asked.chart === ch0, 'a second answer within 5 minutes asks nobody (and an unknown symbol is not asked again)');
+  ok(a.sp.length === 70 && a.sp.every(v => typeof v === 'number') && a.sp[0] === 344.17, "the line of today's session only, oldest first");
+  ok(t.cur === 'ILS' && t.p === 133 && t.prev === 131.8 && t.open === false, 'prices in agorot are shown in shekels');
+  ok(g.n === 'SPDR S&P 500 ETF Trust' && d.open === true, 'an ETF, and a market of the list is open');
+  ok(asked.quote === 2 && asked.series === 1, 'one quote request and one line request for the whole list');
+  ok(JSON.stringify(d).indexOf(GOOD) < 0, 'the key is never in a card answer');
+  const c0 = asked.credits;
+  await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL,TEVA:TASE,SPY,NOPE', range: '1d' });
+  ok(asked.credits === c0, 'a second answer within 5 minutes asks nobody (and an unknown symbol is not asked again)');
+  nextMinute();
   d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL', range: '1mo', show: 'abs' });
   ok(
-    /range=1mo&interval=1d/.test(lastSpark) && d.q[0].sp.length === 120 && d.range === '1mo' && d.show === 'abs',
-    'a longer range asks for its own line, thinned to 120 points'
+    /interval=1day&outputsize=22/.test(lastTwelve) && d.q[0].sp.length === 22 && d.range === '1mo' && d.show === 'abs',
+    'a longer range asks for its own line'
   );
   ok(typeof d.q[0].rc === 'number' && d.q[0].rc < 0, 'the change over the range, for the chart');
 
+  // ---- the credits: 8 a minute; a longer list is asked in parts, one a minute ----
+  nextMinute();
+  const ten = 'A,B,C,D,E,F,G,H,I,J',
+    c1 = asked.credits;
+  d = await svc.cards.feed('stocks', { list: 'custom', symbols: ten, range: '1d' });
+  ok(
+    asked.credits - c1 === 8 && d.q.length === 8 && d.q.every(x => !x.sp.length),
+    'ten symbols: the prices of eight in the first minute, no line yet'
+  );
+  nextMinute();
+  d = await svc.cards.feed('stocks', { list: 'custom', symbols: ten, range: '1d' });
+  ok(asked.credits - c1 === 16 && d.q.length === 10, 'the next minute the last two prices and six lines');
+  nextMinute();
+  d = await svc.cards.feed('stocks', { list: 'custom', symbols: ten, range: '1d' });
+  ok(asked.credits - c1 === 20 && d.q.every(x => x.sp.length === 70), 'and the last lines a minute later: never more than 8 a minute');
+  ok(mk.PER_MIN === 8 && mk.PER_DAY === 800, 'the limits of the free plan');
+
+  // ---- a limit or a refused key stops the requests ----
+  nextMinute();
+  limit = 'You have run out of API credits for the day.';
+  const c2 = asked.credits;
+  d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'K1', range: '1d' });
+  ok(/limit for today/.test(d.error), 'the daily limit is said on the card');
+  d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'K2', range: '1d' });
+  ok(asked.credits === c2 && /limit for today/.test(d.error), 'and nothing is asked until the next day (UTC)');
+  limit = '';
+  d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL,TEVA:TASE,SPY,NOPE', range: '1d' });
+  ok(d.q && d.q.length === 3, 'a list asked before still shows its last prices');
+  shift += 24 * 3600 * 1000;
+  settings.key = 'e'.repeat(32);
+  d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'MSFT', range: '1d' });
+  ok(/refused the key/.test(d.error), 'a refused key is said on the card');
+  const c3 = asked.credits;
+  await svc.cards.feed('stocks', { list: 'custom', symbols: 'MSFT', range: '1d' });
+  ok(asked.credits === c3, 'and not tried again until the key changes');
+  settings.key = GOOD;
+  ok(!logged.some(l => l.indexOf(GOOD) >= 0 || l.indexOf('e'.repeat(32)) >= 0), 'no key is logged');
+  nextMinute();
+
   // ---- presets ----
   d = await svc.cards.feed('stocks', { list: 'idx', symbols: 'XXX' });
-  ok(d.q.map(q => q.s).join() === '^GSPC,AAPL' && d.missing.join() === 'MSFT', 'a preset list is used instead of the typed one');
+  ok(d.q.map(q => q.s).join() === 'SPY' && d.missing.join() === 'QQQ,DIA', 'a preset list is used instead of the typed one');
   ok(
-    S.PRESETS.stocks.tech === 'AAPL,MSFT,NVDA,GOOGL,TSLA' && S.PRESETS.crypto.top === 'BTC,ETH,SOL,XRP,DOGE',
-    'the presets are the ones of the design'
+    S.PRESETS.stocks.tech === 'AAPL,MSFT,NVDA,GOOGL,TSLA' &&
+      S.PRESETS.stocks.idx === 'SPY,QQQ,DIA' &&
+      S.PRESETS.crypto.top === 'BTC,ETH,SOL,XRP,DOGE' &&
+      Object.keys(S.PRESETS.stocks).every(k => mk.stockList(S.PRESETS.stocks[k]).every(s => s.indexOf(':') < 0)),
+    "the presets are US symbols (the free plan's market)"
   );
+  nextMinute();
 
   // ---- crypto ----
   d = await svc.cards.feed('crypto', { list: 'custom', symbols: 'btc,eth,nope', vs: 'eur', range: '1d' });
@@ -230,9 +361,14 @@ run(async () => {
     (await svc.cards.action('crypto', optC, 'chart', 'ETH:9y')).error && (await svc.cards.action('crypto', optC, 'open', '')).error,
     'a range or action it does not know is refused'
   );
+  const c4 = asked.credits;
   ok((await svc.cards.action('stocks', { list: 'custom', symbols: 'AAPL' }, 'chart', 'aapl:1y')).error === undefined, 'a stock too');
+  const c5 = asked.credits - c4;
   d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL', range: '1d' });
-  ok(d.chart && d.chart.s === 'AAPL' && d.chart.range === '1y', 'over a year');
+  ok(
+    d.chart && d.chart.s === 'AAPL' && d.chart.range === '1y' && d.chart.sp.length === 120 && c5 === 1,
+    'over a year: one credit, the daily line thinned to 120 points'
+  );
   ok(
     mk.shortName('Microsoft Corporation') === 'Microsoft' &&
       mk.shortName('Tesla, Inc.') === 'Tesla' &&
@@ -259,13 +395,17 @@ run(async () => {
   ok(!missingWords.length, 'every word the pages ask for is in the labels' + (missingWords.length ? ': ' + missingWords.join(' | ') : ''));
 
   // ---- when the services are away ----
+  nextMinute();
+  await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL,TEVA:TASE,SPY,NOPE', range: '1d' });
+  shift += 6 * 3600 * 1000 + 61 * 1000;
   fail = true;
   d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'MSFT2' });
   ok(d.error && !d.q, 'a list that cannot be asked says so');
-  d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL,TEVA.TA,^GSPC,NOPE', range: '1d' });
+  d = await svc.cards.feed('stocks', { list: 'custom', symbols: 'AAPL,TEVA:TASE,SPY,NOPE', range: '1d' });
   ok(d.q && d.q[0].p === 342.37, 'a list that was asked before keeps its last answer');
   fail = false;
   srv.server.close();
+  Date.now = realNow;
 
   // ---- the manifest ----
   const addons = req('addons');

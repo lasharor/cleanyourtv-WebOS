@@ -1,9 +1,9 @@
 {
   "id": "markets",
   "name": "Stocks and crypto",
-  "version": "1.0.0",
-  "description": "Two cards for Home: a watchlist of stocks and indices, and one of crypto coins, with a chart and details on OK.",
-  "about": "Two cards for Home: Stocks (shares, ETFs and indices of any exchange, like AAPL, ^GSPC or TEVA.TA) and Crypto (coins by their symbol, like BTC or ETH). Choose a ready list on the TV (Customise > Stocks or Crypto) or type your own on the phone page (Cards > Set up from your phone). Each card is one button for the remote: OK opens a drawer with Watchlist, Chart and Details, where the range of the chart can be changed. Stock prices come from Yahoo Finance's public chart service (no key, may be delayed, for personal use) at most every 5 minutes while a market is open; crypto prices from CoinGecko's public API (no key) at most every 2 minutes. Only the symbols you chose leave the TV.",
+  "version": "1.1.0",
+  "description": "Two cards for Home: your stocks (with a free Twelve Data key) and your crypto coins, with a chart and details on OK.",
+  "about": "Stocks: US shares and ETFs (AAPL, SPY) from Twelve Data, an official API that needs your own free key (twelvedata.com): set it in Add-ons > Stocks and crypto > Set up from your phone. The free plan has 8 credits a minute and 800 a day, one per symbol: prices every 5 minutes for 5 symbols, every 20 for 20, while the US market is open. Crypto: coins (BTC, ETH) from CoinGecko's public API, no key, every 2 minutes. Pick a list in Customise or type your own on the phone page; OK on a card opens the list, a chart and the details. Only your symbols (and the key, to Twelve Data) leave the TV.",
   "kind": "service",
   "entry": {
     "service": "service.js"
@@ -15,9 +15,9 @@
     {
       "id": "stocks",
       "name": "Stocks",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Your stocks and indices: the price, today's change and a line.",
-      "about": "A watchlist of up to 20 shares, ETFs or indices (symbols as on Yahoo Finance: AAPL, ^GSPC, TEVA.TA), with a drawer for the remote (OK): Watchlist, Chart and Details. No key and no account.",
+      "about": "A watchlist of up to 20 US shares or ETFs (AAPL, MSFT, SPY), with a drawer for the remote (OK): the list, a chart and the details. Needs a free Twelve Data API key (Add-ons > Stocks and crypto > Set up from your phone); a longer list is updated less often (free plan: 800 credits a day).",
       "size": "medium",
       "page": "card.html",
       "drawer": {
@@ -53,8 +53,8 @@
           "choices": [
             ["custom", "From your phone"],
             ["tech", "Big tech"],
-            ["idx", "US market"],
-            ["il", "Tel Aviv + US"]
+            ["idx", "US market (ETFs)"],
+            ["il", "Israeli (US-listed)"]
           ]
         },
         {
@@ -94,7 +94,7 @@
           "key": "symbols",
           "kind": "text",
           "label": "Watchlist symbols",
-          "default": "AAPL,MSFT,NVDA,^GSPC,TEVA.TA"
+          "default": "AAPL,MSFT,NVDA,SPY,TEVA"
         }
       ]
     },
@@ -103,7 +103,7 @@
       "name": "Crypto",
       "version": "1.0.0",
       "description": "Your coins: the price, the 24-hour change and a line.",
-      "about": "A watchlist of up to 20 coins by their symbol (BTC, ETH, SOL), priced in dollars, euros, shekels or bitcoin, with a drawer for the remote (OK): Watchlist, Chart and Details. From CoinGecko, with no key and no account.",
+      "about": "A watchlist of up to 20 coins by their symbol (BTC, ETH, SOL), priced in dollars, euros, shekels or bitcoin, with a drawer for the remote (OK): the list, a chart and the details. From CoinGecko's public API, with no key and no account.",
       "size": "medium",
       "page": "card.html",
       "drawer": {

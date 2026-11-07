@@ -19,6 +19,7 @@ local network on request, and an optional notification endpoint is off by defaul
 | 8795 | Immich page | The same, for the Immich add-on (address, API key, albums); see [Wallpapers](wallpapers.md#immich-add-on) |
 | 8796 | Unsplash page | The same, for the Unsplash add-on (Access Key, search words); see [Wallpapers](wallpapers.md#unsplash-add-on) |
 | 8797 | Spotify page | The same, for the Spotify add-on (the Client ID of your own Spotify app, the sign-in); see [Spotify now playing](#spotify-now-playing) |
+| 8801 | Stocks and crypto page | The same, for the Stocks and crypto add-on (the Twelve Data API key); see [Cards](launcher.md#cards) |
 | 8800 | Add-on repositories page | The same, for adding a repository of add-ons from your phone (ten minutes); see [Add-on repositories](development/addon-repos.md) |
 | 8798 | Jellyfin page | The same, for the Jellyfin add-on (server address, user name and password; the TV keeps only the access token); see [Cards](launcher.md#cards) |
 | 8799 | Phone remote (a catalog add-on) | Only while the add-on is on **and** a phone is paired or its pairing screen is open; every phone needs a token from a one-time code; see [Phone remote](phone-remote.md) |

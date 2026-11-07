@@ -342,7 +342,7 @@ function pill() {
     : '<span class="pill"><i></i>' + esc(L('Closed') + ' · ' + L('prices at close')) + '</span>';
 }
 function foot() {
-  var src = kind() === 'crypto' ? L('Data by CoinGecko') : L('Market data from Yahoo Finance, may be delayed'),
+  var src = kind() === 'crypto' ? L('Data by CoinGecko') : L('Market data by Twelve Data'),
     when = stale() ? L('Offline, data from %s').replace('%s', ltr(timeOf())) : L('Updated %s').replace('%s', ltr(timeOf()));
   return '<div class="foot' + (stale() ? ' amber' : '') + '"><span>' + esc(src) + '</span><span>' + esc(when) + '</span></div>';
 }
@@ -434,7 +434,7 @@ function drawSymbol(q) {
           kind() === 'crypto'
             ? L('Live') + ' · ' + L('Updated %s').replace('%s', ltr(timeOf()))
             : q.open
-              ? L('Open') + ' · ' + L('Delayed up to 15 min')
+              ? L('Open') + ' · ' + L('Updated %s').replace('%s', ltr(timeOf()))
               : L('At close') + ' · ' + L('Updated %s').replace('%s', ltr(timeOf()))
         ),
     near =
@@ -484,7 +484,7 @@ function drawSymbol(q) {
     h += bar(L('52 weeks'), q.ylo, q.yhi, q.p, q, belowHigh(q.p, q.yhi));
   }
   h += '</div>';
-  var src = kind() === 'crypto' ? L('Data by CoinGecko') : L('Market data from Yahoo Finance, may be delayed');
+  var src = kind() === 'crypto' ? L('Data by CoinGecko') : L('Market data by Twelve Data');
   return { html: h + '<div class="src' + (stale() ? ' amber' : '') + '">' + esc(src) + '</div>', sign: sign };
 }
 function render() {

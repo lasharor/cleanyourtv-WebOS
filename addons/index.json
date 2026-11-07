@@ -79,9 +79,9 @@
     {
       "id": "markets",
       "name": "Stocks and crypto",
-      "version": "1.0.0",
-      "description": "Two cards for Home: a watchlist of stocks and indices, and one of crypto coins, with a chart and details on OK.",
-      "about": "Two cards for Home: Stocks (shares, ETFs and indices of any exchange, like AAPL, ^GSPC or TEVA.TA) and Crypto (coins by their symbol, like BTC or ETH). Choose a ready list on the TV (Customise > Stocks or Crypto) or type your own on the phone page (Cards > Set up from your phone). Each card is one button for the remote: OK opens a drawer with Watchlist, Chart and Details, where the range of the chart can be changed. Stock prices come from Yahoo Finance's public chart service (no key, may be delayed, for personal use) at most every 5 minutes while a market is open; crypto prices from CoinGecko's public API (no key) at most every 2 minutes. Only the symbols you chose leave the TV.",
+      "version": "1.1.0",
+      "description": "Two cards for Home: your stocks (with a free Twelve Data key) and your crypto coins, with a chart and details on OK.",
+      "about": "Stocks: US shares and ETFs (AAPL, SPY) from Twelve Data, an official API that needs your own free key (twelvedata.com): set it in Add-ons > Stocks and crypto > Set up from your phone. The free plan has 8 credits a minute and 800 a day, one per symbol: prices every 5 minutes for 5 symbols, every 20 for 20, while the US market is open. Crypto: coins (BTC, ETH) from CoinGecko's public API, no key, every 2 minutes. Pick a list in Customise or type your own on the phone page; OK on a card opens the list, a chart and the details. Only your symbols (and the key, to Twelve Data) leave the TV.",
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
@@ -89,23 +89,24 @@
       ],
       "luna": [],
       "files": {
-        "addon.json": "7e858c80472e69bb88e4aa3e79403ab34fc006818125c3b1f89623c2a8667331",
+        "addon.json": "ec8a86e91d8f6e574cc29126895daaf5881b440715faaa4d8537e2642d263228",
         "cards/crypto/card.css": "c5f273e0f32b19cf0e599f711a6f444bc12e8d08443fa286fa87c8f62c870658",
         "cards/crypto/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
         "cards/crypto/card.js": "0fb004bea11e10a233a5caf765383d7aa65a6e9cda62c8f426f8540c8ec34a0b",
         "cards/crypto/drawer.css": "7149bfa02c542255c13ff4d6f159030cfdc76cf5dbc3260f8aaeb000f947ca4d",
         "cards/crypto/drawer.html": "1411157ab10ef9883bb9fff34be2a8e8f0109935690f059ff5b027bda1aa0501",
-        "cards/crypto/drawer.js": "b9262ee78f16fb9bea72d79208a025c4b307f6b44bbbe9e57d8762691eb57d4f",
+        "cards/crypto/drawer.js": "18b579c17dd4af23dd79ea5f767c25900d916e25974ab51bd6dc42596f1c30ea",
         "cards/crypto/preview.jpg": "c693ddc851b47e8022ba3af5e92471ffb79015fc3426770574c9fa6cdb1816d2",
         "cards/stocks/card.css": "c5f273e0f32b19cf0e599f711a6f444bc12e8d08443fa286fa87c8f62c870658",
         "cards/stocks/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
         "cards/stocks/card.js": "0fb004bea11e10a233a5caf765383d7aa65a6e9cda62c8f426f8540c8ec34a0b",
         "cards/stocks/drawer.css": "7149bfa02c542255c13ff4d6f159030cfdc76cf5dbc3260f8aaeb000f947ca4d",
         "cards/stocks/drawer.html": "1411157ab10ef9883bb9fff34be2a8e8f0109935690f059ff5b027bda1aa0501",
-        "cards/stocks/drawer.js": "b9262ee78f16fb9bea72d79208a025c4b307f6b44bbbe9e57d8762691eb57d4f",
+        "cards/stocks/drawer.js": "18b579c17dd4af23dd79ea5f767c25900d916e25974ab51bd6dc42596f1c30ea",
         "cards/stocks/preview.jpg": "7ef13170d5eb58c4f7db7531065d7520772c53be69668d7b03e023758134a9ca",
-        "markets.js": "2c8a7501245c09a686a390c764405ea2e4cab7b816be62c5ef8430663ac2b851",
-        "service.js": "4b51cd714e88540d4a050d108d61fcd53f99bbc658ca54eb501eb18222d889de"
+        "markets.js": "98277528e03984abfda0fe56eaa3f341603488920b687752c4dec7f722dc0530",
+        "phone.js": "fa62dd5738d653d74a63dcef6643e3c68e323a29f9b2d25fc4238851278f06d1",
+        "service.js": "20e4dd09feb975385422788741c35cb448a60f7f68200179a501082fa788579a"
       }
     },
     {
@@ -130,7 +131,7 @@
       "files": {
         "addon.json": "4e5f3eab4b00b15608f4c0b05dd3bd8161748cc1844052a1ed038bd6e60806c9",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "a8a976295906514690d1500efd7ba06ef29df8218d36ddbf392676b16b1bef80",
+        "page/index.html": "0b05fe4351fb8bdd7465d7b6ce61a47db1782f930d89c70866709b4748d15b96",
         "page.js": "985cedb9ca9b6038eff61f4ac45f0db1a803b0ee6b0adcf99430c9b0dec926ee",
         "remotekeys.js": "2f65affbb6a6ff057947d81a553ee3d2063d293edaed4cdcb4a0019b380ea8d3",
         "service.js": "b78115301ab56e0c4244279b420ff4ab76da4686fc33fb49332c96a0d4a83c3e",
@@ -222,7 +223,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "1d7e411083da2b0b4b50f6b355d7f3a4adf61a814c79e7d38ec88b9c97f6788d",
+        "page/index.html": "4df6e501cad287f20fa9096abf5839585961625e911e5bd9290cd13232e4cad5",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
