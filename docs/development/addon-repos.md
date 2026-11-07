@@ -59,7 +59,7 @@ cytv-addons repo-add alice/tv-addons         # asks to confirm; -y says yes
 cytv-addons list                             # everything the repositories offer
 cytv-addons install clock alice-tv-addons    # asks to confirm for a repository other than official
 cytv-addons update                           # newer versions of what is installed (-y: do not ask)
-cytv-addons installed
+cytv-addons installed                        # with the repository each came from
 cytv-addons remove clock
 cytv-addons repo-rm alice-tv-addons          # what was installed from it stays
 ```

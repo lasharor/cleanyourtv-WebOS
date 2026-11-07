@@ -89,8 +89,9 @@ function plain(method, path, body, done) {
     done(j);
   });
 }
+// a column of n characters, and at least one space after it: a name made from a GitHub address easily fills its column
 function pad(s, n) {
-  s = String(s);
+  s = String(s) + ' ';
   while (s.length < n) s += ' ';
   return s;
 }
@@ -139,7 +140,7 @@ if (cmd === 'repos') {
 } else if (cmd === 'installed') {
   plain('GET', '/api/addons', null, function (j) {
     j.addons.forEach(function (a) {
-      console.log(pad(a.id, 16) + pad(a.version || '', 9) + pad(a.status, 9) + (a.bundled ? 'ships with CleanYourTV' : ''));
+      console.log(pad(a.id, 16) + pad(a.version || '', 9) + pad(a.status, 9) + (a.bundled ? 'ships with CleanYourTV' : a.repo ? 'from ' + a.repo : ''));
     });
   });
 } else if (cmd === 'install' && args[1]) {

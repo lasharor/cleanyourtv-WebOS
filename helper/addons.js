@@ -405,6 +405,7 @@ function create(ctx) {
   // a running add-on whose service has a phone page of its own (settings): the manager offers "Set up from your phone" for it
   const info = a => {
     const out = baseInfo(a);
+    if (!a.bundled) out.repo = sourceOf(a.id); // the repository it was installed from (updates come from there)
     if (a.status === 'running' && a.mod && typeof a.mod.settings === 'function') out.settings = true;
     return out;
   };
@@ -506,7 +507,8 @@ function create(ctx) {
         can: repos.describe(e.kind, e.permissions, e.luna),
         repo: repo.name,
         official: repo.name === repos.OFFICIAL,
-        installed: a && a.manifest ? a.manifest.version : '',
+        // installed from this repository (the same id from another one is a different add-on)
+        installed: a && a.manifest && (mine || a.bundled) ? a.manifest.version : '',
         bundled: !!(a && a.bundled),
         // an update comes from the repository the add-on was installed from
         update: !!(mine && a.manifest && version.cmp(e.version, a.manifest.version) > 0),

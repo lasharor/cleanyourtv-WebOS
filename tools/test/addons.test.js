@@ -919,6 +919,20 @@ run(async () => {
   ok(c.code === 0 && /^extra\s+1\.1\.0\s+viacli/m.test(c.out), 'cytv-addons list shows what a repository offers: ' + c.out);
   c = await cli(['install', 'extra', 'viacli'], 'yes\n');
   ok(c.code === 0 && /Installed extra 1\.1\.0 from viacli/.test(c.out), 'cytv-addons install asks, yes installs: ' + c.out + c.err);
+  c = await cli(['installed']);
+  ok(c.code === 0 && /^extra\s.*\sfrom viacli$/m.test(c.out), 'cytv-addons installed says which repository an add-on came from: ' + c.out);
+  r = await call(a, '/api/addons/catalog');
+  ok(
+    r.j.addons.filter(x => x.id === 'extra').every(x => (x.repo === 'viacli') === !!x.installed),
+    'the catalog marks an add-on installed only on the row of the repository it came from'
+  );
+  c = await cli(['repo-add', gx.url + '/other', 'a-name-that-fills-the-column', '-y']);
+  c = await cli(['repos']);
+  ok(
+    c.code === 0 && /^a-name-that-fills-the-column\s+https?:/m.test(c.out),
+    'a long repository name is still apart from its address: ' + c.out
+  );
+  await cli(['repo-rm', 'a-name-that-fills-the-column']);
   cur = mk('1.2.0');
   c = await cli(['update', '-y']);
   ok(c.code === 0 && /Updated extra to 1\.2\.0/.test(c.out), 'cytv-addons update: ' + c.out + c.err);

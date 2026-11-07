@@ -296,9 +296,9 @@ left out stays installed and running but has no button.
 
 | Request | Reply |
 |---|---|
-| `GET /api/addons` | `{addons: [{id, name, version, kind, description, about, preview, permissions, enabled, status, error, bundled, tile, page}], paused}`; `status` is `running`, `off`, `paused` or `failed` |
+| `GET /api/addons` | `{addons: [{id, name, version, kind, description, about, preview, permissions, enabled, status, error, bundled, repo, tile, page}], paused}`; `status` is `running`, `off`, `paused` or `failed`; `repo` (not for bundled ones) is the repository it was installed from |
 | `GET /api/addons/preview/<id>[?repo=<name>]` | The add-on's picture (`image/jpeg`, `png` or `webp`): from its folder when it is on the TV, else from its repository; 404 without one |
-| `GET /api/addons/catalog` | `{addons: [{id, name, version, description, about, preview, kind, permissions, repo, official, installed, bundled, update}], error, errors: [{repo, error}]}`: what every repository offers; `update` only when the add-on was installed from that repository |
+| `GET /api/addons/catalog` | `{addons: [{id, name, version, description, about, preview, kind, permissions, repo, official, installed, bundled, update}], error, errors: [{repo, error}]}`: what every repository offers; `installed` and `update` only on the row of the repository the add-on was installed from |
 | `GET /api/addons/repos` | `{repos: [{name, url, official}]}` |
 | `POST /api/addons/repos {add, name?, confirm}` or `{remove}` | Adds a repository (`user/repo`, `user/repo@branch/folder` or an https folder) or removes one; `official` cannot be removed (`400`). Adding needs `confirm: true`, else `400 {error, confirm: true}`. `{repos, added}` or `{repos, removed}` |
 | `POST /api/addons/repos/phone {}` or `{stop: true}` | Opens the phone page for adding a repository (port 8800): `{url, code, qr, seconds}` |
