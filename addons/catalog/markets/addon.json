@@ -1,0 +1,188 @@
+{
+  "id": "markets",
+  "name": "Stocks and crypto",
+  "version": "1.0.0",
+  "description": "Two cards for Home: a watchlist of stocks and indices, and one of crypto coins, with a chart and details on OK.",
+  "about": "Two cards for Home: Stocks (shares, ETFs and indices of any exchange, like AAPL, ^GSPC or TEVA.TA) and Crypto (coins by their symbol, like BTC or ETH). Choose a ready list on the TV (Customise > Stocks or Crypto) or type your own on the phone page (Cards > Set up from your phone). Each card is one button for the remote: OK opens a drawer with Watchlist, Chart and Details, where the range of the chart can be changed. Stock prices come from Yahoo Finance's public chart service (no key, may be delayed, for personal use) at most every 5 minutes while a market is open; crypto prices from CoinGecko's public API (no key) at most every 2 minutes. Only the symbols you chose leave the TV.",
+  "kind": "service",
+  "entry": {
+    "service": "service.js"
+  },
+  "permissions": ["net.fetch"],
+  "provides": ["cards"],
+  "minService": "1.6.18",
+  "cards": [
+    {
+      "id": "stocks",
+      "name": "Stocks",
+      "version": "1.0.0",
+      "description": "Your stocks and indices: the price, today's change and a line.",
+      "about": "A watchlist of up to 20 shares, ETFs or indices (symbols as on Yahoo Finance: AAPL, ^GSPC, TEVA.TA), with a drawer for the remote (OK): Watchlist, Chart and Details. No key and no account.",
+      "size": "medium",
+      "page": "card.html",
+      "drawer": {
+        "page": "drawer.html",
+        "action": "open",
+        "label": "Stocks"
+      },
+      "settings": {
+        "action": "settings",
+        "title": "Stocks"
+      },
+      "poll": 60,
+      "actions": [
+        {
+          "name": "open",
+          "label": "Stocks"
+        },
+        {
+          "name": "settings",
+          "label": "Choose stocks"
+        },
+        {
+          "name": "chart",
+          "label": "Chart"
+        }
+      ],
+      "options": [
+        {
+          "key": "list",
+          "kind": "choice",
+          "label": "Watchlist",
+          "default": "custom",
+          "choices": [
+            ["custom", "From your phone"],
+            ["tech", "Big tech"],
+            ["idx", "US market"],
+            ["il", "Tel Aviv + US"]
+          ]
+        },
+        {
+          "key": "show",
+          "kind": "choice",
+          "label": "Change shown as",
+          "default": "pct",
+          "choices": [
+            ["pct", "Percent"],
+            ["abs", "Price change"]
+          ]
+        },
+        {
+          "key": "range",
+          "kind": "choice",
+          "label": "Line on the card",
+          "default": "1d",
+          "choices": [
+            ["1d", "Today"],
+            ["5d", "5 days"],
+            ["1mo", "1 month"],
+            ["6mo", "6 months"],
+            ["1y", "1 year"]
+          ]
+        },
+        {
+          "key": "look",
+          "kind": "choice",
+          "label": "Look",
+          "default": "minimal",
+          "choices": [
+            ["minimal", "Minimal"],
+            ["rich", "Rich"]
+          ]
+        },
+        {
+          "key": "symbols",
+          "kind": "text",
+          "label": "Watchlist symbols",
+          "default": "AAPL,MSFT,NVDA,^GSPC,TEVA.TA"
+        }
+      ]
+    },
+    {
+      "id": "crypto",
+      "name": "Crypto",
+      "version": "1.0.0",
+      "description": "Your coins: the price, the 24-hour change and a line.",
+      "about": "A watchlist of up to 20 coins by their symbol (BTC, ETH, SOL), priced in dollars, euros, shekels or bitcoin, with a drawer for the remote (OK): Watchlist, Chart and Details. From CoinGecko, with no key and no account.",
+      "size": "medium",
+      "page": "card.html",
+      "drawer": {
+        "page": "drawer.html",
+        "action": "open",
+        "label": "Crypto"
+      },
+      "settings": {
+        "action": "settings",
+        "title": "Crypto"
+      },
+      "poll": 60,
+      "actions": [
+        {
+          "name": "open",
+          "label": "Crypto"
+        },
+        {
+          "name": "settings",
+          "label": "Choose coins"
+        },
+        {
+          "name": "chart",
+          "label": "Chart"
+        }
+      ],
+      "options": [
+        {
+          "key": "list",
+          "kind": "choice",
+          "label": "Watchlist",
+          "default": "custom",
+          "choices": [
+            ["custom", "From your phone"],
+            ["top", "Top 5"],
+            ["two", "Bitcoin + Ether"]
+          ]
+        },
+        {
+          "key": "vs",
+          "kind": "choice",
+          "label": "Priced in",
+          "default": "usd",
+          "choices": [
+            ["usd", "US dollar"],
+            ["eur", "Euro"],
+            ["ils", "Shekel"],
+            ["btc", "Bitcoin"]
+          ]
+        },
+        {
+          "key": "range",
+          "kind": "choice",
+          "label": "Line on the card",
+          "default": "1d",
+          "choices": [
+            ["1d", "24 hours"],
+            ["7d", "7 days"],
+            ["30d", "30 days"],
+            ["1y", "1 year"]
+          ]
+        },
+        {
+          "key": "look",
+          "kind": "choice",
+          "label": "Look",
+          "default": "minimal",
+          "choices": [
+            ["minimal", "Minimal"],
+            ["rich", "Rich"]
+          ]
+        },
+        {
+          "key": "symbols",
+          "kind": "text",
+          "label": "Watchlist symbols",
+          "default": "BTC,ETH,SOL"
+        }
+      ]
+    }
+  ]
+}

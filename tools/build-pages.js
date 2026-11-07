@@ -20,6 +20,15 @@ const PAGES = [
   ['addons/catalog/phoneremote/src', 'addons/catalog/phoneremote/page/index.html'], // the phone remote's own page on the TV: pairing and the paired phones
   ['picker/app/index.html', 'picker/app/index.html'],
 ];
+// pages that are the same file in two places: the Stocks and Crypto cards of the markets add-on draw with one code (the launcher serves
+// a card's pages from its own folder, cards/<card id>/), so cards/crypto/ is written from cards/stocks/
+const COPIES = [
+  [
+    'addons/catalog/markets/cards/stocks',
+    'addons/catalog/markets/cards/crypto',
+    ['card.html', 'card.js', 'card.css', 'drawer.html', 'drawer.js', 'drawer.css'],
+  ],
+];
 // the manager shows the service's own messages (update steps, sync errors): it carries the translations of texts in helper/ too
 const EXTRA = { 'manager/src': ['helper'] };
 const extraText = src =>
@@ -134,6 +143,25 @@ if (require.main === module) {
       console.log('wrote ' + p[1]);
     }
   }
+  for (const c of COPIES)
+    for (const f of c[2]) {
+      const from = path.join(root, c[0], f),
+        to = path.join(root, c[1], f),
+        out = fs.readFileSync(from, 'utf8'),
+        cur = fs.existsSync(to) ? fs.readFileSync(to, 'utf8') : '';
+      if (out === cur) {
+        console.log('ok   ' + c[1] + '/' + f + ' matches ' + c[0]);
+        continue;
+      }
+      if (check) {
+        stale++;
+        console.log('FAIL ' + c[1] + '/' + f + ' does not match ' + c[0] + ' (run: node tools/build-pages.js)');
+      } else {
+        if (!fs.existsSync(path.dirname(to))) fs.mkdirSync(path.dirname(to));
+        fs.writeFileSync(to, out);
+        console.log('wrote ' + c[1] + '/' + f);
+      }
+    }
   process.exit(stale ? 1 : 0);
 }
-module.exports = { build, PAGES, langs, english, usedIn, plain, filled };
+module.exports = { build, PAGES, COPIES, langs, english, usedIn, plain, filled };
