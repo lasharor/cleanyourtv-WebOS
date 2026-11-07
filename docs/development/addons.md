@@ -270,7 +270,8 @@ it a little to sit under its glass dock.
 | number 3, or yellow | the second |
 | number 4, or blue | the third |
 | numbers 5 to 9 | the fourth to the eighth page (no colour) |
-| Back (Home key) | back to Home |
+| Back | back to Home |
+| Home | back to Home (see below; the key must be learned once) |
 
 A page is loaded when you turn to it and unloaded when you turn away (its video and timers stop). A page that needs some of those
 keys for itself lists them in `claims`: `digits` (the number buttons), `colors` (the colour buttons) and `back` (the page handles
@@ -280,6 +281,17 @@ Other pages include `/addon/sdk.js`: Back goes to Home, the number and colour bu
 `/api/addons/<id>/<path>`. A page that shows a QR code (the phone remote's pairing screen) includes `/addon/qrcode.js` as well: it is the
 one `third-party/qrcode-generator` file, which the package puts beside the helper files and the loader serves. Write the page in ES5
 (Chromium 68, webOS 5). The launcher sends the page its language, clock format and theme colours as query parameters and a message.
+
+**The Home key.** When another app is in front, pressing Home relaunches the launcher, which turns back to its first page. A page of the
+book is an iframe of the Home app, so webOS sees Home in front and sends no relaunch there: the key would do nothing. The service
+therefore binds the remote's Home key in LG's input service only while a page shows (`helper/book.js`, `helper/inputhook.js`), and a
+press asks the app manager for Home (`scripts/bookhome.sh`), which is that same relaunch. The code is the one learned in the manager
+(**CleanYourTV as Home** > **Learn the Home key**), else 773, what LG's input service reports for the Home button of the usual remotes.
+No other button sends 773, so a remote whose Home sends another code loses nothing; learn its code and Home works on a page too (until
+then Back is the way back, and the number and colour buttons on a page that does not keep them). A code that is already the Input, voice,
+Guide or a remapped button is never taken. The launcher reports the page it shows to `POST /api/book/page` on each turn, every 30 s while
+a page shows and when it is shown again, so the bind exists only while a page is open. Leaving for another app with a page open keeps the
+bind (some TVs report the launcher hidden while it is on screen); Home there opens Home, as it does anyway.
 
 The service accepts a page's requests (their origin is the service itself) only from the loopback address, only for `/addon/...`
 and for `/api/addons/<id>/...` with that add-on's own page as the Referer. Install and remove are not open to pages.

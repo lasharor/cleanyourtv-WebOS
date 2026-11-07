@@ -7446,6 +7446,7 @@ document.addEventListener('visibilitychange', function () {
     refreshSoon();
     WALL.shown();
     SCENES.shown();
+    if (PAGER.on) PAGER.report(); /* back on a page: the Home key is bound again at once (the service may have restarted meanwhile) */
   }
 });
 
@@ -7501,7 +7502,9 @@ var LIVE = {
    away and the page slides in (transform only). The number buttons (1 is Home, 2 the next page, ...) and the colour buttons
    (red Home, green, yellow, blue the next three) switch pages; Back returns to Home. A page that keeps those keys for itself
    (Live TV: digits tune channels) says so in its manifest ("claims"); then only its own keys work there and Back/Home leave it.
-   The pages come from GET /api/addons; each page is loaded when you open it and unloaded when you leave it. */
+   The pages come from GET /api/addons; each page is loaded when you open it and unloaded when you leave it.
+   The Home key of the remote is bound by the service only while a page shows (helper/book.js): the page is an iframe of the Home
+   app, so webOS sees Home in front and sends no relaunch when Home is pressed. PAGER.report tells the service which page shows. */
 var addonBar = []; /* topbar entries: add-ons with placement "topbar", they open their page */
 var stripOn = true; /* the strip that shows the pages on Home (manager > Add-ons) */
 var stripPos = ''; /* where the user put it ('' leaves that to the theme) */
@@ -7510,6 +7513,7 @@ var PAGER = {
   on: false /* true while a page other than Home shows */,
   id: '',
   busy: 0,
+  hb: 0 /* the timer that tells the service which page shows, while one does */,
   load: function () {
     return api('/api/addons').then(
       function (x) {
@@ -7700,9 +7704,25 @@ var PAGER = {
       }
     }, 380);
     logLine('page ' + (id || 'home'));
+    PAGER.report();
   },
   home: function () {
     PAGER.go('');
+  },
+  /* The service binds the remote's Home key only while a page shows (helper/book.js: the code learned in the manager, else 773): a
+     press then asks webOS for Home, which is the relaunch handled in input.js. It is told on each turn, every 30 s while a page shows
+     (a restarted service starts with no page) and when the launcher is shown again. Hiding the window does not unbind the key: some
+     TVs report the window hidden while it is on screen, and a bind left in place while another app is in front only makes Home open
+     Home, which it does anyway. */
+  report: function () {
+    clearTimeout(PAGER.hb);
+    PAGER.hb = 0;
+    var id = PAGER.on ? PAGER.id : '';
+    api('/api/book/page', { id: id }).then(
+      function () {},
+      function () {}
+    );
+    if (id) PAGER.hb = setTimeout(PAGER.report, 30000);
   },
   /* a message to the page that shows */
   send: function (m) {
@@ -7783,6 +7803,10 @@ try {
 } catch (e) {}
 load();
 var pagesLoaded = PAGER.load();
+/* a launcher that starts again shows Home: the service is told so before a launch parameter can turn to a page ({live:true}) */
+pagesLoaded.then(function () {
+  PAGER.report();
+});
 refreshSoon();
 wantInputs(pagesLoaded);
 api('/api/frontend-ok', { version: VERSION }).catch(function () {}); // lets the manager know an updated launcher started

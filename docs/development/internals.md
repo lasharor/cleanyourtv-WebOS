@@ -24,6 +24,7 @@
 | `server.js`, `web.js` | The HTTP server with the origin rules, and small reply helpers. |
 | `apps.js`, `running.js` | The app list, icons, usage, launching and the launcher's own settings; the running apps to close (Back on Home). |
 | `inputkey.js`, `inputhook.js`, `picker.js` | The Input key: the hook in LG's input processes, the key binds, the Inputs picker. |
+| `book.js` | The launcher's book: which page shows (`POST /api/book/page`, the launcher reports it), so the Home key (learned in the manager, else 773) is bound in LG's input service only while one shows (`inputhook.js`, `scripts/bookhome.sh`); see [Add-ons](addons.md#pages-home-is-page-1-of-a-book). |
 | `manager.js`, `updates.js`, `debloat.js` | The manager's API, updates from GitHub releases with rollback, switching the debloat. |
 | `notify.js`, `notifyapi.js` | One feature each. |
 | `addons.js`, `addons-bundled/` | Add-ons: loads the folders that have an `addon.json` (those that ship in `addons-bundled/`, Live TV among them, and those installed from the catalog), isolates the ones that fail, serves their pages and installs from the catalog (`docs/development/addons.md`). |

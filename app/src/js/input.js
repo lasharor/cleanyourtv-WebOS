@@ -344,6 +344,7 @@ document.addEventListener('visibilitychange', function () {
     refreshSoon();
     WALL.shown();
     SCENES.shown();
+    if (PAGER.on) PAGER.report(); /* back on a page: the Home key is bound again at once (the service may have restarted meanwhile) */
   }
 });
 

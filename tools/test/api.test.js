@@ -287,6 +287,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       'scenes',
       'cards',
       'inputkey',
+      'book',
       'notifyapi',
       'manager',
       'remap',
