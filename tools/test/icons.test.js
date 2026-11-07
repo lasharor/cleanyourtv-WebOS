@@ -103,6 +103,21 @@ run(async () => {
     config: memoryConfig({}),
     feature: n => (n === 'apps' ? { apps: async () => list } : n === 'theme' ? theme : null),
   });
+  // the tool (wave 2): which apps have a picture of their own (reset is not a tool: it deletes the picture)
+  ok(
+    ic.tools.list().length === 1 && ic.tools.list()[0].inputSchema.properties.action.enum.join() === 'list_custom',
+    'one tool, icons, with list_custom only'
+  );
+  ok(/no app/.test((await ic.tools.call('icons', { action: 'list_custom' })).content[0].text), 'list_custom with no picture says so');
+  I.set('com.example.app', PNG, true);
+  const tl = await ic.tools.call('icons', { action: 'list_custom' });
+  const tj = JSON.parse(tl.content[0].text);
+  ok(
+    !tl.isError && tj.length === 1 && tj[0].id === 'com.example.app' && tj[0].name === 'Example' && tj[0].tile === true,
+    'list_custom: the app, by name, and how it is shown'
+  );
+  ok((await ic.tools.call('icons', { action: 'reset' })).isError, 'reset is refused');
+  I.remove('com.example.app');
   let r = await call(ic, '/api/icons/pair', 'POST', { app: 'com.example.app', scale: 2 });
   const code = r.j.code;
   ok(

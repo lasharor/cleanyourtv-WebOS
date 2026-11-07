@@ -257,15 +257,26 @@ run(async () => {
   await mod.handle(z.req, z.res, '/nope', async () => ({}));
   ok(z.res.code === 404, 'anything else is 404');
   ok(
-    mod.tools && typeof mod.tools.list === 'function' && mod.tools.list().length === 5,
-    'the service gives its tools to the voice assistant'
+    mod.tools && typeof mod.tools.list === 'function' && mod.tools.list().length === 6 && mod.tools.list()[0].name === 'agent',
+    'the service gives its tools to the voice assistant: its own agent tool first, then the signed ones'
   );
+  // the agent tool (wave 2): the sources, approved or not; approving is not a tool
+  const ag = mod.tools.list()[0];
+  ok(ag.inputSchema.properties.action.enum.join() === 'list_sources', 'the agent tool only lists (no approve)');
+  let ls = JSON.parse((await mod.tools.call('agent', { action: 'list_sources' })).content[0].text);
+  ok(
+    ls.length === 4 && ls.some(x => x.source === 'app:com.example.demo' && x.approved === true && x.tools.indexOf('open_app') >= 0),
+    'list_sources: every signed file, with its tools and whether it is approved: ' + JSON.stringify(ls).slice(0, 200)
+  );
+  ok((await mod.tools.call('agent', { action: 'approve', source: 'app:com.example.demo' })).isError, 'any other action is refused');
   const sx = fake('/sources', 'GET');
   await mod.handle(sx.req, sx.res, '/sources', async () => ({}));
   ok(JSON.parse(sx.res.out).sources.length === 4, 'GET /sources lists every signed file');
   const ax = fake('/approve', 'POST');
   await mod.handle(ax.req, ax.res, '/approve', async () => ({ source: 'app:com.example.demo', approved: false }));
   ok(JSON.parse(ax.res.out).ok === true && !mod.tools.list().some(t => t.name === 'open_app'), 'POST /approve takes a source out');
+  ls = JSON.parse((await mod.tools.call('agent', { action: 'list_sources' })).content[0].text);
+  ok(ls.filter(x => x.source === 'app:com.example.demo')[0].approved === false, 'and list_sources says it is not approved now');
 
   // ---- the manifest ----
   const addons = req('addons');
