@@ -30,6 +30,13 @@
    "preview": "bloom/preview.jpg"
   },
   {
+   "id": "cinema",
+   "name": "Cinema",
+   "author": "CleanYourTV",
+   "description": "A polished dark living-room layout with wide app tiles, quiet colours and a bright focus ring.",
+   "preview": "cinema/preview.jpg"
+  },
+  {
    "id": "compact",
    "name": "Compact",
    "author": "CleanYourTV",
@@ -122,3 +129,4 @@
   }
  ]
 }
+

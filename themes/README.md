@@ -39,6 +39,14 @@ The original look: near-black, white focus, ten columns.
 
 Folder: [`classic/`](classic/)
 
+### Cinema
+
+A dark living-room layout with wide app tiles, a quiet top bar and a cool focus ring.
+
+[![Cinema](cinema/preview.jpg)](cinema/preview.jpg)
+
+Folder: [`cinema/`](cinema/)
+
 ### Big Tiles
 
 Classic with large tiles matching the dock in four columns.
@@ -137,3 +145,4 @@ Brown and amber with the glow in the accent colour.
 [![Warm](warm/preview.jpg)](warm/preview.jpg)
 
 Folder: [`warm/`](warm/)
+

@@ -1,0 +1,86 @@
+{
+  "name": "Cinema",
+  "author": "CleanYourTV",
+  "description": "A polished dark living-room layout with wide app tiles, quiet colours and a bright focus ring.",
+  "extends": "classic",
+  "colors": {
+    "night": "#090a0d",
+    "panel": "#17191e",
+    "ink": "#f5f5f7",
+    "accent": "#f5f5f7",
+    "focus": "#78b8ff",
+    "pill": "#f5f5f7"
+  },
+  "surface": {
+    "pillAlpha": 0.06,
+    "pillRing": 0.18,
+    "pillRadius": 32,
+    "menuAlpha": 0.96,
+    "rowRadius": 26
+  },
+  "clock": {
+    "layout": "inline",
+    "align": "left",
+    "x": 96,
+    "y": 58,
+    "scale": 1.1,
+    "dateScale": 0.95
+  },
+  "bar": {
+    "style": "flat",
+    "labels": "show",
+    "anchor": "top",
+    "align": "right",
+    "x": 96,
+    "y": 58,
+    "size": 58,
+    "gap": 24
+  },
+  "shelf": {
+    "show": true,
+    "align": "left",
+    "x": 96,
+    "y": 706,
+    "scale": 0.72
+  },
+  "dock": {
+    "anchor": "bottom",
+    "align": "center",
+    "y": 78,
+    "count": 5,
+    "w": 270,
+    "h": 156,
+    "gap": 30,
+    "radius": 26,
+    "panel": 0.1,
+    "panelPad": 26,
+    "lift": 7,
+    "focusScale": 1.06
+  },
+  "grid": {
+    "mode": "push",
+    "dockUp": 224,
+    "clipTop": 210,
+    "cols": 6,
+    "tileH": 174,
+    "gapX": 26,
+    "gapY": 30,
+    "radius": 26,
+    "align": "center"
+  },
+  "tile": {
+    "gloss": 0.12,
+    "border": 0.08,
+    "ringWidth": 4,
+    "ringOffset": 4
+  },
+  "effects": {
+    "glow": 0.24,
+    "glowColor": "accent",
+    "speed": 0.85
+  },
+  "strip": {
+    "show": false
+  }
+}
+
