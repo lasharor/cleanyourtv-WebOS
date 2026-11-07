@@ -82,7 +82,7 @@
       "version": "1.0.0",
       "description": "Two cards for Home: a watchlist of stocks and indices, and one of crypto coins, with a chart and details on OK.",
       "about": "Two cards for Home: Stocks (shares, ETFs and indices of any exchange, like AAPL, ^GSPC or TEVA.TA) and Crypto (coins by their symbol, like BTC or ETH). Choose a ready list on the TV (Customise > Stocks or Crypto) or type your own on the phone page (Cards > Set up from your phone). Each card is one button for the remote: OK opens a drawer with Watchlist, Chart and Details, where the range of the chart can be changed. Stock prices come from Yahoo Finance's public chart service (no key, may be delayed, for personal use) at most every 5 minutes while a market is open; crypto prices from CoinGecko's public API (no key) at most every 2 minutes. Only the symbols you chose leave the TV.",
-      "preview": "",
+      "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
         "net.fetch"
@@ -93,15 +93,17 @@
         "cards/crypto/card.css": "c5f273e0f32b19cf0e599f711a6f444bc12e8d08443fa286fa87c8f62c870658",
         "cards/crypto/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
         "cards/crypto/card.js": "0fb004bea11e10a233a5caf765383d7aa65a6e9cda62c8f426f8540c8ec34a0b",
-        "cards/crypto/drawer.css": "fc261592ba8c1288fc03ebfbf9cbbaab31d566e7d37e873ed3d2cb992603aae2",
+        "cards/crypto/drawer.css": "7149bfa02c542255c13ff4d6f159030cfdc76cf5dbc3260f8aaeb000f947ca4d",
         "cards/crypto/drawer.html": "1411157ab10ef9883bb9fff34be2a8e8f0109935690f059ff5b027bda1aa0501",
         "cards/crypto/drawer.js": "b9262ee78f16fb9bea72d79208a025c4b307f6b44bbbe9e57d8762691eb57d4f",
+        "cards/crypto/preview.jpg": "c693ddc851b47e8022ba3af5e92471ffb79015fc3426770574c9fa6cdb1816d2",
         "cards/stocks/card.css": "c5f273e0f32b19cf0e599f711a6f444bc12e8d08443fa286fa87c8f62c870658",
         "cards/stocks/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
         "cards/stocks/card.js": "0fb004bea11e10a233a5caf765383d7aa65a6e9cda62c8f426f8540c8ec34a0b",
-        "cards/stocks/drawer.css": "fc261592ba8c1288fc03ebfbf9cbbaab31d566e7d37e873ed3d2cb992603aae2",
+        "cards/stocks/drawer.css": "7149bfa02c542255c13ff4d6f159030cfdc76cf5dbc3260f8aaeb000f947ca4d",
         "cards/stocks/drawer.html": "1411157ab10ef9883bb9fff34be2a8e8f0109935690f059ff5b027bda1aa0501",
         "cards/stocks/drawer.js": "b9262ee78f16fb9bea72d79208a025c4b307f6b44bbbe9e57d8762691eb57d4f",
+        "cards/stocks/preview.jpg": "7ef13170d5eb58c4f7db7531065d7520772c53be69668d7b03e023758134a9ca",
         "markets.js": "2c8a7501245c09a686a390c764405ea2e4cab7b816be62c5ef8430663ac2b851",
         "service.js": "4b51cd714e88540d4a050d108d61fcd53f99bbc658ca54eb501eb18222d889de"
       }
