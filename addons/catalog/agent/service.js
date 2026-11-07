@@ -129,12 +129,34 @@ function create(ctx) {
     });
   }
 
+  // the agent tool: which apps and add-ons give tools, and whether each is approved. Approving is never a tool: the model must not
+  // approve tools for itself (only the phone page does it)
+  const AGENT_TOOL = {
+    name: 'agent',
+    description:
+      'The apps and add-ons that sign tools for the assistant. action list_sources: each source, whether the user approved it, its tools and any error. Approving a source is done on the phone page only.',
+    inputSchema: { type: 'object', properties: { action: { type: 'string', enum: ['list_sources'] } }, required: ['action'] },
+  };
+  function listSources(args) {
+    if (!args || args.action !== 'list_sources') return { content: [{ type: 'text', text: 'action is list_sources' }], isError: true };
+    const list = reg.sources().map(s => ({
+      source: s.key,
+      approved: !!s.approved,
+      tools: (s.tools || []).map(t => (typeof t === 'string' ? t : t.name)),
+      error: s.error || '',
+    }));
+    return { content: [{ type: 'text', text: JSON.stringify(list.length ? list : 'no app or add-on signs tools yet') }], isError: false };
+  }
+
   return {
     handle: handle,
     start: () => reg.reload(),
     settings: settings,
     // "provides": ["tools"]: what the voice assistant (helper/answers.js) asks
-    tools: { list: () => reg.list(), call: (name, args, opts) => reg.call(name, args, opts) },
+    tools: {
+      list: () => [AGENT_TOOL].concat(reg.list().filter(t => t.name !== 'agent')),
+      call: (name, args, opts) => (name === 'agent' ? listSources(args) : reg.call(name, args, opts)),
+    },
     registry: reg,
   };
 }
