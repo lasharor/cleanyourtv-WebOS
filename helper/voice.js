@@ -303,12 +303,12 @@ function uninstall() {
 // both programs start through the loader of their own C library; cytv-asr32 is told two threads (no faster with four on the test TV)
 const recogniser = () =>
   is32()
-    ? [LIB + '/ld-linux-armhf.so.3', ['--library-path', LIB, V + '/cytv-asr32', MODEL, '2']]
-    : [LIB + '/ld-linux-aarch64.so.1', ['--library-path', LIB, V + '/cytv-asr', MODEL]];
+    ? { file: LIB + '/ld-linux-armhf.so.3', args: ['--library-path', LIB, V + '/cytv-asr32', MODEL, '2'] }
+    : { file: LIB + '/ld-linux-aarch64.so.1', args: ['--library-path', LIB, V + '/cytv-asr', MODEL] };
 function transcribe(pcm) {
   return new Promise((resolve, reject) => {
     const r = recogniser();
-    const ch = cp.spawn(r[0], r[1], {
+    const ch = cp.spawn(r.file, r.args, {
       env: Object.assign({}, ENV, { LD_PRELOAD: '' }),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
