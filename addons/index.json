@@ -2,17 +2,17 @@
   "addons": [
     {
       "id": "bigclock",
-      "name": "Big clock",
-      "version": "1.0.0",
-      "description": "A full-screen clock. A small example of a page add-on.",
-      "about": "A full-screen clock with the date, as a page next to Home. Press its colour or number button to open it, Back returns to Home. Also a small example of a page add-on for people who want to make their own.",
+      "name": "Midnight Clock",
+      "version": "1.1.0",
+      "description": "A stylish full-screen clock with seconds and the date.",
+      "about": "A calm midnight design with a large, readable local time, live seconds and the full date. It opens as a page beside Home; press Back to return.",
       "preview": "preview.jpg",
       "kind": "page",
       "permissions": [],
       "luna": [],
       "files": {
-        "addon.json": "e82a2d9b9353500c67c87797538914299a6cc5b22029084714c5033a2206f205",
-        "index.html": "ad47a31114832658c41cbbcb46ef2e4cdb9be8ab7cad4308cdea90a2d9da784f"
+        "addon.json": "f2e3b9bc3635f91f56aa4b2a316da114290b735bc4687d20219b8c4874cb4b5c",
+        "index.html": "f6d9a0e6f3342d022c896556b840d6c91a4eb54da9b87605c99bb4e83e140662"
       }
     },
     {
@@ -241,3 +241,4 @@
     }
   ]
 }
+

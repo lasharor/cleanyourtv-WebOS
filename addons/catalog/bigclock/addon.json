@@ -1,10 +1,10 @@
 {
   "id": "bigclock",
-  "name": "Big clock",
-  "version": "1.0.0",
+  "name": "Midnight Clock",
+  "version": "1.1.0",
   "kind": "page",
-  "description": "A full-screen clock. A small example of a page add-on.",
-  "about": "A full-screen clock with the date, as a page next to Home. Press its colour or number button to open it, Back returns to Home. Also a small example of a page add-on for people who want to make their own.",
+  "description": "A stylish full-screen clock with seconds and the date.",
+  "about": "A calm midnight design with a large, readable local time, live seconds and the full date. It opens as a page beside Home; press Back to return.",
   "entry": {
     "page": "index.html"
   },
@@ -15,3 +15,4 @@
     "placement": "page"
   }
 }
+
