@@ -255,7 +255,7 @@
     {
       "id": "unsplash",
       "name": "Unsplash",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "A new landscape photo from Unsplash behind Home now and then, with your own free Access Key. Nothing is saved on the TV.",
       "about": "",
       "preview": "",
@@ -265,9 +265,9 @@
       ],
       "luna": [],
       "files": {
-        "addon.json": "29c29a4faaac4a9434080f1405a9e6f187341f9253ca623df6f7ed185743e616",
+        "addon.json": "c3ed3ea1704744779e998a06998a61f749f25290f646128962622e870c82c93e",
         "phone.js": "d9f96764f349e821469a600bb1bf338057e4af1230f5367d939b05ede7d60a5e",
-        "service.js": "feac5e89cddac3b6b9b5d6bb9b90606d237e71b12dde1ed6e83aca939e781fc3"
+        "service.js": "58245fbb14b9e8509fe5461bb64896b8a38eedce33dab540722380e7c9c164d4"
       }
     },
     {

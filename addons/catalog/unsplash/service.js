@@ -376,7 +376,59 @@ function create(ctx) {
     });
   }
 
+  // ---- the tool for the voice assistant and MCP clients ("provides": ["tools"]): one tool with an action ----
+  // The Access Key is never in an answer, not even its last characters.
+  const TOOL = {
+    name: 'unsplash',
+    description:
+      "Unsplash photos behind the TV's Home screen. action status: is it set up and on, what it searches for, the hourly limit; set_query: the words photos are searched by (query; empty for any landscape); turn: on or off (on); credits: who took the photo on Home now.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['status', 'set_query', 'turn', 'credits'] },
+        query: { type: 'string', description: 'for set_query: words such as mountains, or empty' },
+        on: { type: 'boolean', description: 'for turn' },
+      },
+      required: ['action'],
+    },
+  };
+  const done = v => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v) }], isError: false });
+  const bad = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });
+  async function callTool(name, args) {
+    if (name !== 'unsplash') return bad('unknown tool: ' + name);
+    const x = args && typeof args === 'object' ? args : {};
+    const d = details();
+    if (x.action === 'status')
+      return done({
+        configured: d.configured,
+        on: d.on,
+        query: d.query || '',
+        photosShown: d.shown,
+        pausedForTheHourlyLimit: !!d.pausedUntil,
+        error: d.error,
+      });
+    if (!d.configured) return bad('Unsplash is not set up: Add-ons > Unsplash > Set up from your phone (it needs your own Access Key)');
+    if (x.action === 'set_query') {
+      if (typeof x.query !== 'string') return bad('set_query needs a query (empty for any landscape)');
+      const q = x.query.trim().replace(/\s+/g, ' ').slice(0, 100);
+      save({ query: q });
+      return done({ query: q, note: 'the next photo uses it (a new one comes at most every 3 minutes)' });
+    }
+    if (x.action === 'turn') {
+      if (typeof x.on !== 'boolean') return bad('turn needs on: true or false');
+      turn(x.on);
+      return done({ on: x.on });
+    }
+    if (x.action === 'credits') {
+      const l = credits(),
+        p = l.filter(c => c.id === lastShown)[0] || l[0];
+      return p ? done({ photographer: p.name, link: p.link }) : done('no Unsplash photo was shown yet');
+    }
+    return bad('action is status, set_query, turn or credits');
+  }
+
   return {
+    tools: { list: () => [TOOL], call: callTool },
     wallpapers: {
       label: 'Unsplash',
       // one entry that stands for "a new photo from Unsplash", there only while a key is set and the source is on
