@@ -57,3 +57,5 @@ Other buttons can open an app or an input: see [Key remapping](key-remap.md). Th
 
 !!! note "When the hook is not attached"
     On some firmware the hook cannot attach. The manager then shows the Input key as not available and LG's picker is used.
+    On some TVs the hook attaches but no button reaches it (LG 55UN6950ZUA, issue 185). Learning the Input key then says so, switches
+    the Input key off and leaves the key with LG's picker; the Input key row shows *no button reaches the hook on this TV*.

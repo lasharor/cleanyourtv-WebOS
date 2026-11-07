@@ -782,10 +782,11 @@ function build() {
   }
   if (view === 'inputkey') {
     var hk = st.inputhook || {},
-      na = hk.hook && !hk.hook.attached;
+      na = hk.hook && !hk.hook.attached,
+      blind = hk.hook && hk.hook.blind;
     rows.push({
       label: 'Input key opens our Inputs list',
-      sub: na ? 'not available on this firmware' : onoff(st.options.inputKey),
+      sub: na ? 'not available on this firmware' : blind ? 'no button reaches the hook on this TV' : onoff(st.options.inputKey),
       fn: function () {
         opt({ inputKey: !st.options.inputKey });
       },
@@ -1350,7 +1351,10 @@ function build() {
     });
     rows.push({
       label: 'Input key',
-      sub: st.inputhook && st.inputhook.hook && !st.inputhook.hook.attached ? 'not available' : onoff(st.options.inputKey),
+      sub:
+        st.inputhook && st.inputhook.hook && (!st.inputhook.hook.attached || st.inputhook.hook.blind)
+          ? 'not available'
+          : onoff(st.options.inputKey),
       fn: function () {
         push('inputkey');
       },

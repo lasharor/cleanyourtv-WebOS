@@ -79,7 +79,9 @@ function create(ctx) {
     // a hidden picker is only kept while the hook attached: without it the key cannot open the picker, which would only hold the remote
     const hookAttached = () => {
       try {
-        return !!(inputhook.hookInfo && inputhook.hookInfo().attached);
+        // attached but blind (no button reaches it on this TV, issue 185) cannot open the picker either
+        const h = inputhook.hookInfo ? inputhook.hookInfo() : {};
+        return !!(h.attached && !h.blind);
       } catch (_) {
         return false;
       }

@@ -140,6 +140,13 @@ function rmLearn() {
               draw();
               return;
             }
+            if (l.state === 'blind') {
+              kText =
+                'No button reaches CleanYourTV on this TV: LG’s input service passes them another way, so buttons cannot be learned.\nUse Share log to report this.';
+              build();
+              draw();
+              return;
+            }
             if (l.state === 'timeout') {
               kText = 'No button was pressed. Go back to try again.';
               build();
@@ -222,7 +229,12 @@ function rmRows() {
     if (on)
       rows.push({
         label: 'Add a button',
-        sub: rm.hook === false ? 'not available on this firmware' : 'press it, then choose what it does',
+        sub:
+          rm.hook === false
+            ? 'not available on this firmware'
+            : rm.blind
+              ? 'no button reaches the hook on this TV'
+              : 'press it, then choose what it does',
         dim: rm.hook === false,
         fn: function () {
           if (rm.hook !== false) rmLearn();
