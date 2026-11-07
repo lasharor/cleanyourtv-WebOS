@@ -138,7 +138,8 @@ function create(ctx) {
   }
   // One check at a time: a check whose luna calls are slow (the app manager restarting) must not be joined by the next tick.
   let busy = false,
-    wasUp = false;
+    wasUp = false,
+    strikes = 0; // readings in a row that say the TV is on an app again (the safety close)
   async function tick() {
     if (busy) return;
     busy = true;
@@ -170,6 +171,7 @@ function create(ctx) {
     wasUp = up;
     if (!up) {
       since = 0;
+      strikes = 0;
       try {
         const fg = await luna(AM + 'getForegroundAppInfo', {});
         if (fg.appId !== HOME) {
@@ -203,9 +205,16 @@ function create(ctx) {
     try {
       const pw = await luna('luna://com.webos.service.tvpower/power/getPowerState', {});
       // "Screen Saver Ready" (or "Screen Saver") in processing: tvpowerd holds the saver slot, so this page is the screen saver
-      // itself, not one the system left behind (on the tested TV the state stays Active while our page is up)
-      if (pw.state !== 'Active' || /screen saver/i.test(String(pw.processing || ''))) return;
+      // itself, not one the system left behind (on the tested TV the state stays Active while our page is up). That rests on
+      // one string of LG's (docs/screensaver.md > Limits): a single reading without it decides nothing, two in a row close.
+      if (pw.state !== 'Active' || /screen saver/i.test(String(pw.processing || ''))) {
+        strikes = 0;
+        return;
+      }
+      strikes++;
+      if (strikes < 2) return;
       console.log('screensaver: the TV is on an app again; closing the page');
+      strikes = 0;
       await close();
       since = 0;
     } catch (_) {}

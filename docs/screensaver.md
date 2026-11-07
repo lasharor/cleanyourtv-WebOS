@@ -118,6 +118,9 @@ The launch showed a grey "loading" screen with a spinner for a second, like any 
 
 - While the page is up the power state stays `Active` with `processing: "Screen Saver Ready"`; that is why the service treats it as the
   screen saver and leaves it alone (a page that was closed every minute by its own safety check was the first bug found on the TV).
+  The safety close rests on that one string of LG's, seen on the tested TV: a build that reports `Active` with another `processing`
+  while the page is up would see the page closed and opened again. To keep one odd reading from doing that, the service closes the
+  page only after a minute and at two readings in a row (20 seconds apart) without "Screen Saver" in `processing`.
 - The page keeps LG's `screenSaver` window type: that is what makes `tvpowerd` arm it again after a dismissal (with `overlay` it started
   once and then stayed at `Screen Saver Ready`, see [When it appears](#when-it-appears)).
 - "Closing it gives the app underneath back" was seen with the earlier `overlay` manifest, where the first key closed the page and gave

@@ -245,6 +245,46 @@ run(async () => {
     P.PROC = wasProc;
   }
   {
+    // the safety close (a page the system left behind): only when the TV reads as on an app again at two checks in a row, after the
+    // first minute; one reading without "Screen Saver" in processing (another build, a moment between states) closes nothing
+    const procDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-proc-'));
+    fs.writeFileSync(path.join(procDir, 'mounts'), 'x ' + P.SCREENSAVER_APP + ' ext4 rw 0 0\n');
+    const wasProc = P.PROC;
+    P.PROC = procDir;
+    const realNow = Date.now;
+    let now = realNow(),
+      power = {},
+      kills = 0;
+    Date.now = () => now;
+    const g = saver.create({
+      config: { get: () => ({}) },
+      luna: async uri => {
+        if (/listRunningApps/.test(uri)) return { running: [{ id: 'com.webos.app.screensaver' }] };
+        if (/getPowerState/.test(uri)) return power;
+        if (/killApp/.test(uri)) kills++;
+        return { returnValue: true };
+      },
+      feature: () => null,
+    });
+    try {
+      await g.tick(); // the page is up: the minute starts
+      now += 61000;
+      power = { state: 'Active' };
+      await g.tick();
+      ok(kills === 0, 'one reading of "Active" without the screen saver in processing closes nothing');
+      power = { state: 'Active', processing: 'Screen Saver Ready' };
+      await g.tick();
+      power = { state: 'Active' };
+      await g.tick();
+      ok(kills === 0, 'a reading with "Screen Saver Ready" in between starts the count again');
+      await g.tick();
+      ok(kills === 1, 'two readings in a row of "Active" without the screen saver close the page');
+    } finally {
+      Date.now = realNow;
+      P.PROC = wasProc;
+    }
+  }
+  {
     // webapp-mgr's killApp failing must not stop the app manager's own way out, nor turn the dismissal into an error
     const seen = [];
     const g = saver.create({
