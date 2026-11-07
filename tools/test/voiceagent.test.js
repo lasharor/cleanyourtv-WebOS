@@ -331,6 +331,12 @@ run(async () => {
       !/claude|cursor/i.test(r.text),
     'lan: the page has a prompt with the code, how to pair (always, with a new token) and how to add the server, naming no app'
   );
+  ok(!/^<!doctype/i.test(r.text) && /^You can control my LG TV/.test(r.text), 'lan: an agent sent the link gets the prompt as plain text');
+  const html = await lan('GET', pagePath, undefined, { accept: 'text/html,application/xhtml+xml,*/*;q=0.8' });
+  ok(
+    /^<!doctype/i.test(html.text) && /send your agent the address of this page/.test(html.text) && html.text.indexOf(code) >= 0,
+    'lan: a browser gets the page, which says the link alone is enough'
+  );
   ok(!/Bearer [0-9a-f]{8}\./.test(r.text), 'lan: the page holds no token');
   ok(
     /instructions/.test(r.text) && /disconnect_from_tv/.test(r.text) && !/Rules:/.test(r.text),

@@ -1147,7 +1147,7 @@ function build() {
         dim: full,
         info: {
           t: 'Connect an agent',
-          d: 'Shows a QR code and an address for a phone or a computer. The page there has a prompt to paste to your agent, with a code that works once. The agent trades it for a token of its own, and the page turns green. The code works for ten minutes. Back closes it.',
+          d: 'Shows a QR code and a link. Send the link to your agent on a computer on the same network: it reads the setup there and connects. Or open the link on a phone or a computer, copy the prompt and paste it to your agent. The code in it works once, for ten minutes. Back closes it.',
         },
         fn: function () {
           if (full) {
@@ -3447,7 +3447,7 @@ function openMcpQr() {
   $('qrbox').style.visibility = 'hidden';
   $('share').querySelector('h2').textContent = tr('Connect an agent to the TV');
   $('share').querySelector('ol').innerHTML = tr(
-    '<li>Scan the QR code with a phone, or open the address on a computer, on the <b>same network</b> as the TV.</li><li>Press <b>Copy the prompt</b> and paste it to your agent.</li><li>The agent pairs with the <b>code</b> below, which works once; the page turns green.</li>'
+    '<li>Send the link below to your agent on a computer on the <b>same network</b> as the TV. It reads the setup there and connects.</li><li>Or scan the QR code with a phone, press <b>Copy the prompt</b> and paste it to your agent.</li><li>The <b>code</b> below works once. This screen closes when the agent connects.</li>'
   );
   $('sharemsg').textContent = tr('Preparing…');
   api('/api/mcp/lan', { page: true }).then(

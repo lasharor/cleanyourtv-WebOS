@@ -61,7 +61,7 @@ function openMcpQr() {
   $('qrbox').style.visibility = 'hidden';
   $('share').querySelector('h2').textContent = tr('Connect an agent to the TV');
   $('share').querySelector('ol').innerHTML = tr(
-    '<li>Scan the QR code with a phone, or open the address on a computer, on the <b>same network</b> as the TV.</li><li>Press <b>Copy the prompt</b> and paste it to your agent.</li><li>The agent pairs with the <b>code</b> below, which works once; the page turns green.</li>'
+    '<li>Send the link below to your agent on a computer on the <b>same network</b> as the TV. It reads the setup there and connects.</li><li>Or scan the QR code with a phone, press <b>Copy the prompt</b> and paste it to your agent.</li><li>The <b>code</b> below works once. This screen closes when the agent connects.</li>'
   );
   $('sharemsg').textContent = tr('Preparing…');
   api('/api/mcp/lan', { page: true }).then(

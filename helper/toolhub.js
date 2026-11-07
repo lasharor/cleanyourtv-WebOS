@@ -291,6 +291,16 @@ function create(ctx) {
         return send(404, { error: 'this page is closed: show a new code on the TV' });
       }
     }
+    // an agent that was sent the link (curl and the like ask for no HTML) gets the prompt itself, as plain text
+    if (pm && !pm[2] && !/text\/html/.test(String(req.headers.accept || ''))) {
+      return promptFor(page.code).then(
+        t => {
+          res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+          res.end(t + '\n');
+        },
+        () => send(500, { error: 'the page could not be made' })
+      );
+    }
     if (pm && !pm[2]) {
       return tokenHtml(page.code).then(
         html => {
@@ -440,7 +450,8 @@ button{font:inherit;font-weight:600;padding:12px 16px;border-radius:12px;border:
 .st.ok{background:#16a34a22}.st.ok i{background:#16a34a}.code{font:600 28px ui-monospace,Menlo,monospace;letter-spacing:.12em}</style>
 <h1>Connect an agent to the TV</h1>
 <p>Let an AI agent on a computer in your home (any app that supports MCP) use the TV's tools.</p>
-<ol><li>Copy the prompt below.</li><li>Paste it to your agent on a computer on the same network as the TV.</li><li>Keep this page open: it turns green when the agent has paired with the TV.</li></ol>
+<ol><li>Copy the prompt below and paste it to your agent on a computer on the same network as the TV.</li><li>Or send your agent the address of this page: it can read the prompt itself.</li><li>Keep this page open: it turns green when the agent has paired with the TV.</li></ol>
+<p>AI agent reading this page: the prompt below is for you. Follow its steps.</p>
 <p>Code <span class=code>${web.esc(code)}</span> · works once</p>
 <div class=st id=st><i></i><span id=stt>Waiting for an agent at ${addr}</span></div>
 <h2>Prompt for your agent</h2>
