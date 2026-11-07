@@ -52,7 +52,7 @@ Each agent is listed in that screen's **Connected devices** menu and can be bloc
 for two weeks (the default; 1 day to 1 month, or never) is removed by itself. A request that carries an `Origin` header (a web page in a
 browser) is refused, ten wrong codes or tokens lock an address out for ten minutes, and requests are limited to 60 a minute and 64 KB. It is plain
 HTTP: anyone who can watch your network can read a token, so use it on a network you trust. The page behind the QR code shows the code,
-not a token, and its status (`/t/<random>/status`, while it is open) tells only the name and address of the agent that paired, when, and whether it has made a call.
+not a token. Its address is short to type (`http://<tv>:8802/` and 8 letters and digits, about 40 bits); a wrong address counts as a wrong try, so ten misses shut an address out for ten minutes. Its status (`/<8 characters>/status`, while it is open) tells only the name and address of the agent that paired, when, and whether it has made a call.
 
 ## Themes
 

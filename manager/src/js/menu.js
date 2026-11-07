@@ -459,7 +459,7 @@ function build() {
           : {
               t: 'Accept MCP clients from the network',
               d:
-                'Lets AI agents on other computers (Claude Code, Claude Desktop, Cursor, a script) use the same tools. Port ' +
+                'Lets AI agents on other computers (any MCP client, or a script) use the same tools. Port ' +
                 (mn.port || 8802) +
                 ' opens only while an agent is paired or a code is shown. Turning the TV off and requests from web pages are refused. Plain HTTP: use a network you trust.',
             },
