@@ -858,6 +858,66 @@
   "status": 404,
   "type": ""
  },
+ "screen saver status": {
+  "body": {
+   "every": 25,
+   "failed": false,
+   "method": "",
+   "photos": 0,
+   "replaced": false,
+   "running": false
+  },
+  "cors": "null",
+  "status": 200,
+  "type": "application/json"
+ },
+ "screen saver photos": {
+  "body": {
+   "credits": {},
+   "every": 25,
+   "from": "",
+   "photos": []
+  },
+  "cors": "null",
+  "status": 200,
+  "type": "application/json"
+ },
+ "screen saver: a couch scene, no launcher files in the test folder": {
+  "body": "",
+  "cors": "null",
+  "status": 404,
+  "type": ""
+ },
+ "screen saver: not a couch scene": {
+  "body": "",
+  "cors": "null",
+  "status": 404,
+  "type": ""
+ },
+ "screen saver: a live source that is not installed": {
+  "body": {
+   "error": "not a live source"
+  },
+  "cors": "null",
+  "status": 200,
+  "type": "application/json"
+ },
+ "screen saver: the launcher reports a key": {
+  "body": {
+   "returnValue": true
+  },
+  "cors": "null",
+  "status": 200,
+  "type": "application/json"
+ },
+ "screen saver: dismiss": {
+  "body": {
+   "returnValue": true
+  },
+  "cors": "null",
+  "status": 200,
+  "type": "application/json"
+ },
  "log line": {
   "body": {},
   "cors": "null",
