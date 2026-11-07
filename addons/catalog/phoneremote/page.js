@@ -573,7 +573,7 @@ function vfit(){var x=$('vtxt');x.style.height='auto';x.style.height=Math.max(38
    Voice works when the TV has something that answers (the AI chat, Home Assistant or a server); until the TV has said, the mic is on */
 function vOn(){return !vst||!!(vst.ok&&vst.answers)}
 function vOffWhy(){return vst&&!vst.ok?t('The service on the TV has no voice yet. Update CleanYourTV.'):t('Nothing on the TV answers yet. Set it up in the manager: Voice.')}
-function micDraw(down){var on=vOn();each('.qmic',function(b){b.className='qmic'+(on?'':' off')+(down===b?' on':'');b.setAttribute('aria-disabled',on?'false':'true')})}
+function micDraw(down){var on=vOn();each('.qmic',function(b){b.className='qmic'+(on?'':' off')+(down===b?' on':'');b.setAttribute('aria-disabled',on?'false':'true');b.setAttribute('aria-label',on?t('Speak to the TV'):t('Speak to the TV')+'. '+vOffWhy())})}
 function micDown(e){if(e.type==='touchstart')lastTouch=Date.now();else if(Date.now()-lastTouch<700)return;
  vHeld=false;clearTimeout(vT);micDraw(e.currentTarget);if(!vOn())return;vT=setTimeout(function(){vHeld=true;buzz();vopen(true)},480)}
 function micUp(){clearTimeout(vT);micDraw()}

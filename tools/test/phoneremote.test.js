@@ -143,7 +143,16 @@ run(async () => {
       { id: 'com.example.tv', title: 'Example' },
     ],
   };
-  const voice = { installed: true, listening: false, last: null, asked: [], listens: 0, answer: 'Turned off Kitchen lights.' };
+  const voice = {
+    installed: true,
+    listening: false,
+    last: null,
+    asked: [],
+    listens: 0,
+    answer: 'Turned off Kitchen lights.',
+    askMs: 0,
+    llm: { enabled: true, hasKey: true },
+  };
   const stub = http.createServer((req, res) => {
     let d = '';
     req.on('data', c => (d += c));
@@ -156,13 +165,13 @@ run(async () => {
           listening: voice.listening,
           last: voice.last,
           url: '',
-          llm: { enabled: true, hasKey: true },
+          llm: voice.llm,
           ha: { configured: false },
         });
       if (req.url === '/api/voice/ask' && req.method === 'POST') {
         const b = JSON.parse(d || '{}');
         voice.asked.push(b.text);
-        return vj({ text: b.text, answer: voice.answer, via: 'ha', error: '' });
+        return setTimeout(() => vj({ text: b.text, answer: voice.answer, via: 'ha', error: '' }), voice.askMs);
       }
       if (req.url === '/api/voice/listen' && req.method === 'POST') {
         if (!voice.installed) return vj({ started: false, error: 'voice is not installed' });
@@ -521,6 +530,31 @@ run(async () => {
     'without voice on the TV the phone is told why, and nothing listens'
   );
   voice.installed = true;
+  // the AI chat switched on without a key answers nothing: the mic stays off (a server address or Home Assistant would count)
+  voice.llm = { enabled: true, hasKey: false, server: 'http://x' };
+  p.c.send(JSON.stringify({ t: 'vstat' }));
+  for (let i = 0; i < 20 && p.msgs.filter(m => m.t === 'vstat').length < 2; i++) await sleep(50);
+  ok(p.msgs.filter(m => m.t === 'vstat')[1].answers === false, 'the AI chat on without a key does not count as something that answers');
+  voice.llm = { enabled: true, hasKey: true };
+  // a phone that leaves before its answer comes: the late answer is dropped quietly, the service goes on
+  let unhandled = 0;
+  const onUnhandled = () => unhandled++;
+  process.on('unhandledRejection', onUnhandled);
+  const p2 = await phone(port, token);
+  for (let i = 0; i < 20 && !p2.msgs.filter(m => m.t === 'ready').length; i++) await sleep(50);
+  voice.askMs = 150;
+  p2.c.send(JSON.stringify({ t: 'ask', text: 'are you there' }));
+  await sleep(40);
+  p2.c.close();
+  await sleep(300);
+  voice.askMs = 0;
+  process.removeListener('unhandledRejection', onUnhandled);
+  p.c.send(JSON.stringify({ t: 'ping' }));
+  for (let i = 0; i < 20 && !p.msgs.filter(m => m.t === 'pong').length; i++) await sleep(50);
+  ok(
+    unhandled === 0 && voice.asked.indexOf('are you there') >= 0 && p.msgs.filter(m => m.t === 'pong').length > 0,
+    'an answer for a phone that left meanwhile is dropped without an error, and the other phones go on'
+  );
 
   p.c.send(JSON.stringify({ t: 'key', k: 'HOME', n: 7 }));
   p.c.send(JSON.stringify({ t: 'key', k: 'POWEROFF', n: 8 }));

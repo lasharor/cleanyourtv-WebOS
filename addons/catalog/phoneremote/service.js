@@ -755,12 +755,17 @@ function create(ctx, opts) {
       ok: true,
       installed: s.installed,
       unsupported: !!s.unsupported,
-      answers: !!((l.enabled && (l.hasKey || l.server)) || s.url || h.configured), // something on the TV answers what is asked
+      answers: !!((l.enabled && l.hasKey) || s.url || h.configured), // something on the TV answers what is asked
       listening: !!s.listening,
     };
   }
+  // an answer can come long after the question (45 s, a listen 90 s): the phone may be gone by then, and a send on a socket that
+  // closed meanwhile must not throw out of the handler, which nobody awaits
   const tell = (c, o) => {
-    if (!c.conn.closed) c.conn.send(JSON.stringify(o));
+    if (c.conn.closed) return;
+    try {
+      c.conn.send(JSON.stringify(o));
+    } catch (_) {}
   };
   async function voiceAsk(c, m) {
     const text = String(m.text || '')
@@ -802,6 +807,8 @@ function create(ctx, opts) {
       busy = false;
       if (!c.vtimer) return;
       const l = s.last || {},
+        // the record is this listen's when it is not older than its start: the voice service has one listener at a time and answers
+        // a second listen with "already listening", so no other listen can write a newer record while this one runs
         mine = (l.at || 0) >= t0 - 1000;
       if (typeof s.listening !== 'boolean') {
         if (++misses >= 5) {
@@ -909,7 +916,7 @@ function create(ctx, opts) {
     if (VOICE[m.t]) {
       if (c.tokens < 1) return c.conn.send(JSON.stringify({ t: 'err', n: m.n, e: 'slow down' }));
       c.tokens--;
-      return VOICE[m.t](c, m);
+      return Promise.resolve(VOICE[m.t](c, m)).catch(() => {}); // a voice step that fails ends quietly: the phone times out on its own
     }
     const act = ACTIONS[m.t];
     if (!act) return;
