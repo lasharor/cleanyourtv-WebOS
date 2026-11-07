@@ -567,6 +567,21 @@ run(async () => {
       /20-cleanyourtv-screensaver setup/.test(fs.readFileSync(path.join(root, 'scripts', 'bootstrap.sh'), 'utf8')),
       'bootstrap.sh calls the screen saver script in its setup mode'
     );
+
+    // after its own app manager restart (a boot where Home is the stand-in), as 10-cleanyourtv-home does after its restart: Home
+    // is opened again only when nothing or Home is in front, not over an input the TV booted into
+    o = saverRun({ kind: 'qml', homeStandin: true, fg: '', waitRestart: true, waitReload: true });
+    ok(restarted(o) && /reload-home/.test(o.calls), 'Home stand-in, nothing in front after the restart: Home is reloaded');
+    o = saverRun({ kind: 'qml', homeStandin: true, fg: 'com.webos.app.hdmi1', waitRestart: true });
+    ok(
+      restarted(o) && !/reload-home/.test(o.calls) && !/applicationManager\/launch/.test(o.calls) && /hdmi1/.test(o.log),
+      'Home stand-in, an HDMI input in front after the restart: Home is not opened over it, and the log says why'
+    );
+    o = saverRun({ kind: 'qml', fg: '', waitRestart: true, waitReload: true });
+    ok(
+      restarted(o) && /applicationManager\/launch/.test(o.calls) && !/reload-home/.test(o.calls),
+      "no Home stand-in, a black screen after the restart: Home is launched (the app manager's own)"
+    );
   }
 
   rmrf(tmp);

@@ -79,5 +79,14 @@ echo "$(up) saver: restarting the app manager so that it reads the new screen sa
   echo "$(up) saver: the app manager is restarted" >> $LOG
   for i in $(seq 1 60); do systemctl is-active sam >/dev/null && break; sleep 2; done
   sh $L/after-sam.sh
-  [ $RH = 1 ] && sh $L/reload-home.sh
+  # The restart closes what was on screen. As 10-cleanyourtv-home does after its restart: Home is opened again only when nothing or
+  # Home is in front a moment later, not over an app or input the user went to meanwhile (or that the TV started on, such as HDMI).
+  sleep ${CYTV_SETTLE:-8}
+  fg=$(luna-send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null 2>/dev/null | grep '"appId"')
+  case "$fg" in
+    *'"appId": ""'*|*com.webos.app.home*|"")
+      if [ $RH = 1 ]; then sh $L/reload-home.sh   # the Home stand-in: its page lives in webapp-mgr, which the restart took down
+      else luna-send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' </dev/null >/dev/null 2>&1; fi ;;
+    *) echo "$(up) saver: $(echo "$fg" | cut -d'"' -f4) is in front after the restart; Home is not opened over it" >> $LOG ;;
+  esac
 ) </dev/null >/dev/null 2>&1 &
