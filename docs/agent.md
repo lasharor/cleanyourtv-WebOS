@@ -37,6 +37,15 @@ Where the tools come from:
 The tools that change what is on screen (`launch_app`, `switch_input`, `close_app`, `navigate`, `show_notification`, `remote_buttons`) first close LG's
 screen saver if it is on: it starts when nobody has pressed a key for a while, and the Inputs list and cards would open under it.
 
+### The add-ons' tools
+
+Each add-on gives one tool with an `action`, so the tools stay under the 40 the service sends. They are there while the add-on is
+installed and switched on.
+
+| Add-on | Tool | Actions |
+|---|---|---|
+| Spotify now playing | `spotify` | `now_playing` (the track, the artist, the device), `play`, `pause`, `next`, `previous`, `devices` (the Spotify Connect devices, by name), `open_on_tv` (the Spotify app of the TV on what plays). The controls need Spotify Premium. Moving the music to another device is not a tool: it can wake a speaker in another room |
+
 ## The voice assistant uses them
 
 In the manager app, **Features > AI agents (MCP) > Let the voice assistant act on the TV** (or the box on the voice setup page) lets the AI use the tools. The
