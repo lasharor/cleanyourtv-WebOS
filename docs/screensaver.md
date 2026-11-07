@@ -13,7 +13,8 @@ LG's screen saver back.
        their credit line), or a theme's own scenes;
     2. else, with [Wallpapers](wallpapers.md) on, the **wallpaper library**: uploads from the phone, the photos of a source add-on
        (Immich), and a live source (Unsplash: the photo Home shows now, with the photographer's name; the saver does not ask the
-       source for another, which would make Home skip one; with only a live source the page looks again every 25 seconds and follows
+       source for another, which would make Home skip one; right after the service starts, the photo the saver fetched first is
+       the one Home gets next; with only a live source the page looks again every 25 seconds and follows
        Home when its photo changes);
     3. else the **theme's wallpaper**.
 - **The clock and the date**, bottom right, solid white over the photo: no transparency, so it stays readable on a bright picture.
