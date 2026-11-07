@@ -285,7 +285,15 @@ function build() {
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Set up from your phone', sub: 'providers, keys, models', fn: openPair });
+    rows.push({
+      label: 'Set up from your phone',
+      sub: 'providers, keys, models',
+      info: {
+        t: 'Set up from your phone',
+        d: 'Shows a QR code. On a phone on the same Wi-Fi, add OpenRouter or a server of yours, set their keys, models and order, and write instructions. Nothing is typed on the TV.',
+      },
+      fn: openPair,
+    });
     rows.push({
       label: 'Set up with commands',
       sub: 'for scripts and ssh',

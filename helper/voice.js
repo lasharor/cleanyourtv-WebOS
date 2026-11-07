@@ -467,15 +467,12 @@ async function respond(text, card) {
   let aiFailed = false;
   if (!out.answer && useAi) {
     try {
-      // a fallback asked: the thinking card says which one
-      const r = await askLlm(text, p =>
-        say({ kind: 'thinking', title: 'Thinking · asking ' + p.name, question: text, text: '', seconds: 90 })
-      );
+      // the cards do not say which provider answers or is asked; the reply does (provider, tried)
+      const r = await askLlm(text);
       out.answer = r.answer;
       out.via = 'ai';
       out.provider = r.via;
       out.tried = r.tried;
-      if (r.tried.length) out.foot = 'via ' + r.name + ' · ' + r.tried.map(t => t.name).join(', ') + ' did not answer';
       if (out.error) out.error = '';
     } catch (e) {
       aiFailed = !!e.tried;
@@ -509,7 +506,6 @@ async function respond(text, card) {
           text: out.answer || '',
           seconds: readSeconds(out.answer),
         },
-        out.foot ? { foot: out.foot } : {},
         out.card && out.card.image ? { image: out.card.image } : {},
         out.card && out.card.seconds ? { seconds: out.card.seconds } : {}
       )
@@ -639,7 +635,7 @@ function applyLlm(cur, b) {
       p.model = d.model.trim();
     }
     if (d.waitS !== undefined) {
-      if (WAITS.indexOf(+d.waitS) < 0) return 'wait ' + WAITS.join(', ') + ' seconds';
+      if (WAITS.indexOf(+d.waitS) < 0) return 'the wait must be one of ' + WAITS.join(', ') + ' seconds';
       p.waitS = +d.waitS;
     }
     if (typeof d.off === 'boolean') p.off = d.off;
@@ -714,7 +710,7 @@ function applyLlm(cur, b) {
     if (!p) return 'no such AI provider';
     list = [p].concat(list.filter(x => x !== p));
   }
-  if (list.filter(p => p.type === 'openrouter').length > 1) return 'OpenRouter can be in the list once';
+  if (list.filter(p => p.type === 'openrouter').length > 1) return 'OpenRouter can be in the list only once';
   const seen = {};
   for (const p of list)
     if (p.type === 'server') {
@@ -722,7 +718,7 @@ function applyLlm(cur, b) {
       seen[sameAddress(p.base)] = 1;
     }
   if (raw.enabled && !list.some(usable)) {
-    if (b.enabled === true) return 'add an AI provider first';
+    if (b.enabled === true) return 'add an AI provider first, or switch one on';
     raw.enabled = false; // the last one that could answer was removed or switched off
   }
   raw.providers = list;
@@ -857,7 +853,8 @@ function pairPage(msg, done, token, lang, only) {
     'optional',
     'API key',
     '(one is saved; leave empty to keep it)',
-    '(only if your server needs one; most at home do not)',
+    '(only if your server asks for one; most do not)',
+    'usually ends in /v1',
     'Remove the saved key',
     'Model',
     'read from your server',
@@ -913,9 +910,9 @@ el('button',{type:'button',class:'ib','aria-label':tx('Move up'),text:'\\u25B2',
 el('button',{type:'button',class:'ib','aria-label':tx('Remove'),text:'\\u2715',onclick:function(){p.ask=true;draw()}})]));
 var b=c.querySelectorAll('.ib');if(!i)b[0].disabled=true;if(i===last)b[1].disabled=true;
 if(p.ask)c.appendChild(el('div',{class:'ask'},[el('span',{text:tx('Remove this provider?')}),el('button',{type:'button',text:tx('Yes'),onclick:function(){list.splice(list.indexOf(p),1);draw()}}),el('button',{type:'button',class:'sec',text:tx('No'),onclick:function(){p.ask=false;draw()}})]));
-if(srv){c.appendChild(field(p,tx('Address'),'',el('input',{type:'url',value:p.base,placeholder:'http://computer:11434/v1',class:p.err.base?'bad':'',oninput:function(e){p.base=e.target.value.trim()},onchange:function(){check(p);loadModels(p)}}),'base'));
+if(srv){c.appendChild(field(p,tx('Address'),tx('usually ends in /v1'),el('input',{type:'url',value:p.base,placeholder:'http://computer:11434/v1',class:p.err.base?'bad':'',oninput:function(e){p.base=e.target.value.trim()},onchange:function(){check(p);loadModels(p)}}),'base'));
 c.appendChild(field(p,tx('Name'),tx('optional'),el('input',{type:'text',value:p.name||'',oninput:function(e){p.name=e.target.value}}),'name'))}
-var kh=p.hasKey&&!p.clearKey?tx('(one is saved; leave empty to keep it)'):srv?tx('(only if your server needs one; most at home do not)'):'';
+var kh=p.hasKey&&!p.clearKey?tx('(one is saved; leave empty to keep it)'):srv?tx('(only if your server asks for one; most do not)'):'';
 c.appendChild(field(p,tx('API key'),kh,el('input',{type:'password',autocomplete:'off',placeholder:srv?'':'sk-or-...',class:p.err.key?'bad':'',oninput:function(e){p.key=e.target.value.trim()}}),'key'));
 if(p.hasKey&&!p.clearKey&&srv)c.appendChild(el('a',{href:'#',style:'font-size:14px;color:#aaa',text:tx('Remove the saved key'),onclick:function(e){e.preventDefault();p.clearKey=true;draw()}}));
 var dl='m'+i,mi=el('input',{list:dl,value:p.model,autocomplete:'off',class:p.err.model?'bad':'',oninput:function(e){p.model=e.target.value.trim()}});

@@ -169,11 +169,11 @@ function note(p, ok, ms, e) {
   };
 }
 // The providers in their order: resolves {answer, via, name, tried: [{id, name, error}]}; fails with every reason when none
-// answered. onTry(provider) is called when a fallback is asked.
-async function askLlm(text, onTry) {
+// answered.
+async function askLlm(text) {
   const l = llmCfg(),
     list = l.providers.filter(usable);
-  if (!list.length) throw new Error(l.providers.length ? 'no AI provider can be used' : 'no AI provider is set up');
+  if (!list.length) throw new Error(l.providers.length ? 'every AI provider is switched off or has no model' : 'no AI provider is set up');
   if (Date.now() - lastTurn > 600000) history = []; // a new conversation after ten quiet minutes
   const turns = history.concat({ role: 'user', content: text }).slice(-12);
   const system = (l.system || DEFAULT_SYSTEM) + ' Today is ' + new Date().toISOString().slice(0, 10) + '.';
@@ -192,7 +192,6 @@ async function askLlm(text, onTry) {
       tried.push({ id: p.id, name: p.name, error: 'no time left' });
       continue;
     }
-    if (tried.length && onTry) onTry(p);
     const t0 = Date.now();
     try {
       const answer = await askOne(p, turns, system, Math.min(p.waitS * 1000, left));
@@ -328,7 +327,7 @@ const MAJOR = ['anthropic', 'openai', 'google', 'meta-llama', 'mistralai', 'deep
 function models(pIn) {
   const p = provider(pIn || {}),
     api = apiOf(p),
-    name = p.type === 'openrouter' ? 'OpenRouter' : 'The AI server',
+    name = p.type === 'openrouter' ? 'OpenRouter' : 'your server',
     ck = p.type + ' ' + api + ' ' + (p.key ? 'k' : '');
   if (p.type === 'server' && !p.base) return Promise.reject(new Error('enter the address of your server'));
   const c = modelCache[ck];

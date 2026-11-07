@@ -1,9 +1,8 @@
 # Voice (optional)
 
 Recognises speech from the remote's microphone **on the TV**. The text is shown on screen and can be sent to a server you run,
-to language models (OpenRouter, an AI server of your own, or both, one taking over when the other fails), or both; the answer is
-shown as text on screen.
-Answers are not spoken. No audio is recorded or sent anywhere.
+to language models (OpenRouter, a self-hosted AI server, or both, one taking over when the other fails), or to both; the answer
+is shown as text on screen. Answers are not spoken. No audio is recorded or sent anywhere.
 
 It is **off and not installed by default**. Nothing described here runs until you install it.
 
@@ -55,15 +54,15 @@ In **Voice**, **Set up from your phone** shows a QR code. Scan it with a phone o
 provider: **+ OpenRouter** and **+ Your own server** add one, ▲ and ▼ change the order, ✕ removes one. On each card:
 
 - **Address** (your own server): the part before `/chat/completions`, usually ending with `/v1`: `http://<computer>:<port>/v1`.
-- **API key**: OpenRouter's key, or your server's if it needs one (most at home do not). A saved key is never shown; leave the
+- **API key**: OpenRouter's key, or your server's if it asks for one (most do not). A saved key is never shown; leave the
   field empty to keep it.
-- **Model**: the list is read from that provider while you type the address; any model name can be typed.
+- **Model**: the list is read from that provider once its address is entered; any model name can be typed.
 - **Wait for an answer**: 10, 25, 30, 45 or 60 seconds (25 for a server, 30 for OpenRouter by default).
 - **Test** asks the provider "Say OK" with the values on the card and shows the time it took, or what went wrong.
 
-Below the cards: **Answer with the AI**, the instructions, which answers first (Home Assistant or the AI) and your own server
-for the text. **Save** checks every card first. The page is open for ten minutes or until you save, at a random address. It is
-plain HTTP, so use it on a network you trust.
+Below the cards: **Answer with the AI**, the instructions, which answers first (Home Assistant or the AI) and the address of a
+server of yours that gets the text (see above). **Save** checks every card first. The page is open for ten minutes or until you
+save, at a random address. It is plain HTTP, so use it on a network you trust.
 
 On the TV, **Voice** > **AI providers** lists them in their order with the last result of each (a green dot: answered; red: did
 not answer; grey: not tried yet). Channel up and down move the selected one; OK opens it: **Test now**, **Model**, **Wait for an
@@ -78,9 +77,9 @@ answer**, **Use this provider** (switch it off without removing it), **Make firs
 - it gives an empty answer, or tries to call a tool, after one more try.
 
 All providers together have 60 seconds. A provider that could not be reached is skipped for one minute, so a computer that is off
-costs nothing on the next question. While a fallback is asked, the card on the TV says **Thinking · asking OpenRouter**; the answer
-then ends with a quiet line such as "via OpenRouter · Ollama on PC did not answer". When none answers, the card **Not answered**
-lists the reason of each one.
+costs nothing on the next question. The card on the TV does not say which provider answered: it shows **Thinking**, then the
+answer. When none answers, the card **Not answered** lists the reason of each one. The reply of `/api/voice/ask` (below) and
+**Voice** > **AI providers** in the manager app show which one answered.
 
 ### Your own server
 
@@ -132,12 +131,12 @@ curl -X POST localhost:8765/api/voice/set -d '{"llm":{"enabled":true,"providers"
 `name`, `base`, `key`, `model`, `waitS` (10, 25, 30, 45 or 60) and `off`. `POST /api/voice/test {"id":"<id>"}` tests one;
 `GET /api/voice/models?id=<id>` lists its models.
 
-**Coming from version 1.6 (OpenRouter only):** nothing to do. Your OpenRouter key, model and instructions become the first provider
-and answer as before; add your own server on the phone page to put it first, with OpenRouter as the fallback. The commands of 1.6
-still work and act on the OpenRouter provider: `{"llm":{"key":"sk-or-...","model":"..."}}` adds it or changes its key or model,
-`{"llm":{"clearKey":true}}` removes it, `{"llm":{"enabled":true}}` switches the answers on. The status still has `hasKey` (an
-OpenRouter key is saved) and `model` (of the provider asked first). The settings keep OpenRouter's key and model where 1.6 reads
-them, so going back to the previous version in the manager keeps OpenRouter answering.
+**Coming from version 1.6 (OpenRouter only):** nothing to do. Your OpenRouter key, model and instructions become the first
+provider and answer as before. To have your own server answer first, add it on the phone page and move it to the top: OpenRouter
+is then the fallback. The commands of 1.6 still work and act on the OpenRouter provider: `{"llm":{"key":"sk-or-...","model":"..."}}`
+adds it or changes its key or model, `{"llm":{"clearKey":true}}` removes it, `{"llm":{"enabled":true}}` switches the answers on.
+The status still has `hasKey` (an OpenRouter key is saved) and `model` (of the provider asked first). The settings keep
+OpenRouter's key and model where 1.6 reads them, so going back to the previous version in the manager keeps OpenRouter answering.
 
 You can also ask by text, with the same result, and without the speech download:
 

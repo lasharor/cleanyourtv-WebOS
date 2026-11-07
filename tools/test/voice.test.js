@@ -326,9 +326,11 @@ run(async () => {
     'the first cannot be reached: the next one answers, and the reply says who was tried'
   );
   ok(
-    cards.some(c => c.kind === 'thinking' && /asking/.test(c.title)) &&
-      /via .* · Dead PC did not answer/.test((cards[cards.length - 1] || {}).foot || ''),
-    'the cards say a fallback is asked, and which one answered'
+    cards.length > 0 &&
+      cards.every(c => !(c.kind === 'answer' && c.foot)) &&
+      cards.some(c => c.kind === 'thinking') &&
+      cards.every(c => c.kind !== 'thinking' || c.title === 'Thinking'),
+    'the cards do not say which provider answered or is asked: no foot on the answer, a plain Thinking card'
   );
   const chat = olLog.filter(x => x.url === '/v1/chat/completions')[0];
   ok(

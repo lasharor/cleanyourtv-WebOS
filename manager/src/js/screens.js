@@ -1,5 +1,5 @@
 function aiHelp() {
-  return 'Chat with language models: OpenRouter, a server of yours (Ollama, LM Studio and others) or both, the first answering and the next taking over when it fails. Run these on the TV (ssh):\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"enabled":true,"providers":[{"type":"server","base":"http://192.168.1.20:11434/v1","model":"llama3.2:3b"},{"type":"openrouter","key":"sk-or-...","model":"openrouter/auto"}]}}\'\n\nOptional: "system" sets the instructions; a provider takes "name", "key", "waitS" (10, 25, 30, 45 or 60) and "off". Ask by text from anywhere on the TV:\ncurl -X POST localhost:8765/api/voice/ask -d \'{"text":"What is the capital of Peru?"}\'\n\nSpoken and typed questions go as text to the providers in their order; no audio does. Each key stays on the TV and goes only to its own provider.\n\nHome Assistant (Assist), with a long-lived access token:\ncurl -X POST localhost:8765/api/voice/set -d \'{"ha":{"url":"http://homeassistant.local:8123","token":"..."}}\'\nOptional: "route" is ha-first, ha-only or ai-only; "selfSigned":true accepts a self-signed certificate; "agent" is a conversation entity.';
+  return 'Answers from language models: OpenRouter, a server of yours with the OpenAI-compatible API (Ollama, for example), or several, asked in order. If one does not answer, the next one is. Run these on the TV (ssh):\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"enabled":true,"providers":[{"type":"server","base":"http://192.168.1.20:11434/v1","model":"llama3.2:3b"},{"type":"openrouter","key":"sk-or-...","model":"openrouter/auto"}]}}\'\n\nOptional: "system" sets the instructions; a provider takes "name", "key", "waitS" (10, 25, 30, 45 or 60) and "off". Ask by text from anywhere on the TV:\ncurl -X POST localhost:8765/api/voice/ask -d \'{"text":"What is the capital of Peru?"}\'\n\nSpoken and typed questions go as text to the providers in their order; no audio does. Each key stays on the TV and goes only to its own provider.\n\nHome Assistant (Assist), with a long-lived access token:\ncurl -X POST localhost:8765/api/voice/set -d \'{"ha":{"url":"http://homeassistant.local:8123","token":"..."}}\'\nOptional: "route" is ha-first, ha-only or ai-only; "selfSigned":true accepts a self-signed certificate; "agent" is a conversation entity.';
 }
 function liveRefresh() {
   api('/api/live/status').then(
@@ -792,7 +792,7 @@ function openPair(only) {
           '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter the <b>address</b> of Home Assistant and a <b>long-lived access token</b>, and tap <b>Save</b>.</li>'
         )
       : tr(
-          '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Add <b>OpenRouter</b> or <b>your own server</b> with its key and model, and tap <b>Save</b>.</li>'
+          '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Add <b>OpenRouter</b> or <b>your own server</b>, choose a model, and tap <b>Save</b>.</li>'
         );
   $('sharemsg').textContent = tr('Preparing\u2026');
   api('/api/voice/pair', only === 'ha' ? { only: 'ha' } : {}).then(
@@ -869,7 +869,8 @@ var pvId = '' /* the provider the Provider screen shows */,
 var PV_OK = '#9be3b0',
   PV_ERR = '#ff9a8a',
   PV_NONE = 'rgba(245,246,248,.35)',
-  PV_HELP = 'OK opens a provider. Channel up or down moves the selected one in the order. Addresses and keys are entered on your phone.';
+  PV_HELP =
+    'OK opens this provider. Channel up and down move it in the order. The dot is its last result: green answered, red did not, grey not tried yet. Addresses and keys are set on your phone.';
 function llmList() {
   return ((vo || {}).llm || {}).providers || [];
 }
@@ -1020,7 +1021,15 @@ function llmTestAll() {
 function provRows() {
   var l = llmList();
   if (!l.length) {
-    rows.push({ label: 'Set up from your phone', sub: 'add OpenRouter or your own server', fn: openPair });
+    rows.push({
+      label: 'Set up from your phone',
+      sub: 'add OpenRouter or your own server',
+      info: {
+        t: 'Set up from your phone',
+        d: 'Shows a QR code. On a phone on the same Wi-Fi, add OpenRouter or a server of yours, set their keys, models and order, and write instructions. Nothing is typed on the TV.',
+      },
+      fn: openPair,
+    });
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
     return;
@@ -1129,10 +1138,10 @@ function provOneRows() {
   });
   rows.push({
     label: 'Remove',
-    sub: 'asks again',
+    sub: 'press OK twice',
     info: {
       t: 'Remove',
-      d: 'Removes this provider and its key from the TV. Press OK twice; the next one in the list then answers in its place.',
+      d: 'Removes this provider and its key from the TV. Press OK twice. The ones after it move up a place; if no provider is left that can answer, AI chat switches off.',
     },
     fn: function () {
       var now = Date.now();

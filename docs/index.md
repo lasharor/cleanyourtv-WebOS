@@ -16,8 +16,8 @@ on-device voice recognition, and an optional debloat of LG's ads and telemetry.
 - **Key remapping (optional).** A remote button (the Netflix or Prime key, a colour key) opens an app, an input, Live TV or Home. Off until you switch it on. [More](key-remap.md).
 - **Picture notifications.** A card with a photo over whatever is on screen, triggered from your network, for example by
   Home Assistant. [More](notifications.md).
-- **Voice (optional).** Speech recognition on the TV (Moonshine), with answers from Home Assistant's Assist, a language model through
-  OpenRouter or a self-hosted AI server (Ollama, LM Studio and others), or your own server, shown as text. [More](voice.md).
+- **Voice (optional).** Speech recognition on the TV (Moonshine), with answers from Home Assistant's Assist, a language model
+  (through OpenRouter, or self-hosted on any OpenAI-compatible server such as Ollama) or your own server, shown as text. [More](voice.md).
 - **Debloat.** Stops LG's ad and telemetry services and blocks a few ad servers. [More](debloat.md).
 - **Manager app.** Sets up, updates and removes everything from the TV. [More](manager.md).
 
