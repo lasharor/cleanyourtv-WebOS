@@ -1,7 +1,7 @@
 {
   "id": "tuner",
   "name": "TV guide (LG tuner)",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A guide for LG's own tuner (antenna or cable): the channels, what is on now and next, the schedule.",
   "about": "A guide for the channels of the TV's own tuner (antenna, cable), in the look of the Live TV guide: the channels, what is on now and next, and the schedule of the channel you select, read from the same data LG's own guide uses. OK on a channel opens LG's Live TV on it. It is a page next to Home, on its own colour button, and it works on its own: it needs neither Live TV (IPTV) nor a playlist. Nothing is read until you open it. The guide itself is the code of the Live TV guide, built again, so both stay alike. The idea and the first version are from @Tech-Dex (pull request 144, issue 126).",
   "kind": "service",

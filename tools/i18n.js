@@ -98,6 +98,28 @@ function report() {
   return { keys, unused, rows, problems, text };
 }
 
+// The manager's rows: { label: '...', sub: '...', about: '...' } are translated where the list draws them (manager/src/js/list.js), so
+// their texts are not inside tr('...'). The plain strings of such a value count (also both sides of a ? :, up to the next property or
+// the end of the object), split at " · " as t() splits them. Left out: a piece that starts or ends with a space (part of a text built in
+// code), a value that is compared (=== 'input') or used as a key ([...], || fallback), and names such as com.webos.app.hdmi.
+function rowTexts(src) {
+  const out = [],
+    rowValue = /\b(?:label|sub|about)\s*:\s*([\s\S]*?)(?=,\s*[\w$]+\s*:(?!:)|\s*\})/g,
+    lit = /'((?:[^'\\\n]|\\.)*)'/g;
+  let m, l;
+  while ((m = rowValue.exec(src))) {
+    const value = m[1];
+    while ((l = lit.exec(value))) {
+      if (!l[1] || /(===?|!==?|\[|\|\|)\s*$/.test(value.slice(0, l.index)) || /^\s*(===?|!==?|\])/.test(value.slice(l.index + l[0].length)))
+        continue;
+      for (const piece of l[1].split(' \u00B7 '))
+        if (piece === piece.trim() && /[A-Za-z]{2}/.test(piece) && !/[(/]$|^[\w-]+\.[\w.]+$/.test(piece) && out.indexOf(piece) < 0)
+          out.push(piece);
+    }
+  }
+  return out;
+}
+
 if (require.main === module) {
   const args = process.argv.slice(2);
   if (args.indexOf('--sync') >= 0) {
@@ -116,10 +138,11 @@ if (require.main === module) {
             .readdirSync(js)
             .map(f => fs.readFileSync(path.join(js, f), 'utf8'))
             .join('\n');
-      const svc = path.join(root, 'addons', 'catalog', d, 'service.js');
-      if (fs.existsSync(svc)) {
-        const s = fs.readFileSync(svc, 'utf8');
-        if (s.indexOf('i18n.tr(') >= 0) extra += '\n' + s;
+      // its service and the other scripts beside it that translate through the service's table (the phone remote's page.js:
+      // const T = s => esc(i18n.tr(lang, s)), so its texts are T('...'))
+      for (const f of fs.readdirSync(path.join(root, 'addons', 'catalog', d)).filter(n => /\.js$/.test(n))) {
+        const s = fs.readFileSync(path.join(root, 'addons', 'catalog', d, f), 'utf8');
+        if (s.indexOf('i18n.tr(') >= 0) extra += '\n' + s.replace(/\bT\('/g, "t('");
       }
     }
     const src = B.plain(
@@ -139,6 +162,15 @@ if (require.main === module) {
     let m;
     while ((m = re.exec(src))) found[m[1]] = 1;
     while ((m = reI18n.exec(src))) found[m[1]] = 1;
+    for (const k of rowTexts(
+      B.plain(
+        fs
+          .readdirSync(path.join(root, 'manager/src/js'))
+          .map(f => fs.readFileSync(path.join(root, 'manager/src/js', f), 'utf8'))
+          .join('\n')
+      )
+    ))
+      found[k] = 1;
     let added = 0;
     for (const k of Object.keys(found)) if (!Object.prototype.hasOwnProperty.call(en, k)) (en[k] = k), added++;
     fs.writeFileSync(enFile, JSON.stringify(en, null, 1) + '\n');
@@ -171,4 +203,4 @@ if (require.main === module) {
   r.problems.forEach(p => console.log('FAIL ' + p));
   process.exit(r.problems.length ? 1 : 0);
 }
-module.exports = { report };
+module.exports = { report, rowTexts };
