@@ -96,12 +96,17 @@ Nothing is written under `/usr`: the mount disappears at reboot. `DISABLE` in `/
   that changes the derived manifest is staged as well.
 - `tvprofile.js` `saverTakeover`: `standin` where LG's screen saver is a native program (the script over it, no app manager restart),
   `mount` otherwise (the folder over the app and the app manager restarted). `screensaver-method` holding `mount` forces the second.
+  When the stand-in cannot open the page it unmounts itself and starts LG's program for that boot (`/tmp/cleanyourtv-saver-failed`,
+  shown in the manager); after two boots in a row with such a failure (`screensaver-standin-fails`) `20-` writes `screensaver-method`
+  itself.
 - `10-cleanyourtv-home` calls it with `prepare` before its own `systemctl restart sam`, so one restart reads both; `/tmp/cleanyourtv-sam`
   records that the app manager was restarted this boot, so `20-` does not restart it again. Where Home is a stand-in (no restart there)
-  and the screen saver needs the mount, `20-` restarts it after Home came up and calls `reload-home.sh` afterwards: the restart takes
-  down the Home page in `webapp-mgr`.
+  and the screen saver needs the mount, `20-` restarts it after Home came up and then calls `reload-home.sh` when nothing or Home is in
+  front: the restart takes down the Home page in `webapp-mgr`. The setup (`20- setup`) never restarts the app manager for the
+  screen saver; where that would be needed, ours comes at the next boot.
 - `helper/screensaver.js` serves the page its photos and closes it: on `POST /api/screensaver/dismiss`, and by itself when the TV is
-  `Active` again while the page is still listed (a page left behind would keep the remote). It also opens the page over an idle
+  `Active` again without "Screen Saver" in `processing` while the page is still listed, after the page's first minute and at two
+  readings in a row (a page left behind would keep the remote). It also opens the page over an idle
   launcher when `tvpowerd` did not, and the launcher tells it about every key (`POST /api/screensaver/active`): "Home in front" alone
   is not "idle".
 
