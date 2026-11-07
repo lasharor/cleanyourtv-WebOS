@@ -138,10 +138,11 @@ if (require.main === module) {
             .readdirSync(js)
             .map(f => fs.readFileSync(path.join(js, f), 'utf8'))
             .join('\n');
-      const svc = path.join(root, 'addons', 'catalog', d, 'service.js');
-      if (fs.existsSync(svc)) {
-        const s = fs.readFileSync(svc, 'utf8');
-        if (s.indexOf('i18n.tr(') >= 0) extra += '\n' + s;
+      // its service and the other scripts beside it that translate through the service's table (the phone remote's page.js:
+      // const T = s => esc(i18n.tr(lang, s)), so its texts are T('...'))
+      for (const f of fs.readdirSync(path.join(root, 'addons', 'catalog', d)).filter(n => /\.js$/.test(n))) {
+        const s = fs.readFileSync(path.join(root, 'addons', 'catalog', d, f), 'utf8');
+        if (s.indexOf('i18n.tr(') >= 0) extra += '\n' + s.replace(/\bT\('/g, "t('");
       }
     }
     const src = B.plain(

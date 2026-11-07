@@ -167,4 +167,9 @@ run(async () => {
     absent.length === 0,
     'en.json lists every text of the manager rows (node tools/i18n.js --sync): ' + JSON.stringify(absent.slice(0, 5))
   );
+  // a catalog add-on's page that translates through the service's table with its own short name (the phone remote: T('...'))
+  const phonePage = fs.readFileSync(path.join(root, 'addons', 'catalog', 'phoneremote', 'page.js'), 'utf8');
+  const phoneTexts = (phonePage.match(/\bT\('((?:[^'\\]|\\.)+)'\)/g) || []).map(x => x.slice(3, -2).replace(/\\'/g, "'"));
+  const phoneAbsent = phoneTexts.filter(k => !Object.prototype.hasOwnProperty.call(enKeys, k));
+  ok(phoneTexts.length > 20 && phoneAbsent.length === 0, "en.json lists the phone remote page's texts: " + JSON.stringify(phoneAbsent));
 });
