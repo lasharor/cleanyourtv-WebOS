@@ -91,11 +91,12 @@ function create(store, opts) {
     // a device that pairs again with a token that still works keeps it: no second entry, and the page still learns who it was
     if (token) {
       const v = verify(token, ip);
+      // first: verify() also names the device of a blocked token
+      if (v.error === 'blocked') return { error: 'blocked: the user blocked this agent on the TV', status: 403, blocked: true };
       if (v.device) {
         win.paired = { id: v.device.id, name: v.device.name, ip: String(ip || ''), at: now };
         return { already: true, name: v.device.name, id: v.device.id };
       }
-      if (v.error === 'blocked') return { error: 'blocked: the user blocked this agent on the TV', status: 403, blocked: true };
     }
     const s = state();
     if (s.devices.length >= max) return { error: max + ' ' + label + 's are paired already: remove one on the TV', status: 409 };

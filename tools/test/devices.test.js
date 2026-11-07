@@ -58,6 +58,13 @@ run(async () => {
   ok(D.count() === 2, 'two devices');
 
   ok(D.setBlocked(q.id, true) && D.verify(q.token).error === 'blocked', 'a blocked device is refused');
+  {
+    // found on the TV: a blocked agent that paired again with its token was told it was connected
+    const wk = D.openWindow(),
+      k = D.pair(wk.code, 'blocked one', '10.0.0.11', q.token);
+    ok(k.status === 403 && k.blocked && !k.already && !k.token && D.count() === 2, 'a blocked device that pairs again is refused');
+    ok(!D.windowState(wk.id).paired, 'and its try does not use the code');
+  }
   ok(D.setBlocked(q.id, false) && D.verify(q.token).device, 'and allowed again');
   ok(D.remove(q.id) && D.verify(q.token).error === 'revoked' && D.count() === 1, 'a removed device is refused');
   ok(!D.remove('ffffffff'), 'removing an unknown device says so');
