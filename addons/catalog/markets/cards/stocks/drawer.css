@@ -502,7 +502,8 @@ h1 {
 .st div:nth-child(odd) {
   padding-right: 16px;
 }
-.st span {
+/* the label (the value in b may hold a coloured span of its own) */
+.st div > span {
   display: block;
   font-size: 20px;
   font-weight: 500;
