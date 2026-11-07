@@ -1617,10 +1617,11 @@ function build() {
   /* every paired device: manage one, remove unused ones, remove all */
   if (view === 'mcpdevices') {
     mcpLive();
-    var mn2 = mnet || {},
-      ags = mn2.agents || [];
+    /* ags and mn are this function's (declared on the AI agents screen above): one var each, as ES5 lint wants */
+    var mn2 = mnet || {};
+    ags = mn2.agents || [];
     if (!ags.length) rows.push({ label: 'No device is paired', sub: 'Connect an agent pairs one', dim: true, fn: function () {} });
-    var mn = mn2;
+    mn = mn2;
     ags.forEach(function (a) {
       var soon = a.removesIn != null && a.removesIn < 3 * 864e5;
       rows.push({
@@ -1735,7 +1736,7 @@ function build() {
   }
   /* how long an unused device stays */
   if (view === 'mcpexpire') {
-    var cur = mnet && mnet.expireDays != null ? mnet.expireDays : 14;
+    var keepDays = mnet && mnet.expireDays != null ? mnet.expireDays : 14;
     [
       [1, '1 day'],
       [3, '3 days'],
@@ -1746,7 +1747,7 @@ function build() {
     ].forEach(function (c) {
       rows.push({
         label: c[1],
-        sub: c[0] === cur ? 'chosen' : c[0] === 14 ? 'the default' : c[0] === 0 ? 'not recommended' : '',
+        sub: c[0] === keepDays ? 'chosen' : c[0] === 14 ? 'the default' : c[0] === 0 ? 'not recommended' : '',
         info: {
           t: c[1],
           d: c[0]
