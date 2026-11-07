@@ -1417,9 +1417,7 @@
  "5 minutes": "5 minutes",
  "10 minutes": "10 minutes",
  "AI server address": "AI server address",
- "Key of your AI server": "Key of your AI server",
  "AI chat (self-hosted)": "AI chat (self-hosted)",
  "(empty: OpenRouter; or your own, such as http://computer:11434/v1)": "(empty: OpenRouter; or your own, such as http://computer:11434/v1)",
- "(not needed for a server of your own)": "(not needed for a server of your own)",
- "optional; most servers at home need none": "optional; most servers at home need none"
+ "(OpenRouter's key; with an AI server address, that server's key if it needs one, most at home do not)": "(OpenRouter's key; with an AI server address, that server's key if it needs one, most at home do not)"
 }

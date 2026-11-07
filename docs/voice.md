@@ -98,9 +98,9 @@ ollama pull llama3.2:3b
 OLLAMA_HOST=0.0.0.0 ollama serve
 ```
 
-Then, on the phone page of **Set up from your phone**, set **AI server address** to the address of your server, leave the
-OpenRouter key empty, choose the model from the list (it is read from your server) and switch on **Answer with the AI**. The same
-from a shell:
+Then, on the phone page of **Set up from your phone**, set **AI server address** to the address of your server, leave **API key**
+empty (unless your server needs one), choose the model from the list (it is read from your server) and switch on **Answer with
+the AI**. The same from a shell:
 
 ```sh
 curl -X POST localhost:8765/api/voice/set -d '{"llm":{"base":"http://192.168.1.20:11434/v1","model":"llama3.2:3b","enabled":true}}'
@@ -108,8 +108,9 @@ curl -X POST localhost:8765/api/voice/set -d '{"llm":{"base":"http://192.168.1.2
 
 - `http://` is fine on your own network. An empty address goes back to OpenRouter.
 - Your OpenRouter key is never sent to your server: it goes only to OpenRouter, and stays saved for when you clear the address. Most
-  servers at home need no key; if yours wants one (for example an API key you set in LM Studio, `llama-server` or vLLM), set
-  **Key of your AI server** (`"serverKey"`). It is sent as `Authorization: Bearer <key>` to that server only.
+  servers at home need no key; if yours wants one (for example an API key you set in LM Studio, `llama-server` or vLLM), enter it
+  in **API key** on the phone page together with the address. It is kept apart from the OpenRouter key (`"serverKey"` from a shell)
+  and sent as `Authorization: Bearer <key>` to that server only.
 - **Model** on the TV then lists the models of your server; the manager app shows **AI chat (self-hosted)**.
 - Home Assistant is another way: if it has a conversation agent backed by a local model (its Ollama integration, for example),
   choose that agent under **Assist agent** (below).

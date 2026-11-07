@@ -175,6 +175,33 @@ run(async () => {
     'saving the Voice page keeps Home Assistant'
   );
   await sleep(2100);
+  // the page has one key field: with an AI server address it is that server's key, without one the OpenRouter key
+  r = await vask('pair');
+  await sleep(100);
+  sv = await form(r.j.url.replace(/^http:\/\/[^/]+/, '') + '/save', {
+    base: 'http://127.0.0.1:9/v1',
+    key: 'server-key-1',
+    model: 'm/two',
+    enabled: '1',
+    haroute: 'ha-only',
+  });
+  r = await vask('status', null, 'GET');
+  ok(
+    sv.code === 200 && r.j.llm.base === 'http://127.0.0.1:9/v1' && r.j.llm.hasServerKey && r.j.llm.hasKey,
+    'with an address, the key field is saved as that server key and the OpenRouter key is kept'
+  );
+  await sleep(2100);
+  await vask('set', { llm: { clearKey: true } });
+  r = await vask('pair');
+  await sleep(100);
+  sv = await form(r.j.url.replace(/^http:\/\/[^/]+/, '') + '/save', { key: 'sk-or-2', model: 'm/two', enabled: '1', haroute: 'ha-only' });
+  r = await vask('status', null, 'GET');
+  ok(
+    sv.code === 200 && r.j.llm.base === '' && r.j.llm.hasKey && r.j.llm.hasServerKey && r.j.llm.enabled,
+    'without an address, the key field is the OpenRouter key; the server key stays apart'
+  );
+  await sleep(2100);
+  await vask('set', { llm: { clearServerKey: true } });
   // a self-hosted server with the OpenAI-compatible chat API (such as http://<computer>:11434/v1): no key, none of OpenRouter's extra fields
   const olLog = [];
   const ol = await serve((q, rs) => {

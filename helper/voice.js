@@ -654,8 +654,7 @@ function pairPage(msg, done, list, token, lang, only) {
 <button>${T('Save')}</button></form>`
         : `<form method=post action="/${token}/save">
 <label>${T('AI server address')} <small>${T('(empty: OpenRouter; or your own, such as http://computer:11434/v1)')}</small></label><input name=base type=url placeholder="https://openrouter.ai/api/v1" value="${esc(l.base)}">
-<label>${T('OpenRouter key')} ${l.key ? T('(one is saved; leave empty to keep it)') : ''} <small>${T('(not needed for a server of your own)')}</small></label><input name=key type=password autocomplete=off placeholder="sk-or-...">
-<label>${T('Key of your AI server')} <small>(${T('optional; most servers at home need none')}${l.serverKey ? '; ' + T('one is saved, leave empty to keep it') : ''})</small></label><input name=serverkey type=password autocomplete=off>
+<label>${T('API key')} ${(l.base ? l.serverKey : l.key) ? T('(one is saved; leave empty to keep it)') : ''} <small>${T("(OpenRouter's key; with an AI server address, that server's key if it needs one, most at home do not)")}</small></label><input name=key type=password autocomplete=off placeholder="${l.base ? '' : 'sk-or-...'}">
 <label>${T('Model')} <small>${T('choose from the list or type any OpenRouter model name')}</small></label><input name=model list=ml value="${esc(l.model)}" autocomplete=off><datalist id=ml>${opts}</datalist>
 <label class=c><input type=checkbox name=enabled value=1 ${l.enabled ? 'checked' : ''}> ${T('Answer with the AI')}</label>
 <label>${T('Instructions for the AI')} <small>${T('(empty: short plain answers)')}</small></label><textarea name=system rows=3>${esc(l.system)}</textarea>
@@ -714,8 +713,9 @@ function startPair(only) {
             url: f.get('url') || '',
             ha: { route: f.get('haroute') || 'ha-first' },
           };
-          if (f.get('key')) set.llm.key = f.get('key');
-          if (f.get('serverkey')) set.llm.serverKey = f.get('serverkey');
+          // one key field: with an AI server address it is that server's key, else the OpenRouter key (kept apart, so the
+          // OpenRouter key never goes to a server of yours)
+          if (f.get('key')) set.llm[(f.get('base') || '').trim() ? 'serverKey' : 'key'] = f.get('key');
           if (f.get('token')) set.token = f.get('token');
         }
         const err = applySet(set);
