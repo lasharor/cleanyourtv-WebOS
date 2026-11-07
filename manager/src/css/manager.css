@@ -334,3 +334,217 @@ body {
   unicode-bidi: plaintext;
   text-align: right;
 }
+/* the Tools screen (AI agents (MCP) > Tools): a group's arrow and state dot, child rows, switches, a New badge, a tag, a check, a lock */
+.row .chev {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  position: relative;
+  opacity: 0.7;
+}
+.row .chev::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 7px;
+  width: 11px;
+  height: 11px;
+  border-right: 3px solid currentColor;
+  border-bottom: 3px solid currentColor;
+  transform: rotate(-45deg);
+}
+.row .chev.open::before {
+  left: 7px;
+  top: 3px;
+  transform: rotate(45deg);
+}
+.row .dot {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid rgba(245, 246, 248, 0.38);
+}
+.row .dot.on {
+  background: #9be3b0;
+  border-color: #9be3b0;
+}
+.row .dot.part {
+  border-color: #f2c879;
+  background: linear-gradient(90deg, #f2c879 50%, transparent 50%);
+}
+.row.f .dot.on {
+  background: #2f9d57;
+  border-color: #2f9d57;
+}
+.row.f .dot.part {
+  border-color: #b8860b;
+  background: linear-gradient(90deg, #b8860b 50%, transparent 50%);
+}
+.row.f .dot.off {
+  border-color: rgba(11, 12, 16, 0.35);
+}
+.row.child,
+.row.allrow {
+  margin-left: 56px;
+  height: 76px;
+  font-size: 28px;
+}
+.row.allrow {
+  font-weight: 600;
+}
+.row .sw {
+  flex: none;
+  width: 74px;
+  height: 40px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.14);
+  position: relative;
+  transition: background 140ms ease;
+}
+.row .sw::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform 140ms ease;
+}
+.row .sw.on {
+  background: #2f9d57;
+}
+.row .sw.on::after {
+  transform: translateX(34px);
+}
+.row .sw.mixed {
+  background: #8a6a1f;
+}
+.row .sw.mixed::after {
+  transform: translateX(17px);
+}
+.row.f .sw {
+  background: rgba(11, 12, 16, 0.18);
+}
+.row.f .sw::after {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.row.f .sw.on {
+  background: #2f9d57;
+}
+.row.f .sw.mixed {
+  background: #b8860b;
+}
+.row .bdg {
+  flex: none;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 5px 12px;
+  border-radius: 14px;
+  background: rgba(138, 180, 255, 0.18);
+  color: #8ab4ff;
+  text-transform: uppercase;
+}
+.row.f .bdg {
+  background: #2b5bd7;
+  color: #fff;
+}
+.row .tg {
+  flex: none;
+  font-size: 20px;
+  padding: 5px 12px;
+  border-radius: 14px;
+  background: rgba(255, 154, 138, 0.14);
+  color: #ff9a8a;
+}
+.row.f .tg {
+  background: #c2410c;
+  color: #fff;
+}
+.row .ck {
+  flex: none;
+  width: 36px;
+  height: 30px;
+  position: relative;
+}
+.row .ck.on::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 2px;
+  width: 10px;
+  height: 20px;
+  border-right: 4px solid #9be3b0;
+  border-bottom: 4px solid #9be3b0;
+  transform: rotate(45deg);
+}
+.row.f .ck.on::before {
+  border-color: #1f7a42;
+}
+.row.locked {
+  cursor: default;
+}
+.row .lock {
+  flex: none;
+  width: 26px;
+  height: 30px;
+  position: relative;
+  opacity: 0.75;
+}
+.row .lock::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 0;
+  width: 10px;
+  height: 12px;
+  border: 3px solid currentColor;
+  border-bottom: 0;
+  border-radius: 9px 9px 0 0;
+}
+.row .lock::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 13px;
+  width: 26px;
+  height: 17px;
+  border-radius: 4px;
+  background: currentColor;
+}
+#info .para {
+  margin-top: 30px;
+}
+#info strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+#mfoot {
+  position: absolute;
+  left: 96px;
+  bottom: 54px;
+  width: 680px;
+  line-height: 1.4;
+  font-size: 24px;
+  color: rgba(245, 246, 248, 0.4);
+}
+#mfoot b {
+  color: var(--ink2);
+  font-weight: 600;
+}
+[dir="rtl"] .row.child,
+[dir="rtl"] .row.allrow {
+  margin-left: 0;
+  margin-right: 56px;
+}
+[dir="rtl"] #mfoot {
+  left: auto;
+  right: 96px;
+}
+#list.gaps > .row {
+  margin-bottom: 8px;
+}

@@ -41,11 +41,12 @@ function checkArgs(schema, args) {
   return '';
 }
 
-// the tools of the providers, merged: {map: name -> {provider, name, schema, description, confirm}, names}. A name taken twice gets
-// its provider's id in front (spotify__next); at most 40 tools
+// the tools of the providers, merged: {map: name -> {provider, name, schema, description, confirm}, names, lists}. A name taken twice
+// gets its provider's id in front (spotify__next). lists: what each provider gave, for the tool settings (toolprefs.js)
 async function merge(providers) {
   const map = {},
-    names = [];
+    names = [],
+    lists = [];
   for (const p of providers || []) {
     if (!p || !p.tools || typeof p.tools.list !== 'function' || typeof p.tools.call !== 'function') continue;
     let list = [];
@@ -55,8 +56,9 @@ async function merge(providers) {
       console.error('tools: the tools of ' + p.id + ' could not be listed: ' + e.message);
       continue;
     }
+    lists.push({ provider: p, core: !!p.core, tools: (Array.isArray(list) ? list : []).filter(t => t && TOOL_NAME.test(t.name || '')) });
     for (const t of Array.isArray(list) ? list : []) {
-      if (names.length >= MAX_TOOLS) break;
+      if (names.length >= 200) break;
       if (!t || !TOOL_NAME.test(t.name || '') || typeof t.description !== 'string') continue;
       let name = t.name;
       if (map[name]) name = (String(p.id || 'x').replace(/[^A-Za-z0-9_]/g, '_') + '__' + t.name).slice(0, 64);
@@ -76,13 +78,15 @@ async function merge(providers) {
       names.push(name);
     }
   }
-  return { map, names };
+  return { map, names, lists };
 }
 
 const fail = (m, extra) => Object.assign({ content: [{ type: 'text', text: String(m) }], isError: true }, extra || {});
 
 function create(ctx) {
-  const core = require('./coretools').create(ctx);
+  const core = Object.assign(require('./coretools').create(ctx), { core: true });
+  const toolprefs = require('./toolprefs'),
+    prefs = toolprefs.create(ctx);
   // the service's own tools first, then the add-ons'
   const providers = () => {
     const a = ctx.feature && ctx.feature('addons');
@@ -90,8 +94,53 @@ function create(ctx) {
     return [core].concat(more.map(p => ({ id: p.id, name: p.name, tools: p.mod && p.mod.tools })));
   };
 
-  async function list() {
+  // with "new tools stay off", a card says which part has tools waiting
+  function tellNew(added) {
+    const by = {};
+    added.forEach(x => (by[x.g.name] = (by[x.g.name] || 0) + 1));
+    Object.keys(by).forEach(n =>
+      tell(n + ' has ' + by[n] + (by[n] === 1 ? ' new tool' : ' new tools'), 'Turn them on in AI agents (MCP) > Tools.')
+    );
+  }
+  // the tools with the settings applied (manager: AI agents (MCP) > Tools): a tool that is off is left out; an add-on tool keeps
+  // only the actions that are on; at most 40 of the tools that are on. Tools seen for the first time get their state here, before
+  // anyone is given the list.
+  async function current() {
     const m = await merge(providers());
+    const groups = toolprefs.groupsOf(m.lists);
+    const added = prefs.sync(groups);
+    if (added.length && prefs.newTools() === 'off') tellNew(added);
+    const itemsOf = {};
+    groups.forEach(g =>
+      g.items.forEach(it => {
+        const k = (g.kind === 'service' ? '' : g.id) + '|' + it.tool;
+        (itemsOf[k] = itemsOf[k] || []).push(it);
+      })
+    );
+    const names = [];
+    for (const n of m.names) {
+      const e = m.map[n],
+        its = itemsOf[(e.provider.core ? '' : e.provider.id) + '|' + e.name] || [],
+        on = its.filter(it => prefs.isOn(it.key));
+      if (its.length && !on.length) {
+        e.off = true;
+        continue;
+      }
+      if (on.length < its.length && on.every(it => it.action)) {
+        e.allowed = on.map(it => it.action);
+        const props = (e.schema && e.schema.properties) || {};
+        e.schema = Object.assign({}, e.schema, {
+          properties: Object.assign({}, props, { action: Object.assign({}, props.action, { enum: e.allowed }) }),
+        });
+      }
+      if (names.length < MAX_TOOLS) names.push(n);
+    }
+    return { map: m.map, names, groups };
+  }
+  const OFF_TEXT = ' is turned off on the TV (CleanYourTV manager: Features > AI agents (MCP) > Tools). Tell the user if they want it.';
+
+  async function list() {
+    const m = await current();
     return m.names.map(n => {
       const e = m.map[n];
       const t = { name: n, description: e.description, inputSchema: e.schema };
@@ -100,10 +149,13 @@ function create(ctx) {
     });
   }
   async function call(name, args) {
-    const m = await merge(providers()),
+    const m = await current(),
       e = m.map[name];
-    if (!e) return fail('unknown tool: ' + String(name).slice(0, 64));
+    if (e && e.off) return fail(name + OFF_TEXT);
+    if (!e || m.names.indexOf(name) < 0) return fail('unknown tool: ' + String(name).slice(0, 64));
     const a = args === undefined ? {} : args;
+    if (e.allowed && a && typeof a === 'object' && typeof a.action === 'string' && e.allowed.indexOf(a.action) < 0)
+      return fail(name + ' ' + a.action.slice(0, 40) + OFF_TEXT);
     const bad = checkArgs(e.schema, a);
     if (bad) return fail(bad);
     if (e.confirm)
@@ -589,6 +641,18 @@ poll();
 
   async function handle(req, res, u, body) {
     // the network settings and the agents, for the manager: GET lanInfo(); POST lanSet()
+    // the tool settings, for the manager: GET the groups and their items; POST a change (toolprefs.set), then the groups again
+    if (u === '/api/mcp/tools') {
+      if (req.method === 'POST') {
+        const r = prefs.set((await body(req)) || {});
+        if (r.error) return web.json(res, r, 400);
+      }
+      const m = await current(),
+        a = ctx.feature && ctx.feature('addons'),
+        names = {};
+      ((a && a.list && a.list()) || []).forEach(x => (names[x.id] = x.name));
+      return web.json(res, prefs.status(m.groups, names));
+    }
     if (u === '/api/mcp/lan') {
       if (req.method !== 'POST') return web.json(res, lanInfo());
       const r = await lanSet((await body(req)) || {});
@@ -605,7 +669,7 @@ poll();
 
   return {
     name: 'mcp',
-    paths: ['/api/mcp', '/api/mcp/lan'],
+    paths: ['/api/mcp', '/api/mcp/lan', '/api/mcp/tools'],
     handle,
     start,
     stop,

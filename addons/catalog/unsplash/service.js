@@ -391,6 +391,8 @@ function create(ctx) {
       },
       required: ['action'],
     },
+    group: 'Unsplash', // the manager's Tools screen
+    labels: { status: 'Is it on', set_query: 'The search words', turn: 'On or off', credits: 'Who took the photo' },
   };
   const done = v => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v) }], isError: false });
   const bad = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });
