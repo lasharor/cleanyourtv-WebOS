@@ -304,6 +304,10 @@ top, left, centre or right) that you choose, which wins over the theme. The butt
 choice is stored in `config.json` (`book`: `order`, `hidden`, `strip`, `position`) and written with `POST /api/addons/book`. A page that is
 left out stays installed and running but has no button.
 
+Each running page add-on also has **Open page** there: the manager launches Home with `{"page": "<add-on id>"}` and Home turns to that page
+at once, also when it is left out of the book (then it comes after the last page and Back returns to Home). Any app can open a page the
+same way: `luna://com.webos.applicationManager/launch` with `{"id": "com.webos.app.home", "params": {"page": "<add-on id>"}}`.
+
 ## API
 
 | Request | Reply |

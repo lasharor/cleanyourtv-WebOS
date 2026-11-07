@@ -246,14 +246,14 @@ function guidePage() {
   for (var i = 0; i < PAGES.length; i++) if (PAGES[i].guide) return PAGES[i].id;
   return '';
 }
-/* launching Home with {inputs:true} opens the Inputs list */
+/* launching Home with {inputs:true} opens the Inputs list; {page:<add-on id>} turns to that add-on's page, in the book or not (manager > Open page) */
 function wantInputs(pages) {
   var p = {};
   try {
     p = JSON.parse(webOSSystem.launchParams || '{}');
   } catch (e) {}
-  /* the Guide button: which page has the guide is known once the add-on pages are loaded */
-  if (p && p.guide && !p.inputs && pages) {
+  /* the Guide button, or a page to open: which pages there are is known once the add-on pages are loaded */
+  if (p && (p.guide || p.page) && !p.inputs && pages) {
     $('homepage').style.visibility = 'hidden'; /* no flash of the dashboard on the way to the guide */
     pages.then(function () {
       wantInputs();
@@ -264,6 +264,9 @@ function wantInputs(pages) {
   if (p && p.inputs) {
     closeMenus();
     inputsMenu();
+  } else if (p && typeof p.page === 'string' && PAGER.index(p.page) > 0) {
+    closeMenus();
+    PAGER.go(p.page, null, true);
   } else if (p && p.guide && guidePage()) {
     noteGuideFrom(p);
     closeMenus();
@@ -318,7 +321,7 @@ document.addEventListener('webOSRelaunch', function () {
     return;
   }
   csSearchEnd();
-  if (PAGER.on && !(p && p.live)) PAGER.home(); /* Home pressed: back to the first page */
+  if (PAGER.on && !(p && (p.live || p.page))) PAGER.home(); /* Home pressed: back to the first page */
   load();
   refreshSoon();
   wantInputs(PAGER.load());
