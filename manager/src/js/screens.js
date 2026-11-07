@@ -868,7 +868,7 @@ var pvId = '' /* the provider the Provider screen shows */,
   pvBusy = false;
 var PV_OK = '#9be3b0',
   PV_ERR = '#ff9a8a',
-  PV_NONE = 'rgba(245,246,248,.35)',
+  PV_NONE = '#8a8d96', // not tried yet: a grey that shows on the dark rows and on the light focused row
   PV_HELP =
     'OK opens this provider. Channel up and down move it in the order. The dot is its last result: green answered, red did not, grey not tried yet. Addresses and keys are set on your phone.';
 function llmList() {
