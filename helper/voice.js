@@ -1146,6 +1146,11 @@ function create(c) {
       const hub = ctx.feature && ctx.feature('mcp');
       return hub && hub.providers ? hub.providers() : [];
     },
+    // the same list with the tool settings applied (manager: AI agents (MCP) > Tools), so a tool that is off is not offered by voice
+    merged: () => {
+      const hub = ctx.feature && ctx.feature('mcp');
+      return hub && hub.merged ? hub.merged() : null;
+    },
   });
   // the voice key of LG's own remote handling follows our setting (syncLg); checked now and then
   const start = () => {

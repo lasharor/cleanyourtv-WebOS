@@ -108,7 +108,7 @@ curl -X POST localhost:8765/api/mcp \
 ```
 
 `tools/list` answers `{tools: [{name, description, inputSchema}]}`; a destructive tool also has `annotations: {destructiveHint: true}`.
-`tools/call` answers `{content: [{type: "text", text}], isError}`. The arguments are checked against the tool's `inputSchema` first. A
+`tools/call` answers `{content: [{type: "text", text}], isError}`. The arguments are checked against the tool's `inputSchema` first, and keys it does not declare are dropped before the tool runs. A
 destructive tool is refused here (`isError: true`): only the voice assistant runs it, after you said yes on the TV.
 
 Like the rest of the service API, the endpoint answers on `127.0.0.1` only: programs on the TV can use it. For an agent on another
