@@ -37,6 +37,48 @@ run(async () => {
     'loading the map redraws cards and makes the glyph available'
   );
   ok(mdiContext.haIcon('sensor', mdiContext.haGlyph('mdi:unknown')) === 'domain icon', 'unknown glyphs keep the domain icon');
+  let dimmed = false,
+    timer,
+    delay,
+    keydown;
+  const idleContext = {
+    document: {
+      body: {
+        classList: {
+          add: () => {
+            dimmed = true;
+          },
+          remove: () => {
+            dimmed = false;
+          },
+        },
+      },
+      addEventListener: (event, fn) => {
+        if (event === 'keydown') keydown = fn;
+      },
+    },
+    setTimeout: (fn, ms) => {
+      timer = fn;
+      delay = ms;
+      return 1;
+    },
+    clearTimeout: () => {
+      timer = null;
+    },
+  };
+  vm.runInNewContext(cardsSource.slice(cardsSource.indexOf('var cardsIdleMinutes'), cardsSource.indexOf('/* OLED care:')), idleContext);
+  for (const minutes of [3, 5, 10]) {
+    idleContext.setCardsIdleMinutes(minutes);
+    ok(delay === minutes * 60000 && typeof timer === 'function', 'card dimming uses the selected delay');
+  }
+  timer();
+  ok(dimmed, 'cards dim when the timer expires');
+  idleContext.setCardsIdleMinutes(10);
+  ok(dimmed, 'unchanged settings do not wake dimmed cards');
+  keydown();
+  ok(!dimmed && timer, 'a key press wakes cards and restarts the timer');
+  idleContext.setCardsIdleMinutes(0);
+  ok(!dimmed && !timer, 'switching off card dimming cancels the timer');
   const stackContext = { document: { documentElement: { dir: 'ltr' } } };
   vm.createContext(stackContext);
   vm.runInContext(

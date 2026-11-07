@@ -754,6 +754,32 @@ function build() {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
+  if (view === 'cardsidledim') {
+    var dimEnabled = st.options.cardsIdleDim !== false;
+    var dimMinutes = st.options.cardsIdleMinutes || 3;
+    rows.push({
+      label: 'Dim inactive cards',
+      sub: onoff(dimEnabled),
+      fn: function () {
+        opt({ cardsIdleDim: !dimEnabled });
+      },
+    });
+    if (dimEnabled) {
+      [tr('3 minutes'), tr('5 minutes'), tr('10 minutes')].forEach(function (label, index) {
+        var minutes = [3, 5, 10][index];
+        rows.push({
+          label: label,
+          sub: minutes === dimMinutes ? 'selected' : '',
+          fn: function () {
+            opt({ cardsIdleMinutes: minutes });
+          },
+        });
+      });
+    }
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
   if (view === 'volumebar') {
     var curV = (st.options && st.options.volumeTheme) || 'system';
     rows.push({
@@ -1378,6 +1404,13 @@ function build() {
         },
       });
     rows.push({ label: 'Cards', sub: 'small widgets on Home', fn: openCards });
+    rows.push({
+      label: 'Dim inactive cards',
+      sub: onoff(st.options.cardsIdleDim !== false),
+      fn: function () {
+        push('cardsidledim');
+      },
+    });
     rows.push({
       label: 'Android box',
       sub: ab && ab.configured ? ab.settings.host : ab ? 'off' : '',

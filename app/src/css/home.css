@@ -1013,7 +1013,6 @@ body.wpon {
   font-size: 0.82em;
   color: #9fd3ff;
 }
-/* OLED care (cards.js): dimmed after three minutes without a key; the slow shift of the whole layer is not animated */
 .cards-idle .card {
   opacity: 0.45;
   transition: opacity 2s linear;
