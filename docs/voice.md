@@ -23,7 +23,7 @@ code; **Remove voice** deletes everything again.
 | Step | How |
 |---|---|
 | Choose the button | **Voice** > **Learn the voice button**. Try the remote's microphone button; if the hook does not see it, any spare button works. Then switch **Listen on the voice button** on. |
-| Try without a button | **Voice** > **Try it now**, or `curl -X POST localhost:8765/api/voice/listen` |
+| Try without a button | **Voice** > **Try it now**, or `curl -X POST localhost:8765/api/voice/listen`. On some TVs (the 65UR91, webOS 25 on a 2023 board) LG's service opens the microphone only while the mic button is held: hold it within 8 seconds, or the card says **Hold the remote's mic button while you speak**. |
 | Send the text to a server | `curl -X POST localhost:8765/api/voice/set -d '{"url":"http://server:port/path","token":"optional"}'` |
 | Pause LG's voice assistant | **Voice** > **Switch off LG's voice assistant**. It pauses LG's `voiceconductor` process while voice is on, so LG's own screen and its cloud recognition do not start on the same button. A reboot or turning the switch off undoes it. |
 
@@ -80,7 +80,7 @@ It answers `{"text","answer","error"}`; add `"card":false` to skip the screen.
 | Cost on the G2 | Load 0.3 s; a 3 s phrase takes about 1.4 s; about 190 MB of memory while recognising, none when idle. |
 | Reported accuracy | 12.0 % average word error rate on the Open ASR Leaderboard datasets, 4.8 % on LibriSpeech test-clean (figures from the Moonshine project; not measured through the remote's microphone). |
 | Language | English. Moonshine also publishes German, Spanish, Arabic, Japanese, Mandarin, Tagalog and Vietnamese models and larger English ones (small 123 M, medium 245 M parameters). |
-| Audio | 16 kHz mono from the microphone stream of LG's `voiceinput` service. Held in memory while recognising, then discarded; not written to disk or sent anywhere. |
+| Audio | 16 kHz mono from the microphone stream of LG's `voiceinput` service, read from the socket its reply names (`/var/voiceinput/voiceinput_remote1.soc` on the 65UR91, `/tmp/voiceinput_remote1.soc` when the reply names none). Held in memory while recognising, then discarded; not written to disk or sent anywhere. |
 
 **Which TVs.** Voice needs a TV with a **64-bit kernel**. A TV whose kernel is 32-bit ARM (`uname -m` says `armv7l`, as on the 43UP7550PTZ, issue 175) cannot run the recogniser at all: the manager says so and downloads nothing.
 
