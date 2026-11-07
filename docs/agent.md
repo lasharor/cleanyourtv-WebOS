@@ -30,9 +30,11 @@ Where the tools come from:
 | `most_used_apps` | The apps used most, from the launcher's usage counts | `limit?` (1-20, 5) |
 | `get_weather` | The weather now and the next days (Open-Meteo); without a place, the place of a card on Home (the weather card first, else a downloaded forecast card) | `place?`, `unit?`: `c` or `f` |
 | `new_conversation` | The voice assistant forgets the conversation so far | |
+| `theme` | The look of Home: `list` the themes and the one in use, `set` one (downloaded from GitHub first, as on the phone page), `revert` to the one before | `action`: `list`, `set`, `revert`; `id?`, `accent?` (a colour such as `#4c8dff`) |
+| `remote_buttons` | The remote buttons remapped on this TV: `list` them and what each does, or `press` one (it runs only while remapping is on) | `action`: `list`, `press`; `code?` |
 | `power_off` | Turns the TV off (destructive: only by voice, after a yes) | |
 
-The tools that change what is on screen (`launch_app`, `switch_input`, `close_app`, `navigate`, `show_notification`) first close LG's
+The tools that change what is on screen (`launch_app`, `switch_input`, `close_app`, `navigate`, `show_notification`, `remote_buttons`) first close LG's
 screen saver if it is on: it starts when nobody has pressed a key for a while, and the Inputs list and cards would open under it.
 
 ## The voice assistant uses them
