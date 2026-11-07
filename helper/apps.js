@@ -499,6 +499,8 @@ function create(ctx) {
       const box = addons && addons.module && addons.module('androidbox');
       const moved = box && box.handles(b.id) ? await box.open(b.id) : null;
       if (moved) return web.json(res, moved);
+      // Home with parameters (manager > an add-on > Open page: {page: id}): the stand-in Home reads them from a file
+      if (b.id === 'com.webos.app.home' && b.params && typeof b.params === 'object') require('./nativehome').homeParams(b.params);
       return web.json(res, await luna('luna://com.webos.applicationManager/launch', { id: b.id, params: b.params || {} }));
     }
     // a full power-off (tvpower/power/shutDown, issue 50): not the standby of the remote's power key, which keeps Quick Start+ and draws power.

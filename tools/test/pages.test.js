@@ -139,6 +139,73 @@ run(async () => {
     asked = await wake(1, true);
     ok(asked.length === 0, 'nor one that is hidden');
   }
+  // manager > an add-on > Open page: Home is launched with {page: id} and turns to it, also to a page switched out of the book
+  {
+    const addonsSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'addons.js'), 'utf8'),
+      inputSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'input.js'), 'utf8');
+    const pagerSrc = addonsSrc.slice(addonsSrc.indexOf('var addonBar'), addonsSrc.indexOf("window.addEventListener('message'"));
+    const wantSrc = inputSrc.slice(inputSrc.indexOf('function wantInputs'), inputSrc.indexOf('/* webOS 26: when the TV wakes'));
+    const addon = (id, inBook, claims) => ({
+      id,
+      name: id,
+      status: 'running',
+      enabled: true,
+      page: '/addon/' + id + '/index.html',
+      tile: { label: id, placement: 'book' },
+      inBook,
+      claims: claims || [],
+      order: 0,
+    });
+    const reply = { addons: [addon('weather', true), addon('phoneremote', false, ['back'])] };
+    const homeStyle = { visibility: 'visible' };
+    const sb = {
+      api: () => ({ then: ok1 => (ok1(reply), { then: f => f() }) }),
+      rebuild: () => {},
+      $: () => ({ style: homeStyle }),
+      cfg: {},
+      LOC: '',
+      API: '',
+      closeMenus: () => {},
+      inputsMenu: () => {},
+      liveOn: () => false,
+      LIVE: {},
+      webOSSystem: { launchParams: '{}' },
+      JSON,
+    };
+    vm.runInNewContext(pagerSrc + ';PAGER.draw = function () {};this.P = PAGER;' + wantSrc + ';this.want = wantInputs;', sb);
+    const P = sb.P;
+    P.load();
+    ok(
+      P.index('weather') === 1 && P.index('phoneremote') === 2 && P.index('nope') === -1,
+      'a page out of the book can be opened, after the last one'
+    );
+    ok(sb.PAGES.length === 1, 'but it is not a page of the book (the strip and the number buttons leave it out)');
+    ok(P.url(P.find('phoneremote')).indexOf('/addon/phoneremote/index.html?') === 0, 'its address is its own page');
+    const went = [];
+    P.go = (id, params, instant) => went.push([id, params, instant]);
+    P.on = true;
+    P.id = 'phoneremote';
+    ok(P.claims('back') && !P.claims('digits'), 'its claims count while it shows');
+    sb.webOSSystem.launchParams = JSON.stringify({ page: 'phoneremote' });
+    sb.want({ then: f => f() });
+    ok(
+      went.length === 1 && went[0][0] === 'phoneremote' && went[0][2] === true,
+      'Home launched with {page: id} turns to that page at once'
+    );
+    went.length = 0;
+    sb.webOSSystem.launchParams = JSON.stringify({ page: 'nope' });
+    sb.want({ then: f => f() });
+    ok(!went.length, 'an add-on without a page is ignored');
+    ok(
+      /PAGER\.on && !\(p && \(p\.live \|\| p\.page\)\)\) PAGER\.home\(\)/.test(inputSrc),
+      'a relaunch with {page: id} does not first turn back to Home'
+    );
+    const menuSrc = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'menu.js'), 'utf8');
+    ok(
+      /label: 'Open page'[\s\S]{0,400}api\('\/api\/launch', \{ id: 'com\.webos\.app\.home', params: \{ page: a1\.id \} \}\)/.test(menuSrc),
+      'the manager offers Open page and launches Home with {page: id}'
+    );
+  }
   const pages = ['app', 'manager/app', 'picker/app', 'notify/app', 'helper/addons-bundled/iptv/page', 'addons/catalog/tuner/page'].map(d =>
     path.join(root, d, 'index.html')
   );
