@@ -45,6 +45,7 @@ installed and switched on.
 | Add-on | Tool | Actions |
 |---|---|---|
 | Spotify now playing | `spotify` | `now_playing` (the track, the artist, the device), `play`, `pause`, `next`, `previous`, `devices` (the Spotify Connect devices, by name), `open_on_tv` (the Spotify app of the TV on what plays). The controls need Spotify Premium. Moving the music to another device is not a tool: it can wake a speaker in another room |
+| Live TV (IPTV, bundled) | `iptv` | `status` (set up, how many channels, a guide), `find_channel` (`query`: words of the name or a number), `whats_on` and `schedule` (`channel`: now and next, or the next eight programmes), `favourites`, `set_favourite` (`channel`, `on`), `check_stream` (does the stream answer), `refresh` (load the playlist and guide again). No answer holds a stream or playlist address: they can carry the playlist's user name and password |
 
 ## The voice assistant uses them
 
