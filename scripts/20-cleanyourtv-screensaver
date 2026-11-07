@@ -7,14 +7,20 @@
 #   mount    anything else (a QML or web screen saver): the page's folder is mounted over the app and the app manager reads it
 # "prepare" (called by 10-cleanyourtv-home just before it restarts the app manager) only mounts, so one restart reads both.
 # The screen saver starts by itself when the TV is idle: nothing is launched here.
+# The paths and commands can be pointed elsewhere for the tests (tools/test/screensaver.test.js: CYTV_TEST_ROOT, CYTV_TEST_BIN with fake
+# mount, systemctl and luna-send, CYTV_MOUNTS); on the TV none of them is set.
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
-L=/media/developer/cleanyourtv
-H=/usr/palm/applications/com.webos.app.screensaver
-STANDIN=/tmp/cleanyourtv-screensaver-standin   # holds LG's screen saver program while the stand-in is mounted over it
-SAM=/tmp/cleanyourtv-sam                       # present once the app manager was restarted this boot
-LOG=/tmp/cleanyourtv-boot.log
-up() { cut -d' ' -f1 /proc/uptime; }
-replaced() { grep -q " $H " /proc/mounts || { [ -f $STANDIN ] && grep -q " $(cat $STANDIN) " /proc/mounts; }; }
+[ -n "$CYTV_TEST_BIN" ] && export PATH=$CYTV_TEST_BIN:$PATH
+R=${CYTV_TEST_ROOT:-}
+L=$R/media/developer/cleanyourtv
+H=$R/usr/palm/applications/com.webos.app.screensaver
+STANDIN=$R/tmp/cleanyourtv-screensaver-standin   # holds LG's screen saver program while the stand-in is mounted over it
+SAM=$R/tmp/cleanyourtv-sam                       # present once the app manager was restarted this boot
+HSTANDIN=$R/tmp/cleanyourtv-home-standin         # LG's Home program while the Home stand-in is mounted over it
+LOG=$R/tmp/cleanyourtv-boot.log
+MOUNTS=${CYTV_MOUNTS:-/proc/mounts}
+up() { cut -d' ' -f1 /proc/uptime 2>/dev/null; }
+replaced() { grep -q " $H " $MOUNTS || { [ -f $STANDIN ] && grep -q " $(cat $STANDIN) " $MOUNTS; }; }
 
 [ -e $L/DISABLE-SCREENSAVER ] && exit 0
 [ -d $H ] || exit 0   # a TV without LG's screen saver app: nothing to replace
@@ -49,7 +55,7 @@ systemctl is-active sam >/dev/null 2>&1 || exit 0     # it reads the mount when 
 # The app manager has to read the new manifest. Where Home is a stand-in its page lives in webapp-mgr, which such a restart takes
 # down: wait until Home is up, and open it again afterwards (reload-home.sh), so that a boot does not end on a black screen.
 RH=0
-[ -f /tmp/cleanyourtv-home-standin ] && grep -q " $(cat /tmp/cleanyourtv-home-standin) " /proc/mounts && RH=1
+[ -f $HSTANDIN ] && grep -q " $(cat $HSTANDIN) " $MOUNTS && RH=1
 echo "$(up) saver: restarting the app manager so that it reads the new screen saver" >> $LOG
 (
   if [ $RH = 1 ]; then
