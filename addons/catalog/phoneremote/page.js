@@ -405,7 +405,7 @@ $('bnum').onclick=function(){sheet(true)};$('xnum').onclick=function(){sheet(fal
    the inputs and the power sheet */
 function pullDown(panel,closer){
   var el=$(panel),y0=0,dy=0,on=false;
-  function start(e){if(e.touches.length!==1)return;var t=e.target;if(t&&t.closest&&t.closest('[data-k],button'))return;y0=e.touches[0].clientY;dy=0;on=true;el.style.transition='none'}
+  function start(e){if(e.touches.length!==1)return;var t=e.target;if(t&&t.closest&&t.closest('[data-k],button,.vres,textarea'))return;y0=e.touches[0].clientY;dy=0;on=true;el.style.transition='none'}
   function move(e){if(!on)return;var d=e.touches[0].clientY-y0;dy=d>0?d:0;if(dy>0)e.preventDefault();el.style.transform=dy?'translateY('+dy+'px)':''}
   function end(){if(!on)return;on=false;el.style.transition='';el.style.transform='';if(dy>72){var b=$(closer);if(b)b.click()}}
   el.addEventListener('touchstart',start,{passive:true});el.addEventListener('touchmove',move,{passive:false});
@@ -435,7 +435,7 @@ function cfmOpen(on){$('cfm').className=on?'dlgw':'hide dlgw';if(!on)return;
 function lgDraw(a){var rows=[t('Closing the connection'),a[1]==='skip'?t('The TV could not be reached: its list is left as it is'):t('Removing this phone from the TV’s list'),t('Deleting what this phone stored')];
  $('lgl').innerHTML=rows.map(function(r,i){return '<div class="'+a[i]+'"><i>'+(a[i]==='done'?'✓':'')+'</i>'+r+'</div>'}).join('')}
 function wipe(){pendClear();store('');tok='';try{var k,del=[];for(k=0;k<localStorage.length;k++)if(/^cytv/.test(localStorage.key(k)))del.push(localStorage.key(k));del.forEach(function(x){localStorage.removeItem(x)})}catch(e){}
- me={name:'',seen:0,created:0};mac='';wol=null;appsIn=false;liveIn=false;pwrState='';$('tvname').textContent='TV';$('apgrid').innerHTML='';$('lvgrid').innerHTML='';$('txt').value='';prev='';$('code').value='';$('pname').value=guess();cells();vpref=vload();vst=null;miclb();tab('kb')}
+ me={name:'',seen:0,created:0};mac='';wol=null;appsIn=false;liveIn=false;pwrState='';$('tvname').textContent='TV';$('apgrid').innerHTML='';$('lvgrid').innerHTML='';$('txt').value='';prev='';$('code').value='';$('pname').value=guess();cells();vpref=vload();vst=null;miclb();vcur=null;$('vres').innerHTML='';$('vres').appendChild(vempty);vshow('vempty',true);tab('kb')}
 /* when the page's own socket is not open the TV may still answer (on standby with Quick Start+, or a socket that just dropped): a short one of its own tells it */
 function tellTv(cb){var w,done=false;function end(ok){if(done)return;done=true;try{w.close()}catch(e){}cb(ok)}
  try{w=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws')}catch(e){return cb(false)}
@@ -485,7 +485,7 @@ if(window.CYTV_APP){var eb=$('eb'),ps=$('psub');eb.textContent=eb.getAttribute('
    On this phone: a box with the phone's keyboard up; the keyboard's own dictation key turns speech into text (a page on plain HTTP may not
    open the microphone itself, the keyboard may), and the text goes to the TV as a question. On the TV remote: the TV listens through the
    remote's mic, and the drawer follows each step. The choice is kept on the phone (cytv-voice): a tap uses it, a hold asks again. */
-var VK='cytv-voice',vpref=vload(),vst=null,vsrc='',vlast='',vbusy=false,vlistening=false,vT=0,vHeld=false;
+var VK='cytv-voice',vpref=vload(),vst=null,vsrc='',vbusy=false,vlistening=false,vT=0,vHeld=false;
 function vload(){var d={src:'',remember:true,show:true};try{var j=JSON.parse(localStorage.getItem(VK)||'null');if(j&&typeof j==='object'){if(j.src==='phone'||j.src==='remote')d.src=j.src;d.remember=j.remember!==false;d.show=j.show!==false}}catch(e){}return d}
 function vsave(){try{localStorage.setItem(VK,JSON.stringify(vpref))}catch(e){}miclb();vdraw()}
 function each(q,f){Array.prototype.forEach.call(document.querySelectorAll(q),f)}
@@ -507,12 +507,12 @@ function vopen(pick){if(!ready){say(t('Not connected'),'warn',2500);return}
  $('vcs').className='';vstat();
  if(pick||!vpref.remember||!vpref.src)return vpick();
  vgo(vpref.src)}
-function vclose(){if(vlistening)send({t:'vstop'});vlistening=false;$('vcs').className='hide';try{$('vtxt').blur()}catch(e){}vnote('')}
-function vpick(){vshow('vcpick',true);vshow('vcmain',false);$('vrem').setAttribute('aria-checked',vpref.remember?'true':'false');vdraw();vnote('')}
-function vgo(src,keep){vsrc=src;vshow('vcpick',false);vshow('vcmain',true);$('vchipt').textContent=srcName(src);
- if(!keep)$('vlog').innerHTML='';
+function vclose(){natStop(true);if(vlistening)send({t:'vstop'});vlistening=false;vfull(false);$('vcs').className='hide';try{$('vtxt').blur()}catch(e){}vnote('')}
+function vpick(){vshow('vcpick',true);vshow('vcmain',false);vfull(false);$('vrem').setAttribute('aria-checked',vpref.remember?'true':'false');vdraw();vnote('')}
+function vfull(on){$('vcs').className=on?'full':'';$('vcsheet').className='drawer'+(on?' vfull':'')}
+function vgo(src){vsrc=src;vshow('vcpick',false);vshow('vcmain',true);vfull(true);$('vchipt').textContent=srcName(src);
  vshow('vagain',false);vshow('vcancel',false);vshow('vwarnm',false);
- if(src==='phone'){vshow('vlive',false);vshow('vphone',true);vnote(t('Speak or type…'),'acc');try{$('vtxt').focus()}catch(e){}return}
+ if(src==='phone'){vshow('vlive',false);vshow('vphone',true);natDraw();if(natStart())return;vnote(t('Speak or type…'),'acc');try{$('vtxt').focus()}catch(e){}return}
  vshow('vphone',false);
  if(!vremOk()){vshow('vlive',false);$('vwarnm').textContent=vwhy();vshow('vwarnm',true);vnote('');return}
  vstep('listening');vshow('vlive',true);vshow('vcancel',true);vlistening=true;
@@ -522,10 +522,18 @@ function vstep(st){var b=$('vlt'),s=$('vls');$('vbars').className=st==='listenin
  if(st==='listening'){b.textContent=t('Listening on the TV');s.textContent=t('Speak now. If nothing happens, hold the remote’s mic button while you speak.');vnote(t('The TV is listening'),'acc')}
  else if(st==='recognising'){b.textContent=t('Recognising');s.textContent=t('One moment.');vnote(t('Recognising'),'acc')}
  else{b.textContent=t('Thinking');s.textContent=t('One moment.');vnote(t('Thinking'),'acc')}}
-function vbubble(cls,text,label){var d=document.createElement('div');d.className='vb '+cls;
- if(label){var l=document.createElement('small');l.textContent=label;d.appendChild(l)}
- d.appendChild(document.createTextNode(text));$('vlog').appendChild(d);$('vlog').scrollTop=1e6;return d}
-function vdrop(){each('#vlog .wait',function(e){e.parentNode.removeChild(e)})}
+/* The conversation: the screen is full height while it shows, and each question is a turn, the question small above its answer card,
+   oldest first. It scrolls on its own; the field or the listening panel stays at the bottom. It is kept while the page is open (the TV's
+   assistant remembers the last exchanges too) and starts empty after a reload or a log out. */
+var vcur=null;
+function vturn(q){var d=document.createElement('div'),qq=document.createElement('p'),o=document.createElement('div'),b=document.createElement('small'),a=document.createElement('p');
+ d.className='vturn';qq.className=q?'vq':'vq hide';qq.textContent='“'+q+'”';o.className='vout';b.className='vby';a.className='vat';
+ o.appendChild(b);o.appendChild(a);d.appendChild(qq);d.appendChild(o);$('vres').appendChild(d);vshow('vempty',false);vcur=d;return d}
+function vout(cls,by,text){if(!vcur)vturn('');var o=vcur.querySelector('.vout');o.className='vout'+(cls?' '+cls:'');
+ vcur.querySelector('.vby').textContent=by||'';vcur.querySelector('.vat').textContent=text}
+/* a new turn scrolls to the bottom; an answer scrolls so that its question is at the top, to read it from the start */
+function vscroll(top){var r=$('vres');if(top&&vcur)r.scrollTop=Math.max(0,vcur.offsetTop-r.offsetTop-8);else r.scrollTop=r.scrollHeight}
+function vwait(q){vturn(q);vout('wait','',t('Thinking')+'…');vscroll(false);vnote(t('Thinking'),'acc')}
 function verr(e){e=String(e||'');
  if(/no destination/.test(e))return t('Nothing on the TV answers yet. Set up AI chat or Home Assistant in the manager: Voice.');
  if(e==='busy')return t('Still answering the last question.');
@@ -536,26 +544,27 @@ function verr(e){e=String(e||'');
  if(e==='no answer'||e==='timed out')return t('The TV did not answer.');
  return e}
 /* what came back, the same for both places: the answer under who gave it, or what went wrong */
-function vreply(m){vdrop();vbusy=false;
- if(m.error)vbubble('err',verr(m.error));
- else if(m.answer)vbubble('ai',m.answer,m.via==='ha'?t('Home Assistant'):m.via==='ai'?t('AI'):t('Answer'));
- else vbubble('ai',t('Sent to the TV.'));
- vshow('vphone',false);vshow('vlive',false);vshow('vcancel',false);vshow('vagain',true);$('vre').disabled=!vlast;
+function vreply(m){vbusy=false;
+ if(!vcur||vcur.getAttribute('data-done'))vturn(m.text||'');vcur.setAttribute('data-done','1');
+ if(m.error)vout('vwarn','',verr(m.error));
+ else if(m.answer)vout('',m.via==='ha'?t('Home Assistant'):m.via==='ai'?t('AI'):t('Answer'),m.answer);
+ else vout('','',t('Sent to the TV.'));
+ vscroll(true);vshow('vlive',false);vshow('vcancel',false);
+ /* the next question: on the phone the field stays under the result; from the TV remote one button listens again */
+ if(vsrc==='phone'){vshow('vphone',true);natDraw()}else vshow('vagain',true);
  if(m.error)vnote('');else vnote(t('Answered · also on the TV'),'ok')}
-function vsendAsk(text){if(!send({t:'ask',text:text}))return false;vbusy=true;vlast=text;buzz();return true}
+/* a new question replaces the last result; the field stays (and the keyboard with it), so the drawer does not jump */
 function vask(text){text=String(text||'').trim();if(!text||vbusy)return;
- if(!vsendAsk(text))return;
+ if(!send({t:'ask',text:text}))return;vbusy=true;buzz();
  $('vtxt').value='';vfit();
  if(!vpref.show){vclose();say(t('Sent to the TV'),'ok',3000);return}
- try{$('vtxt').blur()}catch(e){}
- vshow('vphone',false);vshow('vagain',false);vbubble('me',text);vbubble('ai wait','…')}
+ vwait(text)}
 function vans(m){vbusy=false;if($('vcs').className==='hide'||!vpref.show)return;vreply(m)}
 function vlive(m){if($('vcs').className==='hide'||vsrc!=='remote'||!vlistening)return;
  if(m.state==='listening'||m.state==='recognising')return vstep(m.state);
- if(m.state==='thinking'){vstep('thinking');if(m.text){vlast=m.text;vbubble('me',m.text)}return}
+ if(m.state==='thinking'){if(!m.text)return vstep('thinking');vshow('vlive',false);return vwait(m.text)}
  vlistening=false;
- if(m.state==='done'){if(m.text&&m.text!==vlast){vlast=m.text;vbubble('me',m.text)}
-  if(!vpref.show){vclose();return}return vreply({answer:m.answer,via:m.via,error:m.error})}
+ if(m.state==='done'){if(!vpref.show){vclose();return}if(m.text&&!(vcur&&!vcur.getAttribute('data-done')))vturn(m.text);return vreply({answer:m.answer,via:m.via,error:m.error})}
  vreply({error:m.e||'error'})}
 function vfit(){var x=$('vtxt');x.style.height='auto';x.style.height=Math.max(38,Math.min(x.scrollHeight,96))+'px'}
 /* a tap uses the remembered place; a hold, as on the power button, asks again */
@@ -569,18 +578,44 @@ each('.vopt',function(b){b.onclick=function(){var src=b.getAttribute('data-src')
  if(src==='remote'&&!vremOk()){buzz();say(vwhy(),'warn',5000);return}
  vpref.remember=$('vrem').getAttribute('aria-checked')==='true';vpref.src=vpref.remember?src:'';vsave();vgo(src)}});
 $('vrem').onclick=function(){$('vrem').setAttribute('aria-checked',$('vrem').getAttribute('aria-checked')==='true'?'false':'true')};
-$('vchip').onclick=function(){if(vlistening){send({t:'vstop'});vlistening=false}vpick()};
+$('vchip').onclick=function(){natStop(true);if(vlistening){send({t:'vstop'});vlistening=false}vpick()};
 $('xvc').onclick=vclose;$('xvc2').onclick=vclose;$('vcan').onclick=vclose;$('vcs').onclick=function(e){if(e.target===$('vcs'))vclose()};
 $('vsend').addEventListener('mousedown',function(e){e.preventDefault()});
-$('vsend').onclick=function(){vask($('vtxt').value)};
+$('vsend').onclick=function(){if(recOn){natSend=true;natStop();return}vask($('vtxt').value)};
+$('vnat').addEventListener('mousedown',function(e){e.preventDefault()});
+$('vnat').onclick=function(){if(recOn)natStop();else natStart()};
 $('vtxt').addEventListener('input',vfit);
 $('vtxt').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();vask($('vtxt').value)}});
-/* Ask again sends the last question once more; the mic starts a new one from the same place */
-$('vre').onclick=function(){var x=vlast;if(!x||vbusy||!vsendAsk(x))return;vshow('vagain',false);vbubble('me',x);vbubble('ai wait','…')};
-$('vmic').onclick=function(){vgo(vsrc,true)};
+/* after an answer from the TV remote: listen again for the next question */
+$('vmic').onclick=function(){buzz();vgo(vsrc)};
 $('kvvoice').onclick=function(){thOpen(false);vopen(true)};
 $('kvshow').onclick=function(){vpref.show=!vpref.show;vsave()};
-pullDown('vcsheet','xvc');miclb();vdraw();
+/* The phone's own microphone: a browser opens it only on a secure page (HTTPS, localhost, or an address Chrome was told to trust in
+   chrome://flags, "Insecure origins treated as secure"). There the drawer listens at once with the phone's speech recognition, shows the
+   words as they come, and sends them when the phone hears the end; the box can still be typed in. Elsewhere the keyboard's mic is the way. */
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,recOn=false,natSend=false,natErr='';
+function natOk(){return !!(SR&&window.isSecureContext)}
+function natDraw(){var ok=natOk();vshow('vnat',ok);$('vnat').className='vnat'+(ok?'':' hide')+(recOn?' on':'');
+ $('vht').textContent=recOn?t('Listening on this phone… speak now'):ok?t('Tap the mic and speak, or type'):t('Tap the mic on your keyboard and speak');
+ $('vhint').className='vh'+(recOn?' rec':'')}
+function natStart(){if(!natOk()||recOn||vbusy)return false;
+ try{rec=new SR()}catch(e){return false}
+ rec.lang=navigator.language||'en-US';rec.interimResults=true;rec.continuous=false;rec.maxAlternatives=1;
+ var r=rec;natSend=false;natErr='';$('vtxt').value='';vfit();
+ r.onresult=function(e){if(r!==rec)return;var s='',i;for(i=0;i<e.results.length;i++)s+=e.results[i][0].transcript;$('vtxt').value=s.replace(/^ +/,'');vfit();
+  for(i=0;i<e.results.length;i++)if(e.results[i].isFinal)natSend=true};
+ r.onerror=function(e){natErr=String((e&&e.error)||'error')};
+ r.onend=function(){if(r!==rec)return;recOn=false;rec=null;natDraw();var x=$('vtxt').value.trim();
+  if(natSend&&x){natSend=false;return vask(x)}
+  if(natErr==='not-allowed'||natErr==='service-not-allowed')say(t('The phone did not allow the microphone. Use the keyboard’s mic instead.'),'warn',6000);
+  else if(natErr==='no-speech')say(t('I did not hear anything'),'warn',3000);
+  else if(natErr&&natErr!=='aborted')say(t('The phone could not listen:')+' '+natErr,'warn',5000);
+  else vnote(t('Speak or type…'),'acc')};
+ try{r.start()}catch(e){rec=null;return false}
+ recOn=true;natDraw();buzz();vnote(t('Listening on this phone'),'acc');return true}
+/* stop listening: what was heard is still sent (unless the drawer is closed or the place changed, quiet) */
+function natStop(quiet){if(!rec)return;var r=rec;if(quiet){rec=null;recOn=false;natSend=false;try{r.abort()}catch(e){}natDraw();return}try{r.stop()}catch(e){}}
+var vempty=$('vempty');pullDown('vcsheet','xvc');miclb();vdraw();natDraw();
 $('pname').value=guess();cells();try{var tn=localStorage.getItem('cytv-tvname');if(tn)$('tvname').textContent=tn}catch(e){}tok=stored();try{mac=localStorage.getItem(MK)||''}catch(e){}tab('kb');if(tok){show('remote');connect()}else show('pairbox');mark();autoPair();
 `;
 
@@ -735,23 +770,33 @@ textarea:focus{border:1.5px solid #ff8a5b;box-shadow:0 0 0 4px rgba(255,138,91,.
 .drawer .top .vchip{width:auto;height:34px;padding:0 12px;border-radius:17px;border:1px solid #2e3140;background:#232631;font-size:13px;font-weight:600;color:#f4f5f7}.vchip i{flex:none;width:8px;height:8px;border-radius:50%;background:#ff8a5b;margin-right:7px}.drawer .top .vchip svg{width:14px;height:14px;margin-left:6px}
 .vfield{display:flex;align-items:flex-end;border:1.5px solid #ff8a5b;border-radius:16px;padding:7px 7px 7px 14px;background:#101116;box-shadow:0 0 0 4px rgba(255,138,91,.14)}
 .vfield textarea,.vfield textarea:focus{flex:1;min-width:0;border:0;padding:7px 0;background:transparent;box-shadow:none;font-size:16px;line-height:24px;height:38px}
+.vnat{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid #2e3140;background:#232631;color:#ff8a5b;margin-left:8px}.vnat .ic{width:20px;height:20px}.vnat.on{background:#ff8a5b;color:#1b1008;border-color:#ff8a5b;box-shadow:0 0 0 6px rgba(255,138,91,.14);animation:vpulse 1.2s ease-in-out infinite}
+@keyframes vpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}@media (prefers-reduced-motion:reduce){.vnat.on{animation:none}}.vh.rec{color:#ff8a5b}
 .vsend{flex:none;width:40px;height:40px;border-radius:50%;border:0;background:#ff8a5b;color:#1b1008;margin-left:8px}.vsend .ic{width:20px;height:20px}
 .vh{display:flex;align-items:center;font-size:13px;margin:10px 2px 0}.vh .ic{width:16px;height:16px;color:#ff8a5b;margin:0 6px 0 0}.vh .ic+span{margin:0}
-.vlog{max-height:42vh;overflow-y:auto}
-.vb{border-radius:16px;padding:11px 13px;font-size:14.5px;line-height:1.45;margin-top:10px;overflow-wrap:anywhere;-webkit-user-select:text;user-select:text}
-.vb.me{background:#232631;color:#c9ccd8;margin-left:40px}.vb.ai{background:rgba(255,138,91,.14);color:#f4f5f7;margin-right:20px}
-.vb.err{background:rgba(242,193,78,.1);border:1px solid rgba(242,193,78,.35);color:#f0d58a;margin-right:20px}
-.vb small{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#ff8a5b;font-weight:800;margin-bottom:3px}
-.vb.wait{color:#a3a8b8;margin-right:160px;animation:sk 1.1s ease-in-out infinite}
+/* the conversation: full height, the top row and the bottom (field, listening panel, buttons) fixed, the turns between them scroll */
+#vcs.full{align-items:stretch}
+.drawer.vfull{display:flex;flex-direction:column;height:100%;max-height:none;border-radius:0;border-top:0;padding-top:calc(14px + env(safe-area-inset-top,0px));padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));overflow:hidden}
+.drawer.vfull>.grab{display:none}
+#vcmain{display:flex;flex-direction:column;flex:1;min-height:0}#vcmain>*{flex:none}
+.vres{flex:1 1 auto!important;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin:0 -20px 12px;padding:2px 20px 8px;border-bottom:1px solid #2e3140}
+.vempty{margin:32vh 24px 0;text-align:center;font-size:15px;line-height:1.5;color:#a3a8b8}
+.vturn+.vturn{margin-top:22px}
+.vq{margin:0 2px 8px;font-size:14px;line-height:1.45;color:#a3a8b8;font-style:italic;overflow-wrap:anywhere;-webkit-user-select:text;user-select:text}
+.vout{border-radius:16px;background:#232631;border:1px solid #2e3140;padding:12px 14px}
+.vby{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#ff8a5b;font-weight:800;margin-bottom:4px}.vby:empty{display:none}
+.vat{margin:0;font-size:16px;line-height:1.55;color:#f4f5f7;white-space:pre-wrap;overflow-wrap:anywhere;-webkit-user-select:text;user-select:text}
+.vout.wait .vat{color:#a3a8b8;animation:sk 1.4s ease-in-out infinite}
 .vbig{text-align:center;margin-top:2px}.vbig b{display:block;font-size:20px}.vbig small{display:block;font-size:13.5px;line-height:1.4;color:#a3a8b8;margin-top:4px}
 .rart{position:relative;width:58px;height:110px;margin:16px auto 4px;border-radius:29px;background:#232631;border:1px solid #2e3140}.rart i{position:absolute;left:50%;top:24px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:#ff8a5b;box-shadow:0 0 0 7px rgba(255,138,91,.14)}
 .vbars{display:flex;align-items:center;justify-content:center;height:56px;margin:8px 0}.vbars i{width:6px;border-radius:3px;background:#ff8a5b;margin:0 2.5px}
 .vbars.live i{animation:vbar 1s ease-in-out infinite}.vbars.idle i{opacity:.35}
 .vbars i:nth-child(2){animation-delay:.12s}.vbars i:nth-child(3){animation-delay:.24s}.vbars i:nth-child(4){animation-delay:.36s}.vbars i:nth-child(5){animation-delay:.48s}.vbars i:nth-child(6){animation-delay:.6s}.vbars i:nth-child(7){animation-delay:.72s}
 @keyframes vbar{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
-@media (prefers-reduced-motion:reduce){.vbars.live i,.vb.wait{animation:none}}
-.vbtns{display:flex;margin-top:16px}.vbtns button{flex:1;height:50px;border-radius:16px}.vbtns button+button{margin-left:8px}.vbtns .ghostb{background:transparent;border:1px solid #2e3140;font-size:14px}.vbtns button:disabled{opacity:.45}
+@media (prefers-reduced-motion:reduce){.vbars.live i,.vout.wait .vat{animation:none}}
+.vbtns{display:flex;margin-top:16px}.vbtns button{flex:1;height:50px;border-radius:16px}.vbtns button+button{margin-left:8px}.vbtns .ghostb{background:transparent;border:1px solid #2e3140;font-size:14px}.vbtns .pri .ic{width:20px;height:20px;margin-right:8px}
 .vwarn{margin-top:12px;border-radius:12px;background:rgba(242,193,78,.1);border:1px solid rgba(242,193,78,.35);padding:10px 12px;font-size:13px;line-height:1.4;color:#f0d58a}
+.vout.vwarn{margin-top:0;border-radius:16px;padding:12px 14px}.vout.vwarn .vat{font-size:14.5px;color:#f0d58a}
 .kv .kvbtn{height:auto;padding:0;border:0;background:transparent;color:#ff8a5b;font-size:inherit;font-weight:600}
 `;
 
@@ -854,12 +899,12 @@ ${qr}</div></div>
 <button class=vtog id=vrem role=switch aria-checked=true><span>${T('Remember my choice')}</span><i class=sw></i></button>
 <p class=vhint>${T('Change it later: hold the mic button, or This remote › Voice.')}</p></div>
 <div id=vcmain class=hide><div class=top><button id=vchip class=vchip aria-label="${T('Change where you speak')}"><i></i><span id=vchipt></span>${ic('chev')}</button><button id=xvc2 aria-label="${T('Close')}">${ic('close')}</button></div>
-<div id=vlog class=vlog></div>
-<div id=vphone><div class=vfield><textarea id=vtxt rows=1 autocomplete=off enterkeyhint=send placeholder="${T('Ask the TV')}" aria-label="${T('Question for the TV')}"></textarea><button id=vsend class=vsend aria-label="${T('Send')}">${ic('send')}</button></div>
-<p class=vh>${ic('mic')}<span>${T('Tap the mic on your keyboard and speak')}</span></p></div>
+<div id=vres class=vres aria-live=polite><p id=vempty class=vempty>${T('Ask a question. The answer shows here and on the TV.')}</p></div>
+<div id=vphone><div class=vfield><textarea id=vtxt rows=1 autocomplete=off enterkeyhint=send placeholder="${T('Ask the TV')}" aria-label="${T('Question for the TV')}"></textarea><button id=vnat class="vnat hide" aria-label="${T('Speak')}">${ic('mic')}</button><button id=vsend class=vsend aria-label="${T('Send')}">${ic('send')}</button></div>
+<p class=vh id=vhint>${ic('mic')}<span id=vht>${T('Tap the mic on your keyboard and speak')}</span></p></div>
 <div id=vlive class=hide><div class=vbig><b id=vlt></b><small id=vls></small></div><div class=rart><i></i></div><div class="vbars live" id=vbars><i style="height:20px"></i><i style="height:38px"></i><i style="height:52px"></i><i style="height:30px"></i><i style="height:46px"></i><i style="height:24px"></i><i style="height:14px"></i></div></div>
 <p id=vwarnm class="vwarn hide"></p>
-<div id=vagain class="vbtns hide"><button id=vre class=ghostb>${T('Ask again')}</button><button id=vmic class=pri aria-label="${T('Speak to the TV')}">${ic('mic')}</button></div>
+<div id=vagain class="vbtns hide"><button id=vmic class=pri>${ic('mic')}<span>${T('Ask another question')}</span></button></div>
 <div id=vcancel class="vbtns hide"><button id=vcan class=ghostb>${T('Cancel')}</button></div></div>
 </div></div>
 <div id=pnote role=status aria-live=polite></div>

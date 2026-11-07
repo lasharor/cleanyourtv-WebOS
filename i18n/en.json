@@ -1453,5 +1453,13 @@
  "Ask the TV": "Ask the TV",
  "Question for the TV": "Question for the TV",
  "Tap the mic on your keyboard and speak": "Tap the mic on your keyboard and speak",
- "Ask again": "Ask again"
+ "Ask again": "Ask again",
+ "Listening on this phone… speak now": "Listening on this phone… speak now",
+ "Tap the mic and speak, or type": "Tap the mic and speak, or type",
+ "The phone did not allow the microphone. Use the keyboard’s mic instead.": "The phone did not allow the microphone. Use the keyboard’s mic instead.",
+ "The phone could not listen:": "The phone could not listen:",
+ "Listening on this phone": "Listening on this phone",
+ "Speak": "Speak",
+ "Ask another question": "Ask another question",
+ "Ask a question. The answer shows here and on the TV.": "Ask a question. The answer shows here and on the TV."
 }

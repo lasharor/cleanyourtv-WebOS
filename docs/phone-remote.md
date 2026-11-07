@@ -37,8 +37,15 @@ label under the button says what was chosen:
   the TV: **Listening on the TV**, **Recognising**, **Thinking**, then the answer. On TVs where LG opens the microphone only while the
   button is held, hold the remote's mic button while you speak.
 
-The question and the answer show on the phone, labelled with what answered (**Home Assistant** or **AI**), and on the TV as its usual card.
-**Ask again** sends the last question once more; the mic button under the answer starts a new one. **Remember my choice** (on by
+Once you have chosen, the voice screen fills the phone: each question is a turn, the question in small type above its answer
+card, labelled with what answered (**Home Assistant** or **AI**); the TV shows its usual card as well. The conversation scrolls on its own,
+oldest first, and a long answer opens at its question so it reads from the start. The field (or, from the TV remote, the listening panel
+and **Ask another question**) stays at the bottom. The conversation is kept while the page is open and starts empty after a reload.
+When the browser lets the page use the microphone (an HTTPS page, or in Chrome on Android an address added under `chrome://flags`,
+**Insecure origins treated as secure**, for example `http://<tv address>:8799`), **On this phone** listens at once with the phone's own
+speech recognition, shows the words as you speak and sends them when you stop; the mic in the field listens again. Elsewhere the
+keyboard's mic is the way, as above.
+**Remember my choice** (on by
 default) keeps the place for the next tap; switched off, the question comes every time. A **hold** on the mic button asks again, and so
 does the chip at the top of the drawer. **This remote** (tap the TV's name) has two rows for it: **Voice** (where you speak) and **Show
 answers here** (off: the drawer closes once the question is sent, and the answer shows only on the TV); when the TV cannot listen on its

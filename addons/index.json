@@ -98,8 +98,8 @@
       "files": {
         "addon.json": "3e9af193aec089bfea708c31fc816bdfa4cf78ba303c3214f0bd97838ace03be",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "0999330638f8d81a0d97f8a8077499f1bc1cb3aa50bdf9bb63a68d0265f5725c",
-        "page.js": "b4b47e20ab452a83d0cda525acf095b9f194b814dafd2114ed9f7e4f54415e1e",
+        "page/index.html": "b0ef8a60bd43d2951df023c52909c9f020f640649efff6508e92c5be89cb597d",
+        "page.js": "1ae7ff2ead8b3f97895799bfa5cea79b4179eb675a4d0490bec0f94fa9c68dce",
         "remotekeys.js": "2f65affbb6a6ff057947d81a553ee3d2063d293edaed4cdcb4a0019b380ea8d3",
         "service.js": "fd2865bf782e470d71c19dc7046dd130cea3c971638f0409f53aeb11766f144f",
         "src/css/page.css": "63830f9abe5d49fbf15a55e3e3c8dd957d0e0d7ce957cf514d22f25e5f8a2f97",
@@ -190,7 +190,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "319f153b4208a0876bf6e84aeb9ec2b562e203668c13bf59e486884e77adb3d1",
+        "page/index.html": "6acd4120ea1ea23c32339938ab231caba9310827df4446849af9213748661fc8",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
