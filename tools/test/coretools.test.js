@@ -98,6 +98,11 @@ run(async () => {
   ok(closes() === 1 && went[went.length - 1] === 'input_list', 'the screen saver is closed first, else the Inputs list opens under it');
   await C.call('show_notification', { title: 'Wake' });
   ok(closes() === 2, 'and before a card');
+  for (const t of ['launch_app', 'switch_input', 'close_app']) await C.call(t, { id: 'netflix', input: 'PS5' });
+  ok(closes() === 5, 'launch_app, switch_input and close_app close it too');
+  const before = closes();
+  for (const t of ['list_apps', 'get_volume', 'tv_info', 'list_running_apps']) await C.call(t, {});
+  ok(closes() === before, 'a tool that only reads leaves it on');
   shown.length = 0;
   power = 'Active';
   went.length = 3;
