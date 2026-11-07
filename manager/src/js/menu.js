@@ -485,7 +485,7 @@ function build() {
         dim: full,
         info: {
           t: 'Connect an agent',
-          d: 'Shows a QR code and an address for a phone or a computer. The page there has a prompt to paste to your agent, with a code that works once. The agent trades it for a token of its own, and the page turns green. The code works for ten minutes. Back closes it.',
+          d: 'Shows a QR code and a link. Send the link to your agent on a computer on the same network: it reads the setup there and connects. Or open the link on a phone or a computer, copy the prompt and paste it to your agent. The code in it works once, for ten minutes. Back closes it.',
         },
         fn: function () {
           if (full) {
