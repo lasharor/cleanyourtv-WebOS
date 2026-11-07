@@ -130,15 +130,18 @@ function stripItems(track, d) {
     track.appendChild(t);
   }
 }
-function stripView(box, d) {
+/* the strip: fill(track) puts its content in once; when it does not fit, it is put in twice and scrolls as a ticker (the symbols, or a
+   message too long for one line) */
+function stripView(box, d, fill) {
   var track = el('span', 'track');
+  fill = fill || stripItems;
   box.appendChild(track);
-  stripItems(track, d);
+  fill(track, d);
   var room = Math.min(1100, window.innerWidth) - 44,
     still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (track.scrollWidth <= room || still) return;
   box.className += ' scroll';
-  stripItems(track, d);
+  fill(track, d);
   var half = track.scrollWidth / 2,
     dur = Math.max(8, half / TICK_SPEED);
   track.style.animationDuration = dur.toFixed(2) + 's';
@@ -224,8 +227,17 @@ function draw() {
     return sendButtons(fullButton('settings', main, mode));
   }
   if (d.error || !d.q || !d.q.length) {
+    var said = d.error || '';
+    if (mode === 'strip') {
+      // one line under or above the clock: a message too long for it scrolls sideways like the symbols
+      main.className = 'strip msg1';
+      stripView(main, d, function (track) {
+        track.appendChild(el('span', 'tk', said));
+      });
+      return sendButtons([]);
+    }
     main.className = 'msg';
-    main.appendChild(el('div', 'm1', d.error || ''));
+    main.appendChild(el('div', 'm1', said));
     return sendButtons([]);
   }
   if (mode === 'strip') {

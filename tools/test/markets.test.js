@@ -579,10 +579,14 @@ run(async () => {
   const card = fs.readFileSync(path.join(cardDir, 'card.js'), 'utf8'),
     cardCss = fs.readFileSync(path.join(cardDir, 'card.css'), 'utf8');
   ok(
-    /stripItems\(track, d\);[\s\S]*scrollWidth[\s\S]*stripItems\(track, d\)/.test(card) &&
+    /fill = fill \|\| stripItems;[\s\S]*fill\(track, d\);[\s\S]*scrollWidth[\s\S]*fill\(track, d\)/.test(card) &&
       /@keyframes cytv-tick[\s\S]*translateX\(-50%\)/.test(cardCss) &&
       !/animation[^;]*(left|width|margin)/.test(cardCss),
     'the strip shows every symbol and, when they do not fit, scrolls as a ticker that animates transform only'
+  );
+  ok(
+    /main\.className = 'strip msg1';\s*stripView\(main, d, function/.test(card),
+    'a message in the strip (no key, the daily limit) scrolls sideways like the symbols when it is too long for one line'
   );
   ok(
     /fullButton\('open'/.test(card) && /fullButton\('settings'/.test(card),
