@@ -4,11 +4,12 @@ const { ok, req, run, memoryConfig } = require('./lib');
 
 run(async () => {
   const lunaCalls = [];
-  let foreground = 'netflix';
+  let foreground = 'netflix',
+    power = 'Active';
   const luna = async (uri, params) => {
     lunaCalls.push({ uri, params });
     if (/getForegroundAppInfo/.test(uri)) return { returnValue: true, appId: foreground };
-    if (/getPowerState/.test(uri)) return { returnValue: true, state: 'Active' };
+    if (/getPowerState/.test(uri)) return { returnValue: true, state: power };
     return { returnValue: true };
   };
   const apps = {
@@ -90,6 +91,16 @@ run(async () => {
   // navigate
   for (const to of ['home', 'live_tv', 'input_list']) await C.call('navigate', { to });
   ok(went.join() === 'home,live_tv,input_list', 'navigate goes to Home, Live TV and the Inputs list');
+  const closes = () => lunaCalls.filter(c => /closeByAppId/.test(c.uri) && c.params.id === 'com.webos.app.screensaver').length;
+  ok(closes() === 0, 'an awake screen is left alone');
+  power = 'Screen Saver';
+  await C.call('navigate', { to: 'input_list' });
+  ok(closes() === 1 && went[went.length - 1] === 'input_list', 'the screen saver is closed first, else the Inputs list opens under it');
+  await C.call('show_notification', { title: 'Wake' });
+  ok(closes() === 2, 'and before a card');
+  shown.length = 0;
+  power = 'Active';
+  went.length = 3;
   r = await C.call('navigate', { to: 'settings' });
   ok(r.isError && went.length === 3, 'navigate refuses anywhere else');
 
