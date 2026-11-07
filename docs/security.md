@@ -81,7 +81,7 @@ program started by the root service with its own copy of the C library; it reads
 - Audio from the remote's microphone is held in memory only while recognising.
 - Only the recognised text is sent, and only to the address you set (plain `http://` is possible: the token is then visible on
   your network) and, if you switch on AI chat, to `openrouter.ai` over HTTPS with your OpenRouter key and the model you chose.
-  OpenRouter and that model's provider see the text. With an AI server address set (Ollama on a computer of yours), the text
+  OpenRouter and that model's provider see the text. With an AI server address set (a self-hosted server of yours), the text
   goes to that address instead, over plain `http://` if you give one, and to no one else; the OpenRouter key is never sent there
   (only the key you set for that server, if any).
 - The phone setup page is a short-lived page on the local network (port 8769, a random 128-bit address, ten minutes, closed after

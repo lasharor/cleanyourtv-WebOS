@@ -578,7 +578,7 @@ function applySet(b) {
     if (typeof b.llm.serverKey === 'string' && b.llm.serverKey.trim()) l.serverKey = b.llm.serverKey.trim().slice(0, 300);
     if (b.llm.clearServerKey) l.serverKey = '';
     if (typeof b.llm.base === 'string') {
-      // the address of an OpenAI-compatible chat API (Ollama: http://<computer>:11434/v1); empty is OpenRouter
+      // the address of a self-hosted, OpenAI-compatible chat API (such as http://<computer>:11434/v1); empty is OpenRouter
       const u = b.llm.base.trim().slice(0, 300),
         base = u ? haBase(u) : '';
       if (u && !base) return 'the AI server address must start with http:// or https://';
@@ -653,9 +653,9 @@ function pairPage(msg, done, list, token, lang, only) {
 <label class=c><input type=checkbox name=hass value=1 ${ha.selfSigned ? 'checked' : ''}> ${T('Accept a self-signed certificate')}</label>
 <button>${T('Save')}</button></form>`
         : `<form method=post action="/${token}/save">
-<label>${T('AI server address')} <small>${T('(empty: OpenRouter. Your own, such as Ollama: http://computer:11434/v1)')}</small></label><input name=base type=url placeholder="https://openrouter.ai/api/v1" value="${esc(l.base)}">
-<label>${T('OpenRouter key')} ${l.key ? T('(one is saved; leave empty to keep it)') : ''} <small>${T('(not needed for Ollama)')}</small></label><input name=key type=password autocomplete=off placeholder="sk-or-...">
-<label>${T('Key of your AI server')} <small>(${T('optional; Ollama needs none')}${l.serverKey ? '; ' + T('one is saved, leave empty to keep it') : ''})</small></label><input name=serverkey type=password autocomplete=off>
+<label>${T('AI server address')} <small>${T('(empty: OpenRouter; or your own, such as http://computer:11434/v1)')}</small></label><input name=base type=url placeholder="https://openrouter.ai/api/v1" value="${esc(l.base)}">
+<label>${T('OpenRouter key')} ${l.key ? T('(one is saved; leave empty to keep it)') : ''} <small>${T('(not needed for a server of your own)')}</small></label><input name=key type=password autocomplete=off placeholder="sk-or-...">
+<label>${T('Key of your AI server')} <small>(${T('optional; most servers at home need none')}${l.serverKey ? '; ' + T('one is saved, leave empty to keep it') : ''})</small></label><input name=serverkey type=password autocomplete=off>
 <label>${T('Model')} <small>${T('choose from the list or type any OpenRouter model name')}</small></label><input name=model list=ml value="${esc(l.model)}" autocomplete=off><datalist id=ml>${opts}</datalist>
 <label class=c><input type=checkbox name=enabled value=1 ${l.enabled ? 'checked' : ''}> ${T('Answer with the AI')}</label>
 <label>${T('Instructions for the AI')} <small>${T('(empty: short plain answers)')}</small></label><textarea name=system rows=3>${esc(l.system)}</textarea>

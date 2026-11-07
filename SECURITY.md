@@ -22,7 +22,7 @@ recogniser is a 64-bit program started by the root service with its own copy of 
 pipe and prints text. Audio from the remote's microphone is held in memory only while recognising. Only the recognised
 text is sent, and only to the address you set (plain `http://` is possible: the token is then visible on your network)
 and, if you switch on AI chat, to `openrouter.ai` over HTTPS with your OpenRouter key and the model you chose; OpenRouter and
-that model's provider see the text (with an AI server address set, such as Ollama on a computer of yours, the text goes there
+that model's provider see the text (with an AI server address set, a self-hosted server of yours, the text goes there
 instead, and the OpenRouter key never does). The phone setup page is a short-lived page on the local network (port 8769, a random 128-bit address, ten minutes,
 closed after saving, plain HTTP: the key is visible on the network while it is typed). With Home Assistant set up, the recognised text goes to the address you set with your long-lived access token (plain `http://` makes the token visible on your network; a self-signed certificate is accepted only when switched on). The keys and the token are kept in `config.json` (readable by root only) and are never returned by the
 service. Pausing LG's voice assistant sends it SIGSTOP; nothing of LG's is modified.

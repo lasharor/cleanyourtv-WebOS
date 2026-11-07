@@ -823,7 +823,7 @@ function build() {
       },
     });
     rows.push({
-      label: lm.base ? 'AI chat (your server)' : 'AI chat (OpenRouter)',
+      label: lm.base ? 'AI chat (self-hosted)' : 'AI chat (OpenRouter)',
       sub: lm.hasKey || lm.base ? onoff(lm.enabled) + ' \u00B7 ' + lm.model : 'no key set',
       fn: function () {
         if (!lm.hasKey && !lm.base) {
@@ -3520,7 +3520,7 @@ function openModels() {
         return;
       }
       banner('');
-      // OpenRouter can pick a model itself; a server of yours (Ollama) lists only the models it has
+      // OpenRouter can pick a model itself; a self-hosted server lists only the models it has
       mdl = (((vo || {}).llm || {}).base ? [] : [{ id: 'openrouter/auto', name: 'Auto (OpenRouter picks)', price: null }]).concat(r.picks);
       var cur = ((vo || {}).llm || {}).model;
       if (

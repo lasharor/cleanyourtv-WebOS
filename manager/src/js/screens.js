@@ -681,7 +681,7 @@ function openModels() {
         return;
       }
       banner('');
-      // OpenRouter can pick a model itself; a server of yours (Ollama) lists only the models it has
+      // OpenRouter can pick a model itself; a self-hosted server lists only the models it has
       mdl = (((vo || {}).llm || {}).base ? [] : [{ id: 'openrouter/auto', name: 'Auto (OpenRouter picks)', price: null }]).concat(r.picks);
       var cur = ((vo || {}).llm || {}).model;
       if (

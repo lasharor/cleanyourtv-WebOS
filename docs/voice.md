@@ -1,8 +1,8 @@
 # Voice (optional)
 
 Recognises speech from the remote's microphone **on the TV**. The text is shown on screen and can be sent to a server you run,
-to a language model (through OpenRouter, or on a computer of yours with Ollama), or both; the answer is shown as text on screen. Answers are not spoken. No audio is
-recorded or sent anywhere.
+to a language model (through OpenRouter, or on an AI server of your own), or both; the answer is shown as text on screen.
+Answers are not spoken. No audio is recorded or sent anywhere.
 
 It is **off and not installed by default**. Nothing described here runs until you install it.
 
@@ -68,35 +68,51 @@ curl -X POST localhost:8765/api/voice/ask -d '{"text":"..."}'
 
 It answers `{"text","answer","error"}`; add `"card":false` to skip the screen.
 
-## AI chat on a computer of yours (Ollama), free
+## AI chat on your own server (self-hosted)
 
-Instead of OpenRouter, the answers can come from a language model on a computer at home: [Ollama](https://ollama.com), or any
-server with the same OpenAI-compatible chat API (LM Studio, llama.cpp's `llama-server`, vLLM). Nothing is paid and the text stays on
-your network.
+Instead of OpenRouter, the answers can come from a language model on a computer of yours. Any server that speaks the
+OpenAI-compatible chat API works: Ollama, LM Studio, llama.cpp's `llama-server`, vLLM, LocalAI, Jan, text-generation-webui and
+others. Nothing is paid and the text stays on your network.
 
-On the computer, install Ollama, get a small model and let it listen on the network (by default it answers only the computer itself):
+What the server needs:
+
+- the endpoints `/v1/chat/completions` (the answers) and `/v1/models` (the list of models on the TV and the phone page);
+- to listen on the network, not only on the computer itself (`localhost` or `127.0.0.1`, which many servers use by default);
+- its port open in the computer's firewall;
+- a model small enough to answer within 60 seconds: on a computer without a graphics card, take one of 1 to 4 billion parameters.
+
+The address you enter is the part before `/chat/completions`, so it usually ends with `/v1`: `http://<computer>:<port>/v1`.
+Examples:
+
+| Server | Address | Listening on the network |
+|---|---|---|
+| [Ollama](https://ollama.com) | `http://<computer>:11434/v1` | set `OLLAMA_HOST=0.0.0.0` (on Windows and macOS in the environment of the Ollama app, then restart it) |
+| [LM Studio](https://lmstudio.ai) | `http://<computer>:1234/v1` | switch on **Serve on Local Network** in its server settings |
+| llama.cpp's `llama-server` | `http://<computer>:8080/v1` | start it with `--host 0.0.0.0 --port 8080` |
+| [vLLM](https://docs.vllm.ai) | `http://<computer>:8000/v1` | start it with `vllm serve <model> --host 0.0.0.0` |
+
+With Ollama, for example:
 
 ```sh
 ollama pull llama3.2:3b
 OLLAMA_HOST=0.0.0.0 ollama serve
 ```
 
-On Windows and macOS set `OLLAMA_HOST` to `0.0.0.0` in the environment of the Ollama app and restart it; allow port 11434 in the
-firewall. Then, on the phone page of **Set up from your phone**, set **AI server address** to `http://<computer>:11434/v1`, leave
-the key empty, choose the model from the list (it is read from your server) and switch on **Answer with the AI**. The same from a
-shell:
+Then, on the phone page of **Set up from your phone**, set **AI server address** to the address of your server, leave the
+OpenRouter key empty, choose the model from the list (it is read from your server) and switch on **Answer with the AI**. The same
+from a shell:
 
 ```sh
 curl -X POST localhost:8765/api/voice/set -d '{"llm":{"base":"http://192.168.1.20:11434/v1","model":"llama3.2:3b","enabled":true}}'
 ```
 
-- The address is the part before `/chat/completions`; `http://` is fine on your own network. An empty address goes back to OpenRouter.
-- Your OpenRouter key is never sent to that server: it goes only to OpenRouter, and stays saved for when you clear the address. If
-  your server wants a key (LM Studio or vLLM with one), set **Key of your AI server** (`"serverKey"`); it is sent as
-  `Authorization: Bearer <key>` to that server only. Ollama needs none.
-- The answer must arrive within 60 seconds: on a computer without a graphics card, take a small model (1 to 4 billion parameters).
-- **Model** on the TV then lists the models of your server; the manager app shows **AI chat (your server)**.
-- Home Assistant with its Ollama integration is another way: choose that conversation agent under **Assist agent** (below).
+- `http://` is fine on your own network. An empty address goes back to OpenRouter.
+- Your OpenRouter key is never sent to your server: it goes only to OpenRouter, and stays saved for when you clear the address. Most
+  servers at home need no key; if yours wants one (for example an API key you set in LM Studio, `llama-server` or vLLM), set
+  **Key of your AI server** (`"serverKey"`). It is sent as `Authorization: Bearer <key>` to that server only.
+- **Model** on the TV then lists the models of your server; the manager app shows **AI chat (self-hosted)**.
+- Home Assistant is another way: if it has a conversation agent backed by a local model (its Ollama integration, for example),
+  choose that agent under **Assist agent** (below).
 
 ## The speech model
 
@@ -117,8 +133,8 @@ curl -X POST localhost:8765/api/voice/set -d '{"llm":{"base":"http://192.168.1.2
 The TV's programs are 32-bit ARM on a 64-bit kernel and the recogniser is a 64-bit program, so `cytv-asr` runs through the 64-bit
 loader and libraries that the download places in the same folder. Nothing in the system folders is changed.
 
-Only text goes further: to your server, to OpenRouter or the AI server you set, or nowhere. LG's own assistant is a separate path with its own cloud
-recognition; **Switch off LG's voice assistant** pauses it while voice is on.
+Only text goes further: to your server, to OpenRouter or the AI server you set, or nowhere. LG's own assistant is a separate path
+with its own cloud recognition; **Switch off LG's voice assistant** pauses it while voice is on.
 
 ## Home Assistant (Assist)
 

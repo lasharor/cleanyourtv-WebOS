@@ -1,5 +1,5 @@
-// Answers for the voice function (voice.js): Home Assistant's Assist, a language model (through OpenRouter, or a server that speaks the
-// same chat API, such as Ollama on a computer at home), and a server of yours. Text
+// Answers for the voice function (voice.js): Home Assistant's Assist, a language model (through OpenRouter, or a self-hosted server
+// with the OpenAI-compatible chat API), and a server of yours. Text
 // goes in, text comes out; the settings are the voice section of config.json (voice.js passes them in with init).
 const fetch = require('./fetch'),
   { URL } = require('./netcompat');
@@ -48,14 +48,15 @@ async function toServer(c, payload) {
 }
 
 // ---- chat with a language model (text only; the key and the questions go to OpenRouter, or to the server set as base) ----
-// base: '' is OpenRouter; otherwise the address of an OpenAI-compatible chat API (Ollama: http://<computer>:11434/v1, LM Studio,
-// llama.cpp's server, vLLM). Such a server usually needs no key, and gets none of OpenRouter's extra fields. key is the OpenRouter
-// key and goes only to OpenRouter; serverKey goes only to the server of yours (it may be on plain http on the home network).
+// base: '' is OpenRouter; otherwise the address of a self-hosted, OpenAI-compatible chat API (Ollama, LM Studio, llama.cpp's
+// llama-server, vLLM and others; for example http://<computer>:11434/v1). Such a server usually needs no key, and gets none of
+// OpenRouter's extra fields. key is the OpenRouter key and goes only to OpenRouter; serverKey goes only to the server of yours (it
+// may be on plain http on the home network).
 const orApi = () => process.env.CYTV_OPENROUTER || 'https://openrouter.ai/api/v1'; // overridden only by the tests
 const LLM_DEFAULTS = { enabled: false, key: '', model: 'openrouter/auto', system: '', base: '', serverKey: '' };
 const llmCfg = () => Object.assign({}, LLM_DEFAULTS, cfg().llm || {});
 const llmApi = l => l.base || orApi();
-const llmName = l => (l.base ? 'the AI server' : 'OpenRouter');
+const llmName = l => (l.base ? 'The AI server' : 'OpenRouter');
 const llmReady = l => !!(l.enabled && (l.key || l.base)); // OpenRouter needs a key; a server of yours may not
 const llmAuth = l => (l.base ? l.serverKey : l.key); // never the OpenRouter key to another server
 const DEFAULT_SYSTEM =
@@ -74,7 +75,7 @@ function cleanAnswer(t) {
 }
 async function askLlm(text) {
   const l = llmCfg();
-  if (!l.key && !l.base) throw new Error('no OpenRouter key is set');
+  if (!l.key && !l.base) throw new Error('no OpenRouter key or AI server address is set');
   if (Date.now() - lastTurn > 600000) history = []; // a new conversation after ten quiet minutes
   const turns = history.concat({ role: 'user', content: text }).slice(-12);
   const system = (l.system || DEFAULT_SYSTEM) + ' Today is ' + new Date().toISOString().slice(0, 10) + '.';

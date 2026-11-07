@@ -175,7 +175,7 @@ run(async () => {
     'saving the Voice page keeps Home Assistant'
   );
   await sleep(2100);
-  // a server of yours with the same chat API (Ollama at http://<computer>:11434/v1): no key, none of OpenRouter's extra fields
+  // a self-hosted server with the OpenAI-compatible chat API (such as http://<computer>:11434/v1): no key, none of OpenRouter's extra fields
   const olLog = [];
   const ol = await serve((q, rs) => {
     let b = '';
@@ -186,7 +186,7 @@ run(async () => {
       if (q.url === '/v1/models')
         return rs.end(JSON.stringify({ object: 'list', data: [{ id: 'qwen2.5:3b' }, { id: 'llama3.2:3b', object: 'model' }] }));
       if (q.url !== '/v1/chat/completions') return rs.end('{}');
-      rs.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'Ollama says hi' } }] }));
+      rs.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'the server says hi' } }] }));
     });
   });
   r = await vask('set', { llm: { base: 'ftp://x' } });
@@ -201,7 +201,7 @@ run(async () => {
   );
   r = await vask('ask', { text: 'hello there', card: false });
   const chat = olLog.filter(x => x.url === '/v1/chat/completions')[0];
-  ok(r.j.answer === 'Ollama says hi' && r.j.via === 'ai', 'the server of yours answers');
+  ok(r.j.answer === 'the server says hi' && r.j.via === 'ai', 'the server of yours answers');
   ok(
     chat && chat.body.model === 'llama3.2:3b' && !chat.body.reasoning && !chat.headers.authorization && !chat.headers['x-title'],
     'it gets the model, no key and none of the OpenRouter fields'

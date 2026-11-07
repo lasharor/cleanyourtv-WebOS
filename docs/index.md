@@ -17,7 +17,7 @@ on-device voice recognition, and an optional debloat of LG's ads and telemetry.
 - **Picture notifications.** A card with a photo over whatever is on screen, triggered from your network, for example by
   Home Assistant. [More](notifications.md).
 - **Voice (optional).** Speech recognition on the TV (Moonshine), with answers from Home Assistant's Assist, a language model through
-  OpenRouter or Ollama on a computer of yours, or your own server, shown as text. [More](voice.md).
+  OpenRouter or a self-hosted AI server (Ollama, LM Studio and others), or your own server, shown as text. [More](voice.md).
 - **Debloat.** Stops LG's ad and telemetry services and blocks a few ad servers. [More](debloat.md).
 - **Manager app.** Sets up, updates and removes everything from the TV. [More](manager.md).
 
