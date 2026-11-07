@@ -198,11 +198,11 @@ An add-on with `"provides": ["tools"]` gives the voice assistant and the service
 
 | Member | What it does |
 |---|---|
-| `list()` | The tools (or a promise of them), in MCP form: `[{name, description, inputSchema, annotations?}]`. `name`: a letter, then letters, digits, `_` or `-`; `annotations: {destructiveHint: true}` for a tool that turns something off or deletes something. |
+| `list()` | The tools (or a promise of them), in MCP form: `[{name, description, inputSchema, annotations?, onScreen?}]`. `name`: a letter, then letters, digits, `_` or `-`; `annotations: {destructiveHint: true}` for a tool that turns something off or deletes something; `onScreen`: `true` for a tool that changes what is on screen, or the list of its `action` values that do (`["open_on_tv"]`): the service closes LG's screen saver before them. `onScreen` is not sent to clients. |
 | `call(name, args, opts)` | Runs one and answers `{content: [{type: "text", text}], isError}`. The arguments were checked against `inputSchema`. A destructive tool is called only with `opts.confirmed: true`, after the person said yes on the TV. |
 
 The tools go with the add-on: switched off, they are gone. A name the service or an earlier add-on already uses gets the add-on's id
-in front (`<id>__<name>`); at most 40 tools in all reach the model. The **Agent tools (MCP)** catalog add-on is such a provider for the
+in front (`<id>__<name>`); at most 40 tools in all reach the model, so give an add-on one tool with an `action` rather than one tool per action. The **Agent tools (MCP)** catalog add-on is such a provider for the
 tools that apps and add-ons sign in a `tools.json` ([Tools for the assistant](../agent.md)).
 
 ### A phone page of the add-on

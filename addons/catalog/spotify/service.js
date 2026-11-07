@@ -252,7 +252,71 @@ function create(ctx) {
     });
   }
 
-  return { cards: { feed, action }, settings, handle: (q, r) => r.end('{}'), np, handlePhone };
+  // ---- the tool for the voice assistant and MCP clients ("provides": ["tools"]): the card's controls, one tool with an action ----
+  // play_on (moving the music to another device, which can wake a speaker in another room) is left out on purpose
+  const TOOL = {
+    name: 'spotify',
+    description:
+      "Spotify on this TV's account. action now_playing: what plays and on which device; play, pause, next, previous: control it; devices: the Spotify Connect devices; open_on_tv: open the Spotify app of the TV on what plays. The controls need Spotify Premium.",
+    inputSchema: {
+      type: 'object',
+      properties: { action: { type: 'string', enum: ['now_playing', 'play', 'pause', 'next', 'previous', 'devices', 'open_on_tv'] } },
+      required: ['action'],
+    },
+    onScreen: ['open_on_tv'], // the service closes LG's screen saver first
+  };
+  const done = v => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v) }], isError: false });
+  const bad = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });
+  async function callTool(name, args) {
+    if (name !== 'spotify') return bad('unknown tool: ' + name);
+    const a = String((args && args.action) || '');
+    if (a === 'now_playing') {
+      const n = await np.now(false);
+      if (n.connected === false) return bad('Spotify is not connected: set it up from Add-ons > Spotify now playing.');
+      if (n.error) return bad(n.error);
+      if (!n.title) return done({ playing: false, note: 'nothing plays on the account' });
+      return done({
+        playing: !!n.playing,
+        title: n.title,
+        artist: n.artist || '',
+        device: n.device || '',
+        position: Math.round((n.progress || 0) / 1000) + ' s of ' + Math.round((n.duration || 0) / 1000) + ' s',
+      });
+    }
+    if (a === 'play' || a === 'pause' || a === 'next' || a === 'previous') {
+      const n = await np.now(false);
+      const r = await np.control(a);
+      if (r.error) return bad(r.error);
+      const now = Date.now();
+      // the card shows what was asked for until Spotify reports it, as after a button
+      want =
+        a === 'play' || a === 'pause'
+          ? { playing: a === 'play', until: now + 6000, at: now }
+          : { playing: true, until: now + 6000, at: now, title: n.title };
+      return done({ done: a });
+    }
+    if (a === 'devices') {
+      const l = await np.devices();
+      if (l.error) return bad(l.error);
+      return done(
+        l.devices.filter(d => !d.wake).map(d => ({ name: d.name && d.name !== d.id ? d.name : d.type, type: d.type, active: d.active }))
+      );
+    }
+    if (a === 'open_on_tv') {
+      const r = await openApp();
+      return r.error ? bad(r.error) : done({ opened: 'Spotify' });
+    }
+    return bad('action is now_playing, play, pause, next, previous, devices or open_on_tv');
+  }
+
+  return {
+    cards: { feed, action },
+    tools: { list: () => [TOOL], call: callTool },
+    settings,
+    handle: (q, r) => r.end('{}'),
+    np,
+    handlePhone,
+  };
 }
 
 module.exports = { create, PAIR_PORT };

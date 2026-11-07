@@ -241,6 +241,33 @@ run(async () => {
   r = await C.call('new_conversation', {});
   ok(!r.isError && val(r).forgotten === true, 'new_conversation forgets the conversation');
 
+  // an add-on's tool that changes the screen (onScreen: true, or the actions that do): the hub closes the screen saver first
+  const hubCalls = [];
+  const addonTool = {
+    list: () => [
+      {
+        name: 'box',
+        description: 'A box.',
+        inputSchema: { type: 'object', properties: { action: { type: 'string' } } },
+        onScreen: ['open'],
+      },
+    ],
+    call: async (n, a) => (hubCalls.push(a.action), { content: [{ type: 'text', text: 'ok' }], isError: false }),
+  };
+  const hub = req('toolhub').create(
+    Object.assign({}, ctx, {
+      feature: n => (n === 'addons' ? { providers: () => [{ id: 'demo', name: 'Demo', mod: { tools: addonTool } }] } : features[n] || null),
+    })
+  );
+  power = 'Screen Saver';
+  const c0 = closes();
+  await hub.call('box', { action: 'status' });
+  ok(closes() === c0 && hubCalls.join() === 'status', "an add-on tool's action that does not change the screen leaves the screen saver on");
+  await hub.call('box', { action: 'open' });
+  ok(closes() === c0 + 1 && hubCalls.join() === 'status,open', 'the one that does closes it first');
+  ok(!('onScreen' in (await hub.list()).filter(t => t.name === 'box')[0]), 'onScreen is not sent to clients');
+  power = 'Active';
+
   // a missing part says so instead of throwing
   const bare = req('coretools').create({ feature: () => null }).tools;
   for (const n of ['get_current_app', 'list_running_apps', 'close_app', 'navigate', 'get_volume', 'most_used_apps', 'get_weather'])

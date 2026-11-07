@@ -69,6 +69,8 @@ async function merge(providers) {
             ? t.inputSchema
             : { type: 'object', properties: {} },
         description: String(t.description).slice(0, 300),
+        // the tool changes what is on screen (true), or only some of its actions do: LG's screen saver is closed before
+        onScreen: t.onScreen === true || (Array.isArray(t.onScreen) && t.onScreen.map(String)),
         confirm: t.confirm === true || !!(t.annotations && t.annotations.destructiveHint),
       };
       names.push(name);
@@ -109,6 +111,7 @@ function create(ctx) {
         confirm: true,
       });
     try {
+      if (e.onScreen && e.provider !== core && (e.onScreen === true || e.onScreen.indexOf(String(a.action)) >= 0)) await core.wake();
       const r = await e.provider.tools.call(e.name, a, {});
       return r && Array.isArray(r.content) ? { content: r.content, isError: !!r.isError } : fail('the tool gave no answer');
     } catch (err) {

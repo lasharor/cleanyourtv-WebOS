@@ -448,6 +448,37 @@ run(async () => {
   );
   ctlAnswer = null;
 
+  // ---- the tool (wave 2): the same controls for the voice assistant and AI agents ----
+  const tl = svc.tools.list();
+  ok(
+    tl.length === 1 &&
+      tl[0].name === 'spotify' &&
+      tl[0].onScreen.join() === 'open_on_tv' &&
+      tl[0].inputSchema.properties.action.enum.indexOf('play_on') < 0,
+    'one tool, spotify; only open_on_tv changes the screen; play_on (it can wake a speaker) is not offered'
+  );
+  const tv = r => JSON.parse(r.content[0].text);
+  skew += 20000;
+  playing = { status: 200, body: track() };
+  let tr = await svc.tools.call('spotify', { action: 'now_playing' });
+  ok(
+    !tr.isError && tv(tr).title === 'Example Track' && tv(tr).device === 'Living room TV' && tv(tr).playing === true,
+    'now_playing: the track and the device'
+  );
+  ok(JSON.stringify(tr).indexOf('SECRET') < 0, 'and no token');
+  seen.ctl.length = 0;
+  for (const a of ['pause', 'play', 'next', 'previous']) await svc.tools.call('spotify', { action: a });
+  ok(
+    seen.ctl.map(c => c.p.replace('/v1/me/player/', '')).join() === 'pause,play,next,previous',
+    'pause, play, next and previous reach Spotify: ' + seen.ctl.map(c => c.p).join()
+  );
+  tr = await svc.tools.call('spotify', { action: 'shuffle' });
+  ok(tr.isError && seen.ctl.length === 4, 'any other action is refused before Spotify is asked');
+  ctlAnswer = { status: 403, body: { error: { status: 403, message: 'Player command failed: Premium required' } } };
+  tr = await svc.tools.call('spotify', { action: 'next' });
+  ok(tr.isError && /Premium/.test(tr.content[0].text), 'a free account is told that the controls need Premium');
+  ctlAnswer = null;
+
   // the cover and the output button
   ctlAnswer = null;
   skew += 20000;
@@ -471,6 +502,18 @@ run(async () => {
     'the output button answers with a menu: the devices of the account (a bad id left out), the active one marked, and This TV when it is not listed: ' +
       JSON.stringify(om).slice(0, 200)
   );
+  tr = await svc.tools.call('spotify', { action: 'devices' });
+  ok(
+    !tr.isError &&
+      tv(tr).length === 2 &&
+      tv(tr)[0].name === 'Kitchen' &&
+      tv(tr)[1].active === true &&
+      JSON.stringify(tv(tr)).indexOf('device-0001') < 0,
+    'the tool lists the devices by name (no ids, a bad one left out)'
+  );
+  const lb = launched.length;
+  tr = await svc.tools.call('spotify', { action: 'open_on_tv' });
+  ok(!tr.isError && launched.length === lb + 1 && launched[lb].id === 'spotify-beehive', 'open_on_tv opens the Spotify app of the TV');
   seen.xfer.length = 0;
   ok((await svc.cards.action('nowplaying', {}, 'pick', 'speaker-device-0001')).ok === true, 'a device is picked');
   ok(
