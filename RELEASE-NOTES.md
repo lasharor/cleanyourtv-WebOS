@@ -13,7 +13,7 @@
 
 ## What to know
 
-The Home key on a page, the card dimming setting and the voice fix were tried on real TVs by their authors (a 65UP77006LB on webOS 6.5 for the Home key and the strip click, a 55NANO866NA on webOS 5.6 for the dimming, a 65UR91006LB on webOS 25 for voice). The Home key binds LG's input service while a page shows, so it needs the Input key hook, which is on by default. Please say what you see in an issue.
+The Home key on a page was tried on a 65UR91006LB (webOS 25) with the default code, the voice fix on the same model, the card dimming setting on a 55NANO866NA (webOS 5.6) and the page strip click on a 65UP77006LB (webOS 6.5). The detection of a hook that gets no buttons (issue 185) has **not** been tried on a real TV yet: its author is waiting for the reporter of the issue to confirm it. The Home key binds LG's input service while a page shows, so it needs the Input key hook, which is on by default. Please say what you see in an issue.
 
 ## Thanks
 
