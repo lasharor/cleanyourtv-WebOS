@@ -549,6 +549,7 @@ function build() {
   /* the tool settings: what happens to new tools, then each group (OK or Right opens it; its first row switches the whole group, the
      rows under it one tool each). Every change is saved at once. */
   if (view === 'mcptools') {
+    mcpLive();
     var mt = mtools || { newTools: 'on', groups: [], on: 0, all: 0 };
     rows.push({
       label: 'New tools',
@@ -591,15 +592,11 @@ function build() {
           d:
             (g.kind === 'service'
               ? tr('Tools of the TV service.')
-              : tr('The add-on gives one tool,') +
-                ' **' +
-                g.tool +
-                '**, ' +
-                tr('with') +
+              : tr('What the AI may do with this add-on:') +
                 ' ' +
                 c.all +
                 ' ' +
-                tr(c.all === 1 ? 'action' : 'actions') +
+                tr(c.all === 1 ? 'tool' : 'tools') +
                 '. ' +
                 tr('Each is switched here.')) +
             (g.off ? '\n\n' + tr('The add-on is switched off in Add-ons. Your choices are kept for when it is on again.') : '') +
@@ -628,13 +625,13 @@ function build() {
       var gs = mtState(g);
       rows.push({
         cls: 'allrow',
-        label: tr('All') + ' ' + g.name + ' ' + tr('tools'),
+        label: mtAll(g),
         raw: true,
         sw: gs === 'on' ? 'on' : gs === 'part' ? 'mixed' : 'off',
         dim: !!g.off,
         group: g.id,
         info: {
-          t: tr('All') + ' ' + g.name + ' ' + tr('tools'),
+          t: mtAll(g),
           raw: true,
           d:
             gs === 'part'
@@ -656,21 +653,16 @@ function build() {
       g.items.forEach(function (it) {
         rows.push({
           cls: 'child',
-          label: g.kind === 'addon' ? it.name.replace(/_/g, ' ') : it.name,
-          raw: true,
+          label: it.label,
           sw: it.on ? 'on' : 'off',
           badge: it.fresh ? 'New' : '',
           tag: it.confirm ? 'voice only, after a yes' : '',
           dim: !!g.off,
           group: g.id,
           info: {
-            t: (g.kind === 'addon' && g.tool ? g.tool + ' › ' : '') + it.name,
-            raw: true,
+            t: it.label,
             d:
-              tr(it.label) +
-              '.' +
-              (it.confirm ? ' ' + tr('Runs by voice only, after you say yes on the TV; refused from the network.') : '') +
-              '\n\n' +
+              (it.confirm ? tr('Runs by voice only, after you say yes on the TV; refused from the network.') + '\n\n' : '') +
               tr(it.on ? 'On: agents and the voice assistant can use it.' : 'Off: it is not offered, and a call to it is refused.'),
           },
           fn: function () {
@@ -684,16 +676,14 @@ function build() {
     });
     rows.push({ sep: true });
     rows.push({
-      label: 'disconnect_from_tv',
-      raw: true,
+      label: 'Agents can disconnect themselves',
       sub: 'Always on',
       lock: true,
       cls: 'locked',
       nofocus: true,
       info: {
-        t: 'disconnect_from_tv',
-        raw: true,
-        d: 'Lets a network agent log itself out. It cannot be turned off: an agent must always be able to leave.',
+        t: 'Agents can disconnect themselves',
+        d: 'A network agent can always log itself out of the TV. This cannot be turned off: an agent must always be able to leave.',
       },
     });
     rows.push({ sep: true });
@@ -2489,11 +2479,29 @@ function mtSet(body, said) {
       if (said) banner(said, 'ok');
       var was = rows[idx] && rows[idx].label;
       build();
-      for (var i = 0; i < rows.length; i++) if (rows[i].label === was && !rows[i].sep) idx = i;
+      mtRefocus(was);
       draw();
     },
     function () {
       banner('The service did not answer', 'err');
     }
   );
+}
+/* "All Spotify tools", and "All Agent tools" (not "All Agent tools tools") */
+function mtAll(g) {
+  return tr('All') + ' ' + g.name + (/\btools$/i.test(g.name) ? '' : ' ' + tr('tools'));
+}
+/* after the list changed: the focus on the row it was on, else the nearest row that can take it (a row that went away, such as a
+   tool an update removed while the screen was open) */
+function mtRefocus(was) {
+  for (var i = 0; i < rows.length; i++)
+    if (rows[i].label === was && !rows[i].sep) {
+      idx = i;
+      return;
+    }
+  idx = Math.min(idx, rows.length - 1);
+  var up = idx;
+  while (up >= 0 && (rows[up].sep || rows[up].nofocus)) up--;
+  if (up >= 0) idx = up;
+  else while (idx < rows.length - 1 && (rows[idx].sep || rows[idx].nofocus)) idx++;
 }

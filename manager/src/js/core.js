@@ -148,7 +148,7 @@ function mcpDays(ms) {
    every three seconds, and only while one of them is displayed and the app is visible, the state is read again and the screen is
    redrawn when it changed; the focused row stays where it was. Leaving those screens stops the timer. */
 var mcpLiveTimer = 0,
-  mcpLiveViews = ['mcpnet', 'mcpdevices', 'mcpagent'];
+  mcpLiveViews = ['mcpnet', 'mcpdevices', 'mcpagent', 'mcptools'];
 function mcpLiveStop() {
   if (mcpLiveTimer) clearInterval(mcpLiveTimer);
   mcpLiveTimer = 0;
@@ -158,6 +158,21 @@ function mcpLive() {
   mcpLiveTimer = setInterval(function () {
     if (mcpLiveViews.indexOf(view) < 0) return mcpLiveStop();
     if (document.hidden) return; /* behind another app: nothing to show */
+    /* the Tools screen: a new tool that appears (an add-on updated, a source approved) shows with its New badge */
+    if (view === 'mcptools') {
+      api('/api/mcp/tools').then(
+        function (t) {
+          if (view !== 'mcptools' || document.hidden || !t || t.error || JSON.stringify(t) === JSON.stringify(mtools)) return;
+          var was = rows[idx] && rows[idx].label;
+          mtools = t;
+          build();
+          mtRefocus(was);
+          draw();
+        },
+        function () {}
+      );
+      return;
+    }
     api('/api/mcp/lan').then(
       function (n) {
         if (mcpLiveViews.indexOf(view) < 0 || document.hidden || !n || n.error) return;

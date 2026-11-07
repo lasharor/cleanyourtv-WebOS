@@ -62,8 +62,8 @@ choice holds for both: they share one tool list. The row on the AI agents screen
 | **New tools** | What happens to a tool the TV has not seen before (an add-on installed or updated, a service update): **Turn on by themselves** (the default) or **Stay off until you turn them on**. Tools you already chose keep their state when you change this |
 | A group | The service's tools in four groups (Apps and inputs, Screen and Home, TV and sound, Answers) and one group per add-on. A dot and a count: **All on · 7**, **5 of 7 on** (half dot), **Off**; **Add-on is off** when the add-on is switched off. OK or Right opens the group, Left closes it. One group is open at a time (opening one closes the other), and the screen opens with every group closed |
 | **All … tools** | The group's first row: switches the whole group. A group that is partly on is turned all on first, then all off |
-| A tool | One switch per tool, and per action of an add-on's tool (Spotify's `play`, `pause` …). `power_off` is marked **voice only, after a yes** |
-| `disconnect_from_tv` | Always on, and not a switch: an agent must always be able to leave |
+| A tool | One switch per tool, and per action of an add-on's tool, each by what it does ("Open an app", Spotify's "Play", "Next track"); the screen shows no internal names. Turning the TV off is marked **voice only, after a yes** |
+| **Agents can disconnect themselves** | Always on, and not a switch (`disconnect_from_tv`): an agent must always be able to leave |
 
 How it behaves:
 
