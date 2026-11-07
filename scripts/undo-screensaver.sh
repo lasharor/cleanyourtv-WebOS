@@ -1,10 +1,10 @@
 #!/bin/sh
-# Put LG's screen saver back (RAM only). "temp": until the next reboot only; no argument: also write DISABLE-SCREENSAVER, so the next
+# Put LG's screen saver back (RAM only). "temp": until the next reboot only; no argument: also remove SCREENSAVER-ON, so the next
 # boots keep LG's screen saver.
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
 L=/media/developer/cleanyourtv
 STANDIN=/tmp/cleanyourtv-screensaver-standin
-[ "$1" = temp ] || touch $L/DISABLE-SCREENSAVER
+[ "$1" = temp ] || rm -f $L/SCREENSAVER-ON
 # our page, if it is up: the app that was on screen comes back
 luna-send -n 1 -w 5000 luna://com.palm.webappmanager/killApp '{"appId":"com.webos.app.screensaver"}' </dev/null >/dev/null 2>&1
 # the stand-in way (LG's screen saver is a native program): unmount it; the app manager was never restarted
@@ -13,7 +13,7 @@ if [ -f $STANDIN ] && grep -q " $(cat $STANDIN) " /proc/mounts; then
   umount "$EXE" 2>/dev/null
   rm -f $STANDIN
   echo "$(cut -d' ' -f1 /proc/uptime) undo-screensaver: the stand-in is removed from $EXE" >> /tmp/cleanyourtv-boot.log
-  echo "LG's screen saver is back; rm $L/DISABLE-SCREENSAVER to replace it again at the next boot"
+  echo "LG's screen saver is back; switch it on again in the manager (Features > Screen saver)"
   exit 0
 fi
 for m in $(awk '$2 ~ /applications\/com.webos.app.screensaver$/ {print $2}' /proc/mounts | sort -r); do umount $m 2>/dev/null; done
@@ -35,4 +35,4 @@ case "$fg" in
     echo "$(cut -d' ' -f1 /proc/uptime) undo-screensaver: Home did not come back; asking once more" >> /tmp/cleanyourtv-boot.log
     sh $L/reload-home.sh </dev/null ;;
 esac
-echo "LG's screen saver is back; rm $L/DISABLE-SCREENSAVER to replace it again at the next boot"
+echo "LG's screen saver is back; switch it on again in the manager (Features > Screen saver)"

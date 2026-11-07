@@ -43,7 +43,7 @@ uninstall. Optional features contact other services only when you switch them on
       setup tries the first way once and writes `home-method` itself, so the next boots use it too; only when that fails as well is
       everything rolled back. TVs where the stand-in works are not touched.
 
-   LG's **screen saver** is replaced as well, by `20-cleanyourtv-screensaver`: either the page's folder is mounted over
+   When switched on in the manager (off by default), LG's **screen saver** is replaced as well, by `20-cleanyourtv-screensaver`: either the page's folder is mounted over
    `/usr/palm/applications/com.webos.app.screensaver` and the app manager reads it, or, where LG's screen saver is a native program,
    `screensaver-standin.sh` is mounted over that program and the app manager is left alone (`helper/tvprofile.js`, `saverTakeover`).
    The app id stays LG's, so the TV starts the page when it would have started its own screen saver. Where both use the folder mount,

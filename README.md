@@ -69,7 +69,7 @@ and troubleshooting.
    grid sorted by how often you use each app, top buttons you choose, an Inputs list and a clock; menus in English, Dutch, German,
    French, Spanish, Russian, Turkish, Arabic, Polish, Italian, Brazilian Portuguese, Vietnamese, Hungarian and Swedish ([more languages welcome](https://lasharor.github.io/cleanyourtv-WebOS/languages/)); [themes](https://lasharor.github.io/cleanyourtv-WebOS/themes/) for colours, layout and wallpaper, and
    [Wallpapers](https://lasharor.github.io/cleanyourtv-WebOS/wallpapers/): your own photos behind Home, uploaded from a phone or synced
-   from a photo source you install as an add-on (Immich albums, Unsplash) — the same photos can stand in for [LG's screen saver](https://lasharor.github.io/cleanyourtv-WebOS/screensaver/).
+   from a photo source you install as an add-on (Immich albums, Unsplash) — the same photos can stand in for [LG's screen saver](https://lasharor.github.io/cleanyourtv-WebOS/screensaver/) (off until you switch it on).
 
 2. **[Live TV from your own playlist](https://lasharor.github.io/cleanyourtv-WebOS/live-tv/).** Plays an M3U playlist (HLS) with a
    channel list, a programme guide (XMLTV) and number entry. It does not use LG's tuner, and the project provides no channels.

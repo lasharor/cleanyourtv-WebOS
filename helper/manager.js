@@ -26,13 +26,14 @@ function setHome(enabled) {
   }
   exec.detached('sleep 3; reboot');
 }
-// LG's screen saver or ours: one file, read by 20-cleanyourtv-screensaver at boot. Like Home, the change needs a restart.
+// LG's screen saver or ours: off unless switched on here (SCREENSAVER-ON, read by 10-cleanyourtv-home at boot). Like Home, the change
+// needs a restart. Switching on also stages the page first, so the folder that is mounted at the next boot holds this version's page.
 function setSaver(enabled) {
   try {
-    if (enabled) fs.unlinkSync(P.SA_DISABLE);
-    else fs.writeFileSync(P.SA_DISABLE, '');
+    if (enabled) fs.writeFileSync(P.SA_ON, '');
+    else fs.unlinkSync(P.SA_ON);
   } catch (_) {}
-  exec.detached('sleep 3; reboot');
+  exec.detached((enabled ? 'sh ' + P.D + '/stage-screensaver.sh </dev/null; ' : '') + 'sleep 3; reboot');
 }
 const KEY_NAMES = ['home', 'voice', 'guide'];
 const PICKER_MODES = ['overlay', 'ondemand', 'launcher'];
@@ -82,7 +83,7 @@ function create(ctx) {
       icons: !!(ad && ad.module && ad.module('icons')), // the App icons add-on runs
       lang: config.get().lang || '', // the Language setting: '' follows the TV
       home: { enabled: !fs.existsSync(P.DISABLE), fullhome: fs.existsSync(P.FULLHOME_APP), ours },
-      saver: { enabled: !fs.existsSync(P.SA_DISABLE), replaced: saver.replaced(), failed: fs.existsSync(P.SA_FAILED) },
+      saver: { enabled: fs.existsSync(P.SA_ON), replaced: saver.replaced(), failed: fs.existsSync(P.SA_FAILED) },
       inputhook: inputhook.status(keys().input),
       keys: keys(),
       job: updates.job(),

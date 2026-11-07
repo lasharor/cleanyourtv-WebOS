@@ -4,6 +4,9 @@ CleanYourTV replaces LG's screen saver with its own page: the same pictures as b
 [wallpaper library](wallpapers.md) or the theme's wallpaper), cross-faded, with the clock and date in the corner. It appears when the
 TV is idle, when LG's screen saver would have (see [When it appears](#when-it-appears)).
 
+**It is off until you switch it on**: in the manager app, **Features → Screen saver** (the TV restarts). A new install and an update
+keep LG's screen saver.
+
 It is applied the same way as Home (**RAM only**): a reboot without the boot scripts, or the Homebrew Channel's failsafe mode, brings
 LG's screen saver back.
 
@@ -106,10 +109,10 @@ sh /media/developer/cleanyourtv/undo-screensaver.sh temp
 CleanYourTV's screen saver again (the next restart):
 
 ```sh
-rm /media/developer/cleanyourtv/DISABLE-SCREENSAVER
+touch /media/developer/cleanyourtv/SCREENSAVER-ON
 ```
 
-The setting is the file `DISABLE-SCREENSAVER` in `/media/developer/cleanyourtv`: present means LG's screen saver.
+The setting is the file `SCREENSAVER-ON` in `/media/developer/cleanyourtv`: present means ours, absent (the default) means LG's.
 
 ## Limits
 

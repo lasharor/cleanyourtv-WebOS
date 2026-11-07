@@ -1,7 +1,7 @@
 #!/bin/sh
 # Replace LG's screen saver with the CleanYourTV page: photos from the wallpaper library and a clock (docs/screensaver.md).
 # RAM only, as for Home: a reboot without this script brings LG's screen saver back.
-# Off: touch /media/developer/cleanyourtv/DISABLE-SCREENSAVER and reboot, or run: sh /media/developer/cleanyourtv/undo-screensaver.sh
+# Off by default: on only while /media/developer/cleanyourtv/SCREENSAVER-ON is there (the manager's switch writes it, then restarts).
 # The way is chosen by helper/tvprofile.js (saverTakeover) from LG's own screen saver as it came with the TV:
 #   standin  a native program: screensaver-standin.sh is mounted over it; the app manager is not restarted
 #   mount    anything else (a QML or web screen saver): the page's folder is mounted over the app and the app manager reads it
@@ -25,7 +25,7 @@ MOUNTS=${CYTV_MOUNTS:-/proc/mounts}
 up() { cut -d' ' -f1 /proc/uptime 2>/dev/null; }
 replaced() { grep -q " $H " $MOUNTS || { [ -f $STANDIN ] && grep -q " $(cat $STANDIN) " $MOUNTS; }; }
 
-[ -e $L/DISABLE-SCREENSAVER ] && exit 0
+[ -e $L/SCREENSAVER-ON ] || exit 0
 [ -d $H ] || exit 0   # a TV without LG's screen saver app: nothing to replace
 [ -f $L/backup/screensaver-appinfo.orig.json ] || exit 0
 PREPARE=0; [ "$1" = prepare ] && PREPARE=1

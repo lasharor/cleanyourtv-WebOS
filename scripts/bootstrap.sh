@@ -265,7 +265,8 @@ finish() {
   say "done. Hold OK on an app to customise the dock, or use the Customise button at the top right."
   [ -d $R/usr/palm/applications/com.webos.app.fullhome ] && say "This TV also has LG's full-screen Home. If the Home button opens that instead of CleanYourTV: TV Settings > General > Home Settings > Home Style > Basic."
   say "Back to LG's Home any time: switch off 'CleanYourTV as Home' in the manager app, or run: sh $D/undo-home.sh"
-  say "LG's screen saver is replaced as well; LG's own back: touch $D/DISABLE-SCREENSAVER, then restart the TV (sh $D/undo-screensaver.sh does both)"
+  if [ -e $D/SCREENSAVER-ON ]; then say "Our screen saver is on; LG's own back: Features > Screen saver in the manager app (the TV restarts)"
+  else say "Our screen saver is off (LG's own is used); switch it on in the manager app: Features > Screen saver"; fi
 }
 
 # ---- the order ----

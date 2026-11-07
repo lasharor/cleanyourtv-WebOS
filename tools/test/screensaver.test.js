@@ -370,6 +370,20 @@ run(async () => {
     /20-cleanyourtv-screensaver prepare/.test(homeBoot),
     'the Home boot script mounts the screen saver before it restarts the app manager'
   );
+  // off by default (the maintainer's review): the screen saver is replaced only while SCREENSAVER-ON is there, which only the manager's
+  // switch writes; without it the Home boot script does not even start the screen saver script, so a boot is as without this feature
+  ok(
+    /\[ -e \$L\/SCREENSAVER-ON \] && sh \$L\/20-cleanyourtv-screensaver prepare/.test(homeBoot),
+    'the Home boot script calls the screen saver script only while SCREENSAVER-ON is there'
+  );
+  {
+    const mgr = fs.readFileSync(path.join(root, 'helper', 'manager.js'), 'utf8');
+    ok(
+      /enabled: fs\.existsSync\(P\.SA_ON\)/.test(mgr) && !/SA_DISABLE/.test(mgr),
+      "the manager's switch is the SCREENSAVER-ON file: absent (a new install, an update) means LG's screen saver"
+    );
+    ok(P.SA_ON === P.D + '/SCREENSAVER-ON' && P.SA_DISABLE === undefined, 'paths.js names SCREENSAVER-ON, not DISABLE-SCREENSAVER');
+  }
   ok(/rm -f \$SAM/.test(homeBoot), 'the marker of that restart starts each boot empty');
   // A setup over a running install (bootstrap.sh install from the manager) copies the new page and calls this script while the folder
   // is already mounted: the page has to be staged then too, as 10-cleanyourtv-home stages Home before it looks whether it is replaced.
@@ -543,6 +557,7 @@ run(async () => {
       writeF(path.join(R, 'tmp', '.keep'), '');
       if (opts.sam) writeF(path.join(R, 'tmp', 'cleanyourtv-sam'), '');
       if (opts.method) writeF(path.join(L, 'screensaver-method'), opts.method + '\n');
+      if (opts.on !== false) writeF(path.join(L, 'SCREENSAVER-ON'), '');
       if (opts.fails) writeF(path.join(L, 'screensaver-standin-fails'), opts.fails + '\n');
       if (opts.homeStandin) {
         writeF(path.join(R, 'tmp', 'cleanyourtv-home-standin'), '/usr/bin/home\n');
@@ -610,7 +625,9 @@ run(async () => {
     const mounted = (o, p) => o.mounts.indexOf(' ' + p + ' ') >= 0;
     const restarted = o => /systemctl restart sam/.test(o.calls);
 
-    let o = saverRun({ kind: 'qml', waitRestart: true });
+    let o = saverRun({ kind: 'qml', args: ['prepare'], on: false });
+    ok(!mounted(o, o.H) && !restarted(o) && o.mounts === '', 'switched off (no SCREENSAVER-ON, the default): nothing is mounted');
+    o = saverRun({ kind: 'qml', waitRestart: true });
     ok(
       mounted(o, o.H) && restarted(o),
       'boot, a QML saver, nothing restarted the app manager yet: the folder is mounted and sam restarted'
