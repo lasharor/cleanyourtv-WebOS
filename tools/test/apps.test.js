@@ -369,7 +369,14 @@ run(async () => {
     if (/listApps/.test(args.join(' '))) sub = p; // the volume watch (audio.js) is started with the same spawn
     return p;
   };
-  const watched = req('apps').create({ config: memoryConfig({}), luna: wLuna, spawn: wSpawn, version: '1.6.0', feature: () => null });
+  const watched = req('apps').create({
+    config: memoryConfig({}),
+    luna: wLuna,
+    spawn: wSpawn,
+    version: '1.6.0',
+    feature: () => null,
+    watchAfter: 0,
+  });
   r = await call(watched, '/api/apps');
   const s1 = r.j.stamp;
   r = await call(watched, '/api/apps/stamp');
