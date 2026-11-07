@@ -261,6 +261,8 @@ function create(ctx) {
     paths: ['/api/remap', '/api/remap/learn', '/api/remap/learn-state', '/api/remap/fire'],
     handle,
     start,
+    // the same moves a remapped button makes, for the navigate tool: home, live_tv (the launcher's Live TV) or input_list
+    go: to => run({ type: to === 'live_tv' ? 'live' : to === 'home' ? 'home' : 'inputs' }),
     // for the tests
     table,
     fire,

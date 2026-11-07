@@ -569,6 +569,7 @@ function create(ctx) {
     inputs: inputsWithTuner,
     launch,
     powerOff,
+    usageScores, // {app id: score}, for the most_used_apps tool
     start: () => {
       setInterval(pollForeground, 4000);
       watchApps();

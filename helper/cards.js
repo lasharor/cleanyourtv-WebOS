@@ -501,7 +501,7 @@ function create(ctx) {
     web.notFound(res);
   }
   // the files of a page card are under /card/<id>/ (cardcatalog.js)
-  return { name: 'cards', prefix: '/api/cards/', match: packs.match, handle, stop: stopPair, packs: () => packs.all() };
+  return { name: 'cards', prefix: '/api/cards/', match: packs.match, handle, stop: stopPair, packs: () => packs.all(), weather };
 }
 
 // the phone page: a form per slot (the card type, then its options), and all cards as JSON. Plain script for iOS Safari and Android

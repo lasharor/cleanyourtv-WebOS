@@ -129,7 +129,7 @@ function create(ctx) {
     }
     web.notFound(res);
   }
-  return { name: 'running', paths: ['/api/running', '/api/running/close'], handle, list, close };
+  return { name: 'running', paths: ['/api/running', '/api/running/close'], handle, list, close, stop };
 }
 
 module.exports = { create, pick, services };

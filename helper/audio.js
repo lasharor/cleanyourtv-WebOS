@@ -222,6 +222,8 @@ function create(ctx) {
   return {
     name: 'audio',
     paths: ['/api/audio/volume'],
+    // the volume as the service last heard it from LG's audio service (known: false until the first answer), for the get_volume tool
+    volume: () => Object.assign(getPayload(), { known: initialized }),
     start,
     stop,
     syncStockVolumeOSD,
