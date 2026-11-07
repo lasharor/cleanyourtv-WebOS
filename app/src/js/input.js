@@ -355,6 +355,8 @@ function tick() {
   } catch (e) {
     $('time').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
   }
+  if ($('focus-time')) $('focus-time').textContent = $('time').textContent;
+  if ($('focus-date')) $('focus-date').textContent = $('date').textContent;
   /* greeting line (shown only when the theme turns clock.greeting on, with the stacked layout) */
   var g = $('greet');
   if (g) {
@@ -366,3 +368,4 @@ function tick() {
 }
 setInterval(tick, 15000);
 tick();
+

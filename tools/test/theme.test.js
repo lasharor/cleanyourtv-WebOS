@@ -106,6 +106,8 @@ run(async () => {
     plain.vars['--greet-d'] === 'none' && plain.vars['--dock-tile-alpha'] === '1',
     'by default there is no greeting and the dock tiles are opaque'
   );
+  const focusArt = themeMod.resolve(themeMod.normalize({ effects: { focusIcon: true } }, 'focus-art'));
+  ok(focusArt.focusIcon === true && !plain.focusIcon, 'effects.focusIcon reaches the launcher only when enabled');
   // clock.style, effects.scenes and cards.style (scenes.js): only a theme that uses them carries the keys, so other replies stay the same
   const couch = themeMod.resolve(
     themeMod.normalize({ clock: { style: 'glass' }, effects: { scenes: 'couch', sceneSecs: 5 }, cards: { style: 'glass' } }, 'couch')
@@ -515,3 +517,4 @@ run(async () => {
     'the package build and the setup do not ship or copy themes'
   );
 });
+

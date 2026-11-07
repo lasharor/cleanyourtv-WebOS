@@ -1,28 +1,88 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Big clock</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Midnight Clock</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
-  #t { position: absolute; left: 0; right: 0; top: 38%; text-align: center; font-size: 22vw; font-weight: 300; }
-  #d { position: absolute; left: 0; right: 0; top: 64%; text-align: center; font-size: 3vw; color: #9aa; }
-  #h { position: absolute; left: 0; right: 0; bottom: 4%; text-align: center; font-size: 1.6vw; color: #566; }
+  * { box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+  body { background: #000; font-family: Arial, "Helvetica Neue", sans-serif; }
+  .frame {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: calc(100% - 64px);
+    height: calc(100% - 48px);
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 2px solid rgba(165, 174, 188, .58);
+    border-radius: 42px;
+    background: #020304;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .025), 0 0 24px rgba(0, 70, 135, .12);
+  }
+  .clock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 33vw;
+    font-weight: 700;
+    line-height: .9;
+    letter-spacing: -.075em;
+    font-variant-numeric: tabular-nums;
+  }
+  .digit { display: inline-block; }
+  .digit + .digit { margin-left: -.07em; }
+  .blue-a { color: #0876d2; text-shadow: 0 0 2px rgba(0, 128, 255, .24); }
+  .blue-b { color: #42a3ed; text-shadow: 0 0 3px rgba(50, 155, 255, .22); }
+  .separator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0 .085em 0 .045em;
+  }
+  .separator span {
+    width: .15em;
+    height: .15em;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #f3f5f7, #9ca5b0);
+    box-shadow: 0 0 9px rgba(220, 230, 245, .25);
+  }
+  .separator span + span { margin-top: .09em; }
+  @media (orientation: portrait) {
+    .frame { width: calc(100% - 32px); height: calc(100% - 32px); border-radius: 28px; }
+    .clock { font-size: 29vw; }
+  }
 </style>
 </head>
 <body>
-<div id="t"></div><div id="d"></div><div id="h">Back to go home</div>
+<div class="frame">
+  <div class="clock" aria-label="Local time">
+    <span class="digit blue-a" id="hour-tens"></span><span class="digit blue-b" id="hour-ones"></span>
+    <span class="separator" aria-hidden="true"><span></span><span></span></span>
+    <span class="digit blue-a" id="minute-tens"></span><span class="digit blue-b" id="minute-ones"></span>
+  </div>
+</div>
 <script src="/addon/sdk.js"></script>
 <script>
-  /* ES5 only: this page runs on Chromium 68 (webOS 5) too */
+  /* ES5 only: this page runs on Chromium 68 (webOS 5) too. */
   function two(n) { return (n < 10 ? '0' : '') + n; }
   function tick() {
-    var n = new Date();
-    document.getElementById('t').textContent = two(n.getHours()) + ':' + two(n.getMinutes());
-    document.getElementById('d').textContent = n.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+    var now = new Date(),
+      hours = two(now.getHours()),
+      minutes = two(now.getMinutes());
+    document.getElementById('hour-tens').textContent = hours.charAt(0);
+    document.getElementById('hour-ones').textContent = hours.charAt(1);
+    document.getElementById('minute-tens').textContent = minutes.charAt(0);
+    document.getElementById('minute-ones').textContent = minutes.charAt(1);
   }
   tick();
-  setInterval(tick, 5000);
+  setInterval(tick, 15000);
 </script>
 </body>
 </html>
+
