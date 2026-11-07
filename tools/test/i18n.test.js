@@ -9,8 +9,11 @@ run(async () => {
   ok(!r.problems.length, 'the language files are valid, with matching %s and %d' + (r.problems.length ? ': ' + r.problems.join('; ') : ''));
   ok(r.rows.length >= 4 && r.rows.every(x => x.name), 'every language names itself: ' + r.rows.map(x => x.code + ' ' + x.name).join(', '));
   const B = require(path.join(root, 'tools', 'build-pages.js'));
-  const fresh = B.PAGES.every(p => B.build(p[0]) === fs.readFileSync(path.join(root, p[1]), 'utf8'));
+  const fresh = B.PAGES.every(p => B.fresh(p));
   ok(fresh, 'the pages (and the picker part between its marks) carry the current translations');
+  // a checkout on Windows may have CRLF: the translations and the runtime are put into the page from i18n/, and a CR there is a page
+  // that differs between Linux and Windows (and a "pages are stale" check that fails on one of them)
+  ok(!/\r/.test(B.build('manager/src') + B.build('app/src') + B.build('picker/app/index.html')), 'the built pages carry no CR');
 
   // the runtime as a page has it, with a small table
   const runtime = fs.readFileSync(path.join(root, 'i18n', 'runtime.js'), 'utf8');

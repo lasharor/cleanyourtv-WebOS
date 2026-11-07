@@ -13,9 +13,20 @@ P = lambda *a: os.path.join(ROOT, *a)
 PKG = 'com.cleanyourtv.manager'
 SERVICE = PKG + '.service'
 
-version = re.search(r"const VERSION = '([^']+)'", open(P('helper', 'helper.js')).read()).group(1)
-fe = json.load(open(P('app', 'version.json')))['version']
-if not re.search(r"VERSION\s*=\s*'%s'" % re.escape(fe), open(P('app', 'index.html')).read()):
+def text(*a):
+    # read as UTF-8 whatever the computer's own encoding is: on Windows a plain open() uses the code page (cp1252) and the launcher's
+    # translations are not in it
+    with open(P(*a), encoding='utf-8') as f:
+        return f.read()
+
+def wtext(path, data):
+    # and write as UTF-8 with '\n': on Windows a plain open() writes CRLF, which a .sha256 file and apps.json should not have
+    with open(path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(data)
+
+version = re.search(r"const VERSION = '([^']+)'", text('helper', 'helper.js')).group(1)
+fe = json.loads(text('app', 'version.json'))['version']
+if not re.search(r"VERSION\s*=\s*'%s'" % re.escape(fe), text('app', 'index.html')):
     sys.exit('app/version.json (%s) and VERSION in app/index.html do not match' % fe)
 
 # A test build (made by .github/workflows/test-build.yml from a branch) carries the commit it was made from in a BUILD file, in the
@@ -23,6 +34,12 @@ if not re.search(r"VERSION\s*=\s*'%s'" % re.escape(fe), open(P('app', 'index.htm
 BUILD = os.environ.get('CYTV_BUILD', '').strip()
 if BUILD and not re.fullmatch(r'[0-9a-f]{7,40}', BUILD):
     sys.exit('CYTV_BUILD must be a commit hash')
+
+BOOT_SCRIPTS = ('10-cleanyourtv-home', '15-cleanyourtv-debloat', '20-cleanyourtv-screensaver')
+
+def shell_text(data, name):
+    # a shell script runs on the TV, where '\r' is part of the command ("shift\r: not found"): a checkout on Windows may have CRLF
+    return data.replace(b'\r\n', b'\n') if (name.endswith('.sh') or name in BOOT_SCRIPTS) else data
 
 def add(files, arc, data, mode=0o644):
     files.append((arc, data, mode))
@@ -34,9 +51,9 @@ def add_dir(files, arc_root, src, mode_for=None, skip=(), skip_dirs=()):
             if n in skip or n.startswith('.'):
                 continue
             p = os.path.join(root, n)
-            rel = os.path.relpath(p, src)
-            mode = 0o755 if (n.endswith('.sh') or n in ('ezinject', '10-cleanyourtv-home', '15-cleanyourtv-debloat')) else 0o644
-            body = open(p, 'rb').read()
+            rel = os.path.relpath(p, src).replace(os.sep, '/')   # a package uses '/', also when it is built on Windows
+            mode = 0o755 if (n.endswith('.sh') or n in ('ezinject', '10-cleanyourtv-home', '15-cleanyourtv-debloat', '20-cleanyourtv-screensaver')) else 0o644
+            body = shell_text(open(p, 'rb').read(), n)
             add(files, arc_root + '/' + rel, body, mode)
 
 def tgz(files, prefix=''):
@@ -56,7 +73,7 @@ def ar(parts):
 def write(name, data):
     path = os.path.join(DIST, name)
     open(path, 'wb').write(data)
-    open(path + '.sha256', 'w').write('%s  %s\n' % (hashlib.sha256(data).hexdigest(), name))
+    wtext(path + '.sha256', '%s  %s\n' % (hashlib.sha256(data).hexdigest(), name))
     print('%-52s %8d bytes' % (name, len(data)))
 
 shutil.rmtree(DIST, ignore_errors=True); os.makedirs(DIST)
@@ -79,12 +96,13 @@ for app_id, src in (('com.cleanyourtv.manager', 'manager/app'), ('com.cleanyourt
             add(data, '.' + d + '/' + rel, body)
 add(data, './usr/palm/applications/com.cleanyourtv.manager/qrcode.js', open(P('third-party', 'qrcode-generator', 'qrcode.js'), 'rb').read())   # QR code for sharing the log
 s = '.' + '/usr/palm/services/' + SERVICE
-add(data, s + '/bootstrap.sh', open(P('scripts', 'bootstrap.sh'), 'rb').read(), 0o755)
+add(data, s + '/bootstrap.sh', shell_text(open(P('scripts', 'bootstrap.sh'), 'rb').read(), 'bootstrap.sh'), 0o755)
 add_dir(data, s + '/helper', P('helper'), skip_dirs=('src',))   # helper/addons-bundled/<id>/src: the sources of an add-on's page
 add(data, s + '/helper/qrcode.js', open(P('third-party', 'qrcode-generator', 'qrcode.js'), 'rb').read())   # the QR code an add-on's page draws (helper/addons.js serves it as /addon/qrcode.js)
 add_dir(data, s + '/i18n', P('i18n'), skip=('README.md',))   # the translations, for the phone pages the service serves (helper/i18n.js)
 add_dir(data, s + '/scripts', P('scripts'), skip=('bootstrap.sh',))
-add(data, s + '/scripts/uninstall.sh', open(P('uninstall.sh'), 'rb').read(), 0o755)
+add_dir(data, s + '/screensaver', P('screensaver'))
+add(data, s + '/scripts/uninstall.sh', shell_text(open(P('uninstall.sh'), 'rb').read(), 'uninstall.sh'), 0o755)
 add(data, s + '/voice/cytv-asr', open(P('voice', 'cytv-asr'), 'rb').read(), 0o755)   # optional voice feature: downloads its engine on request
 add(data, s + '/inputhook/ezinject', open(P('third-party', 'inputhook', 'ezinject'), 'rb').read(), 0o755)
 add(data, s + '/inputhook/libinputhookpp.so', open(P('third-party', 'inputhook', 'libinputhookpp.so'), 'rb').read())
@@ -102,6 +120,10 @@ if BUILD:
 add(data, './usr/palm/packages/%s/packageinfo.json' % PKG, json.dumps({'id': PKG, 'version': version, 'app': PKG}).encode())
 
 size = sum(len(d) for _, d, _ in data) // 1024 + 1
+# a name with a backslash comes from building on Windows and is one file on the TV, not a folder: refuse it here
+for arc, _, _ in data:
+    if '\\' in arc:
+        sys.exit('a path with a backslash: ' + arc)
 ctl = ('Package: %s\nVersion: %s\nSection: misc\nPriority: optional\nArchitecture: all\nInstalled-Size: %d\n'
        'Maintainer: N/A <nobody@example.com>\nDescription: CleanYourTV for LG webOS\nwebOS-Package-Format-Version: 2\nwebOS-Packager-Version: x.y.x\n' % (PKG, version, size)).encode()
 ipk_name = '%s_%s_all.ipk' % (PKG, version)
@@ -126,6 +148,6 @@ repo = {'paging': {'page': 1, 'count': 1, 'maxPage': 1, 'itemsTotal': 1}, 'packa
     'manifestUrl': dl + PKG + '.manifest.json', 'manifest': manifest, 'pool': 'main',
     'fullDescriptionUrl': raw + 'docs/homebrew-channel.html'}]}
 for name, obj in ((PKG + '.manifest.json', manifest), ('apps.json', repo)):
-    open(os.path.join(DIST, name), 'w').write(json.dumps(obj, indent=2) + '\n')
+    wtext(os.path.join(DIST, name), json.dumps(obj, indent=2) + '\n')
     print('%-52s (Homebrew Channel, %s)' % (name, TAG))
 print('service %s, launcher %s' % (version, fe))

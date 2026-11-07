@@ -416,21 +416,36 @@ function build() {
     rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
     return;
   }
-  if (view === 'confirm-home' || view === 'confirm-uninstall') {
+  if (view === 'confirm-home' || view === 'confirm-uninstall' || view === 'confirm-saver') {
     var un = view === 'confirm-uninstall',
-      on = !(st.home && st.home.enabled);
+      saver = view === 'confirm-saver',
+      on = saver ? !(st.saver && st.saver.enabled) : !(st.home && st.home.enabled);
     rows.push({ label: 'Cancel', fn: pop });
     rows.push({
-      label: un ? 'Yes, remove CleanYourTV' : on ? 'Yes, use CleanYourTV as Home' : 'Yes, use LG’s Home',
+      label: un
+        ? 'Yes, remove CleanYourTV'
+        : saver
+          ? on
+            ? 'Yes, use our screen saver'
+            : 'Yes, use LG’s screen saver'
+          : on
+            ? 'Yes, use CleanYourTV as Home'
+            : 'Yes, use LG’s Home',
       sub: un ? 'settings and apps are deleted; the TV restarts' : 'the TV restarts',
       fn: function () {
-        api(un ? '/api/manager/uninstall' : '/api/manager/home', un ? {} : { enabled: on }).catch(function () {});
+        api(un ? '/api/manager/uninstall' : saver ? '/api/manager/saver' : '/api/manager/home', un ? {} : { enabled: on }).catch(
+          function () {}
+        );
         banner(
           un
             ? 'Removing CleanYourTV… the TV restarts in a moment and LG’s Home comes back.'
-            : on
-              ? 'Switching to CleanYourTV… the TV restarts in a moment.'
-              : 'Switching to LG’s Home… the TV restarts in a moment.',
+            : saver
+              ? on
+                ? 'Switching to our screen saver… the TV restarts in a moment.'
+                : 'Switching to LG’s screen saver… the TV restarts in a moment.'
+              : on
+                ? 'Switching to CleanYourTV… the TV restarts in a moment.'
+                : 'Switching to LG’s Home… the TV restarts in a moment.',
           'work'
         );
       },
@@ -838,6 +853,13 @@ function build() {
       sub: 'optional · ' + (st.keys && st.keys.home ? 'now: ' + st.keys.home : 'not learned'),
       fn: function () {
         openKeys('home');
+      },
+    });
+    rows.push({
+      label: 'Screen saver',
+      sub: onoff(st.saver && st.saver.enabled) + ' \u00B7 photos and a clock when the TV is idle; switching restarts the TV',
+      fn: function () {
+        push('confirm-saver');
       },
     });
     rows.push({ sep: true });
@@ -1359,6 +1381,13 @@ function build() {
     rows.push({ sep: true });
     rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
   } else if (tb === 'features') {
+    rows.push({
+      label: 'Screen saver',
+      sub: onoff(st.saver && st.saver.enabled) + (st.saver && st.saver.replaced ? ' \u00B7 ours now' : ' \u00B7 LG\u2019s own'),
+      fn: function () {
+        push('home');
+      },
+    });
     rows.push({ label: 'Live TV', sub: onoff(st.options.liveTv !== false), fn: openLiveTv });
     rows.push({
       label: 'Wallpapers',

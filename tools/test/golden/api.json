@@ -458,6 +458,10 @@
     "version": "99.1.0"
    },
    "repo": "lasharor/cleanyourtv-WebOS",
+   "saver": {
+    "enabled": true,
+    "replaced": false
+   },
    "service": {
     "build": "",
     "updateTo": "99.1.0",
@@ -542,6 +546,10 @@
     "version": "99.1.0"
    },
    "repo": "lasharor/cleanyourtv-WebOS",
+   "saver": {
+    "enabled": true,
+    "replaced": false
+   },
    "service": {
     "build": "",
     "updateTo": "99.1.0",
@@ -644,6 +652,10 @@
     "version": "99.1.0"
    },
    "repo": "lasharor/cleanyourtv-WebOS",
+   "saver": {
+    "enabled": true,
+    "replaced": false
+   },
    "service": {
     "build": "",
     "updateTo": "99.1.0",

@@ -73,6 +73,27 @@ if (cmd === 'kind') {
   h.bgColor = '#000000';
   h.transparent = false;
   fs.writeFileSync(a[2], JSON.stringify(h, null, 1));
+} else if (cmd === 'saver') {
+  // saver <stock screen saver appinfo.json> <out>
+  // our page replaces LG's screen saver: a web app that covers the running app and, as an overlay, gives it back when the page closes
+  var s = rj(a[1], {});
+  ['nativeLifeCycleInterfaceVersion', 'containerBasedApp', 'supportQuickStart', 'windowGroup', 'qmlIncludePath', 'qtModules'].forEach(
+    function (k) {
+      delete s[k];
+    }
+  );
+  s.type = 'web';
+  s.main = 'index.html';
+  // the page paints its own black background: no launch splash and no spinner, which showed as a grey "loading" screen for a second
+  delete s.splashBackground;
+  s.noSplashOnLaunch = true;
+  s.spinnerOnLaunch = false;
+  // LG's own saver has the window type "screenSaver", and tvpowerd only counts that as the screen saver: with an overlay window it
+  // started the app but never entered the Screen Saver state, and after the app closed it never armed again. Keep LG's type.
+  if (!s.defaultWindowType) s.defaultWindowType = 'screenSaver';
+  s.transparent = false;
+  s.bgColor = '#000000';
+  fs.writeFileSync(a[2], JSON.stringify(s, null, 1));
 } else if (cmd === 'exe') {
   // exe <stock home appinfo.json>  ->  the program of a native Home app (its "main", absolute or in its folder)
   var e = rj(a[1], {}),
@@ -86,11 +107,11 @@ if (cmd === 'kind') {
   }
   process.exit(1);
 } else if (cmd === 'wamlaunch') {
-  // wamlaunch <launcher appinfo.json> <folder> <out>  ->  the request that asks webapp-mgr to open the launcher (home-standin.sh),
-  // and <out>.str with the app description as a string, the form older webapp-mgr versions may expect
+  // wamlaunch <launcher appinfo.json> <folder> <out> [instance id]  ->  the request that asks webapp-mgr to open a page (home-standin.sh,
+  // screensaver-standin.sh), and <out>.str with the app description as a string, the form older webapp-mgr versions may expect
   var w = rj(a[1], {});
   w.folderPath = a[2];
-  var req = { appDesc: w, parameters: {}, launchingAppId: '', launchingProcId: '', instanceId: 'cleanyourtv-home' };
+  var req = { appDesc: w, parameters: {}, launchingAppId: '', launchingProcId: '', instanceId: a[4] || 'cleanyourtv-home' };
   fs.writeFileSync(a[3], JSON.stringify(req));
   req.appDesc = JSON.stringify(w);
   fs.writeFileSync(a[3] + '.str', JSON.stringify(req));
@@ -111,6 +132,6 @@ if (cmd === 'kind') {
     fs.writeFileSync(p, JSON.stringify(b));
   }
 } else {
-  console.error('usage: jtool.js kind|newer|options|opt|stage|exe|wamlaunch|wintype|rmbind');
+  console.error('usage: jtool.js kind|newer|options|opt|stage|saver|exe|wamlaunch|wintype|rmbind');
   process.exit(2);
 }

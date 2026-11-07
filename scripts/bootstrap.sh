@@ -18,6 +18,7 @@ INITD=$R/var/lib/webosbrew/init.d
 J="node $S/scripts/jtool.js"          # JSON helper (node, not python3)
 TV="node $S/helper/tvprofile.js"      # per-TV decisions
 HOME_DIR=$R/usr/palm/applications/com.webos.app.home
+SAVER_DIR=$R/usr/palm/applications/com.webos.app.screensaver
 
 MODE=${1:-install}; [ $# -gt 0 ] && shift
 WANT=""; [ "$MODE" = update ] && { WANT=$1; shift; }
@@ -103,6 +104,8 @@ check_compat() {
 backup() {
   mkdir -p $D/backup
   [ -f $D/backup/home-appinfo.orig.json ] || cp $HOME_DIR/appinfo.json $D/backup/home-appinfo.orig.json
+  # LG's screen saver, as it came with the TV: its manifest is what our page's appinfo.json is derived from
+  [ -d $SAVER_DIR ] && { [ -f $D/backup/screensaver-appinfo.orig.json ] || cp $SAVER_DIR/appinfo.json $D/backup/screensaver-appinfo.orig.json; }
   [ -f $D/backup/hosts.orig ] || cp /etc/hosts $D/backup/hosts.orig
   [ -f $D/backup/processes.orig.txt ] || { ps > $D/backup/processes.orig.txt 2>&1; systemctl list-units --no-legend > $D/backup/units.orig.txt 2>&1; date > $D/backup/date.txt; }
   # an update keeps the running version's files, so a failed start can be undone
@@ -119,9 +122,10 @@ copy_files() {
   [ -d $S/i18n ] && { mkdir -p $D/i18n; cp $S/i18n/* $D/i18n/; }   # the translations, for the phone pages (helper/i18n.js)
   if [ -f $S/BUILD ]; then cp $S/BUILD $D/BUILD; else rm -f $D/BUILD; fi   # the commit of a test build
   cp $S/scripts/* $D/
+  [ -d $S/screensaver ] && { mkdir -p $D/screensaver; cp -r $S/screensaver/* $D/screensaver/; }   # the page that replaces LG's screen saver (its app/ folder too)
   mkdir -p $D/inputhook && cp $S/inputhook/* $D/inputhook/ && chmod 755 $D/inputhook/ezinject
   [ -d $S/licenses ] && { mkdir -p $D/licenses; cp $S/licenses/* $D/licenses/; }
-  chmod +x $D/*.sh $D/10-cleanyourtv-home $D/15-cleanyourtv-debloat
+  chmod +x $D/*.sh $D/10-cleanyourtv-home $D/15-cleanyourtv-debloat $D/20-cleanyourtv-screensaver
   # root runs these files at boot and from the Input-key hook: nobody else may write them (the dev partition is world-writable)
   chmod -R go-w $D $S 2>/dev/null
   mkdir -p $D/live; chmod 700 $D/live 2>/dev/null; chmod 600 $D/config.json $D/usage.json $D/live/* 2>/dev/null
@@ -148,6 +152,7 @@ set_options() {
 
 boot_scripts() {
   ln -sf $D/10-cleanyourtv-home $INITD/10-cleanyourtv-home
+  ln -sf $D/20-cleanyourtv-screensaver $INITD/20-cleanyourtv-screensaver
   if [ "$(opt debloat)" = 1 ]; then ln -sf $D/15-cleanyourtv-debloat $INITD/15-cleanyourtv-debloat; else rm -f $INITD/15-cleanyourtv-debloat; fi
   VERSION=$(svc_version $D/helper.js)
   say "service $VERSION installed in $D; boot scripts in $INITD"
@@ -177,6 +182,8 @@ restart_for_update() {
   say "restarting the service"
   pkill -f "[c]leanyourtv/watchdog.sh"   # the boot script below starts the watchdog of the new files
   pkill -f "[c]leanyourtv/helper.js"; sleep 1
+  # the page that replaces LG's screen saver was refreshed: put the new files in the folder that is mounted over the app
+  grep -q " $SAVER_DIR " /proc/mounts && sh $D/stage-screensaver.sh </dev/null
   sh $D/10-cleanyourtv-home keep </dev/null
   ok=0
   for i in $(seq 1 15); do
@@ -207,6 +214,7 @@ start_install() {
   say "starting (the screen blinks once while the system app manager restarts)"
   pkill -f "[c]leanyourtv/watchdog.sh"; pkill -f "[c]leanyourtv/helper.js"; pkill -f "[l]una-send -i -f"; sleep 1
   sh $D/10-cleanyourtv-home </dev/null
+  [ -f $D/20-cleanyourtv-screensaver ] && sh $D/20-cleanyourtv-screensaver prepare </dev/null   # the screen saver, where 10 did not
   [ "$(opt debloat)" = 1 ] && sh $D/debloat-stop.sh </dev/null
 }
 
@@ -244,7 +252,7 @@ verify() {
   warn "the new Home did not come up (app type: ${type:-none}, service: ${hv:-not answering}); rolling back"
   # restoring LG's Home live does not always work; without the boot scripts a restart brings it back
   cp /tmp/cleanyourtv-helper.log $MD/cytv-setup.log.service 2>/dev/null
-  rm -f $INITD/10-cleanyourtv-home $INITD/15-cleanyourtv-debloat
+  rm -f $INITD/10-cleanyourtv-home $INITD/15-cleanyourtv-debloat $INITD/20-cleanyourtv-screensaver
   [ -n "$RETRIED" ] && rm -f $D/home-method   # only the file this setup wrote
   echo '{"lastAppId":"com.webos.app.home"}' > $R/var/luna/preferences/bootd_last_foreground_app_id.json 2>/dev/null
   (sleep 4; reboot) </dev/null >/dev/null 2>&1 &
@@ -256,6 +264,7 @@ finish() {
   say "done. Hold OK on an app to customise the dock, or use the Customise button at the top right."
   [ -d $R/usr/palm/applications/com.webos.app.fullhome ] && say "This TV also has LG's full-screen Home. If the Home button opens that instead of CleanYourTV: TV Settings > General > Home Settings > Home Style > Basic."
   say "Back to LG's Home any time: switch off 'CleanYourTV as Home' in the manager app, or run: sh $D/undo-home.sh"
+  say "LG's screen saver is replaced as well; LG's own back: touch $D/DISABLE-SCREENSAVER, then restart the TV (sh $D/undo-screensaver.sh does both)"
 }
 
 # ---- the order ----

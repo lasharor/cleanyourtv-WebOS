@@ -1,6 +1,7 @@
 #!/bin/sh
 # Replace LG's Home with the CleanYourTV launcher (RAM-only; reboot without this script restores stock).
 # Use LG's Home instead: the switch in the manager app (creates /media/developer/cleanyourtv/DISABLE and restarts the TV).
+# The screen saver is replaced the same way by 20-cleanyourtv-screensaver, which this script calls before it restarts the app manager.
 # Two ways, chosen by helper/tvprofile.js (homeTakeover) from LG's Home as it came with the TV:
 #   mount    (flutter and web Home) the launcher's folder is mounted over LG's Home app and the app manager (sam) is restarted
 #   standin  (native Home, webOS 5 to 23) home-standin.sh is mounted over LG's Home program; sam is not restarted.
@@ -12,6 +13,7 @@ luna_send() { command luna-send "$@" </dev/null; }
 H=/usr/palm/applications/com.webos.app.home
 STANDIN=/tmp/cleanyourtv-home-standin   # holds the path of LG's Home program while the stand-in is mounted over it
 LOG=/tmp/cleanyourtv-boot.log
+SAM=/tmp/cleanyourtv-sam   # the app manager was restarted this boot (20-cleanyourtv-screensaver reads this)
 up() { cut -d' ' -f1 /proc/uptime; }
 replaced() { grep -q " $H " /proc/mounts || { [ -f $STANDIN ] && grep -q " $(cat $STANDIN) " /proc/mounts; }; }
 pgrep -f cleanyourtv/helper.js >/dev/null || (nohup node $L/helper.js >/tmp/cleanyourtv-helper.log 2>&1 </dev/null &)
@@ -19,6 +21,7 @@ pgrep -f cleanyourtv/helper.js >/dev/null || (nohup node $L/helper.js >/tmp/clea
 # after an update (the replaced-Home case below leaves this script early), and if our Home stays unreachable for 60 s it falls back to
 # stock Home until the next reboot.
 pgrep -f "[c]leanyourtv/watchdog.sh" >/dev/null || (sh $L/watchdog.sh </dev/null >/dev/null 2>&1 &)
+rm -f $SAM
 [ -e $L/DISABLE ] && exit 0   # LG's Home is selected: only the service runs (manager, Input key picker)
 sh $L/stage-home.sh
 if replaced; then
@@ -76,7 +79,9 @@ if [ "$method" = standin ]; then
   ) </dev/null >/dev/null 2>&1 &
 else
   echo "$(up) home: mounting the launcher over LG's Home, restarting sam" >> $LOG
-  mount --bind $L/home-overlay $H && { (sleep 3; pkill -9 -f /usr/palm/applications/airplay/LunaExecutable) </dev/null >/dev/null 2>&1 & systemctl restart sam; }
+  # the screen saver's app is mounted first when it is replaced the same way, so one app manager restart reads both
+  [ -f $L/20-cleanyourtv-screensaver ] && sh $L/20-cleanyourtv-screensaver prepare </dev/null
+  mount --bind $L/home-overlay $H && { (sleep 3; pkill -9 -f /usr/palm/applications/airplay/LunaExecutable) </dev/null >/dev/null 2>&1 & systemctl restart sam; touch $SAM; }
   echo "$(up) home: sam restarted" >> $LOG
   # After the sam restart nothing is in the foreground (black screen). Once sam is back, start Home again
   # unless the user already went somewhere else (e.g. an HDMI input).
