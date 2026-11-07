@@ -75,7 +75,8 @@ run(async () => {
   // ---- the page's API (helper/screensaver.js) ----
   const calls = [];
   // what Home has behind it, changed by each case below: the config (Wallpapers on or off), the resolved theme, an add-on's scenes
-  let cfgNow = { wall: { on: true } },
+  let libNow = ['u/aa', 's/immich/bb', 'l/unsplash', 'x/zz'],
+    cfgNow = { wall: { on: true } },
     themeNow = null,
     scenesNow = { scenes: [] },
     askedCc = null;
@@ -91,7 +92,7 @@ run(async () => {
     feature: n => {
       if (n === 'wallpapers')
         return {
-          list: () => ['u/aa', 's/immich/bb', 'l/unsplash', 'x/zz'],
+          list: () => libNow,
           stamp: () => '2:ab',
           liveCurrent: async id =>
             id === 'unsplash' ? { url: 'https://images.example.com/now.jpg', credit: 'Photo by D' } : { error: 'not a live source' },
@@ -121,6 +122,15 @@ run(async () => {
   themeNow = { id: 'still', wallpaper: { id: 'still', file: 'lake.jpg', dim: 0.4 } };
   x = await call(f, '/api/screensaver/photos');
   ok(x.j.photos.join(',') === 'u/aa,s/immich/bb,l/unsplash', 'Wallpapers on wins over the theme wallpaper, as on Home');
+  // Wallpapers on with nothing in the library: Home's wall.js switches its layer off and the theme's wallpaper shows, so the saver
+  // shows that too (it showed black)
+  libNow = [];
+  x = await call(f, '/api/screensaver/photos');
+  ok(
+    x.j.photos.join(',') === '/api/theme/wallpaper/still/lake.jpg' && x.j.from === 'theme',
+    "Wallpapers on with an empty library: the theme's wallpaper, as on Home, not black"
+  );
+  libNow = ['u/aa', 's/immich/bb', 'l/unsplash', 'x/zz'];
   cfgNow = { wall: { on: false } };
   x = await call(f, '/api/screensaver/photos');
   ok(
