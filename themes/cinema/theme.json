@@ -27,7 +27,7 @@
     "dateScale": 0.95
   },
   "bar": {
-    "style": "flat",
+    "style": "pill",
     "labels": "show",
     "anchor": "top",
     "align": "right",
@@ -83,4 +83,3 @@
     "show": false
   }
 }
-
