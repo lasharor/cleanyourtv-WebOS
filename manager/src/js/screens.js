@@ -51,7 +51,7 @@ function openNotifyQr() {
 /* MCP on the network (helper/toolhub.js): a page on the phone with the address and the token */
 function openMcpQr() {
   if (!mnet || !mnet.lan) {
-    banner('Switch MCP on the network on first', 'err');
+    banner('Switch on Accept MCP clients from the network first', 'err');
     return;
   }
   shareMode = 'mcp';
@@ -59,29 +59,52 @@ function openMcpQr() {
   $('share').style.display = 'block';
   $('shareurl').textContent = '';
   $('qrbox').style.visibility = 'hidden';
-  $('share').querySelector('h2').textContent = tr('MCP address and token');
+  $('share').querySelector('h2').textContent = tr('Connect an agent to the TV');
   $('share').querySelector('ol').innerHTML = tr(
-    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera and open the page: it shows the address and the token with <b>Copy</b> buttons.</li><li>The token is a <b>secret</b>: anyone who sees this code while it is open can read it.</li>'
+    '<li>Scan the QR code with a phone, or open the address on a computer, on the <b>same network</b> as the TV.</li><li>Press <b>Copy the prompt</b> and paste it to your agent.</li><li>The agent pairs with the <b>code</b> below, which works once; the page turns green.</li>'
   );
   $('sharemsg').textContent = tr('Preparing…');
   api('/api/mcp/lan', { page: true }).then(
     function (r) {
       if (view !== 'share' || shareMode !== 'mcp') return;
       if (!r.pageUrl) {
-        $('sharemsg').textContent = tr('The MCP port is not open.');
+        $('sharemsg').textContent = tr('The port could not open: see Accept MCP clients from the network.');
         return;
       }
       drawQr(r.pageUrl);
       $('qrbox').style.visibility = 'visible';
       $('shareurl').textContent = r.pageUrl;
-      $('sharemsg').textContent = tr(
-        'The page opens for ten minutes. It is not encrypted: the token travels over your Wi-Fi, so use a network you trust.'
-      );
+      /* the code on a line of its own: next to the long address it was broken in two */
+      $('sharemsg').textContent =
+        tr('Code') +
+        ' ' +
+        r.code +
+        '. ' +
+        tr('It works once, for ten minutes. The page is not encrypted: use a network you trust. Back closes the code.');
+      mcpWatch();
     },
     function () {
       $('sharemsg').textContent = tr('The service did not answer.');
     }
   );
+}
+/* while the QR code is on screen, look every two seconds whether a device paired with it; when one has, the screen closes itself */
+function mcpWatch() {
+  setTimeout(function () {
+    if (view !== 'share' || shareMode !== 'mcp') return;
+    api('/api/mcp/lan').then(
+      function (n) {
+        if (view !== 'share' || shareMode !== 'mcp') return;
+        if (!n.paired) return mcpWatch();
+        mnet = n;
+        closeShare();
+        banner(n.paired.name + ' ' + tr('connected'), 'ok');
+      },
+      function () {
+        mcpWatch();
+      }
+    );
+  }, 2000);
 }
 /* Add-ons (helper/addons.js): the ones on the TV and the project's catalog */
 function loadAddons() {

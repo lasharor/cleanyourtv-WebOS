@@ -14,7 +14,8 @@ Where the tools come from:
 
 ## The voice assistant uses them
 
-In the manager app, **Voice > AI acts on the TV** (or the box on the voice setup page) lets the AI use the tools. It is off by
+In the manager app, **Features > AI agents (MCP) > Let the voice assistant act on the TV** (or the box on the voice setup page) lets the AI use the tools. The
+same screen holds the network access below, so everything the tools may reach is switched in one place. It is off by
 default; off, the AI only answers questions as before. Then:
 
 1. Home Assistant still answers first when the routing says so ([Voice](voice.md#home-assistant-assist)).
@@ -46,27 +47,57 @@ curl -X POST localhost:8765/api/mcp \
 destructive tool is refused here (`isError: true`): only the voice assistant runs it, after you said yes on the TV.
 
 Like the rest of the service API, the endpoint answers on `127.0.0.1` only: programs on the TV can use it. For an agent on another
-computer, switch on **MCP on the network** (below).
+computer, switch on the network access (below).
 
 ## MCP on the network
 
-In the manager app, **More > MCP on the network > Accept MCP clients from the network** opens port 8790 on your network. An MCP client
-on another computer (Claude Desktop, Cursor, Home Assistant, a script) then reaches the same tools at `http://<tv>:8790/mcp` with the
-header `Authorization: Bearer <token>`. Off by default.
+In the manager app, **Features > AI agents (MCP) > Accept MCP clients from the network** lets MCP clients on other computers (Claude
+Code, Claude Desktop, Cursor, a script) use the same tools at `http://<tv>:8802/mcp`. Off by default. Everything is managed on that screen;
+there is no page on Home for it.
 
-- **How to connect** shows the address and the token; **Show as QR code** opens a page on your phone with **Copy** buttons (ten minutes);
-  **New token** replaces the token and the old one stops working.
-- It speaks MCP over HTTP (Streamable HTTP, every reply is JSON, no event stream). A client that only starts local programs can use the
-  `mcp-remote` bridge:
+**Connecting an agent.** **Connect an agent** shows a QR code, its address and a 6-digit code. Open the address on a phone or a computer:
+**Connect an agent to the TV** has a ready prompt with **Copy the prompt**. Paste it to your agent. The agent pairs once:
 
-  ```json
-  { "mcpServers": { "tv": { "command": "npx",
-      "args": ["mcp-remote", "http://<tv>:8790/mcp", "--allow-http", "--header", "Authorization: Bearer <token>"] } } }
-  ```
+```sh
+curl -s -X POST http://<tv>:8802/pair -H "content-type: application/json" -d '{"code":"123456","name":"Claude Code"}'
+# {"token":"<id>.<secret>","name":"Claude Code","mcp":"http://<tv>:8802/mcp"}
+```
 
+and then adds the server with that token, for example `claude mcp add --transport http tv http://<tv>:8802/mcp --header "Authorization:
+Bearer <token>"`. A client that only starts local programs uses the `mcp-remote` bridge:
+
+```json
+{ "mcpServers": { "tv": { "command": "npx",
+    "args": ["mcp-remote", "http://<tv>:8802/mcp", "--allow-http", "--header", "Authorization: Bearer <token>"] } } }
+```
+
+The code works once and for ten minutes; Back on the TV takes it off. The page turns green when the agent has paired, and says
+**Connected** after its first call. The token is the agent's own and is shown only once.
+
+**Managing the devices.** **Connected devices** on the same screen ("2 paired · 1 in use") opens the list of every paired agent:
+
+| Row | What it does |
+|---|---|
+| Each paired device | Its name, **In use now**, **Last used 3 h ago**, or **Blocked**; a warning when it is removed within three days. OK opens **Manage the device**: **Block this device** / **Allow this device** (at once), **Remove this device** (asks first; its token stops working) |
+| **Remove unused devices** | A device not used for 1 day, 3 days, 1 week, 2 weeks (the default) or 1 month is removed by itself, and its token stops working; one in use is never removed. **Never** asks first |
+| **Remove all devices** | Asks first: every token stops working and each device has to pair again |
+
+Up to 10 agents can be paired. An agent can also leave by itself: the network side offers it a tool of its own,
+`disconnect_from_tv` (it is in `tools/list` there, not on the TV's own `/api/mcp`), and `POST http://<tv>:8802/logout` with its header
+does the same.
+
+**What the agent learns from the server.** The pasted prompt only pairs and adds the server. Everything else comes from the server on every
+connection, so a new session knows it too: `tools/list` has every tool with its description and arguments, and the `initialize` reply carries
+`instructions` with the rules (destructive tools are refused from the network; 401 means pair again with a new code; 403 means blocked; at
+most 60 requests a minute; `disconnect_from_tv` to leave). Port 8802
+is open only while the switch is on and an agent is paired or a code is shown; if another program on the TV holds it, the switch's row says
+so.
+
+- It speaks MCP over HTTP (Streamable HTTP, every reply is JSON, no event stream).
 - Tools that turn something off or delete something are never run from the network; only your spoken yes on the TV runs them.
-- A request from a web page (it carries an `Origin`) is refused. Ten wrong tokens lock an address out for ten minutes; at most 60
-  requests a minute. It is plain HTTP, so use it on a network you trust. See [Security](security.md#mcp-on-the-network).
+- A request from a web page (it carries an `Origin`) is refused. Ten wrong codes or tokens lock an address out for ten minutes; a code may be
+  tried five times a minute per address, and eight wrong codes take it off. At most 60 requests a minute. It is plain HTTP, so use it on
+  a network you trust. See [Security](security.md#mcp-on-the-network).
 
 ## Signing tools: the agent add-on
 
@@ -113,7 +144,7 @@ exactly `{name}` keeps the argument's type.
 ### Approving
 
 Every file is a **source**, and a source gives no tools until you switch it on: manager app, **Add-ons > Agent tools (MCP) > Set up
-from your phone** (port 8799, a 6-digit code on the TV, ten minutes). The page lists each source with its tools and errors. The
+from your phone** (port 8803, a 6-digit code on the TV, ten minutes). The page lists each source with its tools and errors. The
 approvals are the add-on's settings in `config.json`.
 
 The add-on's own endpoints, on the TV:
@@ -130,7 +161,7 @@ The add-on's own endpoints, on the TV:
 
 The tools act as the service does: as root. What keeps that in hand:
 
-- The assistant uses tools only while **AI acts on the TV** is on, and signed tools only from sources you approved.
+- The assistant uses tools only while **Let the voice assistant act on the TV** is on, and signed tools only from sources you approved.
 - Destructive tools need your spoken yes on the TV; neither the model nor an MCP client can give it.
 - Signed tools cannot call the service's API or anything else on the TV, and an add-on tool reaches only that add-on's own paths.
 - The agent add-on asks for `net.fetch` and one LG call, `applicationManager/launch`. An add-on's own tools run with that add-on's

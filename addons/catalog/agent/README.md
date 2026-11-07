@@ -41,7 +41,7 @@ keeps the argument's type.
 
 Each file is a source: `addon:<id>` (`addons-bundled/<id>/tools.json`, `addons/<id>/tools.json`), `app:<id>`
 (`/media/developer/apps/usr/palm/applications/<id>/tools.json`) or `file:<name>` (`addon-data/agent/tools/<name>.json`, a declaration
-dropped at runtime). A source gives no tools until it is approved on the phone page (`settings(o)`, port 8799) or with
+dropped at runtime). A source gives no tools until it is approved on the phone page (`settings(o)`, port 8803) or with
 `POST /api/addons/agent/approve {source, approved}`. A file that does not parse is listed with its error; a name used twice keeps the first.
 
 ## Endpoints

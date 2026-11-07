@@ -4,6 +4,14 @@ const http = require('http');
 const { ok, call, serve, req, memoryConfig, run } = require('./lib');
 
 run(async () => {
+  // a free port for the network side (the TV's is 8802; helper/toolhub.js reads CYTV_MCP_PORT)
+  const freePort = await new Promise(res => {
+    const t = http.createServer().listen(0, '127.0.0.1', () => {
+      const p = t.address().port;
+      t.close(() => res(p));
+    });
+  });
+  process.env.CYTV_MCP_PORT = String(freePort);
   // ---- OpenRouter: each request takes the next scripted reply; the requests are kept ----
   const sent = [];
   let script = [];
@@ -170,14 +178,8 @@ run(async () => {
     { name: 'launch_app', description: 'A name the service has too.', inputSchema: {} },
   ]).tools;
   let hub = null;
-  const freePort = await new Promise(res => {
-    const t = http.createServer().listen(0, '127.0.0.1', () => {
-      const p = t.address().port;
-      t.close(() => res(p));
-    });
-  });
   const ctx = {
-    config: memoryConfig({ mcp: { port: freePort } }),
+    config: memoryConfig({}),
     version: '9.9.9',
     feature: n =>
       n === 'apps'
@@ -271,7 +273,7 @@ run(async () => {
   r = await vask('set', { llm: { agent: false } });
   ok(r.j.llm.agent === false, 'voice: the switch can be turned off');
 
-  // ---- MCP on the network: off until switched on, a token, no web pages, no destructive tools ----
+  // ---- MCP on the network: off until switched on; agents pair with a one-time code and get a token each ----
   const lan = (method, p, body, headers) =>
     new Promise(resolve => {
       const q = http.request(
@@ -297,49 +299,154 @@ run(async () => {
       q.on('error', e => resolve({ code: 0, error: e.code }));
       q.end(body === undefined ? undefined : JSON.stringify(body));
     });
-  r = await call(hub, '/api/mcp/lan', 'GET');
-  ok(r.j.lan === false && r.j.listening === false, 'lan: off by default');
-  hub.start();
-  ok((await lan('POST', '/mcp', {})).code === 0, 'lan: nothing listens while it is off');
-  r = await call(hub, '/api/mcp/lan', 'POST', { lan: true });
-  const token = r.j.token;
-  ok(r.j.lan === true && /^[0-9a-f]{48}$/.test(token) && r.j.port === freePort, 'lan: switching it on makes a token');
-  ok(ctx.config.get().mcp.lan === true, 'lan: the setting is kept in config.json (mcp)');
-  await new Promise(x => setTimeout(x, 50));
-  const auth = { authorization: 'Bearer ' + token };
+  const lanSet = b => call(hub, '/api/mcp/lan', 'POST', b);
   const list = { jsonrpc: '2.0', id: 1, method: 'tools/list' };
-  ok((await lan('POST', '/mcp', list)).code === 401, 'lan: no token, no answer');
-  ok((await lan('POST', '/mcp', list, { authorization: 'Bearer nope' })).code === 401, 'lan: a wrong token is refused');
+  const bearer = t => ({ authorization: 'Bearer ' + t });
+
+  r = await call(hub, '/api/mcp/lan', 'GET');
+  ok(r.j.lan === false && r.j.listening === false && r.j.agents.length === 0, 'lan: off by default, no agents');
+  ok(req('toolhub').PORT === 8802, 'lan: the TV uses port 8802');
+  await hub.start();
+  r = await lanSet({ lan: true });
+  ok(r.j.lan === true && r.j.listening === false, 'lan: on, but nothing listens while no agent is paired and no code is shown');
+  ok((await lan('POST', '/pair', { code: '1' })).code === 0, 'lan: the port is closed');
+  ok(JSON.stringify(ctx.config.get().mcp).indexOf('token') < 0, 'lan: no shared token any more');
+
+  // Connect an agent: the code
+  r = await lanSet({ page: true });
+  const code = r.j.code,
+    pagePath = (/\/t\/[0-9a-f]+$/.exec(r.j.pageUrl || '') || [''])[0];
+  ok(/^\d{6}$/.test(code) && r.j.listening === true && r.j.pairing === true, 'lan: Connect an agent opens the port with a 6-digit code');
+  r = await lan('GET', pagePath);
   ok(
-    (await lan('POST', '/mcp', list, Object.assign({ origin: 'http://evil.example' }, auth))).code === 403,
+    r.code === 200 && r.text.indexOf(code) >= 0 && /\/pair/.test(r.text) && /claude mcp add --scope user --transport http tv/.test(r.text),
+    'lan: the page has a prompt with the code, how to pair and how to add the server'
+  );
+  ok(!/Bearer [0-9a-f]{8}\./.test(r.text), 'lan: the page holds no token');
+  ok(
+    /instructions/.test(r.text) && /disconnect_from_tv/.test(r.text) && !/Rules:/.test(r.text),
+    'lan: the prompt only pairs and sets up; the rest comes from the server'
+  );
+  ok((await lan('GET', pagePath + '/status')).j.paired === null, 'lan: no agent yet');
+
+  // pairing
+  ok((await lan('POST', '/pair', { code: '000000', name: 'x' })).code === 403, 'lan: a wrong code is refused');
+  ok((await lan('POST', '/pair', { code, name: 'x' }, { origin: 'http://evil.example' })).code === 403, 'lan: a web page cannot pair');
+  r = await lan('POST', '/pair', { code, name: 'Claude Code' });
+  const tok = r.j.token;
+  ok(
+    r.code === 200 && /^[0-9a-f]{8}\.[0-9a-f]{32}$/.test(tok) && r.j.name === 'Claude Code',
+    'lan: the code gives the agent a token of its own'
+  );
+  ok((await lan('POST', '/pair', { code, name: 'y' })).code === 403, 'lan: the code works once');
+  r = await lan('GET', pagePath + '/status');
+  ok(r.j.paired && r.j.paired.name === 'Claude Code' && r.j.used === false, 'lan: the page sees the agent paired');
+  r = await call(hub, '/api/mcp/lan', 'GET');
+  ok(
+    r.j.paired && r.j.paired.name === 'Claude Code',
+    'lan: the manager sees who paired with the code on screen (it closes the QR screen then)'
+  );
+
+  // using it
+  ok((await lan('POST', '/mcp', list)).code === 401, 'lan: no token, no answer');
+  ok((await lan('POST', '/mcp', list, bearer('00000000.00000000000000000000000000000000'))).code === 401, 'lan: a wrong token is refused');
+  ok(
+    (await lan('POST', '/mcp', list, Object.assign({ origin: 'http://evil.example' }, bearer(tok)))).code === 403,
     'lan: a web page cannot call it'
   );
-  ok((await lan('GET', '/mcp', undefined, auth)).code === 405, 'lan: only POST');
-  r = await lan('POST', '/mcp', list, auth);
+  ok((await lan('GET', '/mcp', undefined, bearer(tok))).code === 405, 'lan: only POST');
+  r = await lan('POST', '/mcp', list, bearer(tok));
   ok(r.code === 200 && r.j.result.tools.some(t => t.name === 'switch_input'), 'lan: tools/list answers with the token');
+  ok(
+    r.j.result.tools.some(t => t.name === 'disconnect_from_tv'),
+    'lan: the network side offers disconnect_from_tv'
+  );
+  r = await lan('POST', '/mcp', { jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }, bearer(tok));
+  const ins = (r.j.result && r.j.result.instructions) || '';
+  ok(
+    /401/.test(ins) && /403/.test(ins) && /disconnect_from_tv/.test(ins) && /refused from the network/.test(ins),
+    'lan: initialize carries the rules as instructions'
+  );
+  r = await rpc({ jsonrpc: '2.0', id: 1, method: 'initialize' });
+  ok(r.result.instructions === undefined, 'mcp: the TV itself (/api/mcp) gets no network instructions');
+  r = await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
+  ok(!r.result.tools.some(t => t.name === 'disconnect_from_tv'), 'mcp: and no disconnect_from_tv');
+  ok((await lan('GET', pagePath + '/status')).j.used === true, 'lan: the page turns green once the agent used the tools');
   const pb = poweredOff;
-  r = await lan('POST', '/mcp', { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'power_off', arguments: {} } }, auth);
+  r = await lan('POST', '/mcp', { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'power_off', arguments: {} } }, bearer(tok));
   ok(r.j.result.isError === true && poweredOff === pb, 'lan: turning the TV off is never run from the network');
   const lb2 = launched.length;
   r = await lan(
     'POST',
     '/mcp',
     { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'launch_app', arguments: { id: 'netflix' } } },
-    auth
+    bearer(tok)
   );
   ok(r.j.result.isError === false && launched.length === lb2 + 1, 'lan: a tool runs');
-  r = await call(hub, '/api/mcp/lan', 'POST', { page: true });
-  const pagePath = (/\/t\/[0-9a-f]+$/.exec(r.j.pageUrl || '') || [''])[0];
-  r = await lan('GET', pagePath);
-  ok(pagePath && r.code === 200 && r.text.indexOf(token) >= 0, 'lan: the page behind the QR code shows the token');
-  r = await call(hub, '/api/mcp/lan', 'POST', { regenerate: true });
-  ok(r.j.token !== token && (await lan('POST', '/mcp', list, auth)).code === 401, 'lan: a new token ends the old one');
-  r = await call(hub, '/api/mcp/lan', 'POST', { lan: false });
-  await new Promise(x => setTimeout(x, 50));
+
+  // the list, block, allow
+  r = await call(hub, '/api/mcp/lan', 'GET');
+  const ag = r.j.agents[0];
   ok(
-    r.j.lan === false && (await lan('POST', '/mcp', list, { authorization: 'Bearer ' + r.j.token })).code === 0,
-    'lan: switched off, the port closes'
+    r.j.agents.length === 1 && ag.name === 'Claude Code' && ag.active === true && ag.blocked === false,
+    'lan: the manager lists the agent, in use'
   );
+  ok(r.j.expireDays === 14 && ag.removesIn > 13 * 864e5, 'lan: unused agents go after two weeks by default');
+  await lanSet({ block: ag.id });
+  ok((await lan('POST', '/mcp', list, bearer(tok))).code === 403, 'lan: a blocked agent is refused');
+  await lanSet({ allow: ag.id });
+  ok((await lan('POST', '/mcp', list, bearer(tok))).code === 200, 'lan: and allowed again');
+  ok(
+    (await lanSet({ expireDays: 5 })).code === 400 && (await lanSet({ expireDays: 3 })).j.expireDays === 3,
+    'lan: the choices for unused agents'
+  );
+  ok((await lanSet({ remove: 'ffffffff' })).code === 400, 'lan: removing an unknown agent says so');
+
+  // closing the code: the port stays while an agent is paired
+  r = await lanSet({ pair: false });
+  ok(r.j.pairing === false && r.j.listening === true, 'lan: Back closes the code; the port stays open for the paired agent');
+  r = await lan('GET', pagePath + '/status');
+  ok(
+    r.code === 200 && r.j.paired.name === 'Claude Code' && r.j.used === true,
+    'lan: a code that was used keeps its page, so the phone still shows Connected'
+  );
+  r = await lanSet({ page: true });
+  const unused = (/\/t\/[0-9a-f]+$/.exec(r.j.pageUrl || '') || [''])[0];
+  ok(r.j.paired === null, 'lan: a new code has no agent yet');
+  await lanSet({ pair: false });
+  ok((await lan('GET', unused)).code !== 200, 'lan: an unused code closed with Back takes its page with it');
+
+  // a second agent, then logout and remove all
+  r = await lanSet({ page: true });
+  const t2 = (await lan('POST', '/pair', { code: r.j.code, name: 'Claude Code' })).j.token;
+  r = await call(hub, '/api/mcp/lan', 'GET');
+  ok(r.j.agents.length === 2 && r.j.agents.some(a => a.name === 'Claude Code 2'), 'lan: a second agent with the same name gets " 2"');
+  r = await lan(
+    'POST',
+    '/mcp',
+    { jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'disconnect_from_tv', arguments: {} } },
+    bearer(t2)
+  );
+  ok(r.j.result.isError === false && /Disconnected/.test(r.j.result.content[0].text), 'lan: an agent can disconnect itself with the tool');
+  ok((await lan('POST', '/logout', {}, bearer(t2))).code === 401, 'lan: and its token is gone (logout says 401)');
+  ok(
+    (await lan('POST', '/mcp', list, bearer(t2))).code === 401 && (await call(hub, '/api/mcp/lan', 'GET')).j.agents.length === 1,
+    'lan: and is gone'
+  );
+  await lanSet({ pair: false });
+  r = await lanSet({ removeAll: true });
+  ok(r.j.agents.length === 0 && r.j.listening === false, 'lan: remove all: no agents, and the port closes');
+  ok((await lan('POST', '/mcp', list, bearer(tok))).code === 0, 'lan: nothing listens');
+
+  // the port held by another program: the reply says so
+  const squat = http.createServer();
+  await new Promise(x => squat.listen(freePort, '0.0.0.0', x));
+  r = await lanSet({ page: true });
+  ok(r.j.listening === false && /port \d+ is used by another program/.test(r.j.error) && !r.j.pageUrl, 'lan: a busy port is reported');
+  await new Promise(x => squat.close(x));
+  await lanSet({ pair: false });
+  r = await lanSet({ lan: false });
+  ok(r.j.lan === false && r.j.listening === false, 'lan: switched off');
   hub.stop();
 
   ai.server.close();

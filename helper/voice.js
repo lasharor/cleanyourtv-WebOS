@@ -959,7 +959,7 @@ function pairPage(msg, done, token, lang, only) {
 <div class=add><button type=button id=addor>+ ${T('OpenRouter')}</button><button type=button id=addsrv>+ ${T('Your own server')}</button></div>
 <label class=c><input type=checkbox id=enabled ${l.enabled ? 'checked' : ''}> ${T('Answer with the AI')}</label>
 <label>${T('Instructions for the AI')} <small>${T('(empty: short plain answers)')}</small></label><textarea id=system rows=3>${esc(l.system)}</textarea>
-<label class=c><input type=checkbox id=agent ${l.agent ? 'checked' : ''}> ${T('Let the AI act on the TV (open apps, switch inputs)')}</label>
+<label class=c><input type=checkbox id=agent ${l.agent ? 'checked' : ''}> ${T('Let the AI act on the TV (open apps, switch inputs, approved add-on tools)')} <small>${T('needs a model marked can act')}</small></label>
 <label>${T('Which answers first')}${
     haReady(ha)
       ? ''
