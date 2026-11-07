@@ -6,13 +6,13 @@
 //   GET  /api/addons/agent/sources    every file that declares tools, approved or not, with its errors
 //   POST /api/addons/agent/approve    {source, approved}: let a source's tools in, or take them out
 //   POST /api/addons/agent/reload     read the declarations again
-// The phone page (port 8799, settings(o)) lists the sources with a switch each; the manager's Add-ons screen opens it.
+// The phone page (port 8803, settings(o)) lists the sources with a switch each; the manager's Add-ons screen opens it.
 'use strict';
 const http = require('http');
 const tools = require('./tools');
 const phone = require('./phone');
 
-const PAIR_PORT = 8799, // after the Jellyfin page (8798)
+const PAIR_PORT = 8803, // after the MCP port (8802); 8799 is the phone remote's
   PAIR_MS = 10 * 60 * 1000;
 
 function json(res, o, code) {

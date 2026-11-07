@@ -12,7 +12,7 @@ function build() {
     rmRows();
     return;
   }
-  if (view === 'notifyhow' || view === 'voicehow' || view === 'mcphow') {
+  if (view === 'notifyhow' || view === 'voicehow') {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
@@ -275,32 +275,6 @@ function build() {
         push('providers');
       },
     });
-    if (lm.hasKey)
-      /* OpenRouter has a key: only OpenRouter gets the tools */
-      rows.push({
-        label: 'AI acts on the TV',
-        sub: onoff(!!lm.agent) + ' · apps, inputs, approved add-ons',
-        info: {
-          t: 'AI acts on the TV',
-          d: 'The AI may open apps, switch inputs, show a card and use the tools of the add-ons you approved (Add-ons > Agent tools > Set up from your phone). Turning the TV off asks you first: say yes within 30 seconds. Only OpenRouter gets the tools; a server of yours only answers. Some models cannot use tools; the AI then only answers.',
-        },
-        fn: function () {
-          api('/api/voice/set', { llm: { agent: !lm.agent } }).then(
-            function (x) {
-              if (x.error) {
-                banner(x.error, 'err');
-                return;
-              }
-              vo = x;
-              build();
-              draw();
-            },
-            function () {
-              banner('The service did not answer', 'err');
-            }
-          );
-        },
-      });
     rows.push({
       label: 'Send the text to',
       sub: v.url ? v.url.replace(/^(https?:\/\/[^\/]+).*/, '$1') : 'not set · shows a card only',
@@ -425,19 +399,75 @@ function build() {
     return;
   }
   if (view === 'mcpnet') {
-    var mn = mnet || {};
+    mcpLive();
+    var mn = mnet || {},
+      va = (vo && vo.llm) || {},
+      ags = mn.agents || [],
+      VOICE_D =
+        'The voice assistant may open apps, switch inputs, show a card and use the tools of the add-ons you approved in Add-ons > Agent tools (MCP). Turning the TV off asks first: say yes within 30 seconds. A model that cannot use tools only answers.';
+    /* the voice assistant uses the same tools as the network: the switch for it lives here */
+    rows.push({
+      label: 'Let the voice assistant act on the TV',
+      sub: !va.hasKey ? 'Off · set up the AI chat first' : onoff(!!va.agent),
+      dim: !va.hasKey,
+      info: {
+        t: 'Voice assistant acts on the TV',
+        d: !va.hasKey ? 'Needs the AI chat: Features > Voice > Set up from your phone. ' + VOICE_D : VOICE_D,
+      },
+      fn: function () {
+        if (!va.hasKey) {
+          banner('Set up the AI chat first: Features > Voice > Set up from your phone', 'err');
+          return;
+        }
+        api('/api/voice/set', { llm: { agent: !va.agent } }).then(
+          function (x) {
+            if (x.error) {
+              banner(x.error, 'err');
+              return;
+            }
+            vo = x;
+            if (st) st.mcp = { lan: !!mn.lan, agent: !!(x.llm && x.llm.agent) };
+            build();
+            draw();
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+    rows.push({ sep: true });
     rows.push({
       label: 'Accept MCP clients from the network',
-      sub: onoff(mn.lan),
-      info: {
-        t: 'MCP on the network',
-        d: 'An AI agent on another computer (Claude Desktop, Cursor, Home Assistant) can use the TV’s tools: open apps, switch inputs, show a card, and the tools of the add-ons you approved. It needs the token. Turning the TV off is never allowed from the network. Off by default.',
-      },
+      sub: !mn.lan
+        ? 'Off'
+        : mn.error
+          ? 'On · port ' + mn.port + ' is taken'
+          : ags.length
+            ? 'On · port ' + mn.port + ' · ' + ags.length + (ags.length === 1 ? ' device' : ' devices')
+            : 'On · no agent yet',
+      dim: !!(mn.lan && mn.error),
+      info:
+        mn.lan && mn.error
+          ? {
+              t: 'Accept MCP clients from the network',
+              d:
+                'Port ' +
+                mn.port +
+                ' is used by another program on the TV, so nothing listens. Stop that program, then switch this off and on again.',
+            }
+          : {
+              t: 'Accept MCP clients from the network',
+              d:
+                'Lets AI agents on other computers (Claude Code, Claude Desktop, Cursor, a script) use the same tools. Port ' +
+                (mn.port || 8802) +
+                ' opens only while an agent is paired or a code is shown. Turning the TV off and requests from web pages are refused. Plain HTTP: use a network you trust.',
+            },
       fn: function () {
         api('/api/mcp/lan', { lan: !mn.lan }).then(
           function (n) {
             mnet = n;
-            if (st) st.mcp = { lan: !!n.lan };
+            if (st) st.mcp = { lan: !!n.lan, agent: !!va.agent };
             build();
             draw();
           },
@@ -448,37 +478,241 @@ function build() {
       },
     });
     if (mn.lan) {
+      var full = ags.length >= (mn.max || 10);
       rows.push({
-        label: 'How to connect',
-        sub: 'address, token, client settings',
+        label: 'Connect an agent',
+        sub: full ? 'at most ' + (mn.max || 10) + ' devices: remove one first' : 'QR code · a code that works once',
+        dim: full,
+        info: {
+          t: 'Connect an agent',
+          d: 'Shows a QR code and an address for a phone or a computer. The page there has a prompt to paste to your agent, with a code that works once. The agent trades it for a token of its own, and the page turns green. The code works for ten minutes. Back closes it.',
+        },
         fn: function () {
-          kText =
-            'MCP address (Streamable HTTP):\nhttp://' +
-            mn.ip +
-            ':' +
-            mn.port +
-            '/mcp\n\nHeader:\nAuthorization: Bearer ' +
-            mn.token +
-            '\n\nA client that only starts local programs can use the mcp-remote bridge: npx mcp-remote <address> --allow-http --header "Authorization: Bearer <token>"';
-          push('mcphow');
+          if (full) {
+            banner('At most ' + (mn.max || 10) + ' devices can be paired: remove one first', 'err');
+            return;
+          }
+          openMcpQr();
         },
       });
-      rows.push({ label: 'Show as QR code', sub: 'scan with a phone to copy the address and token', fn: openMcpQr });
       rows.push({
-        label: 'New token',
-        sub: 'the old one stops working',
+        label: 'Connected devices',
+        sub: ags.length
+          ? ags.length +
+            ' paired' +
+            (ags.filter(function (x) {
+              return x.active;
+            }).length
+              ? ' \u00B7 ' +
+                ags.filter(function (x) {
+                  return x.active;
+                }).length +
+                ' in use'
+              : '')
+          : 'none paired yet',
+        info: {
+          t: 'Connected devices',
+          d: 'Every device that paired with the TV, with when it was last used. Open one to block or remove it, or remove them all at once. Unused devices are removed by themselves.',
+        },
         fn: function () {
-          api('/api/mcp/lan', { regenerate: true }).then(function (n) {
+          api('/api/mcp/lan').then(function (n) {
             mnet = n;
-            banner('New token created. Open “How to connect” to see it.', 'ok');
-            build();
-            draw();
+            push('mcpdevices');
           });
         },
       });
     }
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* every paired device: manage one, remove unused ones, remove all */
+  if (view === 'mcpdevices') {
+    mcpLive();
+    var mn2 = mnet || {},
+      ags = mn2.agents || [];
+    if (!ags.length) rows.push({ label: 'No device is paired', sub: 'Connect an agent pairs one', dim: true, fn: function () {} });
+    var mn = mn2;
+    ags.forEach(function (a) {
+      var soon = a.removesIn != null && a.removesIn < 3 * 864e5;
+      rows.push({
+        label: a.name,
+        sub: a.blocked
+          ? 'Blocked'
+          : a.active
+            ? 'In use now'
+            : 'Last used ' + mcpAgo(a.seen) + (soon ? ' · removed in ' + mcpDays(a.removesIn) : ''),
+        info: {
+          t: a.name,
+          d:
+            'Paired ' +
+            new Date(a.created).toLocaleDateString() +
+            '. ' +
+            (a.ip ? 'Last address: ' + a.ip + '. ' : '') +
+            (a.blocked ? 'Blocked: it can use nothing until you allow it. ' : '') +
+            (a.removesIn == null ? 'It is never removed by itself.' : 'Removed in ' + mcpDays(a.removesIn) + ' if it is not used.') +
+            ' OK opens Manage.',
+        },
+        fn: function () {
+          mcpSel = a.id;
+          push('mcpagent');
+        },
+      });
+    });
+    rows.push({
+      label: 'Remove unused devices',
+      sub: mn.expireDays ? 'After ' + mcpDays(mn.expireDays * 864e5) : 'Never',
+      dim: !mn.expireDays,
+      info: {
+        t: 'Remove unused devices',
+        d: 'For safety: a device that has not been used for this long is removed by itself, and its token stops working. A laptop that was sold or a setup you forgot then stops reaching the TV.',
+      },
+      fn: function () {
+        push('mcpexpire');
+      },
+    });
+    if (ags.length)
+      rows.push({
+        label: 'Remove all devices',
+        sub: 'every token stops working',
+        info: { t: 'Remove all devices', d: 'Asks first, then removes every paired device. Each one has to pair again with a new code.' },
+        fn: function () {
+          mcpAsk = {
+            title: 'Remove all devices?',
+            about: 'Every device stops reaching the TV at once and has to pair again with a new code.',
+            yes: 'Yes, remove all devices',
+            body: { removeAll: true },
+            done: 'All devices removed',
+          };
+          push('mcpconfirm');
+        },
+      });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* one device: block, allow, remove */
+  if (view === 'mcpagent') {
+    mcpLive();
+    var ag = ((mnet && mnet.agents) || []).filter(function (x) {
+      return x.id === mcpSel;
+    })[0];
+    if (!ag) {
+      rows.push({ label: 'This device is no longer paired', dim: true, fn: function () {} });
+      rows.push({ sep: true });
+      rows.push({ label: 'Back', fn: pop });
+      return;
+    }
+    rows.push({
+      label: ag.blocked ? 'Allow this device' : 'Block this device',
+      sub: ag.blocked ? 'it may use the tools again' : 'it stays paired and can use nothing',
+      info: {
+        t: ag.blocked ? 'Allow this device' : 'Block this device',
+        d: ag.blocked
+          ? 'The device can use the TV’s tools again with the token it has.'
+          : 'The device stays paired, but every request is refused until you allow it again. It applies at once.',
+      },
+      fn: function () {
+        var b = ag.blocked ? { allow: ag.id } : { block: ag.id };
+        api('/api/mcp/lan', b).then(function (n) {
+          mnet = n;
+          banner(ag.name + (ag.blocked ? ' allowed' : ' blocked'), 'ok');
+          build();
+          draw();
+        });
+      },
+    });
+    rows.push({
+      label: 'Remove this device',
+      sub: 'its token stops working',
+      info: {
+        t: 'Remove this device',
+        d: 'Asks first. Its token stops working at once, and the device has to pair again with a new code.',
+      },
+      fn: function () {
+        mcpAsk = {
+          title: 'Remove ' + ag.name + '?',
+          about: 'Its token stops working at once. To use the TV again it has to pair with a new code.',
+          yes: 'Yes, remove it',
+          body: { remove: ag.id },
+          done: ag.name + ' removed',
+          back: 2,
+        };
+        push('mcpconfirm');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* how long an unused device stays */
+  if (view === 'mcpexpire') {
+    var cur = mnet && mnet.expireDays != null ? mnet.expireDays : 14;
+    [
+      [1, '1 day'],
+      [3, '3 days'],
+      [7, '1 week'],
+      [14, '2 weeks'],
+      [30, '1 month'],
+      [0, 'Never'],
+    ].forEach(function (c) {
+      rows.push({
+        label: c[1],
+        sub: c[0] === cur ? 'chosen' : c[0] === 14 ? 'the default' : c[0] === 0 ? 'not recommended' : '',
+        info: {
+          t: c[1],
+          d: c[0]
+            ? 'A device that has not been used for ' + c[1] + ' is removed by itself.'
+            : 'Devices stay until you remove them. A lost or sold computer keeps reaching the TV until someone removes it here.',
+        },
+        fn: function () {
+          var set = function () {
+            api('/api/mcp/lan', { expireDays: c[0] }).then(function (n) {
+              mnet = n;
+              pop();
+            });
+          };
+          if (c[0] !== 0) return set();
+          mcpAsk = {
+            title: 'Never remove unused devices?',
+            about: 'Devices stay until you remove them. A lost or sold computer keeps reaching the TV until someone removes it here.',
+            yes: 'Yes, never remove them',
+            body: { expireDays: 0 },
+            done: 'Unused devices are kept',
+            back: 2,
+          };
+          push('mcpconfirm');
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* a confirm: Cancel first */
+  if (view === 'mcpconfirm') {
+    var q = mcpAsk || {};
+    rows.push({ label: 'Cancel', info: { t: q.title || '', d: q.about || '' }, fn: pop });
+    rows.push({
+      label: q.yes || 'Yes',
+      info: { t: q.title || '', d: q.about || '' },
+      fn: function () {
+        api('/api/mcp/lan', q.body || {}).then(
+          function (n) {
+            if (n.error) {
+              banner(n.error, 'err');
+              return;
+            }
+            mnet = n;
+            banner(q.done || 'Done', 'ok');
+            for (var i = 0; i < (q.back || 1); i++) pop();
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
     return;
   }
   if (offline) {
@@ -1601,12 +1835,17 @@ function build() {
       },
     });
     rows.push({
-      label: 'MCP on the network',
-      sub: onoff(st.mcp && st.mcp.lan) + ' · AI agents on other computers',
+      label: 'AI agents (MCP)',
+      sub: 'voice: ' + onoff(st.mcp && st.mcp.agent) + ' \u00B7 network: ' + onoff(st.mcp && st.mcp.lan),
+      info: {
+        t: 'AI agents (MCP)',
+        d: 'What the AI may do on the TV: the voice assistant, and MCP clients on other computers. Both use the same tools: open apps, switch inputs, show a card, and the tools of the add-ons you approved. Both are off by default.',
+      },
       fn: function () {
-        api('/api/mcp/lan').then(
-          function (n) {
-            mnet = n;
+        Promise.all([api('/api/mcp/lan'), api('/api/voice/status')]).then(
+          function (r) {
+            mnet = r[0];
+            vo = r[1];
             push('mcpnet');
           },
           function () {

@@ -21,10 +21,10 @@ local network on request, and an optional notification endpoint is off by defaul
 | 8797 | Spotify page | The same, for the Spotify add-on (the Client ID of your own Spotify app, the sign-in); see [Spotify now playing](#spotify-now-playing) |
 | 8801 | Stocks and crypto page | The same, for the Stocks and crypto add-on (the Twelve Data API key); see [Cards](launcher.md#cards) |
 | 8800 | Add-on repositories page | The same, for adding a repository of add-ons from your phone (ten minutes); see [Add-on repositories](development/addon-repos.md) |
+| 8802 | MCP on the network | Only when you switch it on in the manager app (Features > AI agents (MCP)); needs a token; see [MCP on the network](#mcp-on-the-network) |
+| 8803 | Agent tools page | The same, for the agent add-on: which apps and add-ons may give the voice assistant their tools; see [Agent tools](agent.md) |
 | 8798 | Jellyfin page | The same, for the Jellyfin add-on (server address, user name and password; the TV keeps only the access token); see [Cards](launcher.md#cards) |
 | 8799 | Phone remote (a catalog add-on) | Only while the add-on is on **and** a phone is paired or its pairing screen is open; every phone needs a token from a one-time code; see [Phone remote](phone-remote.md) |
-| 8790 | MCP on the network | Only when you switch it on in the manager app (More > MCP on the network); needs a token; see [MCP on the network](#mcp-on-the-network) |
-| 8799 | Agent tools page | The same, for the agent add-on: which apps and add-ons may give the voice assistant their tools; see [Agent tools](agent.md) |
 
 What the setup changes on the TV is listed in [What it changes on the TV](tv-changes.md).
 
@@ -42,13 +42,17 @@ the traffic, can read the token while it is open; **New token** replaces it.
 
 ## MCP on the network
 
-Off until switched on in the manager app (**More > MCP on the network**). It then listens on port 8790 for `POST /mcp` (MCP over HTTP,
-JSON-RPC 2.0) with `Authorization: Bearer <token>`: a random 192-bit token kept in `config.json` (`mcp`), readable by root only. It
-exposes the same tools as `/api/mcp` on the TV and nothing else of the service: an agent with the token can **open apps, switch inputs,
-show cards and use the tools of the add-ons you approved**. Tools that turn something off or delete something (`power_off`) are refused
-from the network. A request that carries an `Origin` header (a web page in a browser) is refused, wrong tokens lock an address out for ten
-minutes, and requests are limited to 60 a minute and 64 KB. It is plain HTTP: anyone who can watch your network can read the token, so
-use it on a network you trust. **Show as QR code** and **New token** work as for network notifications.
+Off until switched on in the manager app (**Features > AI agents (MCP) > Accept MCP clients from the network**). Port 8802 then listens
+only while an agent is paired or **Connect an agent** shows a code. An agent pairs with that code (6 digits, works once, ten minutes; five
+tries a minute per address, eight wrong codes take it off) and gets a token of its own (`<id>.<128-bit secret>`). The TV keeps only a
+SHA-256 of each secret, in `config.json` (`mcp.agents`, readable by root only), compares it in constant time and never logs it. With its
+token an agent can call `POST /mcp` (MCP over HTTP, JSON-RPC 2.0): **open apps, switch inputs, show cards and use the tools of the add-ons
+you approved**, nothing else of the service. Tools that turn something off or delete something (`power_off`) are refused from the network.
+Each agent is listed in that screen's **Connected devices** menu and can be blocked, allowed or removed there, all at once with **Remove all devices**; an agent not used
+for two weeks (the default; 1 day to 1 month, or never) is removed by itself. A request that carries an `Origin` header (a web page in a
+browser) is refused, ten wrong codes or tokens lock an address out for ten minutes, and requests are limited to 60 a minute and 64 KB. It is plain
+HTTP: anyone who can watch your network can read a token, so use it on a network you trust. The page behind the QR code shows the code,
+not a token, and its status (`/t/<random>/status`, while it is open) tells only the name and address of the agent that paired, when, and whether it has made a call.
 
 ## Themes
 

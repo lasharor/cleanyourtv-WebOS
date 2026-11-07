@@ -526,6 +526,7 @@
    },
    "lang": "",
    "mcp": {
+    "agent": false,
     "lan": false
    },
    "notifyApi": {

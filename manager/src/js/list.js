@@ -99,18 +99,37 @@ function draw() {
     }
     return;
   }
-  if (view === 'notifyhow' || view === 'voicehow' || view === 'mcphow') {
+  if (view === 'notifyhow' || view === 'voicehow') {
     $('sub').textContent = tr(kText);
     $('sub').style.whiteSpace = 'pre-line';
     $('sub').style.wordBreak = 'break-all';
     return;
   }
-  if (view === 'notifyapi') {
-    $('sub').textContent = tr('Network notifications');
-    return;
-  }
-  if (view === 'mcpnet') {
-    $('sub').textContent = tr('MCP on the network');
+  if (
+    view === 'notifyapi' ||
+    view === 'mcpnet' ||
+    view === 'mcpdevices' ||
+    view === 'mcpagent' ||
+    view === 'mcpexpire' ||
+    view === 'mcpconfirm'
+  ) {
+    $('sub').textContent = tr(
+      {
+        notifyapi: 'Network notifications',
+        mcpnet: 'AI agents (MCP)',
+        mcpdevices: 'Connected devices',
+        mcpagent: 'Manage the device',
+        mcpexpire: 'Remove unused devices',
+        mcpconfirm: (mcpAsk && mcpAsk.title) || 'Are you sure?',
+      }[view]
+    );
+    /* the focused row explained on the left, as on the other screens */
+    if (inf) {
+      var bn = document.createElement('b');
+      bn.textContent = tr(inf.t);
+      ie.appendChild(bn);
+      ie.appendChild(document.createTextNode(tr(inf.d)));
+    }
     return;
   }
   if (view === 'models') {

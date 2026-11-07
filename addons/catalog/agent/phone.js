@@ -27,17 +27,17 @@ code=(location.hash||'').slice(1);if(/^\\d{6}$/.test(code))load().catch(function
 function page(i18n, esc, lang) {
   const T = s => esc(i18n && i18n.tr ? i18n.tr(lang, s) : s);
   return (
-    `<!doctype html><html lang=${lang}><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>${T('Assistant tools')}</title>
+    `<!doctype html><html lang=${lang}><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>${T('Agent tools')}</title>
 <style>*{box-sizing:border-box}body{font:17px -apple-system,system-ui,sans-serif;background:#0d0e12;color:#eee;margin:0 auto;padding:20px 16px 60px;max-width:640px}
 h1{font-size:26px;margin:4px 0}p{color:#aaa;margin:6px 0}.hide{display:none}.e{color:#f0a0a0}
 button,input{font:inherit;display:block;width:100%;padding:14px;border-radius:12px;border:1px solid #333;background:#1a1b21;color:#eee;margin:8px 0}
 button.p{background:#f5f6f8;color:#111;font-weight:600;border:0}.src{border:1px solid #2a2b33;border-radius:14px;padding:12px 14px;margin:12px 0}
 .row{display:flex;justify-content:space-between;align-items:center}.row input{width:28px;height:28px;margin:0 0 0 12px;flex:none}
 small{color:#888}code{color:#ffd9a3;font-size:14px}</style>
-<h1>${T('Assistant tools')}</h1><p id=sum>${T('Connecting to the TV…')}</p>
+<h1>${T('Agent tools')}</h1><p id=sum>${T('Connecting to the TV…')}</p>
 <div id=login class=hide><p>${T('Enter the code shown on the TV.')}</p><input id=code inputmode=numeric autocomplete=one-time-code><button class=p id=go>${T('Continue')}</button></div>
 <div id=main class=hide>
-<p>${T('Apps and add-ons that signed tools for the voice assistant. Switch one on to let the assistant use its tools; tools that ask you first run only after you say yes.')}</p>
+<p>${T('Apps and add-ons that signed tools. Switch one on to let the voice assistant and MCP clients on your network use its tools. Tools that ask you first run only after you say yes to the voice assistant, and never from the network.')}</p>
 <div id=list></div><button id=rl>${T('Look for tools again')}</button></div>
 ` +
     (i18n && i18n.script ? i18n.script(lang, PHONE_JS) : '<script>function t(s){return s}</script>') +

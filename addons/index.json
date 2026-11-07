@@ -16,10 +16,10 @@
         "luna://com.webos.applicationManager/launch"
       ],
       "files": {
-        "README.md": "bed75309bb810cad4474e25bae28a92702d4e5a846052e3b9a9e64487537005d",
+        "README.md": "4f99509070bc496c524a369aebab2bda6f200d68965db592e2cf00a8864babce",
         "addon.json": "21873ffe90b24e38eee61ce6f5602fa2bb55473e872c08bee81ec0297e3d00e6",
-        "phone.js": "af017a1aeac1ba9afa3af3151fd04a20139635347046875fba0add948de36ae5",
-        "service.js": "983f532cf8279da93a8ea6998c25de33fa6b6285b40a8a9158fab90cbc4114cc",
+        "phone.js": "e427d5b68caffe8bbb5bdf1ba08cb4ecd162030efe31763a3579677b471caa32",
+        "service.js": "0f07930c3f952c964a8f9d5d92b66abe4032aa6c963a7755aba31d222326241d",
         "tools.js": "515c83df002577387ceb237ae6302478351318355fba3a305f65986fec2bc421"
       }
     },
