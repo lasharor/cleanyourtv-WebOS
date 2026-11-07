@@ -288,9 +288,11 @@ function create(ctx) {
           at = { name: hits[0].name + (hits[0].area ? ', ' + hits[0].area : ''), lat: hits[0].lat, lon: hits[0].lon, unit: '' };
         } else {
           const cards = (ctx.config && ctx.config.get().cards) || {};
-          const card = Object.keys(cards)
+          // the built-in weather card first, else any card with a place (a downloaded forecast card keeps it the same way)
+          const placed = Object.keys(cards)
             .map(k => cards[k])
-            .filter(k => k && k.type === 'weather' && typeof k.lat === 'number' && typeof k.lon === 'number')[0];
+            .filter(k => k && typeof k.lat === 'number' && typeof k.lon === 'number');
+          const card = placed.filter(k => k.type === 'weather')[0] || placed[0];
           if (!card) return fail('say a place: there is no weather card with a place on Home');
           at = { name: String(card.place || ''), lat: card.lat, lon: card.lon, unit: card.unit || '' };
         }

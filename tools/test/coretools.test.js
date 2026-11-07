@@ -129,6 +129,17 @@ run(async () => {
   );
   r = await C.call('get_weather', { place: 'Nowhereville' });
   ok(r.isError && /no place/.test(txt(r)), 'an unknown place says so');
+  // found on the TV: the place was on a downloaded forecast card (x-forecast), not the built-in weather card
+  config.update('test', c => {
+    c.cards = { a: { type: 'x-stocks' }, b: { type: 'x-forecast', place: 'Haifa', lat: 32.8, lon: 35, unit: 'c' } };
+  });
+  r = await C.call('get_weather', {});
+  ok(!r.isError && val(r).place === 'Haifa' && asked[asked.length - 1].lat === 32.8, "no place: a downloaded forecast card's place");
+  config.update('test', c => {
+    c.cards = { a: { type: 'x-stocks' } };
+  });
+  r = await C.call('get_weather', {});
+  ok(r.isError && /say a place/.test(txt(r)), 'no card with a place: asks for one');
 
   // show_notification with the new options
   r = await C.call('show_notification', {
