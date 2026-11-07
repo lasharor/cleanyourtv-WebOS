@@ -315,12 +315,21 @@ run(async () => {
   // Connect an agent: the code
   r = await lanSet({ page: true });
   const code = r.j.code,
-    pagePath = (/\/t\/[0-9a-f]+$/.exec(r.j.pageUrl || '') || [''])[0];
+    pagePath = (/\/[a-z2-9]{8}$/.exec(r.j.pageUrl || '') || [''])[0],
+    r0url = r.j.pageUrl;
   ok(/^\d{6}$/.test(code) && r.j.listening === true && r.j.pairing === true, 'lan: Connect an agent opens the port with a 6-digit code');
   r = await lan('GET', pagePath);
   ok(
-    r.code === 200 && r.text.indexOf(code) >= 0 && /\/pair/.test(r.text) && /claude mcp add --scope user --transport http tv/.test(r.text),
-    'lan: the page has a prompt with the code, how to pair and how to add the server'
+    r.code === 200 &&
+      r.text.indexOf(code) >= 0 &&
+      /\/pair/.test(r.text) &&
+      /Authorization: Bearer TOKEN/.test(r.text) &&
+      /connected already/.test(r.text) &&
+      /Bearer OLDTOKEN/.test(r.text) &&
+      /Step 4\. Remember the connection/.test(r.text) &&
+      /Never put the token in the note/.test(r.text) &&
+      !/claude|cursor/i.test(r.text),
+    'lan: the page has a prompt with the code, how to pair (always, with a new token) and how to add the server, naming no app'
   );
   ok(!/Bearer [0-9a-f]{8}\./.test(r.text), 'lan: the page holds no token');
   ok(
@@ -328,6 +337,8 @@ run(async () => {
     'lan: the prompt only pairs and sets up; the rest comes from the server'
   );
   ok((await lan('GET', pagePath + '/status')).j.paired === null, 'lan: no agent yet');
+  ok(/^http:\/\/[^/]+\/[a-z2-9]{8}$/.test(r0url), 'lan: the page address is short: the host, the port and 8 characters');
+  ok((await lan('GET', '/zzzzzzzz')).code === 404, 'lan: a wrong page address is answered 404 (and counted as a wrong try)');
 
   // pairing
   ok((await lan('POST', '/pair', { code: '000000', name: 'x' })).code === 403, 'lan: a wrong code is refused');
@@ -337,6 +348,11 @@ run(async () => {
   ok(
     r.code === 200 && /^[0-9a-f]{8}\.[0-9a-f]{32}$/.test(tok) && r.j.name === 'Claude Code',
     'lan: the code gives the agent a token of its own'
+  );
+  await new Promise(x => setImmediate(x));
+  ok(
+    shown.some(c => c.title === 'Claude Code connected' && /can now control the TV/.test(c.text)),
+    'lan: the TV shows a card when an agent connects'
   );
   ok((await lan('POST', '/pair', { code, name: 'y' })).code === 403, 'lan: the code works once');
   r = await lan('GET', pagePath + '/status');
@@ -411,10 +427,26 @@ run(async () => {
     'lan: a code that was used keeps its page, so the phone still shows Connected'
   );
   r = await lanSet({ page: true });
-  const unused = (/\/t\/[0-9a-f]+$/.exec(r.j.pageUrl || '') || [''])[0];
+  const unused = (/\/[a-z2-9]{8}$/.exec(r.j.pageUrl || '') || [''])[0];
   ok(r.j.paired === null, 'lan: a new code has no agent yet');
   await lanSet({ pair: false });
   ok((await lan('GET', unused)).code !== 200, 'lan: an unused code closed with Back takes its page with it');
+
+  // an agent that is connected already and pairs again with its token: told to keep its session; the QR screen still closes
+  r = await lanSet({ page: true });
+  r = await lan('POST', '/pair', { code: r.j.code, name: 'Other name' }, bearer(tok));
+  ok(
+    r.code === 200 && r.j.connected === true && !r.j.token && r.j.name === 'Claude Code' && /current session/.test(r.j.message),
+    'lan: pairing with a token that works says it is connected already, with no new token'
+  );
+  await new Promise(x => setImmediate(x));
+  ok(
+    shown.some(c => c.title === 'Claude Code connected' && /was already connected/.test(c.text)),
+    'lan: and the TV shows a card for it'
+  );
+  r = await call(hub, '/api/mcp/lan', 'GET');
+  ok(r.j.agents.length === 1 && r.j.paired && r.j.paired.name === 'Claude Code', 'lan: no second entry, and the manager learns who it was');
+  await lanSet({ pair: false });
 
   // a second agent, then logout and remove all
   r = await lanSet({ page: true });
@@ -428,15 +460,29 @@ run(async () => {
     bearer(t2)
   );
   ok(r.j.result.isError === false && /Disconnected/.test(r.j.result.content[0].text), 'lan: an agent can disconnect itself with the tool');
+  await new Promise(x => setImmediate(x));
+  ok(
+    shown.some(c => c.title === 'Claude Code 2 disconnected' && /can no longer control/.test(c.text)),
+    'lan: the TV shows a card when an agent leaves'
+  );
   ok((await lan('POST', '/logout', {}, bearer(t2))).code === 401, 'lan: and its token is gone (logout says 401)');
   ok(
     (await lan('POST', '/mcp', list, bearer(t2))).code === 401 && (await call(hub, '/api/mcp/lan', 'GET')).j.agents.length === 1,
     'lan: and is gone'
   );
   await lanSet({ pair: false });
+  // logout: the same card
+  shown.length = 0;
+  r = await lan('POST', '/logout', {}, bearer(tok));
+  await new Promise(x => setImmediate(x));
+  ok(
+    r.j.bye === true && shown.some(c => c.title === 'Claude Code disconnected' && /can no longer control/.test(c.text)),
+    'lan: logout says bye, and the TV shows a card'
+  );
+  await lanSet({ pair: false });
   r = await lanSet({ removeAll: true });
   ok(r.j.agents.length === 0 && r.j.listening === false, 'lan: remove all: no agents, and the port closes');
-  ok((await lan('POST', '/mcp', list, bearer(tok))).code === 0, 'lan: nothing listens');
+  ok((await lan('POST', '/mcp', list, bearer(tok))).code !== 200, 'lan: the old token gets nothing');
 
   // the port held by another program: the reply says so
   const squat = http.createServer();

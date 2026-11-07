@@ -51,25 +51,35 @@ computer, switch on the network access (below).
 
 ## MCP on the network
 
-In the manager app, **Features > AI agents (MCP) > Accept MCP clients from the network** lets MCP clients on other computers (Claude
-Code, Claude Desktop, Cursor, a script) use the same tools at `http://<tv>:8802/mcp`. Off by default. Everything is managed on that screen;
+In the manager app, **Features > AI agents (MCP) > Accept MCP clients from the network** lets MCP clients on other computers (any
+agent or app that supports MCP, or a script) use the same tools at `http://<tv>:8802/mcp`. Off by default. Everything is managed on that screen;
 there is no page on Home for it.
 
 **Connecting an agent.** **Connect an agent** shows a QR code, its address and a 6-digit code. Open the address on a phone or a computer:
 **Connect an agent to the TV** has a ready prompt with **Copy the prompt**. Paste it to your agent. The agent pairs once:
 
 ```sh
-curl -s -X POST http://<tv>:8802/pair -H "content-type: application/json" -d '{"code":"123456","name":"Claude Code"}'
-# {"token":"<id>.<secret>","name":"Claude Code","mcp":"http://<tv>:8802/mcp"}
+curl -s -X POST http://<tv>:8802/pair -H "content-type: application/json" -d '{"code":"123456","name":"My agent"}'
+# {"token":"<id>.<secret>","name":"My agent","mcp":"http://<tv>:8802/mcp"}
 ```
 
-and then adds the server with that token, for example `claude mcp add --transport http tv http://<tv>:8802/mcp --header "Authorization:
-Bearer <token>"`. A client that only starts local programs uses the `mcp-remote` bridge:
+and then adds the server to its own MCP settings: a remote (Streamable HTTP) server named `tv` at `http://<tv>:8802/mcp` with the header
+`Authorization: Bearer <token>`. The prompt names no app: any MCP client works, in its own way of adding a server. Many take
+`{"mcpServers":{"tv":{"url":"http://<tv>:8802/mcp","headers":{"Authorization":"Bearer <token>"}}}}`. A client that only starts local
+programs uses the `mcp-remote` bridge:
 
 ```json
 { "mcpServers": { "tv": { "command": "npx",
     "args": ["mcp-remote", "http://<tv>:8802/mcp", "--allow-http", "--header", "Authorization: Bearer <token>"] } } }
 ```
+
+An agent that already has a server `tv` sends its token with the pair request (`Authorization: Bearer <token>`). If that token still
+works, the TV answers `{"connected":true,"name":…,"message":…}` instead of a new token: the agent keeps its settings and uses the session it
+has, and no second entry is made (the QR screen still closes). A token that no longer works pairs as new; a blocked one is refused.
+
+The TV shows a card with the agent's name when it connects (**<name> connected**: "This AI agent can now control the TV.", or "This AI
+agent was already connected.") and when it logs out or disconnects itself (**<name> disconnected**: "This AI agent can no longer control
+the TV."). Removing a device on the TV shows no card.
 
 The code works once and for ten minutes; Back on the TV takes it off. The page turns green when the agent has paired, and says
 **Connected** after its first call. The token is the agent's own and is shown only once.
@@ -89,7 +99,11 @@ does the same.
 **What the agent learns from the server.** The pasted prompt only pairs and adds the server. Everything else comes from the server on every
 connection, so a new session knows it too: `tools/list` has every tool with its description and arguments, and the `initialize` reply carries
 `instructions` with the rules (destructive tools are refused from the network; 401 means pair again with a new code; 403 means blocked; at
-most 60 requests a minute; `disconnect_from_tv` to leave). Port 8802
+most 60 requests a minute; `disconnect_from_tv` to leave).
+
+**Remembering the TV.** The prompt's last step asks the agent to save a short note in its own persistent memory (whatever its app calls
+it), so a new chat knows the TV can be controlled through the server `tv`. The note never holds the token, which stays in the MCP settings.
+Pairing again keeps the note; disconnecting deletes it. An agent without a persistent memory says so and skips the step. Port 8802
 is open only while the switch is on and an agent is paired or a code is shown; if another program on the TV holds it, the switch's row says
 so.
 

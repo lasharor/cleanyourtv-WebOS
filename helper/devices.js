@@ -61,18 +61,16 @@ function create(store, opts) {
   function closeWindow() {
     win = null;
   }
-  const windowOpen = () => {
-    if (win && Date.now() > win.until) win = null;
-    return !!win;
-  };
+  // an expired window stays in memory (closed) so whoever paired through it is still known: the manager closes its QR screen on that
+  const windowOpen = () => !!win && Date.now() <= win.until;
   // what the page behind the QR code asks: whether a device paired through this window
   function windowState(id) {
     if (!win || win.id !== id) return { open: false, paired: null };
     return { open: windowOpen(), paired: win.paired };
   }
 
-  // the code for a token. {token, name, id} or {error, status}
-  function pair(code, name, ip) {
+  // the code for a token. {token, name, id}, {already, name, id} when token (the device's current one) still works, or {error, status}
+  function pair(code, name, ip, token) {
     const now = Date.now(),
       t = tries.get(ip) || { n: 0, t: now };
     if (now - t.t > 60000) {
@@ -89,6 +87,15 @@ function create(store, opts) {
     if (typeof code !== 'string' || code.length !== win.code.length || !same(code, win.code)) {
       if (++win.wrong >= WRONG_MAX) win = null;
       return { error: 'wrong code', status: 403 };
+    }
+    // a device that pairs again with a token that still works keeps it: no second entry, and the page still learns who it was
+    if (token) {
+      const v = verify(token, ip);
+      if (v.device) {
+        win.paired = { id: v.device.id, name: v.device.name, ip: String(ip || ''), at: now };
+        return { already: true, name: v.device.name, id: v.device.id };
+      }
+      if (v.error === 'blocked') return { error: 'blocked: the user blocked this agent on the TV', status: 403, blocked: true };
     }
     const s = state();
     if (s.devices.length >= max) return { error: max + ' ' + label + 's are paired already: remove one on the TV', status: 409 };

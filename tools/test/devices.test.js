@@ -19,6 +19,33 @@ run(async () => {
   );
   ok(D.pair(w.code, 'again', '10.0.0.5').status === 403, 'the code works once');
   ok(D.windowState(w.id).paired.name === 'Claude Codescript', 'the window tells its page who paired');
+  {
+    const wa = D.openWindow(),
+      a = D.pair(wa.code, 'someone', '10.0.0.5', p.token);
+    ok(
+      a.already === true && !a.token && a.id === p.id && D.count() === 1,
+      'a device with a token that works is told it is connected already'
+    );
+    ok(D.windowState(wa.id).paired.id === p.id, 'and its window tells who it was');
+    const wb = D.openWindow(),
+      b = D.pair(wb.code, 'fresh', '10.0.0.10', 'ffffffff.' + '0'.repeat(32));
+    ok(b.token && D.count() === 2 && D.remove(b.id), 'a token that does not work pairs as new');
+  }
+  {
+    // a device that pairs just before the window ends: the manager still learns who paired (its QR screen closes on that)
+    let s2 = {};
+    const E = req('devices').create({ get: () => s2, set: o => (s2 = o) }, { max: 3, windowMs: 40, label: 'agent' }),
+      we = E.openWindow();
+    E.pair(we.code, 'late', '10.0.0.9');
+    await new Promise(r => setTimeout(r, 80));
+    ok(
+      !E.windowOpen() && E.windowState(we.id).paired && E.windowState(we.id).paired.name === 'late',
+      'an expired window still tells who paired'
+    );
+    const we2 = E.openWindow();
+    await new Promise(r => setTimeout(r, 80));
+    ok(E.pair(we2.code, 'too late', '10.0.0.9').status === 403, 'an expired code is refused');
+  }
 
   ok(D.verify(p.token, '10.0.0.6').device.name === 'Claude Codescript', 'the token is accepted');
   ok(D.verify(p.token.slice(0, -1) + (p.token.slice(-1) === '0' ? '1' : '0')).error === 'revoked', 'a changed token is refused');
