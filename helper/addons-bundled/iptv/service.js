@@ -704,7 +704,115 @@ function start() {
   setInterval(() => refresh(false), 6 * 3600 * 1000).unref();
 }
 
+// ---- the tool for the voice assistant and MCP clients ("provides": ["tools"]): one tool with an action ----
+// A stream address is never in an answer: it can hold the playlist's user name and password.
+const TOOL = {
+  name: 'iptv',
+  description:
+    "Live TV from the user's own playlist. action status: is it set up, how many channels; find_channel: channels by name or number (query); whats_on: the programme now and next (channel); schedule: the next programmes (channel); favourites: the favourite channels; set_favourite: add or remove one (channel, on); check_stream: does a channel's stream answer (channel); refresh: load the playlist and guide again.",
+  inputSchema: {
+    type: 'object',
+    properties: {
+      action: {
+        type: 'string',
+        enum: ['status', 'find_channel', 'whats_on', 'schedule', 'favourites', 'set_favourite', 'check_stream', 'refresh'],
+      },
+      query: { type: 'string', description: 'for find_channel: words of the name, or a number' },
+      channel: { type: 'string', description: 'a channel number (from find_channel) or its name' },
+      on: { type: 'boolean', description: 'for set_favourite: true adds, false removes' },
+    },
+    required: ['action'],
+  },
+};
+const toolDone = v => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v) }], isError: false });
+const toolFail = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });
+const flat = s =>
+  String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\u0590-\u05ff\u0600-\u06ff\u0400-\u04ff]+/g, ' ')
+    .trim();
+const shown = c => ({ number: c.num, name: c.name, group: c.group || '' });
+// a channel by its number, its exact name, or words of its name
+function channelOf(q) {
+  const list = (playlist && playlist.channels) || [],
+    s = String(q || '').trim();
+  if (!s) return null;
+  if (/^\d{1,5}$/.test(s)) return list.filter(c => String(c.num) === s)[0] || null;
+  const f = flat(s);
+  return list.filter(c => flat(c.name) === f)[0] || list.filter(c => flat(c.name).indexOf(f) >= 0)[0] || null;
+}
+const hhmm = t => {
+  const d = new Date(t * 1000);
+  return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+};
+const programme = p => (p ? { from: hhmm(p[0]), to: hhmm(p[1]), title: p[2] } : null);
+async function callTool(name, args) {
+  if (name !== 'iptv') return toolFail('unknown tool: ' + name);
+  const x = args && typeof args === 'object' ? args : {},
+    a = String(x.action || '');
+  if (a === 'status')
+    return toolDone({
+      configured: !!settings.playlistUrl,
+      channels: playlist ? playlist.channels.length : 0,
+      guide: !!(epg && epg.count),
+      busy: status.state !== 'idle' ? status.state : '',
+      error: status.error || '',
+    });
+  if (a === 'refresh') {
+    if (!settings.playlistUrl) return toolFail('Live TV is not set up: add a playlist from Live TV > Settings on the TV');
+    refresh(true);
+    return toolDone({ refreshing: true, note: 'the playlist and the guide load in the background; status says when it is done' });
+  }
+  if (!settings.playlistUrl) return toolFail('Live TV is not set up: add a playlist from Live TV > Settings on the TV');
+  if (!playlist) return toolFail('the playlist is still loading; try again in a moment');
+  if (a === 'find_channel') {
+    const s = String(x.query || '').trim();
+    if (!s) return toolFail('find_channel needs a query');
+    if (/^\d{1,5}$/.test(s)) {
+      const c = channelOf(s);
+      return toolDone(c ? [shown(c)] : []);
+    }
+    const f = flat(s);
+    return toolDone(
+      playlist.channels
+        .filter(c => flat(c.name).indexOf(f) >= 0 || flat(c.group).indexOf(f) >= 0)
+        .slice(0, 20)
+        .map(shown)
+    );
+  }
+  if (a === 'favourites') {
+    pruneState();
+    return toolDone(
+      state.fav
+        .map(k => playlist.channels.filter(c => c.key === k)[0])
+        .filter(Boolean)
+        .map(shown)
+    );
+  }
+  const c = channelOf(x.channel);
+  if (!c) return toolFail(x.channel ? 'no channel ' + String(x.channel).slice(0, 40) + '; find_channel finds one' : a + ' needs a channel');
+  if (a === 'whats_on' || a === 'schedule') {
+    const list = epg && epg.byId[guideId(c)],
+      now = Math.floor(Date.now() / 1000);
+    const i = list ? list.findIndex(p => p[1] > now) : -1;
+    if (i < 0) return toolDone({ channel: shown(c), guide: 'no guide data for this channel' });
+    if (a === 'schedule') return toolDone({ channel: shown(c), programmes: list.slice(i, i + 8).map(programme) });
+    const on = list[i][0] <= now;
+    return toolDone({ channel: shown(c), now: on ? programme(list[i]) : null, next: programme(list[on ? i + 1 : i]) });
+  }
+  if (a === 'set_favourite') {
+    if (typeof x.on !== 'boolean') return toolFail('set_favourite needs on: true or false');
+    changeState({ op: 'fav', key: c.key, on: x.on });
+    return toolDone({ channel: shown(c), favourite: x.on });
+  }
+  if (a === 'check_stream') {
+    const r = await probeCached(c.url);
+    return toolDone({ channel: shown(c), works: r.reason === 'ok' || r.reason === 'slow', answer: r.reason });
+  }
+  return toolFail('action is status, find_channel, whats_on, schedule, favourites, set_favourite, check_stream or refresh');
+}
+
 // the add-on's ctx is not needed: this part keeps its own state (it was a part of the service before add-ons, and still answers /api/live/)
-const create = (/** @type {any} */ _ctx) => ({ handle, start });
+const create = (/** @type {any} */ _ctx) => ({ handle, start, tools: { list: () => [TOOL], call: callTool } });
 
 module.exports = { create, handle, parseM3U, parseEpg, probe, derivedEpgUrl, nameKey };
