@@ -128,6 +128,36 @@ body {
 #focus-art.on {
   opacity: 0.26;
 }
+#focus-clock {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  top: 455px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity calc(0.25s * var(--spd)) linear;
+}
+#focus-clock.on {
+  opacity: 1;
+}
+#focus-time {
+  color: rgba(245, 247, 255, 0.27);
+  font-size: 190px;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+#focus-date {
+  margin-top: 18px;
+  color: rgba(120, 184, 255, 0.5);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
 
 #top {
   position: absolute;

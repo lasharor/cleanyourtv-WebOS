@@ -133,6 +133,36 @@ body {
 #focus-art.on {
   opacity: 0.26;
 }
+#focus-clock {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  top: 455px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity calc(0.25s * var(--spd)) linear;
+}
+#focus-clock.on {
+  opacity: 1;
+}
+#focus-time {
+  color: rgba(245, 247, 255, 0.27);
+  font-size: 190px;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+#focus-date {
+  margin-top: 18px;
+  color: rgba(120, 184, 255, 0.5);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
 
 #top {
   position: absolute;
@@ -2010,7 +2040,7 @@ body.scenes-on {
   transform: none;
 }
 </style></head><body>
-<div id="homepage"><div class="glow" id="gA"></div><div class="glow" id="gB"></div><img id="focus-art" alt="">
+<div id="homepage"><div class="glow" id="gA"></div><div class="glow" id="gB"></div><img id="focus-art" alt=""><div id="focus-clock"><div id="focus-time"></div><div id="focus-date"></div></div>
 <div id="top"><div id="clock"><div id="greet"></div><div id="time"></div><div id="date"></div></div><div id="bar"></div></div>
 <div id="shelf"><div id="name"></div></div>
 <div id="cards"></div><div id="cs"></div><input id="csq" type="text" autocomplete="off">
@@ -2820,6 +2850,7 @@ function retryTileIcons() {
 /* Cinema: use the selected app's existing icon as a quiet, full-screen backdrop. */
 function updateFocusArt(e) {
   var art = $('focus-art'),
+    clock = $('focus-clock'),
     a = e && e._a,
     o = e && e._o,
     id = a && !a.sys && !a.input ? a.id : o && o.app ? o.app : '',
@@ -2834,8 +2865,10 @@ function updateFocusArt(e) {
       art.src = src;
     }
     art.classList.add('on');
+    if (clock) clock.classList.remove('on');
   } else {
     art.classList.remove('on');
+    if (clock) clock.classList.toggle('on', !!(TH && TH.focusIcon));
   }
 }
 
@@ -7496,6 +7529,8 @@ function tick() {
   } catch (e) {
     $('time').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
   }
+  if ($('focus-time')) $('focus-time').textContent = $('time').textContent;
+  if ($('focus-date')) $('focus-date').textContent = $('date').textContent;
   /* greeting line (shown only when the theme turns clock.greeting on, with the stacked layout) */
   var g = $('greet');
   if (g) {

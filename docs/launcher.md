@@ -8,7 +8,7 @@ same on every supported webOS version.
 ## The screen
 
 - **Dock.** Up to four apps, large, on the first row.
-- **Top shelf.** The name of the focused app and an ambient glow taken from its icon. Cinema also shows that app's icon, dimmed, in the background while an app is focused.
+- **Top shelf.** The name of the focused app and an ambient glow taken from its icon. Cinema shows the focused app's icon in the background, and a large clock when focus is on a control instead.
 - **Grid.** All other apps, sorted by how often you use each one, A to Z, or your own custom static order. An app you install (from the Homebrew
   Channel or the LG store) appears within a few seconds by itself, also while Home is on screen; one you never opened yet sorts last
   when the grid is sorted by use.

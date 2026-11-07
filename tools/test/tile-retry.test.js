@@ -65,7 +65,8 @@ run(async () => {
     context.tile({ id: 'demo', title: 'Updated' }) === tile && tile._a.title === 'Updated',
     'cached tiles still receive updated app metadata'
   );
-  let artOn = false;
+  let artOn = false,
+    clockOn = false;
   const art = {
     src: '',
     _src: '',
@@ -78,18 +79,31 @@ run(async () => {
       },
     },
   };
-  context.$ = id => (id === 'focus-art' ? art : null);
+  const clock = {
+    classList: {
+      add(name) {
+        if (name === 'on') clockOn = true;
+      },
+      remove(name) {
+        if (name === 'on') clockOn = false;
+      },
+      toggle(name, on) {
+        if (name === 'on') clockOn = on;
+      },
+    },
+  };
+  context.$ = id => (id === 'focus-art' ? art : id === 'focus-clock' ? clock : null);
   context.TH = { focusIcon: true };
   context.encodeURIComponent = encodeURIComponent;
   context.updateFocusArt(tile);
-  ok(art.src === icon.src && artOn, 'Cinema shows the focused tile icon as background art');
+  ok(art.src === icon.src && artOn && !clockOn, 'Cinema shows the focused tile icon as background art');
   context.updateFocusArt({ _o: { app: 'com.example.settings' } });
-  ok(art.src === 'http://127.0.0.1:8765/icon/com.example.settings' && artOn, 'an app button in the top bar also uses its app icon');
+  ok(art.src === 'http://127.0.0.1:8765/icon/com.example.settings' && artOn && !clockOn, 'an app button in the top bar also uses its app icon');
   context.updateFocusArt({ _o: { action: 'inputs' } });
-  ok(!artOn, 'non-app top buttons hide the background icon');
+  ok(!artOn && clockOn, 'non-app top buttons show the background clock');
   context.TH.focusIcon = false;
   context.updateFocusArt(tile);
-  ok(!artOn, 'themes without focusIcon keep the background clear');
+  ok(!artOn && !clockOn, 'themes without focusIcon keep the background clear');
   const missing = context.tile({ id: 'missing', title: 'Missing' });
   for (let n = 0; n < 10; n++) {
     missing._i.onerror();
