@@ -203,6 +203,18 @@ run(async () => {
       (await call(ws, '/api/wallpapers/live/plain')).j.error && (await call(ws, '/api/wallpapers/live/nobody')).j.error,
       'a source that is not live, or unknown, has no live photo'
     );
+    // the screen saver shows the live photo Home has now (liveCurrent), and must not move the source on: next() hands out a new photo
+    // each time, so asking it again would show another photo than Home and make Home skip one
+    nextReply = { url: 'https://images.example.com/home.jpg', credit: 'Photo by Cy on Example' };
+    await call(ws, '/api/wallpapers/live/demo'); // Home asks
+    nextReply = { url: 'https://images.example.com/after.jpg', credit: 'x' };
+    let cur = await ws.liveCurrent('demo');
+    ok(
+      cur.url === 'https://images.example.com/home.jpg' && cur.credit === 'Photo by Cy on Example',
+      'liveCurrent: the photo the live source last gave Home, without asking the source for another'
+    );
+    cur = await ws.liveCurrent('nobody');
+    ok(!!cur.error && !cur.url, 'liveCurrent of a source that is not live: an error, as for Home');
 
     let pj = (await call(ws, '/api/wallpapers/push')).j;
     ok(pj.id === '' && pj.url === '', 'nothing waiting for Home: an empty answer');
@@ -211,6 +223,10 @@ run(async () => {
     ok(
       pj.id === 'l/demo' && pj.url === pushReply.url && pj.credit === 'Photo by Bo  on Example',
       'a photo a source has waiting is handed to Home with its entry'
+    );
+    ok(
+      (await ws.liveCurrent('demo')).url === 'https://images.example.com/q.jpg',
+      'a pushed photo is what Home has now, so the screen saver shows that one'
     );
     pushReply = { url: 'https://x.example.com/p"onerror', credit: 'x' };
     pj = (await call(ws, '/api/wallpapers/push')).j;

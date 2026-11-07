@@ -27,8 +27,10 @@ EXE=""
 [ "$method" = standin ] && EXE=$(node $L/jtool.js exe $L/backup/screensaver-appinfo.orig.json 2>/dev/null)
 [ "$method" = standin ] && [ -z "$EXE" ] && { echo "$(up) saver: LG's screen saver program not found; using the mount" >> $LOG; method=mount; }
 
+# Staged on every run, as 10-cleanyourtv-home stages Home: a setup over a running install copies the new page while the folder is
+# already mounted, and without this the mounted folder kept the page of the build before. Unchanged files cost a cmp, nothing more.
+sh $L/stage-screensaver.sh || { echo "$(up) saver: the page could not be staged" >> $LOG; exit 1; }
 if ! replaced; then
-  sh $L/stage-screensaver.sh || { echo "$(up) saver: the page could not be staged" >> $LOG; exit 1; }
   if [ "$method" = standin ]; then
     echo "$(up) saver: LG's screen saver is the program $EXE; mounting the stand-in over it" >> $LOG
     chmod 755 $L/screensaver-standin.sh
