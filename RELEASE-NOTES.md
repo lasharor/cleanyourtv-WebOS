@@ -1,5 +1,3 @@
-**Update the service first.** Add-on repositories and the phone remote need service 1.6.18 or newer: the manager offers the service update before the launcher.
-
 ## New
 
 - **Phone remote** (a catalog add-on, off until you install it and switch it on). A phone on the same Wi-Fi becomes the TV's remote: pair it once with a 6-digit code the TV shows, then use the buttons, a **touchpad that moves the TV's real pointer**, a keyboard that types into the field open on the TV, the TV's apps, your Live TV channels and a power button. Each phone can be blocked or removed, and a phone that is not used for a while is removed by itself. The add-on has its own page on the TV (pairing with a QR code, the paired phones). The protocol is written down in `docs/phone-remote-api.md` for other clients. By @Edenik (#152).
@@ -7,7 +5,6 @@
 ![The phone remote add-on](https://raw.githubusercontent.com/lasharor/cleanyourtv-WebOS/dev/addons/catalog/phoneremote/preview.jpg)
 
 - **Add-on repositories.** The TV keeps a list of repositories, managed from the TV and over SSH (`cytv-addons`); the project's own catalog always stays first. Anyone can publish a repository, and the TV warns before it installs code from one that is not the project's. A template for a repository is in `addons/template/` and the guide is `docs/development/addon-repos.md`. By @Tech-Dex (#169).
-- **The TV guide for LG's own tuner**, and the **Guide key** that opens it (an add-on that shares the guide code of Live TV). By @Tech-Dex (#144, #165).
 - **Themes.** **Nord** (dark polar nights and frost blue) by @gasparegas (#179) and **Moon** by @capegf (#177).
 - **Languages.** **Catalan** completed by @jmtalarn (#180) and **Dutch** completed to 100% by @gasparegas (#178).
 - **Home Assistant cards.** Entity lists can have a dark background and show Home Assistant's own icons, which now load on demand so a card that does not use them stays light, and Horizon gets three more card positions in its right column. By @ramzeka (#173, #174, #182).
@@ -24,4 +21,4 @@ The phone remote and the add-on repositories are new and have only been tried on
 
 ## Thanks
 
-@Edenik for the phone remote; @Tech-Dex for add-on repositories and the tuner guide; @Diplodock for the wake fix; @Black-i for the pointer; @ramzeka for the Home Assistant cards; @gasparegas, @capegf and @jmtalarn for themes and translations; and everyone who reports what a dev build does on their TV.
+@Edenik for the phone remote; @Tech-Dex for add-on repositories; @Diplodock for the wake fix; @Black-i for the pointer; @ramzeka for the Home Assistant cards; @gasparegas, @capegf and @jmtalarn for themes and translations; and everyone who reports what a dev build does on their TV.
