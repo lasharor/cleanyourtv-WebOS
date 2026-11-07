@@ -9,6 +9,12 @@
   over Home without that restart. **Share log** shows the steps under *Boot steps*; open an issue with it if the problem stays.
 - **An app is missing from the grid.** Check **Hidden apps** in Customise. Apps without a launch icon are not listed.
 - **After a firmware update removed root.** Re-root, then run the [install command](install.md#1-install-the-manager-app) and the setup again.
+- **After the TV is switched on, the remote does nothing on Home until you hold Back (the screen then blinks black; webOS 26).**
+  When the TV wakes, LG's boot manager opens Home again, but the TV's window manager does not hand it the remote: the keys reach
+  the browser and stop there. From this version the launcher notices it (it is shown but has no focus) and the service starts the
+  Inputs picker for half a second without drawing it: taking the remote and giving it back is what makes the TV deliver the keys to
+  Home again. Nothing is seen; the service log shows `refocus: the picker took the remote and gave it back to Home`. Seen on an
+  OLED65C54LA (43.21.77); only webOS 26 and newer do this (`wakeRefocus` in `GET /api/tv`).
 - **The Input key opens LG's picker.** Check the Input key switch in the manager app and run **Learn the Input key**.
 - **A loading circle appears every half minute and the remote stops responding until you hold Back.** The Input key can show the
   Inputs list over the running app with a small app that the service starts in the background. On webOS 6.5 (reports) the TV closes that

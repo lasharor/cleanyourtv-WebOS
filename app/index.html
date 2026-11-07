@@ -7364,6 +7364,26 @@ function wantInputs(pages) {
     LIVE.enter(!!p.guide);
   }
 }
+/* webOS 26: when the TV wakes, LG's boot manager relaunches Home with {boot:true}, but the compositor sends it no keyboard: the page
+   is shown without the focus and every key is lost until Back is held. Then the service lets the picker take the remote for a moment
+   and give it back (POST /api/refocus, only on TVs that need it); tried twice at most. */
+var wakeTries = 0;
+function checkWakeFocus(first) {
+  if (first) wakeTries = 0;
+  setTimeout(
+    function () {
+      if (document.hidden || document.hasFocus() || wakeTries >= 2) return;
+      wakeTries++;
+      logLine('launcher shown without the remote after a wake (' + wakeTries + ')');
+      api('/api/refocus', {})
+        .then(function (r) {
+          if (r && r.done) checkWakeFocus(false);
+        })
+        .catch(function () {});
+    },
+    first ? 800 : 1500
+  );
+}
 document.addEventListener('webOSRelaunch', function () {
   var p = {};
   try {
@@ -7371,6 +7391,7 @@ document.addEventListener('webOSRelaunch', function () {
   } catch (e) {}
   csClose();
   logLine('launcher relaunch ' + JSON.stringify(p).slice(0, 120) + (LIVE.on ? ' (live on)' : ''));
+  if (p && p.boot) checkWakeFocus(true);
   if (p && p.guide && guidePage() && PAGER.on && PAGER.id === guidePage()) {
     noteGuideFrom(p);
     PAGER.send({ cytv: 'guide' });

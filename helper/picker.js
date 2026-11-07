@@ -69,6 +69,70 @@ function make(luna, enabled, store, now) {
   }
   return tick;
 }
+// Gives the remote back to Home after a wake (webOS 26, SDK 11). When the TV wakes from standby, LG's boot manager relaunches Home
+// with {boot:true}; the compositor still counts Home as the window with the keyboard (it never lost it while hidden), so it sends no
+// keyboard enter, and the web engine, which marked the page unfocused when Home was hidden, drops every key: the remote does nothing
+// until Back is held. Only a real change of focus cures it: another window takes the keyboard and gives it back. The launcher sees
+// it (shown, but document.hasFocus() is false) and asks for this. The picker is started with {focusonly:true}: it draws one word
+// at 1% opacity (a window that draws nothing is never put on screen and never gets the keyboard), reports when it has the focus
+// (GET /api/log "picker focusonly focus"), and is closed; Home then gets the keyboard back. Seen on an OLED65C54LA (43.21.77):
+// the picker had the focus 0.24 s after the start and Home had it back 0.6 s after the start, nothing visible.
+// opts: { now, sleep, waitMs (how long to wait for the picker's focus), gapMs (the shortest time between two tries) }
+function makeRefocus(luna, opts) {
+  const o = opts || {};
+  const now = o.now || Date.now;
+  const sleep = o.sleep || (ms => new Promise(r => setTimeout(r, ms)));
+  const waitMs = o.waitMs || 3000,
+    gapMs = o.gapMs || 4000;
+  let last = -Infinity,
+    busy = false,
+    focused = null;
+  const close = async () => {
+    const a = await luna('luna://com.webos.applicationManager/closeByAppId', { id: PICKER });
+    if (a.returnValue !== true) await luna('luna://com.webos.applicationManager/close', { id: PICKER });
+  };
+  async function refocus() {
+    if (busy) return { done: false, reason: 'busy' };
+    if (now() - last < gapMs) return { done: false, reason: 'too soon' };
+    busy = true;
+    last = now();
+    try {
+      // a picker kept ready in the background (overlay mode) would only fire its relaunch: close it, it is started again later
+      const run = await luna('luna://com.webos.applicationManager/running', {});
+      if (Array.isArray(run.running) && run.running.some(a => (a.id || a.appId) === PICKER)) {
+        await close();
+        await sleep(300);
+      }
+      let got = false;
+      const wait = new Promise(r => {
+        focused = () => {
+          got = true;
+          r();
+        };
+      });
+      const r = await luna('luna://com.webos.applicationManager/launch', { id: PICKER, params: { focusonly: true } });
+      if (r.returnValue === false) return { done: false, reason: r.errorText || 'the picker did not start' };
+      let timer;
+      await Promise.race([wait, new Promise(res => (timer = setTimeout(res, waitMs)))]);
+      clearTimeout(timer);
+      focused = null;
+      await close();
+      console.log(
+        'refocus: ' +
+          (got ? 'the picker took the remote and gave it back to Home' : 'the picker did not get the remote in ' + waitMs + ' ms')
+      );
+      return { done: true, focused: got };
+    } finally {
+      focused = null;
+      busy = false;
+    }
+  }
+  // the picker reported that its window has the keyboard
+  refocus.noteFocus = () => {
+    if (focused) focused();
+  };
+  return refocus;
+}
 function start(luna, enabled, store) {
   const tick = make(luna, enabled, store);
   // quickly after boot until it is up, then now and then
@@ -80,4 +144,4 @@ function start(luna, enabled, store) {
   };
   setTimeout(loop, 2000);
 }
-module.exports = { start, make, modeOf, MODES };
+module.exports = { start, make, makeRefocus, modeOf, MODES };

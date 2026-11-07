@@ -355,13 +355,24 @@ document.addEventListener('wheel',function(e){
   idle();move(0,e.deltaY>0?1:-1)},{passive:false});
 document.addEventListener('webOSRelaunch',function(){
   log('relaunch shown='+shown);
-  if(params().prewarm)return;
+  if(params().prewarm||params().focusonly)return;
   idle();
   if(shown){if(Date.now()-shownAt>700)hide()}   // Input pressed again closes it
   else show()});
+/* {"focusonly":true} (POST /api/refocus, webOS 26): only takes the remote from Home for a moment and gives it back, nothing is seen. A
+   window that draws nothing is never put on screen and never gets the remote, so one word is drawn at 1% opacity. The service closes
+   the app once it reports the focus; it closes itself if that does not happen. */
+function focusOnly(){
+  var d=document.createElement('div');d.textContent='Inputs';d.style.cssText='position:fixed;left:0;top:0;font-size:24px;color:#fff;opacity:.01';
+  document.body.appendChild(d);
+  var told=false,tell=function(){if(told)return;told=true;log('focusonly focus')};
+  window.addEventListener('focus',tell);
+  var poll=setInterval(function(){if(document.hasFocus()){clearInterval(poll);tell()}},50);
+  setTimeout(function(){clearInterval(poll);closeSoon()},5000)}
 ondemand=!!params().ondemand;
 load();
-if(params().prewarm){
+if(params().focusonly)focusOnly();
+else if(params().prewarm){
   refresh();   // built and filled while hidden
   var done=false,go=function(){if(done)return;done=true;setTimeout(hide,150)};
   window.addEventListener('focus',go);setTimeout(go,12000);

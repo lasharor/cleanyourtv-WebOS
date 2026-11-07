@@ -27,6 +27,46 @@ run(async () => {
     stackCards.map(card => card.style.top).join(',') === '150px,558px,688px' && stackCards.every(card => card.style.transform === ''),
     'a tall card above two short cards keeps its size when the whole stack fits'
   );
+  // webOS 26: after a wake the launcher is shown without the focus and asks the service for the remote (POST /api/refocus), twice at most
+  {
+    const inputSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'input.js'), 'utf8');
+    const fn = inputSrc.slice(inputSrc.indexOf('var wakeTries'), inputSrc.indexOf("document.addEventListener('webOSRelaunch'"));
+    const wake = async (focusAfter, hidden) => {
+      const asked = [];
+      let focus = false;
+      const timers = [];
+      const sb = {
+        document: { hidden: !!hidden, hasFocus: () => focus },
+        setTimeout: f => timers.push(f),
+        logLine: () => {},
+        api: p => {
+          asked.push(p);
+          if (asked.length >= focusAfter) focus = true;
+          return Promise.resolve({ done: true });
+        },
+      };
+      vm.runInNewContext(fn + ';checkWakeFocus(true);', sb);
+      for (let i = 0; i < 10 && timers.length; i++) {
+        timers.shift()();
+        await new Promise(r => setImmediate(r));
+      }
+      return asked;
+    };
+    let asked = await wake(1);
+    ok(asked.length === 1 && asked[0] === '/api/refocus', 'a launcher shown without the focus after a wake asks for the remote once');
+    asked = await wake(99);
+    ok(asked.length === 2, 'and once more when that did not help, never more');
+    const focused = [];
+    vm.runInNewContext(fn + ';checkWakeFocus(true);', {
+      document: { hidden: false, hasFocus: () => true },
+      setTimeout: f => f(),
+      logLine: () => {},
+      api: p => (focused.push(p), Promise.resolve({ done: true })),
+    });
+    ok(!focused.length, 'a launcher that has the focus asks nothing');
+    asked = await wake(1, true);
+    ok(asked.length === 0, 'nor one that is hidden');
+  }
   const pages = ['app', 'manager/app', 'picker/app', 'notify/app', 'helper/addons-bundled/iptv/page', 'addons/catalog/tuner/page'].map(d =>
     path.join(root, d, 'index.html')
   );
