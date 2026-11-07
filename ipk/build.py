@@ -86,6 +86,7 @@ add_dir(data, s + '/i18n', P('i18n'), skip=('README.md',))   # the translations,
 add_dir(data, s + '/scripts', P('scripts'), skip=('bootstrap.sh',))
 add(data, s + '/scripts/uninstall.sh', open(P('uninstall.sh'), 'rb').read(), 0o755)
 add(data, s + '/voice/cytv-asr', open(P('voice', 'cytv-asr'), 'rb').read(), 0o755)   # optional voice feature: downloads its engine on request
+add(data, s + '/voice/cytv-asr32', open(P('voice', 'cytv-asr32'), 'rb').read(), 0o755)   # the same for a TV whose kernel is 32-bit ARM (issue 175)
 add(data, s + '/inputhook/ezinject', open(P('third-party', 'inputhook', 'ezinject'), 'rb').read(), 0o755)
 add(data, s + '/inputhook/libinputhookpp.so', open(P('third-party', 'inputhook', 'libinputhookpp.so'), 'rb').read())
 for n in sorted(os.listdir(P('third-party', 'inputhook'))):

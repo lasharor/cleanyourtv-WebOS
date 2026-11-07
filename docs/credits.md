@@ -23,13 +23,18 @@ hook into LG's input process so a remote button can run a command; we use it for
 ## Voice (optional download)
 
 Nothing below is shipped in the package; the manager app downloads it on request. `voice/cytv-asr` (MIT, source in `voice/asr.c`)
-is built against the Moonshine C header.
+is built against the Moonshine C header;
+`voice/cytv-asr32` (MIT, source in `voice/asr32.c`, for a 32-bit ARM kernel) against the sherpa-onnx C header.
 
 | Component | Licence | Source |
 |---|---|---|
 | Moonshine speech engine and models (`moonshine-voice` 0.1.5) | MIT | [moonshine-ai/moonshine](https://github.com/moonshine-ai/moonshine) |
 | ONNX Runtime (inside the `moonshine-voice` package) | MIT | [microsoft/onnxruntime](https://github.com/microsoft/onnxruntime) |
 | 64-bit GNU C library, libstdc++, libgcc (from `ubuntu-base` 22.04.5) | LGPL-2.1 / GPL-3.0 with runtime library exception | Ubuntu source packages `glibc` and `gcc-12` |
+| sherpa-onnx C library (`sherpa-onnx-core` 2.0.1, for a 32-bit ARM kernel) | Apache-2.0 | [k2-fsa/sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) |
+| ONNX Runtime (inside the `sherpa-onnx-core` package) | MIT | [microsoft/onnxruntime](https://github.com/microsoft/onnxruntime) |
+| Moonshine tiny English model, quantized (sherpa-onnx's copy) | MIT | [moonshine-ai/moonshine](https://github.com/moonshine-ai/moonshine) |
+| 32-bit hard-float GNU C library, libstdc++, libgcc (from `ubuntu-base` 22.04.5 armhf) | LGPL-2.1 / GPL-3.0 with runtime library exception | Ubuntu source packages `glibc` and `gcc-12` |
 
 ## qrcode-generator
 
