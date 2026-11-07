@@ -29,37 +29,32 @@ The first key, click or touch closes it and the app that was on screen comes bac
 
 ## How it replaces LG's screen saver
 
-The same idea as for [Home](tv-changes.md#at-boot), on the app the TV starts when it is idle: `com.webos.app.screensaver`.
+The same idea as for [Home](tv-changes.md#at-boot), on the app the TV starts when it is idle: `com.webos.app.screensaver`. Nothing
+happens while the switch is off (no `SCREENSAVER-ON`).
 
-1. `20-cleanyourtv-screensaver` runs at boot. It builds a folder with the page and an `appinfo.json` derived from **this TV's own**
-   screen saver (saved in `backup/screensaver-appinfo.orig.json` the first time), switched to the web type while it keeps **this TV's
-   own window type** (`screenSaver`, which is the only one `tvpowerd` counts — see [When it appears](#when-it-appears)). The app id
-   stays LG's, which is why the TV keeps asking for it. The folder is built on every run, also while it is already mounted, so a
-   setup over a running install puts the new page in place (as `10-cleanyourtv-home` does for Home).
-2. How it is put in place is decided by `helper/tvprofile.js` (`saverTakeover`), from the kind of LG's screen saver as it came with
-   the TV:
-    - **a native program**: `screensaver-standin.sh` is bind-mounted over that program. The app manager keeps LG's manifest and starts
-      the script when the screen saver starts; the script asks `webapp-mgr` to open the page. The app manager is not restarted.
-      If our page does not open (webapp-mgr refuses it, or it never shows up), the stand-in takes its own mount off and starts
-      LG's program, so the TV has LG's screen saver for that boot rather than none; the manager then shows "ours did not open"
-      under Features > Screen saver. After two boots in a row with such a failure, the boot script switches to the folder mount
-      (`screensaver-method` holding `mount`); deleting that file tries the stand-in again.
-    - **anything else** (a QML or web screen saver): the page's folder is bind-mounted over
-      `/usr/palm/applications/com.webos.app.screensaver` and the app manager is restarted so that it reads it.
+1. At boot, `10-cleanyourtv-home` takes over Home with its folder mount and restarts the app manager so that it reads it. Just before
+   that restart, it calls `20-cleanyourtv-screensaver prepare`, which mounts the screen saver's folder over
+   `/usr/palm/applications/com.webos.app.screensaver`: the one restart reads both.
+2. The folder holds the page and an `appinfo.json` derived from **this TV's own** screen saver (saved in
+   `backup/screensaver-appinfo.orig.json` the first time), switched to the web type while it keeps **this TV's own window type**
+   (`screenSaver`, which is the only one `tvpowerd` counts, see [When it appears](#when-it-appears)). The app id stays LG's, which is
+   why the TV keeps asking for it. The folder is built on every run, also while it is already mounted, so a setup over a running
+   install puts the new page in place (as `10-cleanyourtv-home` does for Home).
 3. The page runs as LG's screen saver app, so the TV treats it as its screen saver, and closing it gives the app that was underneath back
-   instead of going to Home (that was seen with the earlier `overlay` manifest — see [Limits](#limits)).
+   instead of going to Home (that was seen with the earlier `overlay` manifest, see [Limits](#limits)).
 
-`10-cleanyourtv-home` mounts the screen saver *before* it restarts the app manager, so on a TV where both use the folder mount there is
-one restart, not two. A file `screensaver-method` holding `mount` forces the folder mount on a TV whose screen saver is a native
-program.
+### Which TVs
 
-Where Home is a stand-in but the screen saver needs the folder mount (a QML screen saver, the likely case on webOS 5 and 6), the app
-manager is restarted at boot *after* Home came up, because the restart takes down the page in `webapp-mgr`; a moment later Home is
-opened again (`reload-home.sh`), but only when nothing or Home is in front, not over an app or input the TV is on by then. The setup
-itself never restarts the app manager for the screen saver: such a TV keeps LG's screen saver until its next boot and gets ours then
-(a folder mounted without that restart would hide LG's files from an app manager that has not read the new manifest, and the TV would
-have no screen saver at all). A native saver (the stand-in) and a TV where the Home takeover restarted the app manager get ours at
-once.
+This version replaces the screen saver only in the way that was tried on a TV (an LG 65UR91006LB, webOS 25, whose Home and screen
+saver are Flutter apps): where the Home takeover is the folder mount, with its app manager restart. In the manager, **Screen saver**
+reads "not available on this TV yet" elsewhere, and those TVs keep LG's screen saver:
+
+- **LG's Home is a native program** (webOS 5 to 23, Home taken over by the stand-in): there is no app manager restart at boot to read
+  the screen saver's folder. A restart of its own would take down the launcher's page in `webapp-mgr`, and a folder mounted without a
+  restart would leave the TV with no screen saver at all, so nothing is mounted.
+- **LG's screen saver is a native program** (`helper/tvprofile.js` `saverTakeover` is `none`): not replaced.
+
+Both could come in a later version, once they have been tried on such a TV.
 
 ## When it appears
 
@@ -90,21 +85,17 @@ right after opening.
 
 ## Turning it off and on
 
-In the manager app: **CleanYourTV as Home → Screen saver** or **Features → Screen saver**, On or Off. Switching restarts the TV, as
-that switch does for Home. The row under Features also says which screen saver runs now: ours, LG's own, or "ours did not open"
-when the stand-in gave LG's screen saver back this boot.
+It is **off by default**. In the manager app: **Features → Screen saver** or **CleanYourTV as Home → Screen saver**, On or Off.
+Switching restarts the TV, as that switch does for Home; after the restart the screen saver is ours or LG's. The row under Features
+also says which one runs now: ours or LG's own.
 
-The same thing from a shell on the TV — LG's own screen saver back for good:
+The same thing from a shell on the TV — LG's own screen saver back, and the TV restarts:
 
 ```sh
 sh /media/developer/cleanyourtv/undo-screensaver.sh
 ```
 
-Until the next restart only:
-
-```sh
-sh /media/developer/cleanyourtv/undo-screensaver.sh temp
-```
+Add `--no-reboot` to switch it off for the next restart only.
 
 CleanYourTV's screen saver again (the next restart):
 
@@ -142,8 +133,7 @@ The launch showed a grey "loading" screen with a spinner for a second, like any 
 - "Closing it gives the app underneath back" was seen with the earlier `overlay` manifest, where the first key closed the page and gave
   the launcher back. With LG's own window type that is worth one look on a TV with a video app behind the saver.
 - If the page does not open where its folder is mounted, the TV stays on the app it was showing: the screen stays on rather than
-  turning black. Where the stand-in is used, LG's screen saver runs instead for that boot (see
-  [How it replaces LG's screen saver](#how-it-replaces-lgs-screen-saver)).
+  turning black.
 - LG's **Screen Saver** setting (Clock, Gallery, Photo) still exists and is untouched; only the app it starts is replaced.
 - The TV's own sleep and power-off timers are untouched.
 - Photos are streamed from the service on `127.0.0.1`, so they are as fast as the wallpaper library behind Home.

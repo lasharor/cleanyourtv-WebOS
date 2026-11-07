@@ -20,14 +20,9 @@ grep -q cleanyourtv $LASTAPP 2>/dev/null && echo '{"lastAppId":"com.webos.app.ho
 [ -f $D/debloat-undo.sh ] && sh $D/debloat-undo.sh </dev/null
 pkill -f "[c]leanyourtv/watchdog.sh"   # the watchdog would restart the service
 pkill -f "[1]0-cleanyourtv-home"
-pkill -f "[s]creensaver-standin.sh"
 pkill -f "[c]leanyourtv/helper.js"
-# our page for the screen saver: close it and unmount what 20-cleanyourtv-screensaver mounted (the reboot restores the rest)
+# our page for the screen saver: close it and unmount its folder (also for --no-reboot; a reboot restores the rest anyway)
 luna-send -n 1 -w 5000 luna://com.palm.webappmanager/killApp '{"appId":"com.webos.app.screensaver"}' </dev/null >/dev/null 2>&1
-if [ -f /tmp/cleanyourtv-screensaver-standin ]; then
-  grep -q " $(cat /tmp/cleanyourtv-screensaver-standin) " /proc/mounts && umount "$(cat /tmp/cleanyourtv-screensaver-standin)" 2>/dev/null
-  rm -f /tmp/cleanyourtv-screensaver-standin
-fi
 for m in $(awk '$2 ~ /applications\/com.webos.app.screensaver$/ {print $2}' /proc/mounts); do umount $m 2>/dev/null; done
 # our Input-key bind
 node $D/jtool.js rmbind 2>/dev/null

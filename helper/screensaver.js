@@ -1,6 +1,6 @@
 // The screen saver: our page in place of LG's screen saver app (scripts/20-cleanyourtv-screensaver, docs/screensaver.md). This module
 // serves that page, closes it again, and opens it over an idle launcher when tvpowerd did not:
-//   GET  /api/screensaver          {replaced, method, failed, running, photos, every}
+//   GET  /api/screensaver          {replaced, running, photos, every}
 //   GET  /api/screensaver/photos?cc=<country>   {photos, credits, from, every}   what Home has behind it (background() below):
 //        photos are library ids ('u/<id>', 's/<add-on>/<id>', 'l/<add-on>') or paths on this service; from: scenes, wallpapers, theme
 //   GET  /api/screensaver/scene/<night|golden|water|fog|dawn>   a couch scene of the launcher (app/scene-<id>.jpg)
@@ -21,18 +21,20 @@ const SA = 'com.webos.app.screensaver',
   GRACE_MS = 60000,
   EVERY_S = 25; // the seconds each photo stays on the page
 
-// is LG's screen saver replaced now (the app folder, or its program by the stand-in)?
+// is LG's screen saver replaced now (the page's folder mounted over its app)?
 function replaced() {
   try {
-    const m = fs.readFileSync(P.PROC + '/mounts', 'utf8');
-    let st = '';
-    try {
-      st = fs.readFileSync(P.SA_STANDIN, 'utf8').trim();
-    } catch (_) {}
-    return m.indexOf(' ' + P.SCREENSAVER_APP + ' ') >= 0 || (!!st && m.indexOf(' ' + st + ' ') >= 0);
+    return fs.readFileSync(P.PROC + '/mounts', 'utf8').indexOf(' ' + P.SCREENSAVER_APP + ' ') >= 0;
   } catch (_) {
     return false;
   }
+}
+// Can this TV have our screen saver? Where LG's screen saver is not a native program (saverTakeover 'mount') and the Home takeover is
+// the folder mount, whose app manager restart also reads the screen saver's folder (scripts/20-cleanyourtv-screensaver). The Home
+// stand-in (LG's native Home) does no such restart, so a TV with it keeps LG's screen saver in this version.
+function supported(profile, homeMethod) {
+  const p = profile || {};
+  return p.saverTakeover === 'mount' && (p.homeTakeover === 'mount' || homeMethod === 'mount');
 }
 
 // May this module open the page itself? Only when the launcher has been in front for IDLE_MS since the last key it reported: "Home is
@@ -258,13 +260,7 @@ function create(ctx) {
       return json({ returnValue: true });
     }
     if (u === '/api/screensaver') {
-      let method = '';
-      try {
-        method = String(fs.readFileSync(P.SA_METHOD, 'utf8')).trim();
-      } catch (_) {}
-      // failed: the stand-in could not open our page this boot and gave LG's screen saver back (scripts/screensaver-standin.sh)
-      const failed = fs.existsSync(P.SA_FAILED);
-      return json({ replaced: replaced(), method, failed, running: await running(), photos: photos().length, every: EVERY_S });
+      return json({ replaced: replaced(), running: await running(), photos: photos().length, every: EVERY_S });
     }
     web.notFound(res);
   }
@@ -273,4 +269,4 @@ function create(ctx) {
   return { name: 'screensaver', prefix: '/api/screensaver', handle, start, photos, close, active, tick, lastActive: () => activeAt };
 }
 
-module.exports = { create, replaced, mayOpen };
+module.exports = { create, replaced, supported, mayOpen };

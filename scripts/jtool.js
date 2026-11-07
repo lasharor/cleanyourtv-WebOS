@@ -108,8 +108,8 @@ if (cmd === 'kind') {
   }
   process.exit(1);
 } else if (cmd === 'wamlaunch') {
-  // wamlaunch <launcher appinfo.json> <folder> <out> [instance id]  ->  the request that asks webapp-mgr to open a page (home-standin.sh,
-  // screensaver-standin.sh), and <out>.str with the app description as a string, the form older webapp-mgr versions may expect
+  // wamlaunch <launcher appinfo.json> <folder> <out> [instance id]  ->  the request that asks webapp-mgr to open a page (home-standin.sh),
+  // and <out>.str with the app description as a string, the form older webapp-mgr versions may expect
   var w = rj(a[1], {});
   w.folderPath = a[2];
   var req = { appDesc: w, parameters: {}, launchingAppId: '', launchingProcId: '', instanceId: a[4] || 'cleanyourtv-home' };

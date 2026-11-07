@@ -35,6 +35,14 @@ function setSaver(enabled) {
   } catch (_) {}
   exec.detached((enabled ? 'sh ' + P.D + '/stage-screensaver.sh </dev/null; ' : '') + 'sleep 3; reboot');
 }
+// a small text file, or '' when it is not there
+function readText(f) {
+  try {
+    return fs.readFileSync(f, 'utf8');
+  } catch (_) {
+    return '';
+  }
+}
 const KEY_NAMES = ['home', 'voice', 'guide'];
 const PICKER_MODES = ['overlay', 'ondemand', 'launcher'];
 
@@ -83,7 +91,12 @@ function create(ctx) {
       icons: !!(ad && ad.module && ad.module('icons')), // the App icons add-on runs
       lang: config.get().lang || '', // the Language setting: '' follows the TV
       home: { enabled: !fs.existsSync(P.DISABLE), fullhome: fs.existsSync(P.FULLHOME_APP), ours },
-      saver: { enabled: fs.existsSync(P.SA_ON), replaced: saver.replaced(), failed: fs.existsSync(P.SA_FAILED) },
+      // supported: this TV can have our screen saver in this version (helper/screensaver.js supported)
+      saver: {
+        enabled: fs.existsSync(P.SA_ON),
+        replaced: saver.replaced(),
+        supported: saver.supported(ctx.profile ? ctx.profile.get() : {}, readText(P.D + '/home-method').trim()),
+      },
       inputhook: inputhook.status(keys().input),
       keys: keys(),
       job: updates.job(),

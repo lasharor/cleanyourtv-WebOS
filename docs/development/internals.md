@@ -89,22 +89,20 @@ Nothing is written under `/usr`: the mount disappears at reboot. `DISABLE` in `/
 
 ## How the screen saver is replaced
 
-`20-cleanyourtv-screensaver` does the same for the app the TV starts when it is idle, `com.webos.app.screensaver` ([Screen saver](../screensaver.md)):
+`20-cleanyourtv-screensaver` does the same for the app the TV starts when it is idle, `com.webos.app.screensaver` ([Screen saver](../screensaver.md)),
+only while the manager's switch has written `SCREENSAVER-ON` (off by default):
 
 - `stage-screensaver.sh` builds `$D/screensaver-overlay`: the page from `screensaver/app` and an `appinfo.json` derived from the stock
   screen saver (`backup/screensaver-appinfo.orig.json`), type `web` while it keeps the stock `defaultWindowType` (`screenSaver`, the only
-  one `tvpowerd` counts; `jtool.js saver`). It compares the page *and* the two generated files before it copies anything, so an update
+  one `tvpowerd` counts; `jtool.js saver`). It compares the page *and* the generated manifest before it copies anything, so an update
   that changes the derived manifest is staged as well.
-- `tvprofile.js` `saverTakeover`: `standin` where LG's screen saver is a native program (the script over it, no app manager restart),
-  `mount` otherwise (the folder over the app and the app manager restarted). `screensaver-method` holding `mount` forces the second.
-  When the stand-in cannot open the page it unmounts itself and starts LG's program for that boot (`/tmp/cleanyourtv-saver-failed`,
-  shown in the manager); after two boots in a row with such a failure (`screensaver-standin-fails`) `20-` writes `screensaver-method`
-  itself.
-- `10-cleanyourtv-home` calls it with `prepare` before its own `systemctl restart sam`, so one restart reads both; `/tmp/cleanyourtv-sam`
-  records that the app manager was restarted this boot, so `20-` does not restart it again. Where Home is a stand-in (no restart there)
-  and the screen saver needs the mount, `20-` restarts it after Home came up and then calls `reload-home.sh` when nothing or Home is in
-  front: the restart takes down the Home page in `webapp-mgr`. The setup (`20- setup`) never restarts the app manager for the
-  screen saver; where that would be needed, ours comes at the next boot.
+- `10-cleanyourtv-home` calls it, with `prepare`, only in its folder-mount way and only while `SCREENSAVER-ON` is there, right before
+  its own `systemctl restart sam`: one restart reads both folders. `20-` never restarts the app manager itself and is not a boot script
+  of its own (no link in `init.d`); run any other way it does nothing.
+- `tvprofile.js` `saverTakeover`: `mount` where LG's screen saver is a Flutter, QML or web app; `none` where it is a native program,
+  which this version does not replace. `screensaver.js` `supported()` adds the Home side: the Home takeover has to be the folder mount
+  (or `home-method` holding `mount`), since the Home stand-in does no app manager restart. The manager shows "not available on this TV
+  yet" elsewhere.
 - `helper/screensaver.js` serves the page its photos and closes it: on `POST /api/screensaver/dismiss`, and by itself when the TV is
   `Active` again without "Screen Saver" in `processing` while the page is still listed, after the page's first minute and at two
   readings in a row (a page left behind would keep the remote). It also opens the page over an idle

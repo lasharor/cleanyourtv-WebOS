@@ -1514,10 +1514,11 @@ function build() {
     });
     rows.push({
       label: 'Screen saver',
-      sub: onoff(st.saver && st.saver.enabled) + ' \u00B7 photos and a clock when the TV is idle; switching restarts the TV',
-      fn: function () {
-        push('confirm-saver');
-      },
+      sub:
+        st.saver && st.saver.supported === false
+          ? 'not available on this TV yet'
+          : onoff(st.saver && st.saver.enabled) + ' \u00B7 photos and a clock when the TV is idle; switching restarts the TV',
+      fn: openSaver,
     });
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
@@ -2043,17 +2044,11 @@ function build() {
   } else if (tb === 'features') {
     rows.push({
       label: 'Screen saver',
-      /* failed: the stand-in could not open our page this boot and gave LG's screen saver back (scripts/screensaver-standin.sh) */
       sub:
-        onoff(st.saver && st.saver.enabled) +
-        (st.saver && st.saver.failed
-          ? ' \u00B7 ours did not open, LG\u2019s own until the next restart'
-          : st.saver && st.saver.replaced
-            ? ' \u00B7 ours now'
-            : ' \u00B7 LG\u2019s own'),
-      fn: function () {
-        push('confirm-saver');
-      },
+        st.saver && st.saver.supported === false
+          ? 'not available on this TV yet'
+          : onoff(st.saver && st.saver.enabled) + (st.saver && st.saver.replaced ? ' \u00B7 ours now' : ' \u00B7 LG\u2019s own'),
+      fn: openSaver,
     });
     rows.push({ label: 'Live TV', sub: onoff(st.options.liveTv !== false), fn: openLiveTv });
     rows.push({
@@ -2150,6 +2145,17 @@ function build() {
 }
 
 /* an entry of a service older than the repositories has no `official`: everything it lists is the project's */
+/* The screen saver's switch (both rows). Where this TV cannot have ours in this version (helper/screensaver.js supported: LG's native
+   Home or screen saver), say so instead of offering a switch that would do nothing. */
+function openSaver() {
+  if (st.saver && st.saver.supported === false) {
+    /* tr() here too, so tools/i18n.js --sync finds the text for en.json (banner() translates it as well; a translated text is not
+       found again) */
+    banner(tr('Not available on this TV yet: it needs a TV whose Home and screen saver LG ships as apps.'), '');
+    return;
+  }
+  push('confirm-saver');
+}
 function isOfficial(e) {
   return e.official !== false;
 }

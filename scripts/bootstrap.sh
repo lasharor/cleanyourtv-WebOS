@@ -152,7 +152,7 @@ set_options() {
 
 boot_scripts() {
   ln -sf $D/10-cleanyourtv-home $INITD/10-cleanyourtv-home
-  ln -sf $D/20-cleanyourtv-screensaver $INITD/20-cleanyourtv-screensaver
+  rm -f $INITD/20-cleanyourtv-screensaver   # an earlier test build linked it; 10-cleanyourtv-home calls it now (SCREENSAVER-ON)
   if [ "$(opt debloat)" = 1 ]; then ln -sf $D/15-cleanyourtv-debloat $INITD/15-cleanyourtv-debloat; else rm -f $INITD/15-cleanyourtv-debloat; fi
   VERSION=$(svc_version $D/helper.js)
   say "service $VERSION installed in $D; boot scripts in $INITD"
@@ -214,8 +214,6 @@ start_install() {
   say "starting (the screen blinks once while the system app manager restarts)"
   pkill -f "[c]leanyourtv/watchdog.sh"; pkill -f "[c]leanyourtv/helper.js"; pkill -f "[l]una-send -i -f"; sleep 1
   sh $D/10-cleanyourtv-home </dev/null
-  # the screen saver, where 10 did not: "setup" mounts only where no app manager restart is needed (20-cleanyourtv-screensaver)
-  [ -f $D/20-cleanyourtv-screensaver ] && sh $D/20-cleanyourtv-screensaver setup </dev/null
   [ "$(opt debloat)" = 1 ] && sh $D/debloat-stop.sh </dev/null
 }
 

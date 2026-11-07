@@ -461,8 +461,8 @@
    "repo": "lasharor/cleanyourtv-WebOS",
    "saver": {
     "enabled": false,
-    "failed": false,
-    "replaced": false
+    "replaced": false,
+    "supported": true
    },
    "service": {
     "build": "",
@@ -551,8 +551,8 @@
    "repo": "lasharor/cleanyourtv-WebOS",
    "saver": {
     "enabled": false,
-    "failed": false,
-    "replaced": false
+    "replaced": false,
+    "supported": true
    },
    "service": {
     "build": "",
@@ -659,8 +659,8 @@
    "repo": "lasharor/cleanyourtv-WebOS",
    "saver": {
     "enabled": false,
-    "failed": false,
-    "replaced": false
+    "replaced": false,
+    "supported": true
    },
    "service": {
     "build": "",
@@ -867,8 +867,6 @@
  "screen saver status": {
   "body": {
    "every": 25,
-   "failed": false,
-   "method": "",
    "photos": 0,
    "replaced": false,
    "running": false

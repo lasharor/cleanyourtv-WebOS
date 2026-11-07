@@ -45,10 +45,7 @@ module.exports = {
   STANDIN: env.CYTV_STANDIN || '/tmp/cleanyourtv-home-standin', // LG's Home program while scripts/home-standin.sh is mounted over it
   HOME_PARAMS: env.CYTV_HOME_PARAMS || '/tmp/cleanyourtv-home-params', // what a key script (and remap.js) asks the launcher to open
   SCREENSAVER_APP: '/usr/palm/applications/com.webos.app.screensaver',
-  SA_STANDIN: env.CYTV_SA_STANDIN || '/tmp/cleanyourtv-screensaver-standin', // LG's screen saver program while scripts/screensaver-standin.sh is mounted over it
-  SA_METHOD: D + '/screensaver-method', // holding "mount": use that way also where the stand-in would do
   SA_ON: D + '/SCREENSAVER-ON', // present while our screen saver is switched on in the manager (off by default)
-  SA_FAILED: env.CYTV_SA_FAILED || '/tmp/cleanyourtv-saver-failed', // our page did not open this boot (scripts/screensaver-standin.sh)
   // child processes find the system tools first, as in a login shell on the TV
   ENV: Object.assign({}, env, { PATH: '/usr/bin:/usr/sbin:/bin:/sbin:' + (env.PATH || '') }),
 };

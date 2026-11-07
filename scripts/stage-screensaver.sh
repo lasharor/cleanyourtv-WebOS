@@ -13,11 +13,9 @@ T=$L/.stage-screensaver   # what jtool writes, compared with the staged files be
 [ -f $L/backup/screensaver-appinfo.orig.json ] || exit 1   # without LG's own manifest the derived one would have no app id
 mkdir -p $S $T
 node $L/jtool.js saver "$L/backup/screensaver-appinfo.orig.json" "$T/appinfo.json" || exit 1
-# what scripts/screensaver-standin.sh sends to webapp-mgr where LG's screen saver is the native program (saverTakeover 'standin')
-node $L/jtool.js wamlaunch "$T/appinfo.json" "$S" "$T/wam-launch-saver.json" cleanyourtv-screensaver || exit 1
-# Already staged and unchanged (the usual boot): the page AND the two generated files are compared, because the manifest follows this
-# TV's stock screen saver and jtool.js, not only the page. Copying it again and running node three times costs seconds for nothing.
-if cmp -s $L/screensaver/app/index.html $S/index.html && cmp -s $T/appinfo.json $S/appinfo.json && cmp -s $T/wam-launch-saver.json $L/wam-launch-saver.json; then
+# Already staged and unchanged (the usual boot): the page AND the generated manifest are compared, because the manifest follows this
+# TV's stock screen saver and jtool.js, not only the page. Copying it again costs time for nothing.
+if cmp -s $L/screensaver/app/index.html $S/index.html && cmp -s $T/appinfo.json $S/appinfo.json; then
   rm -rf $T
   exit 0
 fi
@@ -28,7 +26,5 @@ for f in icon.png largeIcon.png iconSplash.png; do
   [ -f $H/$f ] && [ ! -f $S/$f ] && cp $H/$f $S/$f 2>/dev/null
 done
 mv $T/appinfo.json $S/appinfo.json || exit 1
-mv $T/wam-launch-saver.json $L/wam-launch-saver.json || exit 1
-[ -f $T/wam-launch-saver.json.str ] && mv $T/wam-launch-saver.json.str $L/wam-launch-saver.json.str
 rm -rf $T
 exit 0

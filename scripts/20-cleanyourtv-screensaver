@@ -1,100 +1,38 @@
 #!/bin/sh
-# Replace LG's screen saver with the CleanYourTV page: photos from the wallpaper library and a clock (docs/screensaver.md).
-# RAM only, as for Home: a reboot without this script brings LG's screen saver back.
+# Replace LG's screen saver with the CleanYourTV page: what Home has behind it, and a clock (docs/screensaver.md).
+# RAM only, as for Home: a reboot without the boot scripts brings LG's screen saver back.
 # Off by default: on only while /media/developer/cleanyourtv/SCREENSAVER-ON is there (the manager's switch writes it, then restarts).
-# The way is chosen by helper/tvprofile.js (saverTakeover) from LG's own screen saver as it came with the TV:
-#   standin  a native program: screensaver-standin.sh is mounted over it; the app manager is not restarted
-#   mount    anything else (a QML or web screen saver): the page's folder is mounted over the app and the app manager reads it
-# "prepare" (called by 10-cleanyourtv-home just before it restarts the app manager) only mounts, so one restart reads both.
-# "setup" (called by bootstrap.sh when it installs) never restarts the app manager: it mounts where nothing more is needed (the
-# stand-in, or the folder after the Home takeover restarted sam this boot) and otherwise leaves LG's screen saver until the next boot.
-# A folder mounted without that restart would hide LG's files from an app manager that has not read the new manifest: no saver at all.
-# The screen saver starts by itself when the TV is idle: nothing is launched here.
-# The paths and commands can be pointed elsewhere for the tests (tools/test/screensaver.test.js: CYTV_TEST_ROOT, CYTV_TEST_BIN with fake
-# mount, systemctl and luna-send, CYTV_MOUNTS); on the TV none of them is set.
+# Called only by 10-cleanyourtv-home ("prepare"), just before the app manager restart it does to take over Home: the page's folder is
+# mounted over LG's screen saver app, and that one restart reads both. Where Home is not taken over that way (LG's Home selected, or the
+# Home stand-in on LG's native Home), nothing is mounted: a folder without that restart would hide LG's files from an app manager that
+# has not read the new manifest. Where LG's screen saver is a native program (helper/tvprofile.js saverTakeover 'none'), it is not
+# replaced in this version. The screen saver starts by itself when the TV is idle: nothing is launched here.
+# The paths can be pointed elsewhere for the tests (tools/test/screensaver.test.js: CYTV_TEST_ROOT, CYTV_TEST_BIN with a fake mount,
+# CYTV_MOUNTS); on the TV none of them is set.
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
 [ -n "$CYTV_TEST_BIN" ] && export PATH=$CYTV_TEST_BIN:$PATH
 R=${CYTV_TEST_ROOT:-}
 L=$R/media/developer/cleanyourtv
 H=$R/usr/palm/applications/com.webos.app.screensaver
-STANDIN=$R/tmp/cleanyourtv-screensaver-standin   # holds LG's screen saver program while the stand-in is mounted over it
-SAM=$R/tmp/cleanyourtv-sam                       # present once the app manager was restarted this boot
-HSTANDIN=$R/tmp/cleanyourtv-home-standin         # LG's Home program while the Home stand-in is mounted over it
 LOG=$R/tmp/cleanyourtv-boot.log
 MOUNTS=${CYTV_MOUNTS:-/proc/mounts}
 up() { cut -d' ' -f1 /proc/uptime 2>/dev/null; }
-replaced() { grep -q " $H " $MOUNTS || { [ -f $STANDIN ] && grep -q " $(cat $STANDIN) " $MOUNTS; }; }
 
 [ -e $L/SCREENSAVER-ON ] || exit 0
-[ -d $H ] || exit 0   # a TV without LG's screen saver app: nothing to replace
+[ "$1" = prepare ] || exit 0                          # only with the app manager restart of 10-cleanyourtv-home
+[ -d $H ] || exit 0                                   # a TV without LG's screen saver app: nothing to replace
 [ -f $L/backup/screensaver-appinfo.orig.json ] || exit 0
-PREPARE=0; [ "$1" = prepare ] && PREPARE=1
-SETUP=0; [ "$1" = setup ] && SETUP=1
 
 method=$(node $L/tvprofile.js get saverTakeover --saver "$(node $L/jtool.js kind $L/backup/screensaver-appinfo.orig.json 2>/dev/null)" 2>/dev/null)
-[ "$(cat $L/screensaver-method 2>/dev/null)" = mount ] && method=mount
-# The stand-in did not open our page at two boots in a row (screensaver-standin.sh counts them, and gave LG's saver back each time):
-# from now on the folder mount, as the setup does for Home with home-method. Removing screensaver-method tries the stand-in again.
-if [ "$method" = standin ] && [ "$(cat $L/screensaver-standin-fails 2>/dev/null || echo 0)" -ge 2 ]; then
-  echo "$(up) saver: the stand-in did not open the page at two boots; the folder mount from now on (screensaver-method)" >> $LOG
-  echo mount > $L/screensaver-method
-  rm -f $L/screensaver-standin-fails
-  method=mount
-fi
-EXE=""
-[ "$method" = standin ] && EXE=$(node $L/jtool.js exe $L/backup/screensaver-appinfo.orig.json 2>/dev/null)
-[ "$method" = standin ] && [ -z "$EXE" ] && { echo "$(up) saver: LG's screen saver program not found; using the mount" >> $LOG; method=mount; }
-
-# Staged on every run, as 10-cleanyourtv-home stages Home: a setup over a running install copies the new page while the folder is
-# already mounted, and without this the mounted folder kept the page of the build before. Unchanged files cost a cmp, nothing more.
-sh $L/stage-screensaver.sh || { echo "$(up) saver: the page could not be staged" >> $LOG; exit 1; }
-if [ $SETUP = 1 ] && [ "$method" != standin ] && [ ! -f $SAM ] && ! replaced; then
-  echo "$(up) saver: the setup does not restart the app manager; LG's screen saver stays until the next boot, ours comes then" >> $LOG
+if [ "$method" != mount ]; then
+  echo "$(up) saver: LG's screen saver is a native program on this TV; it is not replaced in this version" >> $LOG
   exit 0
 fi
-if ! replaced; then
-  if [ "$method" = standin ]; then
-    echo "$(up) saver: LG's screen saver is the program $EXE; mounting the stand-in over it" >> $LOG
-    chmod 755 $L/screensaver-standin.sh
-    mount --bind $L/screensaver-standin.sh "$EXE" || { echo "$(up) saver: the mount over $EXE failed" >> $LOG; exit 1; }
-    echo "$EXE" > $STANDIN
-  else
-    echo "$(up) saver: mounting the page over LG's screen saver app" >> $LOG
-    mount --bind $L/screensaver-overlay "$H" || { echo "$(up) saver: the mount over $H failed" >> $LOG; exit 1; }
-  fi
-fi
 
-[ "$method" = standin ] && exit 0                     # the program needs no app manager restart
-[ $PREPARE = 1 ] && exit 0
-[ $SETUP = 1 ] && exit 0
-[ -f $SAM ] && exit 0                                 # the Home takeover restarted the app manager after this mount
-systemctl is-active sam >/dev/null 2>&1 || exit 0     # it reads the mount when it starts
-# The app manager has to read the new manifest. Where Home is a stand-in its page lives in webapp-mgr, which such a restart takes
-# down: wait until Home is up, and open it again afterwards (reload-home.sh), so that a boot does not end on a black screen.
-RH=0
-[ -f $HSTANDIN ] && grep -q " $(cat $HSTANDIN) " $MOUNTS && RH=1
-echo "$(up) saver: restarting the app manager so that it reads the new screen saver" >> $LOG
-(
-  if [ $RH = 1 ]; then
-    for i in $(seq 1 20); do
-      luna-send -n 1 -w 3000 luna://com.palm.webappmanager/listRunningApps '{}' </dev/null 2>/dev/null | grep -q 'com.webos.app.home' && break
-      sleep 3
-    done
-  fi
-  (sleep 3; pkill -9 -f /usr/palm/applications/airplay/LunaExecutable) </dev/null >/dev/null 2>&1 &
-  systemctl restart sam
-  touch $SAM
-  echo "$(up) saver: the app manager is restarted" >> $LOG
-  for i in $(seq 1 60); do systemctl is-active sam >/dev/null && break; sleep 2; done
-  sh $L/after-sam.sh
-  # The restart closes what was on screen. As 10-cleanyourtv-home does after its restart: Home is opened again only when nothing or
-  # Home is in front a moment later, not over an app or input the user went to meanwhile (or that the TV started on, such as HDMI).
-  sleep ${CYTV_SETTLE:-8}
-  fg=$(luna-send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null 2>/dev/null | grep '"appId"')
-  case "$fg" in
-    *'"appId": ""'*|*com.webos.app.home*|"")
-      if [ $RH = 1 ]; then sh $L/reload-home.sh   # the Home stand-in: its page lives in webapp-mgr, which the restart took down
-      else luna-send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' </dev/null >/dev/null 2>&1; fi ;;
-    *) echo "$(up) saver: $(echo "$fg" | cut -d'"' -f4) is in front after the restart; Home is not opened over it" >> $LOG ;;
-  esac
-) </dev/null >/dev/null 2>&1 &
+# Staged on every run, as 10-cleanyourtv-home stages Home: a setup over a running install copies the new page while the folder is
+# already mounted. Unchanged files cost a cmp, nothing more.
+sh $L/stage-screensaver.sh || { echo "$(up) saver: the page could not be staged" >> $LOG; exit 1; }
+grep -q " $H " $MOUNTS && exit 0
+echo "$(up) saver: mounting the page over LG's screen saver app" >> $LOG
+mount --bind $L/screensaver-overlay "$H" || { echo "$(up) saver: the mount over $H failed" >> $LOG; exit 1; }
+exit 0
