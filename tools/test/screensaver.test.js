@@ -555,7 +555,7 @@ run(async () => {
     o = saverRun({ kind: 'qml', args: ['setup'], homeStandin: true });
     ok(
       !mounted(o, o.H) && !restarted(o) && /next boot/.test(o.log),
-      'setup, a QML saver and no app manager restart this boot: nothing mounted, LG\'s saver stays until the next boot (' +
+      "setup, a QML saver and no app manager restart this boot: nothing mounted, LG's saver stays until the next boot (" +
         o.log.trim().split('\n').pop() +
         ')'
     );
