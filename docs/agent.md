@@ -47,6 +47,7 @@ installed and switched on.
 | Spotify now playing | `spotify` | `now_playing` (the track, the artist, the device), `play`, `pause`, `next`, `previous`, `devices` (the Spotify Connect devices, by name), `open_on_tv` (the Spotify app of the TV on what plays). The controls need Spotify Premium. Moving the music to another device is not a tool: it can wake a speaker in another room |
 | Weather forecast | `weather` | `forecast` (`place`, `unit?`, `days?` 1-7: now with feels like, humidity, wind, UV, air quality, sunrise and sunset, the next six hours and the days), `find_place`. The service's own `get_weather` is the short answer, and knows the place of the card on Home |
 | Live TV (IPTV, bundled) | `iptv` | `status` (set up, how many channels, a guide), `find_channel` (`query`: words of the name or a number), `whats_on` and `schedule` (`channel`: now and next, or the next eight programmes), `favourites`, `set_favourite` (`channel`, `on`), `check_stream` (does the stream answer), `refresh` (load the playlist and guide again). No answer holds a stream or playlist address: they can carry the playlist's user name and password |
+| Android box (bundled) | `androidbox` | `status` (set up, its input, how many apps), `list_apps` (the TV apps that open on the box, with their Android package), `test` (connect over ADB and read the model), `set_app` (`id`, `on`: open an app on the box or on the TV). Opening such an app is `launch_app` |
 
 ## The voice assistant uses them
 

@@ -327,7 +327,49 @@ function create(ctx) {
 
   // the add-on's own part: /api/androidbox... is answered through its manifest "routes" (addon.json), and the launch hook in
   // helper/apps.js asks for handles() and open()
-  return { handle, handles, open };
+  // ---- the tool for the voice assistant and MCP clients ("provides": ["tools"]): one tool with an action ----
+  // (opening an app on the box needs no action here: launch_app opens a chosen app there already)
+  const TOOL = {
+    name: 'androidbox',
+    description:
+      "The Android box (NVIDIA Shield and the like) that opens chosen apps over ADB. action status: is it set up, its input, how many apps; list_apps: the TV's apps that open on the box; test: connect to the box and read its model; set_app: make an app open on the box or on the TV again (id, on).",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['status', 'list_apps', 'test', 'set_app'] },
+        id: { type: 'string', description: 'for set_app: the TV app id (from list_apps or list_apps of the TV)' },
+        on: { type: 'boolean', description: 'for set_app: true opens it on the box, false on the TV' },
+      },
+      required: ['action'],
+    },
+  };
+  const done = v => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v) }], isError: false });
+  const bad = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });
+  async function callTool(name, args) {
+    if (name !== 'androidbox') return bad('unknown tool: ' + name);
+    const x = args && typeof args === 'object' ? args : {};
+    const cfg = settings();
+    if (x.action === 'status')
+      return done(
+        cfg
+          ? { configured: true, input: cfg.input || '', apps: Object.keys(cfg.apps).length, keyReady: adbclient.keyExists(KEY_FILE()) }
+          : { configured: false, note: 'set it up in the manager app: Features > Android box' }
+      );
+    if (!cfg) return bad('the Android box is not set up (manager app: Features > Android box)');
+    if (x.action === 'list_apps') return done((await choices()).filter(a => a.on).map(a => ({ id: a.id, name: a.title, package: a.pkg })));
+    if (x.action === 'test') {
+      const r = await test();
+      return r.ok ? done({ connected: true, model: r.model }) : bad('the box did not answer (' + r.step + '): ' + (r.error || ''));
+    }
+    if (x.action === 'set_app') {
+      if (typeof x.on !== 'boolean') return bad('set_app needs on: true or false');
+      const r = await toggle({ id: String(x.id || ''), on: x.on });
+      return r.error ? bad(r.error) : done({ id: x.id, onTheBox: x.on });
+    }
+    return bad('action is status, list_apps, test or set_app');
+  }
+
+  return { handle, handles, open, tools: { list: () => [TOOL], call: callTool } };
 }
 
 module.exports = { create, clean, suggest };
