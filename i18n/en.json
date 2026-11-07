@@ -1654,5 +1654,8 @@
  "Turn on by themselves": "Turn on by themselves",
  "Add-on is off": "Add-on is off",
  "disconnect_from_tv": "disconnect_from_tv",
- "Always on": "Always on"
+ "Always on": "Always on",
+ "The add-on gives": "The add-on gives",
+ "What the AI may do with this add-on:": "What the AI may do with this add-on:",
+ "Agents can disconnect themselves": "Agents can disconnect themselves"
 }

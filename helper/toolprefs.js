@@ -51,6 +51,11 @@ const CORE_LABELS = {
 };
 const ADDON_ORDER = ['spotify', 'weather', 'iptv', 'androidbox', 'unsplash', 'icons', 'agent'];
 const ITEM = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+// an action without a label, as words a person reads: find_place -> "Find place" (the screen shows no internal names)
+const words = a => {
+  const w = String(a).replace(/[_-]+/g, ' ').trim();
+  return w.charAt(0).toUpperCase() + w.slice(1);
+};
 const actionsOf = t => {
   const p = t && t.inputSchema && t.inputSchema.properties && t.inputSchema.properties.action;
   return p && Array.isArray(p.enum) ? p.enum.filter(a => typeof a === 'string' && ITEM.test(a)) : null;
@@ -100,7 +105,7 @@ function groupsOf(lists) {
             name: a,
             tool: t.name,
             action: a,
-            label: typeof labels[a] === 'string' ? labels[a].slice(0, 60) : a.replace(/_/g, ' '),
+            label: typeof labels[a] === 'string' ? labels[a].slice(0, 60) : words(a),
             confirm: isConfirm(t),
           })
         );
@@ -190,10 +195,12 @@ function create(ctx) {
       kind: g.kind,
       tool: g.tool || '',
       off: false,
+      tools: g.items.map(it => it.tool).filter((t, i, a) => a.indexOf(t) === i).length,
       items: g.items.map(it => ({
         key: it.key,
         name: it.name,
         label: it.label,
+        action: !!it.action,
         on: st[it.key] !== false,
         fresh: fresh.indexOf(it.key) >= 0,
         confirm: it.confirm,
@@ -216,6 +223,7 @@ function create(ctx) {
           name: look.name || (addonNames && addonNames[gid]) || gid,
           kind: 'addon',
           tool: look.tool || (parts.length === 2 ? gid : ''),
+          tools: 1,
           off: true,
           items: [],
         });
@@ -224,7 +232,8 @@ function create(ctx) {
       g.items.push({
         key: k,
         name: lb[0] || nm.split('.').pop(),
-        label: lb[1] || nm.split('.').pop().replace(/_/g, ' '),
+        label: lb[1] || words(nm.split('.').pop()),
+        action: true,
         on: st[k] !== false,
         fresh: false,
         confirm: !!lb[2],

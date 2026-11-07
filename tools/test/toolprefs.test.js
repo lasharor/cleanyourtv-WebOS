@@ -66,6 +66,15 @@ run(async () => {
     'first run: every tool saved as on, none marked new'
   );
   ok(t.state['agent.recipes__open'] === true, 'a tool without actions is one item');
+  {
+    const s0 = (await call(hub, '/api/mcp/tools', 'GET')).j;
+    const ag0 = s0.groups.filter(g => g.id === 'agent')[0],
+      sp0 = s0.groups.filter(g => g.id === 'spotify')[0];
+    ok(
+      ag0.tools === 1 && ag0.items[0].action === false && sp0.items[0].action === true,
+      'each item says whether it is an action; each group how many tools it has'
+    );
+  }
   let s = await status();
   const sg = s.groups.filter(g => g.id === 'spotify')[0];
   ok(
@@ -101,6 +110,15 @@ run(async () => {
       .map(g => g.id)
       .join() === 'iptv,agent,alpha,zeta',
     'known add-ons in their order (found on the TV: the loader gave them in its own order), others after them by name'
+  );
+  ok(
+    req('toolprefs').groupsOf([
+      {
+        provider: { id: 'box', name: 'Box' },
+        tools: [{ name: 'box', description: 'Box.', inputSchema: { properties: { action: { enum: ['find_place'] } } } }],
+      },
+    ])[0].items[0].label === 'Find place',
+    'an action without a label reads as words: Find place'
   );
   ok(s.on === s.all && s.all > 15, 'the count: all on');
   ok(JSON.stringify(s).indexOf('disconnect_from_tv') < 0, 'disconnect_from_tv is not a setting (always on)');
