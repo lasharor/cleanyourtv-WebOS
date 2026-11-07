@@ -1,0 +1,102 @@
+<div id="app">
+  <header class="hd">
+    <div class="ttl">
+      <h1 data-t="Phone remote">Phone remote</h1>
+      <p class="sub" data-t="Use a phone as the TV remote over your Wi-Fi.">Use a phone as the TV remote over your Wi-Fi.</p>
+    </div>
+    <div id="cap" class="cap"><span id="capdot" class="dot off"></span><span id="captext"></span></div>
+  </header>
+  <div class="labels">
+    <h2 class="lpair" data-t="Pairing">Pairing</h2>
+    <h2 class="lphones" data-t="Phones">Phones</h2>
+  </div>
+  <div class="main">
+    <section id="stage" class="stage">
+      <div id="idle" class="pbody">
+        <div class="plate">
+          <div class="how">
+            <div class="kicker" data-t="How pairing works">How pairing works</div>
+            <div class="step">
+              <span class="num">1</span><span class="t" data-t="Scan a code with the phone camera">Scan a code with the phone camera</span>
+            </div>
+            <div class="step second">
+              <span class="num">2</span><span class="t" data-t="Type a 6-digit code on the phone">Type a 6-digit code on the phone</span>
+            </div>
+            <p class="phint" data-t="The code works once and then expires.">The code works once and then expires.</p>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="eyebrow" data-t="New phone">New phone</div>
+          <div class="ssub" data-t="Same Wi-Fi as the TV.">Same Wi-Fi as the TV.</div>
+          <button class="pri" id="pairbtn" data-k="pair" data-t="Pair a phone">Pair a phone</button>
+          <div id="idleurl" class="addr"></div>
+        </div>
+      </div>
+      <div id="pairsheet" class="pbody hide">
+        <div id="qrcard" class="qrcard"><canvas id="qr" width="480" height="480" aria-hidden="true"></canvas></div>
+        <div class="stack open">
+          <div>
+            <div class="step"><span class="num">1</span><span class="t" data-t="Scan this code">Scan this code</span></div>
+            <p class="shint" data-t="with your phone’s camera">with your phone’s camera</p>
+            <div id="pairurl" class="addr2"></div>
+            <div class="step two">
+              <span class="num">2</span><span class="t" data-t="Type this code on the phone">Type this code on the phone</span>
+            </div>
+            <div id="codebox" class="code"></div>
+            <div id="pairnote" class="exp"></div>
+            <div id="rail" class="rail"><i id="railbar"></i></div>
+            <button class="pri renew hide" id="pairnew" data-k="renew" data-t="Get a new code">Get a new code</button>
+          </div>
+          <button class="close" id="pairstop" data-k="stop" data-t="Close">Close</button>
+        </div>
+      </div>
+    </section>
+    <section id="phonecol" class="col">
+      <p id="portnote" class="note hide">
+        <span id="porttext"></span>
+        <button class="small" id="portretry" data-k="retry" data-t="Try again">Try again</button>
+      </p>
+      <div id="phonelist"><div id="phonein"></div></div>
+      <p id="more" class="foot more hide"></p>
+      <button class="rmall hide" id="removeall" data-k="all" data-t="Remove all phones">Remove all phones</button>
+      <p class="foot" data-t="Phones connect over Wi-Fi. To stop them all, switch the add-on off in Manager → Add-ons.">
+        Phones connect over Wi-Fi. To stop them all, switch the add-on off in Manager → Add-ons.
+      </p>
+      <button class="setrow" id="expire" data-k="exp">
+        <span class="sr">
+          <span class="sa" data-t="Remove unused phones">Remove unused phones</span>
+          <span class="sb" id="expsub"></span>
+        </span>
+        <span class="pill" id="exppill"><span id="expval"></span><span class="ch">›</span></span>
+      </button>
+    </section>
+  </div>
+  <div id="veil" class="veil hide">
+    <div id="sheet" class="sheet hide">
+      <h2 id="sheetname"></h2>
+      <div id="sheetmeta" class="smeta"></div>
+      <button class="sbtn" id="sheetaccess" data-k="s:access"></button>
+      <button class="sbtn danger" id="sheetremove" data-k="s:remove" data-t="Remove phone">Remove phone</button>
+      <button class="sbtn" id="sheetcancel" data-k="s:cancel" data-t="Cancel">Cancel</button>
+    </div>
+    <div id="pick" class="sheet pick hide">
+      <h2 data-t="Remove unused phones">Remove unused phones</h2>
+      <p
+        class="ptext"
+        data-t="A phone that isn’t connected and hasn’t been used for this long is removed. It can pair again with a new code."
+      >
+        A phone that isn’t connected and hasn’t been used for this long is removed. It can pair again with a new code.
+      </p>
+      <div id="opts"></div>
+    </div>
+    <div id="dialog" class="dialog hide">
+      <h2 id="dlgtitle"></h2>
+      <p id="dlgtext"></p>
+      <div class="row">
+        <button class="dbtn" id="dlgcancel" data-k="d:cancel" data-t="Cancel">Cancel</button>
+        <button class="dbtn danger" id="dlgok" data-k="d:ok"></button>
+      </div>
+    </div>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>

@@ -290,10 +290,21 @@ document.addEventListener(
     lastWheel = lastKey;
     if (stack.length) menuKey(e.deltaY > 0 ? 40 : 38);
     else if (moving) handleMoveKey(e.deltaY > 0 ? 39 : 37); /* while a tile is moved, the wheel moves it along the row */
-    else homeStep(e.deltaY > 0 ? 1 : -1);
+    else wheelHome(e.deltaY > 0 ? 1 : -1);
   },
   { passive: false }
 );
+/* the notch that brings the hidden pointer back only shows it (input.js gives the focus to what is under it): webOS shows the pointer
+   first and sends that notch a moment later (30 ms on an LG G5), so the first notch within 400 ms of it showing is skipped. Every
+   other notch moves one tile, also one that comes while the pointer stays hidden (a TV whose wheel does not show it). */
+function wheelHome(dir) {
+  if (pointerShownAt && Date.now() - pointerShownAt < 400) {
+    pointerShownAt = 0;
+    return false;
+  }
+  homeStep(dir);
+  return true;
+}
 
 /* Back on the home screen lists the running apps to close them, as LG's Home does with its Recents on a second Back (issue 16) */
 function runningMenu() {
@@ -865,9 +876,11 @@ function customizeMenu() {
                 },
               }
             : null,
-        ].filter(function (it) {
-          return it;
-        });
+        ]
+          .filter(function (it) {
+            return it;
+          })
+          .concat(cards() ? csRows() : []);
       },
     },
     {

@@ -90,7 +90,16 @@ function build() {
     var ha = v.ha || {},
       haOk = !!ha.configured,
       HR = { 'ha-first': 'Home Assistant first, then the AI', 'ha-only': 'Home Assistant only', 'ai-only': 'The AI only' };
-    if (!v.installed) {
+    if (!v.installed && v.unsupported) {
+      /* a 32-bit kernel cannot start the 64-bit recogniser: nothing is offered to download */
+      rows.push({
+        label: 'Voice is not available on this TV',
+        sub: 'its kernel is 32-bit',
+        info: { t: 'Voice is not available on this TV', d: v.unsupported },
+        dim: true,
+        fn: function () {},
+      });
+    } else if (!v.installed) {
       rows.push({
         label: 'Install voice',
         sub: wk ? 'installing…' : 'downloads about 80 MB',
@@ -428,6 +437,64 @@ function build() {
     });
     return;
   }
+  if (view === 'addonrepos') {
+    ad.repos.forEach(function (x) {
+      rows.push({
+        label: x.name,
+        sub: x.url + (x.official ? ' · the project’s own' : ''),
+        fn: function () {
+          ad.repoSel = x.name;
+          push('addonrepo');
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Add from your phone', sub: 'user/repo, or the address of a folder with an index.json', fn: openRepoDialog });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'addonrepo') {
+    var rp = repoSel() || {};
+    rows.push({ label: rp.name || '', sub: rp.url || '', fn: function () {} });
+    if (rp.official)
+      rows.push({ label: 'The project’s own repository always stays', sub: 'it cannot be removed', dim: true, fn: function () {} });
+    else
+      rows.push({
+        label: 'Remove this repository',
+        sub: 'what you installed from it stays installed',
+        fn: function () {
+          addonDo('/api/addons/repos', { remove: rp.name }, rp.name + ' removed');
+        },
+      });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* before anything from another repository: what it means, then Cancel (the default) or the deliberate button that says what it does */
+  if (view === 'confirm-addon' || view === 'confirm-repo') {
+    var pe = ad.pend || {},
+      isRepo = view === 'confirm-repo',
+      warn = trustAbout(isRepo ? [] : pe.items),
+      wl = 'Code from outside the project';
+    rows.push({ label: 'Cancel', about: warn, ablabel: wl, fn: pop });
+    rows.push({
+      label: isRepo
+        ? 'Add a repository, from my phone'
+        : pe.all
+          ? 'Update code from other repositories'
+          : 'Install code from ' + (pe.repo || ''),
+      sub: isRepo ? '' : pe.all ? '' : pe.name,
+      about: warn,
+      ablabel: wl,
+      fn: function () {
+        pop();
+        if (isRepo) openRepoPair();
+        else if (pe.all) addonDo('/api/addons/update', { confirm: true }, 'Add-ons updated');
+        else addonDo('/api/addons/install', { id: pe.id, repo: pe.repo, confirm: true }, pe.name + ' installed');
+      },
+    });
+    return;
+  }
   if (view === 'addon') {
     var a1 = addonSel() || {};
     rows.push({
@@ -470,6 +537,14 @@ function build() {
         });
       }
     }
+    if ((a1.permissions || []).indexOf('key.guide') >= 0)
+      rows.push({
+        label: 'Learn the Guide key',
+        sub: st.keys && st.keys.guide ? 'now: ' + st.keys.guide : 'not learned \u00B7 LG\u2019s guide stays',
+        fn: function () {
+          openKeys('guide');
+        },
+      });
     if (a1.settings)
       rows.push({
         label: 'Set up from your phone',
@@ -544,10 +619,9 @@ function build() {
     });
     rows.push({
       label: 'Learn the Guide key',
-      sub: lo ? (gk ? 'now: ' + gk : 'not learned \u00B7 LG\u2019s guide stays') : 'Live TV is off',
-      dim: !lo,
+      sub: gk ? 'now: ' + gk : 'not learned \u00B7 LG\u2019s guide stays',
       fn: function () {
-        if (lo) openKeys('guide');
+        openKeys('guide');
       },
     });
     rows.push({ sep: true });
@@ -602,10 +676,10 @@ function build() {
       sub: 'LG starts these in the background so they open faster, and checks again every 5 minutes · off frees memory · set again at every boot',
       fn: function () {},
     });
-    if (!pr || !pr.available)
-      rows.push({ label: 'Not available', sub: (pr && pr.error) || 'this TV has no preload manager', fn: function () {} });
+    if (!preSet || !preSet.available)
+      rows.push({ label: 'Not available', sub: (preSet && preSet.error) || 'this TV has no preload manager', fn: function () {} });
     else
-      pr.apps.forEach(function (a) {
+      preSet.apps.forEach(function (a) {
         var fixed = preloadFixed(a);
         rows.push({
           label: preloadName(a.id),
@@ -619,7 +693,7 @@ function build() {
               (a.saved ? ' · changed by you' : ''),
           fn: function () {
             if (fixed) return banner(fixed, 'err');
-            prApp = a.id;
+            preApp = a.id;
             push('preloadapp');
           },
         });
@@ -629,7 +703,7 @@ function build() {
     return;
   }
   if (view === 'preloadapp') {
-    var pa = preloadApp(prApp);
+    var pa = preloadApp(preApp);
     if (!pa) {
       pop();
       return;
@@ -637,13 +711,13 @@ function build() {
     /* only the modes this TV itself uses for some app (now, or when it started) and this app's own: criu or full are not offered where
        LG uses neither, since the row steps through them one by one and a TV without that kernel support could be left with a mode it cannot run */
     var seen = {};
-    (pr.apps || []).forEach(function (x) {
+    (preSet.apps || []).forEach(function (x) {
       seen[x.mode] = true;
       if (x.base) seen[x.base.mode] = true;
     });
     seen[pa.mode] = true;
     var states = ['off'].concat(
-      pr.modes.filter(function (m) {
+      preSet.modes.filter(function (m) {
         return seen[m];
       })
     );
@@ -666,7 +740,7 @@ function build() {
       label: 'How often',
       sub: pa.type + ' · periodic: again at every check · oneshot: once',
       fn: function () {
-        preloadSet(pa.id, { type: pr.types[(pr.types.indexOf(pa.type) + 1) % pr.types.length] });
+        preloadSet(pa.id, { type: preSet.types[(preSet.types.indexOf(pa.type) + 1) % preSet.types.length] });
       },
     });
     rows.push({
@@ -721,6 +795,13 @@ function build() {
       sub: st.keys && st.keys.inputIsDefault ? 'default (' + st.keys.input + ')' : 'learned: ' + (st.keys && st.keys.input),
       fn: function () {
         openKeys('input');
+      },
+    });
+    rows.push({
+      label: 'Learn the Guide key',
+      sub: st.keys && st.keys.guide ? 'now: ' + st.keys.guide : 'not learned \u00B7 LG\u2019s guide stays',
+      fn: function () {
+        openKeys('guide');
       },
     });
     var pk = st.picker || {},
@@ -1365,6 +1446,26 @@ function build() {
   }
 }
 
+/* an entry of a service older than the repositories has no `official`: everything it lists is the project's */
+function isOfficial(e) {
+  return e.official !== false;
+}
+/* the warning before code from another repository is installed or a repository is added, with what each add-on may do */
+function trustAbout(items) {
+  var out = [
+    tr('The code of an add-on runs as root on the TV and can read and change anything on it and on your network.'),
+    tr('The checksum only shows that a file is the one the repository published. It does not show that its author is trustworthy.'),
+    tr('Only continue for people and projects you trust. The CleanYourTV project has not reviewed these add-ons.'),
+    tr('Every repository is contacted whenever the add-ons list or a picture is opened, so its operator sees the TV’s address.'),
+  ];
+  (items || []).forEach(function (x) {
+    var can = (x.can || []).map(function (c) {
+      return tr(c);
+    });
+    out.push(x.name + ' ' + x.version + ' (' + x.repo + ') ' + tr('may') + ': ' + can.join(', ') + '.');
+  });
+  return out.join('\n\n');
+}
 function addonRows() {
   if (ad.paused)
     rows.push({
@@ -1396,13 +1497,44 @@ function addonRows() {
     rows.push({
       label: e.name,
       pv: e.preview ? e.id : '',
+      pvu: e.preview && !isOfficial(e) ? '/api/addons/preview/' + e.id + '?repo=' + e.repo : '',
       about: e.about || e.description,
-      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version,
+      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version + (isOfficial(e) ? '' : ' \u00B7 from ' + e.repo),
       fn: function () {
-        addonDo('/api/addons/install', { id: e.id }, e.name + ' installed');
+        if (isOfficial(e)) return addonDo('/api/addons/install', { id: e.id, repo: e.repo }, e.name + ' installed');
+        ad.pend = { id: e.id, repo: e.repo, name: e.name, items: [e] };
+        push('confirm-addon');
       },
     });
   });
+  if (
+    ad.reposOk &&
+    ad.catalog.some(function (e) {
+      return e.update;
+    })
+  )
+    rows.push({
+      label: 'Update all add-ons',
+      sub: 'each from the repository it was installed from',
+      fn: function () {
+        var other = ad.catalog.filter(function (e) {
+          return e.update && !isOfficial(e);
+        });
+        if (!other.length) return addonDo('/api/addons/update', {}, 'Add-ons updated');
+        ad.pend = { all: true, items: other };
+        push('confirm-addon');
+      },
+    });
+  if (ad.reposOk) {
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Repositories',
+      sub: ad.repos.length + (ad.repos.length === 1 ? ' source of add-ons' : ' sources of add-ons') + ' \u00B7 add your own',
+      fn: function () {
+        push('addonrepos');
+      },
+    });
+  }
   if (bookPages().length) {
     rows.push({ sep: true });
     rows.push({
@@ -1454,8 +1586,8 @@ var DEBLOAT = [
   { id: 'suggestions', label: 'Suggestions and nudges', what: 'contentminer, nudge, sportsalarm' },
 ];
 /* Experimental: preloaded apps (helper/preload.js). The TV's policy per app: off, or how much of it is started (mode), and how often (type). */
-var pr = null,
-  prApp = '';
+var preSet = null,
+  preApp = '';
 var PRELOAD_NAMES = {
   'youtube.leanback.v4': 'YouTube',
   netflix: 'Netflix',
@@ -1477,7 +1609,7 @@ function preloadName(id) {
   return PRELOAD_NAMES[id] || id;
 }
 function preloadApp(id) {
-  var l = (pr && pr.apps) || [];
+  var l = (preSet && preSet.apps) || [];
   for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i];
   return null;
 }
@@ -1491,7 +1623,7 @@ function preloadFixed(a) {
 function preloadLoad(stay) {
   api('/api/preload').then(
     function (r) {
-      pr = r;
+      preSet = r;
       if (stay === true) {
         build();
         draw();
@@ -1507,7 +1639,7 @@ function preloadSet(id, change) {
   for (var k in change) body[k] = change[k];
   api('/api/preload', body, 20000).then(
     function (r) {
-      pr = r;
+      preSet = r;
       if (r.error) banner(r.error, 'err');
       build();
       draw();

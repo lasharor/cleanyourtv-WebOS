@@ -3,7 +3,7 @@
 // This file only wires the parts together. Each part is a feature module with create(ctx) -> { name, paths/prefix, handle, start };
 // ctx carries what they share (config, the TV profile, luna). A part that fails to load is left out and reported at /api/service;
 // the rest keeps working. AGENTS.md has the map of the files.
-const VERSION = '1.6.17';
+const VERSION = '1.6.20';
 const fs = require('fs');
 const P = require('./paths'),
   diag = require('./diag');
@@ -56,6 +56,7 @@ const notify = load('notify', () => require('./notify').create(ctx));
 if (notify) load('voice', () => require('./voice').create(ctx));
 load('theme', () => require('./theme').create(ctx));
 load('wallpapers', () => require('./wallpapers').create(ctx));
+load('scenes', () => require('./scenes').create(ctx));
 load('cards', () => require('./cards').create(ctx));
 const inputkey = load('inputkey', () => require('./inputkey').create(ctx));
 if (notify) load('notifyapi', () => require('./notifyapi').create(ctx));

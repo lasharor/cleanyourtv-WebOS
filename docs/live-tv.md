@@ -56,9 +56,11 @@ quality; search matches names across all channels.
 ### The Guide button
 
 By default the remote's Guide button belongs to LG. In the manager app, **Live TV** > **Learn the Guide key** records the
-button's code; afterwards it opens the Live TV channel guide over whatever is running, and closes it again when Live TV is open.
-**Clear** gives LG's guide back. The button is only taken over while Live TV is on and a code is learned. It uses the same hook as
-the [Input key](input-key.md).
+button's code (it is also in **Input key**, and it is always there, whichever of the two guides below you use); afterwards it opens a
+guide over whatever is running, and closes it again when that guide is open. **Clear** gives LG's guide back. The button is only taken
+over while a code is learned and a guide is on: the **TV guide (LG tuner)** add-on below, when it is installed and switched on, else the
+Live TV guide of your playlist. The two guides are independent (neither needs the other) and share the same guide page. It uses the same
+hook as the [Input key](input-key.md).
 
 ### A guide for LG's own tuner
 

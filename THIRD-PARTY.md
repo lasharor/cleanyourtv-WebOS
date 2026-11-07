@@ -33,6 +33,14 @@ image model from text only, are not real places, and its `CREDITS.md` releases t
 typeface (Latin, weight 300) by Vernon Adams, under the SIL Open Font License 1.1 (`third-party/antonio/OFL.txt`). The glass clock and
 the scene layout follow couch-tv's design.
 
+## Material Design Icons (Home Assistant cards)
+
+The launcher bundles the unmodified WOFF2 font from
+[@mdi/font 7.4.47](https://www.npmjs.com/package/@mdi/font/v/7.4.47).
+`app/mdi-glyphs.js` maps icon names to glyphs using the CSS from the same package.
+The Pictogrammers license notice and Apache 2.0 license are shipped alongside the font
+in `app/mdi-LICENSE.txt` and `app/mdi-APACHE-2.0.txt`.
+
 ## Voice (optional download)
 
 Nothing below is shipped in the package; the manager app downloads it on request (see the Voice page of the documentation) and

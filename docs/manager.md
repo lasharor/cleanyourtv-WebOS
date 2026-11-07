@@ -6,7 +6,7 @@ another tab, Up and Down move through its rows, and the left side of the screen 
 
 - **Updates & Home**: Launcher, Service, Check for updates, Update channel, Go back to launcher, CleanYourTV as Home, Input key, Share log.
 - **Features**: Live TV, Wallpapers, App icons, Cards, Android box, Home Assistant, Voice, Network notifications.
-- **Add-ons**: the installed and available add-ons, and the page strip. The picture and text of the add-on in focus show on the left; a text longer than its six lines drifts up by itself, rests at its end and starts over.
+- **Add-ons**: the installed and available add-ons, **Repositories** (where add-ons come from: the project's own and any you add from your phone, see [Add-on repositories](development/addon-repos.md)), **Update all add-ons**, and the page strip. The picture and text of the add-on in focus show on the left; a text longer than its six lines drifts up by itself, rests at its end and starts over.
 - **Debloat**: the four groups.
 - **System**: Language, Experimental, Reset Home customisation, Uninstall.
 
@@ -24,7 +24,7 @@ The rows, in the order of the old list:
 | Wallpapers | Your own photos behind Home: the phone page (uploads), a row per photo source (Immich, ...), counts, **Picture size**, **Remove all uploads** and, on a TV that had Immich before, **Remove old Immich data**. See [Wallpapers](wallpapers.md). |
 | App icons | A picture of your own for an app: the phone page (a QR code), where you choose **Change** next to an app and a picture, shown as **Full tile** or **Icon** with a preview, or **Reset**. The screen gives the picture sizes that fit the theme's tiles on this TV. A tile's **Change icon** on Home opens it with that app first. See [Your own icon](launcher.md#your-own-icon). |
 | Cards | A card for each place of the theme (Lock Screen, Bloom, Horizon), **Get more cards** (the catalog of downloadable cards on GitHub, with a picture and text each; install, update, remove), the phone page for their names, texts and options, and a link to Home Assistant; see [Cards](launcher.md#cards). |
-| Live TV | **Show Live TV** (off hides it in the launcher and Inputs list and leaves the Guide button to LG), **Show LG's own Live TV** (the tuner in the Inputs list and the TV button; independent of the first), the **Playlist** (set up from your phone with a QR code and a 6-digit code), **Refresh playlist and guide**, **Learn the Guide key**, **Clear recent channels** and **Remove the playlist**. See [Live TV](live-tv.md). |
+| Live TV | **Show Live TV** (off hides it in the launcher and Inputs list; the Guide button then goes to the TV guide add-on if that is on, else to LG), **Show LG's own Live TV** (the tuner in the Inputs list and the TV button; independent of the first), the **Playlist** (set up from your phone with a QR code and a 6-digit code), **Refresh playlist and guide**, **Learn the Guide key** (also under Input key, always available), **Clear recent channels** and **Remove the playlist**. See [Live TV](live-tv.md). |
 | Input key | The takeover switch, **Learn the Input key**, **Input key shows** (the Inputs list over the running app, ready in the background or started when pressed, or the launcher's own list). See [The Input key](input-key.md). |
 | Key remapping | Make a remote button open an app, an input, Live TV, Home or the Inputs list. Off until you switch it on. See [Key remapping](key-remap.md). |
 | Debloat | The four groups of the [debloat](debloat.md), each on or off, and **Switch all on** / **Switch all off**. |

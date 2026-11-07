@@ -16,6 +16,7 @@ uninstall. Optional features contact other services only when you switch them on
 | `/media/developer/apps/usr/palm/services/com.cleanyourtv.manager.service/` | The installed package contents |
 | `/var/lib/webosbrew/init.d/` | Boot scripts `10-cleanyourtv-home` and, with debloat on, `15-cleanyourtv-debloat` (links into the folder above) |
 | `/home/root/.config/lginputhook/keybinds.json` | Our binds for the Input key, the voice and Guide keys and any [remapped buttons](key-remap.md); other binds are left alone |
+| `/home/root/.local/bin/cytv-addons` | Only if you run `cytv-addons.js shortcut`: a one-line command for [add-on repositories](development/addon-repos.md) over SSH. The uninstall removes it |
 | `/media/developer/cytv-setup.log` | The setup log |
 
 ## At boot
@@ -81,5 +82,5 @@ These are switched on in the manager app, **Experimental**, and put back by swit
 
 ## What the uninstall removes
 
-The apps, the boot scripts, the Input-key and voice-key binds, the debloat changes, a switched-off LG volume bar (put back) and the folder
+The apps, the boot scripts, the `cytv-addons` command, the Input-key and voice-key binds, the debloat changes, a switched-off LG volume bar (put back) and the folder
 `/media/developer/cleanyourtv` (with `--keep-config`, the settings and usage history stay). The TV then restarts with LG's Home.

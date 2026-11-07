@@ -94,6 +94,12 @@ saying which AI tools helped. It is reviewed like any other pull request.
 > From the diff, write a pull request description: the symptom, the cause, what changed, how it was tested (name the commands), what was
 > checked on a real TV and what was not, and a line that AI tools were used.
 
+## Part 3: make an add-on from an idea
+
+An add-on is a folder in a repository of your own; the TV fetches it with `cytv-addons` or the manager. Give the assistant
+[Add-on repositories](development/addon-repos.md), the sample in `addons/template/` and your idea; the page has a prompt and a checklist.
+The assistant writes files and runs `node make-index.js`; it does not install anything on your TV unless you say so.
+
 ## What the assistant should not do
 
 - Run commands on your TV that change it, without asking you first.

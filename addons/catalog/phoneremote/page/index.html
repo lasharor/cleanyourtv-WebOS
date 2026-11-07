@@ -1,0 +1,1825 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Phone remote</title>
+<style>
+/* The phone remote's page on the TV (1920x1080): one anchored stage on the left (pairing), the paired phones on the right at full
+   height, and at the bottom of the phones one setting row (when unused phones are removed) that opens a picker. The sizes are the
+   10-foot redesign's: a safe area of 96 px at the sides, 72 at the top and 64 at the bottom; the stage is 900x766, the list 764 wide.
+   The page sits over Home as a page of the book, so it keeps Home's dark look (Chromium 68, ES5 script). No flex gap (old Chromium):
+   spacing is by margins. No shadows: a fill step and a 1 px line. Motion is opacity and transform only (the TV's GPU is weak).
+   Green means only "connected"; a selection is inverted white; amber is expiry and "Never". Focus is a white 3 px ring 4 px outside. */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0a0c10;
+  color: #f2f6fc;
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  overflow: hidden;
+}
+#app {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 72px 96px 64px;
+}
+button {
+  font: inherit;
+  color: #f2f6fc;
+  background: #1a2029;
+  border: 1px solid #1e2735;
+  border-radius: 16px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  outline: none;
+  text-align: center;
+}
+/* the focus ring: white, outside the fill, so it shows on the blue primary too; the layout does not move */
+button:focus {
+  outline: 3px solid #e9f0fa;
+  outline-offset: 4px;
+}
+.hide {
+  display: none !important;
+}
+
+/* ---- header: the title, its line, and the status capsule (information, not a focus stop) ---- */
+.hd {
+  height: 94px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.ttl {
+  min-width: 0;
+}
+h1 {
+  font-size: 54px;
+  line-height: 1.05;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.8px;
+  white-space: nowrap;
+}
+.sub {
+  margin: 8px 0 0;
+  font-size: 26px;
+  color: #a9b8cb;
+}
+.cap {
+  box-sizing: border-box;
+  width: 360px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid #1e2735;
+  background: #101419;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 500;
+  color: #c9d4e3;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6fe39a;
+  margin-right: 10px;
+  flex: 0 0 auto;
+}
+.dot.off {
+  background: #4b5768;
+}
+
+/* ---- the section labels, over the stage and over the list ---- */
+.labels {
+  margin-top: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+}
+.labels h2 {
+  font-size: 27px;
+  line-height: 36px;
+  font-weight: 600;
+  color: #c9d4e3;
+  margin: 0;
+}
+.lpair {
+  width: 900px;
+  flex: 0 0 auto;
+}
+.lphones {
+  width: 764px;
+  margin-left: 64px !important;
+}
+.main {
+  margin-top: 12px;
+  height: 766px;
+  display: flex;
+}
+
+/* ---- the stage: idle (the two steps on the plate, the one primary, the address), pairing (the QR, the code, the countdown) ---- */
+.stage {
+  box-sizing: border-box;
+  width: 900px;
+  height: 766px;
+  flex: 0 0 auto;
+  padding: 32px;
+  background: #101419;
+  border: 1px solid #1e2735;
+  border-radius: 24px;
+}
+.pbody {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  animation: fade 0.12s ease-out;
+}
+.plate {
+  box-sizing: border-box;
+  width: 528px;
+  height: 100%;
+  flex: 0 0 auto;
+  border-radius: 20px;
+  border: 1px solid #1e2735;
+  background: #0d1117;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.how {
+  width: 420px;
+}
+.kicker,
+.eyebrow {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6cb2ff;
+}
+.kicker {
+  margin-bottom: 28px;
+}
+.step {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+.step.second {
+  margin-top: 22px;
+}
+.step.two {
+  margin-top: 26px;
+}
+.num {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  margin-right: 12px;
+  border-radius: 50%;
+  background: #1a2029;
+  color: #6cb2ff;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step .t {
+  font-size: 22px;
+  font-weight: 600;
+  color: #c9d4e3;
+}
+.phint {
+  font-size: 22px;
+  color: #a9b8cb;
+  margin: 36px 0 0;
+}
+.stack {
+  width: 280px;
+  height: 100%;
+  margin-left: 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.stack.open {
+  justify-content: space-between;
+}
+.ssub {
+  font-size: 20px;
+  color: #a9b8cb;
+  margin: 8px 0 18px;
+}
+button.pri {
+  width: 280px;
+  height: 72px;
+  border-color: #2b6fd6;
+  background: #2b6fd6;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+button.pri.renew {
+  margin-top: 22px;
+}
+.addr,
+.addr2 {
+  font:
+    20px/1.2 Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: -0.5px;
+  color: #c9d6e8;
+  white-space: nowrap;
+  direction: ltr; /* an address and a code read left to right in every language */
+}
+.addr {
+  margin-top: 18px;
+}
+.addr2 {
+  margin-top: 10px;
+}
+.addr.warn {
+  font:
+    20px/1.3 -apple-system,
+    "Segoe UI",
+    Roboto,
+    Arial,
+    sans-serif;
+  letter-spacing: 0;
+  color: #ffc46b;
+  white-space: normal;
+}
+.shint {
+  font-size: 21px;
+  color: #a9b8cb;
+  margin: 8px 0 0;
+}
+/* the QR card: the only pure white on the page, 480 modules in a 24 px quiet zone */
+.qrcard {
+  box-sizing: border-box;
+  width: 528px;
+  height: 528px;
+  flex: 0 0 auto;
+  padding: 24px;
+  border-radius: 20px;
+  background: #fff;
+  animation: qrin 0.12s ease-out;
+  transition: opacity 0.12s;
+}
+.qrcard.dimmed {
+  opacity: 0.28;
+}
+#qr {
+  display: block;
+  width: 480px;
+  height: 480px;
+}
+/* the code: 72 px in two groups ("428 731"), the groups 16 px apart so the six digits fit the 280 px stack; it becomes "Code expired"
+   in amber, never just disappears */
+.code {
+  font:
+    700 72px/1 Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: 0;
+  direction: ltr;
+  color: #fff;
+  margin: 12px 0 8px;
+  white-space: nowrap;
+}
+.code span {
+  display: inline-block;
+  animation: fade 0.12s ease-out both;
+}
+.code span.g {
+  margin-left: 16px;
+}
+.code.expired {
+  font-size: 36px;
+  letter-spacing: 0;
+  color: #ffc46b;
+  white-space: normal;
+}
+.exp {
+  font-size: 21px;
+  color: #ffc46b;
+}
+.exp.quiet {
+  color: #a9b8cb;
+}
+.rail {
+  width: 280px;
+  height: 4px;
+  margin-top: 14px;
+  border-radius: 2px;
+  background: #1e2735;
+  overflow: hidden;
+}
+.rail i {
+  display: block;
+  width: 280px;
+  height: 4px;
+  background: #6cb2ff;
+  transform-origin: 0 0;
+  transition: transform 1s linear;
+}
+button.close {
+  width: 160px;
+  height: 64px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ---- the phones: one card per phone, the whole card is one focus stop (OK opens Manage) ---- */
+.col {
+  width: 764px;
+  height: 766px;
+  margin-left: 64px;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.12s;
+}
+.col.dim {
+  opacity: 0.3;
+}
+.note {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  margin: 0 0 12px;
+  font-size: 20px;
+  color: #ffc46b;
+}
+.note span {
+  flex: 1;
+  min-width: 0;
+}
+button.small {
+  flex: 0 0 auto;
+  height: 48px;
+  padding: 0 18px;
+  margin-left: 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+/* the list shows whole cards only (its height is a multiple of a card, set by the script) and slides to keep the focused one in view */
+#phonelist {
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.foot.more {
+  margin: -4px 0 10px;
+}
+.phone,
+.quiet {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 764px;
+  height: 104px;
+  padding: 0 24px;
+  margin: 0 0 12px;
+  border-radius: 20px;
+  text-align: left;
+}
+button.phone {
+  background: #12161d;
+  border: 1px solid #1e2735;
+}
+/* A card fills the list's width and the list clips (overflow: hidden), so the usual outline outside would be cut off, and Chromium
+   before 94 draws an outline square over the rounded corners. The ring is drawn inside instead: the border turns white and an inset
+   shadow thickens it to 3px, following the radius on every Chromium, with no change to the layout. */
+button.phone:focus {
+  background: #1a2029;
+  outline: none;
+  border-color: #e9f0fa;
+  box-shadow: inset 0 0 0 2px #e9f0fa;
+}
+.quiet {
+  background: #0e131a;
+  border: 1px solid #1c2430;
+}
+.av {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  margin-right: 18px;
+  border-radius: 50%;
+  background: #1a2029;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.av svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: #7f93b3;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.who {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+.who b {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quiet .who b {
+  color: #c9d4e3;
+}
+.who .st {
+  display: block;
+  font-size: 18px;
+  color: #a9b8cb;
+  margin-top: 3px;
+  white-space: nowrap;
+}
+/* amber: when an unused phone is about to be removed by itself */
+.who .st em,
+.smeta em {
+  font-style: normal;
+  color: #ffc46b;
+}
+.who .st.on {
+  color: #6fe39a;
+}
+.who .st.no {
+  color: #ff9a9a;
+}
+/* "Manage" reads as the card's action; it is not a stop of its own */
+.mg {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  height: 48px;
+  min-width: 120px;
+  margin-left: 16px;
+  padding: 0 18px;
+  border-radius: 16px;
+  background: #1a2029;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 48px;
+  text-align: center;
+}
+button.phone:focus .mg {
+  background: #262e3a;
+}
+/* "Remove all phones": a text row that belongs to the list, only with two phones or more */
+button.rmall {
+  flex: 0 0 auto;
+  width: 764px;
+  height: 64px;
+  padding-left: 2px;
+  border: 0;
+  border-top: 1px solid #1e2735;
+  border-radius: 0;
+  background: transparent;
+  color: #ff9d9d;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: left;
+}
+.foot {
+  flex: 0 0 auto;
+  font-size: 19px;
+  color: #7d8ba0;
+  margin: 18px 0 0;
+}
+
+/* ---- the setting row: when unused phones are removed, pinned to the bottom of the phones; OK opens the picker ---- */
+button.setrow {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  width: 764px;
+  height: 88px;
+  margin-top: auto;
+  padding: 0 24px;
+  border-radius: 20px;
+  background: #12161d;
+  border: 1px solid #1e2735;
+  text-align: left;
+}
+/* the same inside ring as a phone card */
+button.setrow:focus {
+  background: #1a2029;
+  outline: none;
+  border-color: #e9f0fa;
+  box-shadow: inset 0 0 0 2px #e9f0fa;
+}
+.sr {
+  display: block;
+  min-width: 0;
+}
+.sa {
+  display: block;
+  font-size: 22px;
+  font-weight: 600;
+}
+.sb {
+  display: block;
+  font-size: 18px;
+  color: #a9b8cb;
+  margin-top: 2px;
+}
+.pill {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  min-width: 190px;
+  margin-left: auto;
+  padding: 0 20px;
+  border-radius: 16px;
+  background: #1a2029;
+  border: 1px solid transparent;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+button.setrow:focus .pill {
+  background: #262e3a;
+}
+.pill.never,
+button.setrow:focus .pill.never {
+  color: #ffc46b;
+  background: #2a2114;
+  border-color: #5a4420;
+}
+.pill .ch {
+  margin-left: 12px;
+  color: #a9b8cb;
+}
+/* the picker: the six choices in a list, the current one inverted white with a check */
+.sheet.pick {
+  padding: 36px 40px;
+}
+.ptext {
+  font-size: 22px;
+  color: #a9b8cb;
+  line-height: 1.35;
+  margin: 10px 0 24px;
+}
+button.opt {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 64px;
+  margin-top: 10px;
+  padding: 0 22px;
+  font-size: 20px;
+  font-weight: 600;
+  text-align: left;
+}
+button.opt .r {
+  margin-left: auto;
+  font-size: 16px;
+}
+button.opt.never {
+  color: #ffc46b;
+}
+button.opt.on {
+  background: #edf1f7;
+  border-color: #edf1f7;
+  color: #0a0c10;
+}
+
+/* ---- the manage sheet (640) and the confirm (720): centred over a 58% veil, nothing moves underneath ---- */
+.veil {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(6, 8, 12, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade 0.12s ease-out;
+}
+.sheet,
+.dialog {
+  box-sizing: border-box;
+  background: #151b24;
+  border: 1px solid #2a3546;
+  border-radius: 24px;
+}
+.sheet {
+  width: 640px;
+  padding: 40px 40px 32px;
+}
+.dialog {
+  width: 720px;
+  padding: 44px 44px 36px;
+}
+.sheet h2,
+.dialog h2 {
+  font-size: 36px;
+  font-weight: 600;
+  margin: 0;
+  color: #f2f6fc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.smeta {
+  font-size: 22px;
+  color: #a9b8cb;
+  margin: 8px 0 32px;
+}
+.smeta.on {
+  color: #6fe39a;
+}
+.smeta.no {
+  color: #ff9a9a;
+}
+button.sbtn {
+  display: block;
+  width: 100%;
+  height: 72px;
+  margin-bottom: 14px;
+  font-size: 22px;
+  font-weight: 600;
+}
+button.sbtn:last-child {
+  margin-bottom: 0;
+}
+button.danger {
+  color: #ff9d9d;
+  background: #1c1416;
+  border-color: #3a2226;
+}
+.dialog p {
+  font-size: 24px;
+  color: #a9b8cb;
+  margin: 14px 0 36px;
+}
+.row {
+  display: flex;
+  justify-content: flex-end;
+}
+button.dbtn {
+  height: 64px;
+  min-width: 180px;
+  margin-left: 16px;
+  padding: 0 28px;
+  font-size: 20px;
+  font-weight: 600;
+}
+button.dbtn.danger {
+  background: #8b2e2e;
+  border-color: #8b2e2e;
+  color: #fff;
+}
+
+#toast {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translate(-50%, 8px);
+  padding: 14px 26px;
+  border-radius: 12px;
+  background: #1c2634;
+  border: 1px solid #2a3546;
+  color: #fff;
+  font-size: 21px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.18s,
+    opacity 0.18s;
+}
+#toast.on {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes qrin {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* a right-to-left language mirrors the layout: the margins that space the columns and the rows change sides */
+[dir="rtl"] .lphones,
+[dir="rtl"] .col {
+  margin-left: 0 !important;
+  margin-right: 64px !important;
+}
+[dir="rtl"] .pill,
+[dir="rtl"] button.opt .r {
+  margin-left: 0;
+  margin-right: auto;
+}
+[dir="rtl"] .pill .ch {
+  margin-left: 0;
+  margin-right: 12px;
+}
+[dir="rtl"] button.setrow,
+[dir="rtl"] button.opt {
+  text-align: right;
+}
+[dir="rtl"] .stack {
+  margin-left: 0;
+  margin-right: 28px;
+}
+[dir="rtl"] .num,
+[dir="rtl"] .dot,
+[dir="rtl"] .av {
+  margin-right: 0;
+  margin-left: 12px;
+}
+[dir="rtl"] .av {
+  margin-left: 18px;
+}
+[dir="rtl"] .mg,
+[dir="rtl"] button.small,
+[dir="rtl"] button.dbtn {
+  margin-left: 0;
+  margin-right: 16px;
+}
+[dir="rtl"] .phone,
+[dir="rtl"] button.rmall {
+  text-align: right;
+}
+#debug {
+  display: none;
+}
+</style></head><body>
+<div id="app">
+  <header class="hd">
+    <div class="ttl">
+      <h1 data-t="Phone remote">Phone remote</h1>
+      <p class="sub" data-t="Use a phone as the TV remote over your Wi-Fi.">Use a phone as the TV remote over your Wi-Fi.</p>
+    </div>
+    <div id="cap" class="cap"><span id="capdot" class="dot off"></span><span id="captext"></span></div>
+  </header>
+  <div class="labels">
+    <h2 class="lpair" data-t="Pairing">Pairing</h2>
+    <h2 class="lphones" data-t="Phones">Phones</h2>
+  </div>
+  <div class="main">
+    <section id="stage" class="stage">
+      <div id="idle" class="pbody">
+        <div class="plate">
+          <div class="how">
+            <div class="kicker" data-t="How pairing works">How pairing works</div>
+            <div class="step">
+              <span class="num">1</span><span class="t" data-t="Scan a code with the phone camera">Scan a code with the phone camera</span>
+            </div>
+            <div class="step second">
+              <span class="num">2</span><span class="t" data-t="Type a 6-digit code on the phone">Type a 6-digit code on the phone</span>
+            </div>
+            <p class="phint" data-t="The code works once and then expires.">The code works once and then expires.</p>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="eyebrow" data-t="New phone">New phone</div>
+          <div class="ssub" data-t="Same Wi-Fi as the TV.">Same Wi-Fi as the TV.</div>
+          <button class="pri" id="pairbtn" data-k="pair" data-t="Pair a phone">Pair a phone</button>
+          <div id="idleurl" class="addr"></div>
+        </div>
+      </div>
+      <div id="pairsheet" class="pbody hide">
+        <div id="qrcard" class="qrcard"><canvas id="qr" width="480" height="480" aria-hidden="true"></canvas></div>
+        <div class="stack open">
+          <div>
+            <div class="step"><span class="num">1</span><span class="t" data-t="Scan this code">Scan this code</span></div>
+            <p class="shint" data-t="with your phone’s camera">with your phone’s camera</p>
+            <div id="pairurl" class="addr2"></div>
+            <div class="step two">
+              <span class="num">2</span><span class="t" data-t="Type this code on the phone">Type this code on the phone</span>
+            </div>
+            <div id="codebox" class="code"></div>
+            <div id="pairnote" class="exp"></div>
+            <div id="rail" class="rail"><i id="railbar"></i></div>
+            <button class="pri renew hide" id="pairnew" data-k="renew" data-t="Get a new code">Get a new code</button>
+          </div>
+          <button class="close" id="pairstop" data-k="stop" data-t="Close">Close</button>
+        </div>
+      </div>
+    </section>
+    <section id="phonecol" class="col">
+      <p id="portnote" class="note hide">
+        <span id="porttext"></span>
+        <button class="small" id="portretry" data-k="retry" data-t="Try again">Try again</button>
+      </p>
+      <div id="phonelist"><div id="phonein"></div></div>
+      <p id="more" class="foot more hide"></p>
+      <button class="rmall hide" id="removeall" data-k="all" data-t="Remove all phones">Remove all phones</button>
+      <p class="foot" data-t="Phones connect over Wi-Fi. To stop them all, switch the add-on off in Manager → Add-ons.">
+        Phones connect over Wi-Fi. To stop them all, switch the add-on off in Manager → Add-ons.
+      </p>
+      <button class="setrow" id="expire" data-k="exp">
+        <span class="sr">
+          <span class="sa" data-t="Remove unused phones">Remove unused phones</span>
+          <span class="sb" id="expsub"></span>
+        </span>
+        <span class="pill" id="exppill"><span id="expval"></span><span class="ch">›</span></span>
+      </button>
+    </section>
+  </div>
+  <div id="veil" class="veil hide">
+    <div id="sheet" class="sheet hide">
+      <h2 id="sheetname"></h2>
+      <div id="sheetmeta" class="smeta"></div>
+      <button class="sbtn" id="sheetaccess" data-k="s:access"></button>
+      <button class="sbtn danger" id="sheetremove" data-k="s:remove" data-t="Remove phone">Remove phone</button>
+      <button class="sbtn" id="sheetcancel" data-k="s:cancel" data-t="Cancel">Cancel</button>
+    </div>
+    <div id="pick" class="sheet pick hide">
+      <h2 data-t="Remove unused phones">Remove unused phones</h2>
+      <p
+        class="ptext"
+        data-t="A phone that isn’t connected and hasn’t been used for this long is removed. It can pair again with a new code."
+      >
+        A phone that isn’t connected and hasn’t been used for this long is removed. It can pair again with a new code.
+      </p>
+      <div id="opts"></div>
+    </div>
+    <div id="dialog" class="dialog hide">
+      <h2 id="dlgtitle"></h2>
+      <p id="dlgtext"></p>
+      <div class="row">
+        <button class="dbtn" id="dlgcancel" data-k="d:cancel" data-t="Cancel">Cancel</button>
+        <button class="dbtn danger" id="dlgok" data-k="d:ok"></button>
+      </div>
+    </div>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+<script src="/addon/qrcode.js"></script>
+<script>
+var I18N = {"ar":{"_name":"العربية","_dir":"rtl","_pct":65,"%d days ago":{"zero":"منذ %d يوم","one":"منذ %d يوم","two":"منذ %d يومين","few":"منذ %d أيام","many":"منذ %d يومًا","other":"منذ %d يوم"},"%d h ago":"منذ %d س","%d min ago":"منذ %d د","%d of %d":"%d من %d","%d of %d on":"%d من %d مفعّل","%s   code %s":"%s   الرمز %s","All":"الكل","Automatic":"تلقائي","Back":"رجوع","Cancel":"إلغاء","Close":"إغلاق","Connected":"متصل","Every %s min":"كل %s د","Every %s s":"كل %s ث","frames":"إطارات","Home":"Home","just now":"الآن","never":"أبدًا","not connected":"غير متصل","Off":"إيقاف","Save":"حفظ","Saved":"تم الحفظ","Text":"نص","The service did not answer":"لم تستجب الخدمة","The service did not answer.":"لم تستجب الخدمة.","Try again":"حاول مجددًا","Days":"الأيام","Connect":"اتصال","connected":"متصل","now":"الآن","Phone remote":"جهاز التحكم من الهاتف","Pair":"إقران","Type":"كتابة","OK":"موافق","Paired":"تم الإقران","Pair a phone":"إقران هاتف","Remove all phones":"إزالة كل الهواتف","Block this phone":"حظر هذا الهاتف","Allow this phone":"السماح لهذا الهاتف","Phone allowed":"تم السماح للهاتف","Phone blocked":"تم حظر الهاتف","blocked":"محظور"},"ca":{"_name":"Català","_dir":"ltr","_pct":86,"%d days ago":{"one":"fa %d dia","other":"fa %d dies"},"%d h ago":"fa %d h","%d min ago":"fa %d min","%d of %d":"%d de %d","%d of %d on":"%d de %d d'activats","%s   code %s":"%s   codi %s","All":"Tot","Automatic":"Automàtic","Back":"Enrere","Cancel":"Cancel·la","Close":"Tanca","Connected":"Connectat","Every %s min":"Cada %s min","Every %s s":"Cada %s s","frames":"fotogrames","Home":"Inici","just now":"ara mateix","never":"mai","not connected":"no connectat","Off":"Desactivat","Save":"Desa","Saved":"Desat","Text":"Text","The service did not answer":"El servei no ha respost","The service did not answer.":"El servei no ha respost.","Try again":"Torna-ho a provar","TV":"Televisor","Add-on":"Complement","Add-ons":"Complements","Top":"Part superior","Days":"Dies","Connect":"Connecta","connected":"connectat","This TV":"Aquest televisor","Remove":"Elimina","now":"ara","Phone remote":"Comandament al mòbil","Pair":"Aparella","Type":"Escriu","OK":"D’acord","Paired":"Aparellat","Pair a phone":"Aparella un mòbil","Remove all phones":"Elimina tots els mòbils","Block this phone":"Bloqueja aquest mòbil","Allow this phone":"Permet aquest mòbil","Phone allowed":"Mòbil permès","Phone blocked":"Mòbil bloquejat","blocked":"bloquejat"},"de":{"_name":"Deutsch","_dir":"ltr","_pct":73,"%d days ago":{"one":"vor %d Tag","other":"vor %d Tagen"},"%d h ago":"vor %d Std.","%d min ago":"vor %d Min.","%d of %d":"%d von %d","%d of %d on":"%d von %d an","%s   code %s":"%s   Code %s","All":"Alle","Automatic":"Automatisch","Back":"Zurück","Cancel":"Abbrechen","Close":"Schließen","Connected":"Verbunden","Every %s min":"Alle %s Min.","Every %s s":"Alle %s s","frames":"Bilder","Home":"Home","just now":"gerade eben","never":"nie","not connected":"nicht verbunden","Off":"Aus","Save":"Speichern","Saved":"Gespeichert","Text":"Text","The service did not answer":"Der Dienst hat nicht geantwortet","The service did not answer.":"Der Dienst hat nicht geantwortet.","Try again":"Erneut versuchen","TV":"TV","Top":"Oben","Days":"Tage","Connect":"Verbinden","connected":"verbunden","now":"jetzt","Phone remote":"Handy-Fernbedienung","Pair":"Koppeln","Type":"Tippen","OK":"OK","Paired":"Gekoppelt","Pair a phone":"Handy koppeln","Remove all phones":"Alle Handys entfernen","Block this phone":"Dieses Handy sperren","Allow this phone":"Dieses Handy zulassen","Phone allowed":"Handy zugelassen","Phone blocked":"Handy gesperrt","blocked":"gesperrt"},"es":{"_name":"Español","_dir":"ltr","_pct":69,"%d days ago":{"one":"hace %d día","other":"hace %d días"},"%d h ago":"hace %d h","%d min ago":"hace %d min","%d of %d":"%d de %d","%d of %d on":"%d de %d activados","%s   code %s":"%s   código %s","All":"Todos","Automatic":"Automático","Back":"Atrás","Cancel":"Cancelar","Close":"Cerrar","Connected":"Conectado","Every %s min":"Cada %s min","Every %s s":"Cada %s s","frames":"imágenes","Home":"Home","just now":"ahora mismo","never":"nunca","not connected":"no conectado","Off":"Desactivado","Save":"Guardar","Saved":"Guardado","Text":"Texto","The service did not answer":"El servicio no respondió","The service did not answer.":"El servicio no respondió.","Try again":"Reintentar","Top":"Arriba","Days":"Días","Connect":"Conectar","connected":"conectado","now":"ahora","Phone remote":"Mando en el móvil","Pair":"Vincular","Type":"Escribir","OK":"OK","Paired":"Vinculado","Pair a phone":"Vincular un móvil","Remove all phones":"Quitar todos los móviles","Block this phone":"Bloquear este móvil","Allow this phone":"Permitir este móvil","Phone allowed":"Móvil permitido","Phone blocked":"Móvil bloqueado","blocked":"bloqueado"},"fr":{"_name":"Français","_dir":"ltr","_pct":69,"%d days ago":{"one":"il y a %d jour","other":"il y a %d jours"},"%d h ago":"il y a %d h","%d min ago":"il y a %d min","%d of %d":"%d sur %d","%d of %d on":"%d sur %d activés","%s   code %s":"%s   code %s","All":"Tous","Automatic":"Automatique","Back":"Retour","Cancel":"Annuler","Close":"Fermer","Connected":"Connecté","Every %s min":"Toutes les %s min","Every %s s":"Toutes les %s s","frames":"images","Home":"Home","just now":"à l’instant","never":"jamais","not connected":"non connecté","Off":"Désactivé","Save":"Enregistrer","Saved":"Enregistré","Text":"Texte","The service did not answer":"Le service n’a pas répondu","The service did not answer.":"Le service n’a pas répondu.","Try again":"Réessayer","Top":"Haut","Days":"Jours","Connect":"Connecter","connected":"connecté","now":"maintenant","Phone remote":"Télécommande sur téléphone","Pair":"Associer","Type":"Saisir","OK":"OK","Paired":"Associé","Pair a phone":"Associer un téléphone","Remove all phones":"Supprimer tous les téléphones","Block this phone":"Bloquer ce téléphone","Allow this phone":"Autoriser ce téléphone","Phone allowed":"Téléphone autorisé","Phone blocked":"Téléphone bloqué","blocked":"bloqué"},"hu":{"_name":"Magyar","_dir":"ltr","_pct":64,"%d days ago":{"one":"%d napja","other":"%d napja"},"%d h ago":"%d órája","%d min ago":"%d perce","%d of %d":"%d / %d","%d of %d on":"%d / %d be","%s   code %s":"%s   kód: %s","All":"Összes","Automatic":"Automatikus","Back":"Vissza","Cancel":"Mégse","Close":"Bezárás","Connected":"Kapcsolódva","Every %s min":"%s percenként","Every %s s":"%s másodpercenként","frames":"képkockák","Home":"Főképernyő","just now":"épp most","never":"soha","not connected":"nincs kapcsolat","Off":"Ki","Save":"Mentés","Saved":"Mentve","Text":"Szöveg","The service did not answer":"A szolgáltatás nem válaszolt","The service did not answer.":"A szolgáltatás nem válaszolt.","Try again":"Próbáld újra","TV":"Tévé","Add-on":"Kiegészítő","Add-ons":"Kiegészítők","Top":"Felső sáv","now":"most"},"it":{"_name":"Italiano","_dir":"ltr","_pct":69,"%d days ago":{"one":"%d giorno fa","other":"%d giorni fa"},"%d h ago":"%d h fa","%d min ago":"%d min fa","%d of %d":"%d di %d","%d of %d on":"%d di %d attivi","%s   code %s":"%s   codice %s","All":"Tutti","Automatic":"Automatico","Back":"Indietro","Cancel":"Annulla","Close":"Chiudi","Connected":"Connesso","Every %s min":"Ogni %s min","Every %s s":"Ogni %s s","frames":"fotogrammi","Home":"Home","just now":"adesso","never":"mai","not connected":"non connesso","Off":"Off","Save":"Salva","Saved":"Salvato","Text":"Testo","The service did not answer":"Il servizio non ha risposto","The service did not answer.":"Il servizio non ha risposto.","Try again":"Riprova","TV":"TV","Days":"Giorni","Connect":"Collega","connected":"connesso","now":"adesso","Phone remote":"Telecomando dal telefono","Pair":"Associa","Type":"Scrivi","OK":"OK","Paired":"Associato","Pair a phone":"Associa un telefono","Remove all phones":"Rimuovi tutti i telefoni","Block this phone":"Blocca questo telefono","Allow this phone":"Consenti questo telefono","Phone allowed":"Telefono consentito","Phone blocked":"Telefono bloccato","blocked":"bloccato"},"nl":{"_name":"Nederlands","_dir":"ltr","_pct":75,"%d days ago":{"one":"%d dag geleden","other":"%d dagen geleden"},"%d h ago":"%d uur geleden","%d min ago":"%d min geleden","%d of %d":"%d van %d","%d of %d on":"%d van %d aan","%s   code %s":"%s   code %s","All":"Alle","Automatic":"Automatisch","Back":"Terug","Cancel":"Annuleren","Close":"Sluiten","Connected":"Verbonden","Every %s min":"Elke %s min","Every %s s":"Elke %s s","frames":"beelden","Home":"Home","just now":"zojuist","never":"nooit","not connected":"niet verbonden","Off":"Uit","Save":"Opslaan","Saved":"Opgeslagen","Text":"Tekst","The service did not answer":"De service antwoordde niet","The service did not answer.":"De service antwoordde niet.","Try again":"Opnieuw proberen","TV":"TV","Top":"Boven","Days":"Dagen","Connect":"Verbinden","connected":"verbonden","now":"nu","Phone remote":"Telefoon als afstandsbediening","Pair":"Koppelen","Type":"Typen","OK":"OK","Paired":"Gekoppeld","Pair a phone":"Telefoon koppelen","Remove all phones":"Alle telefoons verwijderen","Block this phone":"Deze telefoon blokkeren","Allow this phone":"Deze telefoon toestaan","Phone allowed":"Telefoon toegestaan","Phone blocked":"Telefoon geblokkeerd","blocked":"geblokkeerd"},"pl":{"_name":"Polski","_dir":"ltr","_pct":80,"%d days ago":{"one":"%d dzień temu","few":"%d dni temu","many":"%d dni temu","other":"%d dni temu"},"%d h ago":"%d godz. temu","%d min ago":"%d min temu","%d of %d":"%d z %d","%d of %d on":"%d z %d włączonych","%s   code %s":"%s   kod %s","All":"Wszystkie","Automatic":"Automatycznie","Back":"Wstecz","Cancel":"Anuluj","Close":"Zamknij","Connected":"Połączono","Every %s min":"Co %s min","Every %s s":"Co %s s","frames":"klatki","Home":"Home","just now":"przed chwilą","never":"nigdy","not connected":"niepołączono","Off":"Wył.","Save":"Zapisz","Saved":"Zapisano","Text":"Tekst","The service did not answer":"Usługa nie odpowiedziała","The service did not answer.":"Usługa nie odpowiedziała.","Try again":"Spróbuj ponownie","TV":"TV","Add-on":"Dodatek","Add-ons":"Dodatki","Top":"Góra","Days":"Dni","Connect":"Połącz","connected":"połączono","now":"teraz","Phone remote":"Pilot w telefonie","Pair":"Sparuj","Type":"Pisz","OK":"OK","Paired":"Sparowano","Pair a phone":"Sparuj telefon","Remove all phones":"Usuń wszystkie telefony","Block this phone":"Zablokuj ten telefon","Allow this phone":"Zezwól temu telefonowi","Phone allowed":"Telefon dozwolony","Phone blocked":"Telefon zablokowany","blocked":"zablokowany"},"pt":{"_name":"Português (Brasil)","_dir":"ltr","_pct":63,"%d days ago":{"one":"há %d dia","other":"há %d dias"},"%d h ago":"há %d h","%d min ago":"há %d min","%d of %d":"%d de %d","%d of %d on":"%d de %d ativado","%s   code %s":"%s   código %s","All":"Todos","Automatic":"Automático","Back":"Voltar","Cancel":"Cancelar","Close":"Fechar","Connected":"Conectado","Every %s min":"A cada %s min","Every %s s":"A cada %s s","frames":"quadros","Home":"Início","just now":"agora mesmo","never":"nunca","not connected":"não conectado","Off":"Desativado","Save":"Salvar","Saved":"Salvo","Text":"Texto","The service did not answer":"O serviço não respondeu","The service did not answer.":"O serviço não respondeu.","Try again":"Tentar novamente","Days":"Dias","Connect":"Conectar","connected":"conectado","now":"agora","Phone remote":"Controle no celular","Pair":"Parear","Type":"Digitar","OK":"OK","Paired":"Pareado","Pair a phone":"Parear um celular","Remove all phones":"Remover todos os celulares","Block this phone":"Bloquear este celular","Allow this phone":"Permitir este celular","Phone allowed":"Celular permitido","Phone blocked":"Celular bloqueado","blocked":"bloqueado"},"ru":{"_name":"Русский","_dir":"ltr","_pct":66,"%d days ago":{"one":"%d день назад","few":"%d дня назад","many":"%d дней назад","other":"%d дня назад"},"%d h ago":"%d ч назад","%d min ago":"%d мин назад","%d of %d":"%d из %d","%d of %d on":"%d из %d включено","%s   code %s":"%s   код %s","All":"Все","Automatic":"Автоматически","Back":"Назад","Cancel":"Отмена","Close":"Закрыть","Connected":"Подключено","Every %s min":"Каждые %s мин","Every %s s":"Каждые %s с","frames":"кадры","Home":"Home","just now":"только что","never":"никогда","not connected":"не подключено","Off":"Выкл.","Save":"Сохранить","Saved":"Сохранено","Text":"Текст","The service did not answer":"Служба не ответила","The service did not answer.":"Служба не ответила.","Try again":"Попробовать снова","Days":"Дни","Connect":"Подключить","connected":"подключён","now":"сейчас","Phone remote":"Пульт на телефоне","Pair":"Связать","Type":"Ввод","OK":"ОК","Paired":"Связан","Pair a phone":"Связать телефон","Remove all phones":"Удалить все телефоны","Block this phone":"Заблокировать этот телефон","Allow this phone":"Разрешить этот телефон","Phone allowed":"Телефон разрешён","Phone blocked":"Телефон заблокирован","blocked":"заблокирован"},"tr":{"_name":"Türkçe","_dir":"ltr","_pct":65,"%d days ago":"%d gün önce","%d h ago":"%d sa önce","%d min ago":"%d dk önce","%d of %d":"%d / %d","%d of %d on":"%d / %d açık","%s   code %s":"%s   kod %s","All":"Tümü","Automatic":"Otomatik","Back":"Geri","Cancel":"İptal","Close":"Kapat","Connected":"Bağlı","Every %s min":"Her %s dk","Every %s s":"Her %s sn","frames":"kare","Home":"Home","just now":"az önce","never":"hiç","not connected":"bağlı değil","Off":"Kapalı","Save":"Kaydet","Saved":"Kaydedildi","Text":"Metin","The service did not answer":"Hizmet yanıt vermedi","The service did not answer.":"Hizmet yanıt vermedi.","Try again":"Tekrar dene","Days":"Günler","Connect":"Bağlan","connected":"bağlı","now":"şimdi","Phone remote":"Telefon kumandası","Pair":"Eşleştir","Type":"Yaz","OK":"Tamam","Paired":"Eşleştirildi","Pair a phone":"Telefon eşleştir","Remove all phones":"Tüm telefonları kaldır","Block this phone":"Bu telefonu engelle","Allow this phone":"Bu telefona izin ver","Phone allowed":"Telefona izin verildi","Phone blocked":"Telefon engellendi","blocked":"engelli"},"vi":{"_name":"Tiếng Việt","_dir":"ltr","_pct":62,"%d days ago":{"one":"%d ngày trước","other":"%d ngày trước"},"%d h ago":"%d giờ trước","%d min ago":"%d phút trước","%d of %d":"%d trên %d","%d of %d on":"%d trên %d đang bật","%s   code %s":"%s   code %s","All":"Tất cả","Automatic":"Tự động","Back":"Quay lại","Cancel":"Hủy","Close":"Đóng","Connected":"Đã kết nối","Every %s min":"Mỗi %s phút","Every %s s":"Mỗi %s giây","frames":"khung hình","Home":"Màn hình chính","just now":"vừa xong","never":"không bao giờ","not connected":"chưa kết nối","Off":"Tắt","Save":"Lưu","Saved":"Đã lưu","Text":"Văn bản","The service did not answer":"Dịch vụ không phản hồi","The service did not answer.":"Dịch vụ không phản hồi.","Try again":"Thử lại","TV":"TV","now":"bây giờ"},"en":{"%d days ago":{"one":"%d day ago","other":"%d days ago"},"%d weeks ago":{"one":"%d week ago","other":"%d weeks ago"},"%d months ago":{"one":"%d month ago","other":"%d months ago"},"%d phone":{"one":"%d phone","other":"%d phone"},"%d phones":{"one":"%d phone","other":"%d phones"},"after %d day":{"one":"after %d day","other":"after %d day"},"after %d days":{"one":"after %d day","other":"after %d days"},"%d phones removed":{"one":"%d phone removed","other":"%d phones removed"},"removed in %d days":{"one":"removed in %d day","other":"removed in %d days"},"Removed in %d days if not used.":{"one":"Removed in %d day if not used.","other":"Removed in %d days if not used."}}};
+/* ---------- language: the pages are written in English and translated where text is shown ----------
+   I18N holds the translations this page uses, from i18n/<language>.json, put in by tools/build-pages.js ({language: {English: text}}).
+   The language is the TV's, unless the manager's Language setting chose another (setLang). t() looks a text up whole, then the parts
+   of a text joined by line breaks or " · ", and fills in templates: "%s" is any text, "%d" a number ("Launcher %s", "%d photos").
+   A text without a translation stays English. A translation can have plural forms, {"one": "%d foto", "other": "%d foto's"}: the
+   form follows the first number in the text, by the language's plural rules (Unicode CLDR: zero, one, two, few, many, other). The
+   English plural forms are in I18N.en. */
+var LANG_TV = String((window.webOSSystem && window.webOSSystem.locale) || navigator.language || 'en')
+    .slice(0, 2)
+    .toLowerCase(),
+  LANG = 'en',
+  LT = null,
+  LTPL = null;
+/* '' or undefined: the TV's language; a language without translations here falls back to English */
+function setLang(code) {
+  var c = code || LANG_TV;
+  LANG = I18N[c] && (c === 'en' || I18N[c]._name) ? c : 'en';
+  LT = I18N[LANG] || null;
+  LTPL = null;
+  if (document.documentElement) {
+    document.documentElement.lang = LANG;
+    /* a right-to-left language (_dir "rtl": Arabic, Hebrew) mirrors the layout; the pages' CSS has the [dir="rtl"] rules */
+    document.documentElement.dir = LT && LT._dir === 'rtl' ? 'rtl' : 'ltr';
+  }
+}
+/* left and right swap places in a right-to-left layout: the arrow keys follow what the eye sees */
+function rtl() {
+  return !!(LT && LT._dir === 'rtl');
+}
+/* the plural form of n in the current language: the browser's rules, or a small table of the same rules for older engines */
+function pluralForm(n) {
+  try {
+    if (window.Intl && Intl.PluralRules) return new Intl.PluralRules(LANG).select(n);
+  } catch (e) {}
+  var i = Math.floor(Math.abs(n)),
+    m10 = i % 10,
+    m100 = i % 100;
+  if (/^(ja|zh|ko|th|vi|id|ms|tr)$/.test(LANG)) return 'other';
+  if (/^(fr|pt)$/.test(LANG)) return i < 2 ? 'one' : 'other';
+  if (/^(ru|uk|be)$/.test(LANG))
+    return m10 === 1 && m100 !== 11 ? 'one' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'few' : 'many';
+  if (LANG === 'pl') return i === 1 ? 'one' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'few' : 'many';
+  if (/^(cs|sk)$/.test(LANG)) return i === 1 ? 'one' : i >= 2 && i <= 4 ? 'few' : 'other';
+  if (LANG === 'ar')
+    return i === 0 ? 'zero' : i === 1 ? 'one' : i === 2 ? 'two' : m100 >= 3 && m100 <= 10 ? 'few' : m100 >= 11 ? 'many' : 'other';
+  if (LANG === 'he') return i === 1 ? 'one' : i === 2 ? 'two' : 'other';
+  return n === 1 ? 'one' : 'other';
+}
+/* a translation, with its plural form picked for n when it has forms */
+function tForm(v, n) {
+  if (typeof v === 'string') return v;
+  if (!v) return '';
+  return (n !== undefined && v[pluralForm(+String(n).replace(',', '.'))]) || v.other || '';
+}
+setLang('');
+/* which capture of a template holds its first number (the plural form follows it) */
+function firstNum(key) {
+  var k = 0,
+    re = /%[sd]/g,
+    x;
+  while ((x = re.exec(key))) {
+    k++;
+    if (x[0] === '%d') return k;
+  }
+  return 1;
+}
+function tTemplates() {
+  if (LTPL) return LTPL;
+  LTPL = [];
+  for (var k in LT)
+    if (k.charAt(0) !== '_' && /%[sd]/.test(k))
+      LTPL.push([
+        new RegExp(
+          '^' +
+            k
+              .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              .replace(/%s/g, '([\\s\\S]+?)')
+              .replace(/%d/g, '([0-9][0-9.,]*)') +
+            '$'
+        ),
+        k,
+        /\n| · /.test(k),
+      ]);
+  LTPL.sort(function (a, b) {
+    return b[1].length - a[1].length;
+  });
+  return LTPL;
+}
+function tTpl(s, joined) {
+  var tp = tTemplates();
+  for (var i = 0; i < tp.length; i++) {
+    if (tp[i][2] !== joined) continue;
+    var m = tp[i][0].exec(s);
+    if (m) {
+      var j = 1,
+        num = /%d/.test(tp[i][1]) ? m[firstNum(tp[i][1])] : undefined;
+      return tForm(LT[tp[i][1]], num).replace(/%[sd]/g, function () {
+        return t(m[j++]);
+      });
+    }
+  }
+  return null;
+}
+function t(s) {
+  if (!LT || s === null || s === undefined || s === '') return s;
+  s = String(s);
+  if (Object.prototype.hasOwnProperty.call(LT, s)) return tForm(LT[s]);
+  var r = tTpl(s, true);
+  if (r !== null) return r;
+  if (s.indexOf('\n') >= 0) return s.split('\n').map(t).join('\n');
+  if (s.indexOf(' · ') >= 0) return s.split(' · ').map(t).join(' · ');
+  r = tTpl(s, false);
+  return r !== null ? r : s;
+}
+/* the manager calls it tr: its code has local variables named t */
+function tr(s) {
+  return t(s);
+}
+/* the languages for the manager's Language list: English and every language this page has, with how complete it is */
+function languages() {
+  var out = [{ code: 'en', name: 'English', pct: 100 }];
+  for (var c in I18N) if (c !== 'en') out.push({ code: c, name: I18N[c]._name || c, pct: I18N[c]._pct || 0 });
+  return out;
+}
+/* The phone remote's page on the TV: pair a phone (a QR code and a 6-digit code), the paired phones, and when unused ones are removed.
+   It is a page of the launcher's book: the launcher gives it the focus, Back closes it (the SDK script at the end of the page posts
+   that to the launcher), and the number and colour buttons stay the launcher's. ES5, Chromium 68: no arrow functions, no template
+   literals, no flex gap. The service is at /api/addons/phoneremote (the loader passes what follows to the add-on's handle).
+   The view: the stage on the left is idle (the two steps and Pair a phone), pairing (the QR, the code and its countdown) or expired
+   (the QR dimmed, Get a new code); the list on the right has one stop per phone, and OK on it opens the manage sheet; a destructive
+   action asks in a confirm that has Cancel first. Back closes the confirm, then the sheet, then the stage, then the page. */
+var Q = (function () {
+  var o = {},
+    s = String(location.search || '')
+      .replace(/^\?/, '')
+      .split('&'),
+    i,
+    p;
+  for (i = 0; i < s.length; i++) {
+    p = s[i].split('=');
+    if (p[0]) o[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || '');
+  }
+  return o;
+})();
+var API = '/api/addons/phoneremote',
+  S = null,
+  SIG = '',
+  qrFor = '',
+  pairFrom = 0,
+  toastT = 0,
+  busy = false,
+  /* the pairing on the stage: what the TV shows (kept when the window ends, so an expired code stays in place), and its countdown */
+  shown = null,
+  expired = false,
+  closing = false,
+  endAt = 0,
+  total = 0,
+  tickT = 0,
+  /* the manage sheet (the phone's id), the picker of when unused phones are removed, and the confirm ({title, text, ok, run});
+     back is the stop the focus returns to */
+  sheetId = '',
+  picking = false,
+  dlg = null,
+  back = '',
+  /* the list shows whole cards: the first one in view, and how many fit */
+  first = 0,
+  fit = 0,
+  CARD = 116; /* a card and the space under it */
+
+setLang(Q.lang || '');
+
+function $(id) {
+  return document.getElementById(id);
+}
+function el(tag, cls, text) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function cls(e, name, on) {
+  var c = ' ' + e.className + ' ';
+  c = c.replace(' ' + name + ' ', ' ');
+  e.className = (on ? c + name : c).replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ');
+}
+/* one call to the add-on: '/state' is the state (and POSTs the expiry), then '/pair', '/revoke', '/access' */
+function api(path, body, cb) {
+  var x = new XMLHttpRequest();
+  x.open(body ? 'POST' : 'GET', API + path);
+  if (body) x.setRequestHeader('content-type', 'application/json');
+  x.timeout = 15000;
+  x.onload = function () {
+    var j = null;
+    try {
+      j = JSON.parse(x.responseText);
+    } catch (e) {}
+    cb(j, x.status);
+  };
+  x.onerror = x.ontimeout = function () {
+    cb(null, 0);
+  };
+  x.send(body ? JSON.stringify(body) : null);
+}
+function toast(text) {
+  var e = $('toast');
+  e.textContent = text;
+  e.className = 'on';
+  clearTimeout(toastT);
+  toastT = setTimeout(function () {
+    e.className = '';
+  }, 3500);
+}
+function fail(r) {
+  toast((r && r.error) || t('The service did not answer.'));
+}
+/* "7 min ago", "3 h ago", "3 days ago", "2 weeks ago": number first so plural forms follow (matches the redesign). */
+function ago(at) {
+  var m = Math.round((Date.now() - at) / 60000),
+    d,
+    w,
+    mo;
+  if (m < 1) return t('just now');
+  if (m < 60) return t(m + ' min ago');
+  if (m < 1440) return t(Math.round(m / 60) + ' h ago');
+  d = Math.round(m / 1440);
+  if (d < 7) return t(d + ' days ago');
+  if (d < 30) {
+    w = Math.max(1, Math.round(d / 7));
+    return t(w + ' weeks ago');
+  }
+  mo = Math.max(1, Math.round(d / 30));
+  return t(mo + ' months ago');
+}
+/* what the phone can do now, said as what happens: green is only "Connected" */
+function state(p) {
+  if (p.blocked) return t('Blocked · can’t control this TV');
+  if (p.online) return t('Connected');
+  return p.seen ? t('Last used ' + ago(p.seen)) : t('Paired, not used yet');
+}
+/* How long until an unused phone is removed by itself (the service removes one that is not connected and has not been used or paired
+   for the chosen days), or -1 when it will not be: removal is off, or the phone is connected or blocked. */
+var DAY = 86400000;
+function removalLeft(p) {
+  var d = S && S.expireDays;
+  if (!d || p.online || p.blocked) return -1;
+  return Math.max(0, Math.max(p.seen || 0, p.created || 0) + d * DAY - Date.now());
+}
+/* said on the card only when it is close: three days or less, or the last quarter of the time */
+function countdown(p) {
+  var left = removalLeft(p);
+  if (left < 0 || (left > 3 * DAY && left > S.expireDays * DAY * 0.25)) return '';
+  return left < DAY ? t('removed soon') : t('removed in ' + Math.ceil(left / DAY) + ' days');
+}
+function stateCls(p) {
+  return p.blocked ? 'no' : p.online ? 'on' : '';
+}
+function phones() {
+  var l = ((S && S.phones) || []).slice();
+  /* connected first, then the most recently used; the order is stable, so the focus stays on the same card */
+  l.sort(function (a, b) {
+    return (b.online ? 1 : 0) - (a.online ? 1 : 0) || (b.seen || 0) - (a.seen || 0) || (a.id < b.id ? -1 : 1);
+  });
+  return l;
+}
+function byId(id) {
+  var l = (S && S.phones) || [],
+    i;
+  for (i = 0; i < l.length; i++) if (l[i].id === id) return l[i];
+  return null;
+}
+
+/* ---- the manage sheet and the confirm ---- */
+function openSheet(id) {
+  sheetId = id;
+  back = 'p:' + id;
+  render();
+  focusKey('s:access');
+}
+function closeSheet(to) {
+  sheetId = '';
+  render();
+  if (!focusKey(to || back)) focusFirst();
+}
+function ask(o) {
+  dlg = o;
+  render();
+  focusKey('d:cancel'); /* Cancel first: a missed OK destroys nothing */
+}
+function closeDlg() {
+  dlg = null;
+  render();
+  if (!focusKey(sheetId ? 's:remove' : back)) focusFirst();
+}
+function removePhone(p) {
+  ask({
+    title: t('Remove ' + p.name + '?'),
+    text: t('It will need a new code to connect again.'),
+    ok: t('Remove'),
+    run: function () {
+      var next = neighbour(p.id);
+      api('/revoke', { id: p.id }, function (r) {
+        if (!r || r.error) return fail(r);
+        S = r;
+        dlg = null;
+        sheetId = '';
+        toast(t(p.name + ' removed'));
+        render();
+        if (!focusKey(next)) focusFirst();
+      });
+    },
+  });
+}
+/* the card the focus goes to when one is removed: the next one, or the one before it at the end of the list */
+function neighbour(id) {
+  var l = phones(),
+    i;
+  for (i = 0; i < l.length; i++) if (l[i].id === id) return l[i + 1] ? 'p:' + l[i + 1].id : l[i - 1] ? 'p:' + l[i - 1].id : 'pair';
+  return 'pair';
+}
+function removeAll() {
+  var n = ((S && S.phones) || []).length;
+  back = 'all';
+  ask({
+    title: t('Remove all ' + n + ' phones?'),
+    text: t('Every phone will need a new code. This can’t be undone.'),
+    ok: t('Remove all'),
+    run: function () {
+      api('/revoke', { all: true }, function (r) {
+        if (!r || r.error) return fail(r);
+        S = r;
+        dlg = null;
+        toast(t(n + ' phones removed'));
+        render();
+        focusKey('pair');
+      });
+    },
+  });
+}
+/* Block applies at once (Allow is one press away, so it does not ask); the sheet closes on the same card */
+function allow(p) {
+  var blocked = !!p.blocked;
+  api('/access', { id: p.id, allow: blocked }, function (r) {
+    if (!r || r.error) return fail(r);
+    S = r;
+    toast(blocked ? t('Phone allowed') : t('Phone blocked'));
+    closeSheet('p:' + p.id);
+  });
+}
+
+/* ---- the pairing window: open while the TV shows the code, closed when the page leaves it or a phone has paired ---- */
+/* the code is on the screen: the window is open and no phone has scanned the QR yet (a scan takes it off the TV at once; the window
+   stays open on the service for that phone alone, to finish pairing) */
+function live() {
+  return !!(S && S.pairing && !S.pairing.scanned);
+}
+function pair() {
+  if (busy) return;
+  busy = true;
+  api('/pair', {}, function (r) {
+    busy = false;
+    if (!r || r.error) return fail(r);
+    S = r;
+    pairFrom = Date.now();
+    expired = false;
+    shown = null;
+    SIG = '';
+    render();
+    focusKey('stop');
+  });
+}
+function stopPair(quiet) {
+  var was = live();
+  closing = true;
+  api('/pair', { stop: true }, function (r) {
+    closing = false;
+    if (r) S = r;
+    shown = null;
+    expired = false;
+    SIG = '';
+    render();
+    focusKey('pair');
+    if (was && !quiet) toast(t('Pairing closed — the code no longer works.'));
+  });
+}
+/* the window ended by itself (its time, or too many wrong codes): the QR stays, dimmed, and the primary offers a new code */
+function expire() {
+  expired = true;
+  clearInterval(tickT);
+  tickT = 0;
+  render();
+  focusKey('renew');
+}
+function mmss(s) {
+  var m = Math.floor(s / 60),
+    r = s % 60;
+  return m + ':' + (r < 10 ? '0' : '') + r;
+}
+function tick() {
+  if (!live() && !expired) {
+    clearInterval(tickT);
+    tickT = 0;
+    return;
+  }
+  var left = Math.max(0, Math.round((endAt - Date.now()) / 1000));
+  $('pairnote').textContent = t('Expires in ' + mmss(left) + ' · works once.');
+  $('railbar').style.transform = 'scaleX(' + (total ? Math.min(1, left / total) : 0) + ')';
+  if (!left && !expired) expire();
+}
+function drawQr(text) {
+  /* qrcode.js loads before the page script; keep a short retry anyway if a host ever reorders the tags. */
+  if (typeof qrcode !== 'function') {
+    if (!drawQr._tries) drawQr._tries = 0;
+    if (drawQr._tries++ < 40)
+      setTimeout(function () {
+        drawQr(text);
+      }, 25);
+    return;
+  }
+  drawQr._tries = 0;
+  try {
+    var q = qrcode(0, 'M');
+    q.addData(text);
+    q.make();
+    /* 480 px of modules; the card's 24 px of white around them is the quiet zone. Each module is rounded to whole pixels. */
+    var n = q.getModuleCount(),
+      cv = $('qr'),
+      size = 480,
+      g,
+      r,
+      c,
+      x,
+      y;
+    if (!cv || !cv.getContext) return;
+    cv.width = cv.height = size;
+    g = cv.getContext('2d');
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, size, size);
+    g.fillStyle = '#000';
+    for (r = 0; r < n; r++)
+      for (c = 0; c < n; c++)
+        if (q.isDark(r, c)) {
+          x = Math.round((c * size) / n);
+          y = Math.round((r * size) / n);
+          g.fillRect(x, y, Math.round(((c + 1) * size) / n) - x, Math.round(((r + 1) * size) / n) - y);
+        }
+  } catch (e) {
+    /* no QR code: the address and the code are on the page anyway */
+  }
+}
+function renderStage() {
+  var p = live() ? S.pairing : null,
+    open = !!(p || expired),
+    code,
+    i,
+    box;
+  if (p && !closing) {
+    if (!shown || shown.code !== p.code) {
+      shown = { code: p.code, url: p.url, qr: p.qr };
+      total = Math.max(p.seconds || 0, 1);
+      expired = false;
+    }
+    endAt = Date.now() + (p.seconds || 0) * 1000;
+    total = Math.max(total, p.seconds || 0);
+    if (!expired && !tickT) tickT = setInterval(tick, 1000);
+  }
+  cls($('idle'), 'hide', open);
+  cls($('pairsheet'), 'hide', !open);
+  cls($('phonecol'), 'dim', open);
+  /* the address the phone types: the TV's, also when no window is open */
+  var url = (p && p.url) || S.url || (shown && shown.url) || '',
+    noNet = S.url === '';
+  $('idleurl').textContent = noNet ? t('This TV has no network address. Connect the TV to Wi-Fi, then pair.') : url;
+  cls($('idleurl'), 'warn', noNet);
+  if (!open || !shown) {
+    qrFor = '';
+    return;
+  }
+  $('pairurl').textContent = shown.url || '';
+  if (shown.qr && shown.qr !== qrFor) {
+    qrFor = shown.qr;
+    drawQr(shown.qr);
+  }
+  cls($('qrcard'), 'dimmed', expired);
+  box = $('codebox');
+  cls(box, 'expired', expired);
+  if (expired) box.textContent = t('Code expired');
+  else if (box.getAttribute('data-code') !== shown.code) {
+    /* two groups of three (the second one set apart by its margin), the digits fading in 40 ms apart */
+    box.textContent = '';
+    code = String(shown.code || '');
+    for (i = 0; i < code.length; i++) {
+      var d = el('span', i === 3 ? 'g' : '', code.charAt(i));
+      d.style.animationDelay = i * 40 + 'ms';
+      box.appendChild(d);
+    }
+  }
+  box.setAttribute('data-code', expired ? '' : shown.code);
+  cls($('pairnote'), 'quiet', false);
+  if (expired) $('pairnote').textContent = t('This code no longer works.');
+  else tick();
+  cls($('rail'), 'hide', expired);
+  cls($('pairnew'), 'hide', !expired);
+}
+function avatar() {
+  var a = el('span', 'av');
+  a.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>';
+  return a;
+}
+function renderPhones() {
+  var box = $('phonein'),
+    list = phones(),
+    i,
+    p,
+    row,
+    who,
+    st,
+    cd,
+    q;
+  box.textContent = '';
+  if (!list.length) {
+    q = el('div', 'quiet');
+    q.appendChild(avatar());
+    who = el('span', 'who');
+    who.appendChild(el('b', '', t('No phone is paired yet')));
+    who.appendChild(el('span', 'st', t('Pair a phone on the left to use it as a remote.')));
+    q.appendChild(who);
+    box.appendChild(q);
+  }
+  for (i = 0; i < list.length; i++) {
+    p = list[i];
+    row = el('button', 'phone');
+    row.setAttribute('data-k', 'p:' + p.id);
+    row.appendChild(avatar());
+    who = el('span', 'who');
+    who.appendChild(el('b', '', p.name));
+    st = el('span', 'st ' + stateCls(p), state(p));
+    cd = countdown(p);
+    if (cd) {
+      st.appendChild(document.createTextNode(' · '));
+      st.appendChild(el('em', '', cd));
+    }
+    who.appendChild(st);
+    row.appendChild(who);
+    row.appendChild(el('span', 'mg', t('Manage')));
+    row.onclick = (function (id) {
+      return function () {
+        openSheet(id);
+      };
+    })(p.id);
+    box.appendChild(row);
+  }
+  /* "Remove all phones" only with two or more */
+  cls($('removeall'), 'hide', list.length < 2);
+  /* a busy port: one line above the list, and a way to try again */
+  var busyPort = !!(S && S.listenError);
+  cls($('portnote'), 'hide', !busyPort);
+  if (busyPort) $('porttext').textContent = t('Port ' + (S.port || 8799) + ' is busy. Another app is using it — close it, then try again.');
+  fitList();
+}
+/* The list gets the room between the column's top lines and the setting row, in whole cards; when the phones do not all fit, a line
+   under it says how many more there are. */
+function fitList() {
+  var n = phones().length,
+    lb = $('phonelist');
+  lb.style.height = '0px';
+  cls($('more'), 'hide', true);
+  fit = Math.max(1, Math.floor(room() / CARD));
+  if (n > fit) {
+    cls($('more'), 'hide', false);
+    $('more').textContent = '▼';
+    fit = Math.max(1, Math.floor(room() / CARD));
+  }
+  lb.style.height = Math.min(n || 1, fit) * CARD + 'px';
+  reveal(first);
+}
+function room() {
+  var foot = $('removeall').nextElementSibling;
+  return $('expire').offsetTop - (foot.offsetTop + foot.offsetHeight) - 12;
+}
+/* shows the card at index i (the focused one), whole, and says what is left below */
+function reveal(i) {
+  var n = phones().length;
+  if (i < first) first = i;
+  if (i >= first + fit) first = i - fit + 1;
+  first = Math.max(0, Math.min(first, n - fit));
+  $('phonelist').scrollTop = first * CARD;
+  if (n > fit) $('more').textContent = first + fit < n ? '▼ ' + t(n - first - fit + ' more') : '▲ ' + t('scrolled to the end');
+}
+function indexOfKey(k) {
+  var l = phones(),
+    i;
+  for (i = 0; i < l.length; i++) if ('p:' + l[i].id === k) return i;
+  return -1;
+}
+function renderCap() {
+  var l = (S && S.phones) || [],
+    on = 0,
+    i;
+  for (i = 0; i < l.length; i++) if (l[i].online) on++;
+  $('captext').textContent = l.length ? t(l.length + ' phones · ' + on + ' connected') : t('No phone paired');
+  cls($('capdot'), 'off', !on);
+}
+/* ---- when unused phones are removed: one row (the rule and its value) and a picker with the six choices ---- */
+var DAYS = [1, 3, 7, 14, 30, 0];
+var AFTER = { 1: 'after 1 day', 3: 'after 3 days', 7: 'after 1 week', 14: 'after 2 weeks', 30: 'after 1 month' };
+var CHOICE = { 1: 'After 1 day', 3: 'After 3 days', 7: 'After 1 week', 14: 'After 2 weeks', 30: 'After 1 month', 0: 'Never' };
+function curExp() {
+  return S && S.expireDays !== undefined ? S.expireDays : 14;
+}
+function openPick() {
+  picking = true;
+  back = 'exp';
+  render();
+  focusKey('o:' + curExp());
+}
+function closePick() {
+  picking = false;
+  render();
+  focusKey('exp');
+}
+function choose(days) {
+  if (days === curExp()) return closePick();
+  /* "Never" is not recommended: it asks first, and says what it means; Cancel goes back to the list */
+  if (days === 0) {
+    back = 'o:0';
+    return ask({
+      title: t('Keep phones paired until you remove them?'),
+      text: t('A lost or sold phone would keep control of this TV.'),
+      ok: t('Keep them'),
+      run: function () {
+        save(0);
+      },
+    });
+  }
+  save(days);
+}
+function save(days) {
+  api('/state', { expireDays: days }, function (r) {
+    if (!r || r.error) return fail(r);
+    S = r;
+    dlg = null;
+    picking = false;
+    toast(days ? t('Saved') + ': ' + t(AFTER[days]) : t('Saved: never'));
+    render();
+    focusKey('exp');
+  });
+}
+function renderExpire() {
+  var cur = curExp(),
+    any = ((S && S.phones) || []).length > 0;
+  $('expsub').textContent = !cur
+    ? t('Off · a lost phone keeps control until you remove it')
+    : any
+      ? t('Automatic · connected phones are never removed')
+      : t('Applies to phones you pair');
+  $('expval').textContent = t(CHOICE[cur] || CHOICE[14]);
+  cls($('exppill'), 'never', !cur);
+}
+function renderPick() {
+  var box = $('opts'),
+    cur = curExp(),
+    i;
+  box.textContent = '';
+  for (i = 0; i < DAYS.length; i++)
+    (function (days) {
+      var b = el('button', 'opt' + (days === 0 ? ' never' : '') + (days === cur ? ' on' : ''));
+      b.setAttribute('data-k', 'o:' + days);
+      b.appendChild(el('span', '', t(CHOICE[days]) + (days === 14 ? ' · ' + t('Default') : '')));
+      b.appendChild(el('span', 'r', days === cur ? '✓' : days === 0 ? t('Not recommended') : ''));
+      b.onclick = function () {
+        choose(days);
+      };
+      box.appendChild(b);
+    })(DAYS[i]);
+}
+function renderOverlay() {
+  var p = sheetId ? byId(sheetId) : null,
+    left,
+    meta;
+  if (sheetId && !p) sheetId = ''; /* the phone went away (removed by itself): the sheet closes */
+  cls($('veil'), 'hide', !sheetId && !dlg && !picking);
+  cls($('sheet'), 'hide', !sheetId || !!dlg);
+  cls($('pick'), 'hide', !picking || !!dlg);
+  cls($('dialog'), 'hide', !dlg);
+  if (picking) renderPick();
+  if (p) {
+    $('sheetname').textContent = p.name;
+    meta = $('sheetmeta');
+    meta.textContent = p.online ? t('Connected now.') : state(p) + '.';
+    /* the sheet always says when an unused phone will be removed */
+    left = removalLeft(p);
+    if (left >= 0) {
+      meta.appendChild(document.createTextNode(' '));
+      meta.appendChild(el('em', '', t('Removed in ' + Math.max(1, Math.ceil(left / DAY)) + ' days if not used.')));
+    }
+    meta.className = 'smeta ' + stateCls(p);
+    $('sheetaccess').textContent = p.blocked ? t('Allow this phone') : t('Block this phone');
+  }
+  if (dlg) {
+    $('dlgtitle').textContent = dlg.title;
+    $('dlgtext').textContent = dlg.text;
+    $('dlgok').textContent = dlg.ok;
+  }
+}
+function render() {
+  if (!S) return;
+  var act = document.activeElement,
+    dk = act && act.getAttribute ? act.getAttribute('data-k') : '';
+  trDom();
+  renderStage();
+  renderPhones();
+  renderExpire();
+  renderCap();
+  renderOverlay();
+  if (!focusKey(dk)) focusFirst();
+}
+function trDom() {
+  var n = document.querySelectorAll('[data-t]'),
+    i;
+  for (i = 0; i < n.length; i++) n[i].textContent = t(n[i].getAttribute('data-t'));
+}
+
+/* ---- the focus: regions, not DOM order. A sheet or a confirm keeps it; while pairing it stays on the stage. ---- */
+function region() {
+  if (dlg) return $('dialog');
+  if (picking) return $('pick');
+  if (sheetId) return $('sheet');
+  if (live() || expired) return $('stage');
+  return $('app');
+}
+function focusables() {
+  var all = region().querySelectorAll('button'),
+    out = [],
+    i;
+  for (i = 0; i < all.length; i++) if (all[i].offsetParent !== null && !all[i].disabled) out.push(all[i]);
+  return out;
+}
+function focusKey(k) {
+  var n = focusables(),
+    i;
+  if (!k) return false;
+  for (i = 0; i < n.length; i++)
+    if (n[i].getAttribute('data-k') === k) {
+      try {
+        n[i].focus();
+      } catch (e) {}
+      return true;
+    }
+  return false;
+}
+function focusFirst() {
+  var l = focusables();
+  if (l.length) {
+    try {
+      l[0].focus();
+    } catch (e) {}
+  }
+}
+/* the arrows move to the nearest stop on that side, by what the eye sees: Up and Down stay in a column, Left and Right cross them */
+function move(k) {
+  var l = focusables(),
+    cur = document.activeElement,
+    best = null,
+    bestD = 1e9,
+    a,
+    i,
+    b,
+    dx,
+    dy,
+    d;
+  if (!l.length) return;
+  if (l.indexOf(cur) < 0) return focusFirst();
+  /* Up and Down in the list go card by card, also to one that is out of view (the list then slides); a card out of view is not a
+     target for any other move */
+  var ck = cur.getAttribute('data-k') || '',
+    ci = indexOfKey(ck),
+    pl = phones(),
+    lr = $('phonelist').getBoundingClientRect();
+  if (ci >= 0 && (k === 38 || k === 40) && pl[ci + (k === 40 ? 1 : -1)]) return focusKey('p:' + pl[ci + (k === 40 ? 1 : -1)].id);
+  a = cur.getBoundingClientRect();
+  for (i = 0; i < l.length; i++) {
+    if (l[i] === cur) continue;
+    b = l[i].getBoundingClientRect();
+    if (/^p:/.test(l[i].getAttribute('data-k') || '') && (b.top < lr.top - 1 || b.bottom > lr.bottom + 1)) continue;
+    dx = (b.left + b.right - a.left - a.right) / 2;
+    dy = (b.top + b.bottom - a.top - a.bottom) / 2;
+    if (k === 37 && !(b.right <= a.left + 1)) continue;
+    if (k === 39 && !(b.left >= a.right - 1)) continue;
+    if (k === 38 && !(b.bottom <= a.top + 1)) continue;
+    if (k === 40 && !(b.top >= a.bottom - 1)) continue;
+    /* the distance along the arrow counts once, the distance across it three times: the stop in line wins */
+    d = k === 37 || k === 39 ? Math.abs(dx) + 3 * Math.abs(dy) : Math.abs(dy) + 3 * Math.abs(dx);
+    if (d < bestD) {
+      bestD = d;
+      best = l[i];
+    }
+  }
+  if (best)
+    try {
+      best.focus();
+    } catch (e) {}
+}
+
+/* the state is drawn again only when something changed (no flicker, and the focus stays where it was) */
+function sig() {
+  var p = (S && S.phones) || [],
+    s = [S && S.expireDays, live() ? S.pairing.code : '', S && S.listenError, S && S.url],
+    i;
+  for (i = 0; i < p.length; i++)
+    s.push(p[i].id + ':' + (p[i].blocked ? 1 : 0) + (p[i].online ? 1 : 0) + ':' + Math.round((p[i].seen || 0) / 60000) + ':' + p[i].name);
+  return s.join('|');
+}
+function poll() {
+  api('/state', null, function (r) {
+    if (!r || r.error) return;
+    var had = live(),
+      paired = r.pairing && r.pairing.paired,
+      sc = r.scanned;
+    S = r;
+    if (paired && paired.at > pairFrom) {
+      pairFrom = paired.at;
+      toast(t(paired.name + ' paired'));
+      api('/pair', { stop: true }, function (x) {
+        if (x) S = x;
+        shown = null;
+        expired = false;
+        SIG = '';
+        render();
+        /* the focus lands on the new card */
+        var l = phones(),
+          i;
+        for (i = 0; i < l.length; i++) if (l[i].name === paired.name && focusKey('p:' + l[i].id)) return;
+      });
+      return;
+    }
+    /* a phone scanned the QR code: it leaves the screen at once. A phone that was already paired closed the window by connecting; a new
+       one finishes on the phone, and the toast above says when it has paired. */
+    if (had && !live() && !closing && (r.pairing || (sc && sc.at > pairFrom))) {
+      if (sc && sc.at > pairFrom) pairFrom = sc.at;
+      shown = null;
+      expired = false;
+      SIG = sig();
+      render();
+      toast(r.pairing ? t('Code scanned. Finish on the phone.') : t(sc.name + ' connected'));
+      focusKey('pair');
+      return;
+    }
+    /* the window was open on this page and closed without a phone: it expired (its time, or eight wrong codes) */
+    if (had && !r.pairing && shown && !closing && !expired) return expire();
+    if (live() && !closing) endAt = Date.now() + (r.pairing.seconds || 0) * 1000;
+    if (sig() !== SIG) {
+      SIG = sig();
+      render();
+    }
+  });
+}
+function onKey(e) {
+  var k = e.keyCode;
+  /* Back: the confirm closes first, then the sheet, then the pairing on the stage, then the page (the launcher's, through the SDK) */
+  if (k === 461 || k === 27 || k === 8) {
+    if (dlg || picking || sheetId || live() || expired) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (dlg) closeDlg();
+      else if (picking) closePick();
+      else if (sheetId) closeSheet();
+      else if (live()) stopPair();
+      else {
+        expired = false;
+        shown = null;
+        render();
+        focusKey('pair');
+      }
+    }
+    return;
+  }
+  if (k >= 37 && k <= 40) {
+    e.preventDefault();
+    move(k);
+  }
+}
+function init() {
+  $('pairbtn').onclick = pair;
+  $('pairnew').onclick = pair;
+  $('pairstop').onclick = function () {
+    if (live()) stopPair();
+    else {
+      expired = false;
+      shown = null;
+      render();
+      focusKey('pair');
+    }
+  };
+  $('removeall').onclick = removeAll;
+  $('expire').onclick = openPick;
+  /* a focused card is always whole in view: the list slides by cards */
+  document.addEventListener(
+    'focus',
+    function (e) {
+      var i = indexOfKey((e.target && e.target.getAttribute && e.target.getAttribute('data-k')) || '');
+      if (i >= 0) reveal(i);
+    },
+    true
+  );
+  $('portretry').onclick = function () {
+    api('/state', {}, function (r) {
+      if (!r || r.error) return fail(r);
+      S = r;
+      render();
+      if (S.listenError) toast(t('The port is still busy.'));
+    });
+  };
+  $('sheetaccess').onclick = function () {
+    var p = byId(sheetId);
+    if (p) allow(p);
+  };
+  $('sheetremove').onclick = function () {
+    var p = byId(sheetId);
+    if (p) removePhone(p);
+  };
+  $('sheetcancel').onclick = function () {
+    closeSheet();
+  };
+  $('dlgcancel').onclick = closeDlg;
+  $('dlgok').onclick = function () {
+    if (dlg && dlg.run) dlg.run();
+  };
+  document.addEventListener('keydown', onKey, true);
+  api('/state', null, function (r) {
+    if (!r) return fail(r);
+    if (r.error) return toast(r.error);
+    S = r;
+    SIG = sig();
+    render();
+    focusKey('pair');
+  });
+  setInterval(poll, 2000);
+}
+init();
+</script>
+<script src="/addon/sdk.js"></script>
+</body></html>

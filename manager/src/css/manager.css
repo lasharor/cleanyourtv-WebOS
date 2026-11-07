@@ -111,6 +111,7 @@ body {
 }
 #info .abi {
   will-change: transform;
+  white-space: pre-line;
 }
 #panel {
   position: absolute;

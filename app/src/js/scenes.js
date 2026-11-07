@@ -6,7 +6,11 @@
    Glass cards (cards.style) are filled with the same blurred copy, placed where the card is, so no live blur is needed (the GPU is weak).
    Without scenes the glass clock stands alone with a white frosted fill.
    Custom scenes (effects.scenes "custom"): a theme brings its own images; they are served by the helper at /api/theme/scene/<id>/<file>.
-   Per-scene clock and date position are set as CSS variables on each scene element; .s-custom in home.css reads them. */
+   Per-scene clock and date position are set as CSS variables on each scene element; .s-custom in home.css reads them.
+   Scenes of an add-on (with the couch scenes): an add-on that provides "scenes" (the Seasons add-on, helper/scenes.js) can bring other
+   photos for the couch scenes. The launcher asks POST /api/scenes {cc} (the TV's country) when the theme starts the couch scenes and
+   every 30 minutes; a list comes back only when such an add-on runs, and then its photos take the place of the five landscapes, drawn
+   as custom scenes (no cut-out, a darker shade at the top) with the photographer in the bottom corner. Without one nothing changes. */
 var SCENES = (function () {
   var COUCH = [
     { id: 'night', fg: true },
@@ -15,6 +19,63 @@ var SCENES = (function () {
     { id: 'fog', fg: true },
     { id: 'dawn', fg: true },
   ];
+  var addonLib = null /* the scenes of an add-on, as custom scenes, or null */,
+    addonKey = '',
+    addonAt = 0,
+    lastTh = null;
+  /* the TV's country (its country setting, else the region of its language): an add-on can choose its scenes by it */
+  function country() {
+    var c = '';
+    try {
+      var w = window.webOSSystem && window.webOSSystem.country ? window.webOSSystem : window.PalmSystem;
+      var j = w && w.country ? (typeof w.country === 'string' ? JSON.parse(w.country) : w.country) : null;
+      c = (j && (j.smartServiceCountry || j.country)) || '';
+    } catch (e) {}
+    if (!c) {
+      var m = /[-_]([A-Za-z]{2,3})$/.exec((window.webOSSystem && window.webOSSystem.locale) || navigator.language || '');
+      c = m ? m[1] : '';
+    }
+    return String(c).toUpperCase();
+  }
+  /* the scenes of an add-on: asked when the couch scenes start and every 30 minutes (sooner while an add-on has none ready yet) */
+  function askAddon(force) {
+    if (!force && Date.now() - addonAt < (addonKey === 'none' ? 60000 : 1800000)) return;
+    addonAt = Date.now();
+    api('/api/scenes', { cc: country() }).then(
+      function (r) {
+        var l =
+          r && r.addon && r.scenes && r.scenes.length
+            ? r.scenes.map(function (x) {
+                return {
+                  id: 'x-' + x.id,
+                  image: r.addon + '/' + x.id + '/image',
+                  glass: r.addon + '/' + x.id + '/glass',
+                  credit: x.credit || '',
+                  darkSky: !!x.darkSky,
+                  addon: true,
+                };
+              })
+            : null;
+        var k = l ? JSON.stringify(l) : 'none';
+        if (k === addonKey) return;
+        addonKey = k;
+        addonLib = l;
+        if (lastTh) apply(lastTh);
+      },
+      function () {}
+    );
+  }
+  /* the photographer of a scene of an add-on, in the bottom corner (as Wallpapers does for an Unsplash photo) */
+  function credit(s) {
+    var c = $('scredit');
+    if (!c) {
+      c = document.createElement('div');
+      c.id = 'scredit';
+      $('homepage').appendChild(c);
+    }
+    c.textContent = on && s && s.credit ? t('Photo: %s').replace('%s', s.credit) : '';
+    c.style.display = c.textContent ? 'block' : 'none';
+  }
   var lib = COUCH /* active scene list */,
     custom = false /* whether lib comes from the theme */,
     customBase = ''; /* URL prefix for custom scene images */
@@ -55,7 +116,7 @@ var SCENES = (function () {
     box.id = 'scenes';
     els = lib.map(function (s) {
       var el = document.createElement('div');
-      el.className = 'scene ' + (custom ? 's-custom' : 's-' + s.id);
+      el.className = 'scene ' + (custom ? 's-custom' + (s.addon ? ' s-addon' : '') : 's-' + s.id);
       el.innerHTML =
         '<img class="sbg" alt=""><div class="shade"></div><div class="gclock"></div>' +
         (s.water ? '<div class="gclock under"></div>' : '') +
@@ -143,6 +204,7 @@ var SCENES = (function () {
     /* the date moves with the clock and the glass of the cards follows the scene, halfway through the fade */
     setTimeout(function () {
       sceneClass(lib[cur].id);
+      credit(lib[cur]);
       if (custom) {
         var s = lib[cur];
         document.body.style.setProperty('--scene-date-top', (s.date && s.date.top != null ? s.date.top : 96) + 'px');
@@ -167,14 +229,17 @@ var SCENES = (function () {
   }
   /* the theme decides: scenes on or off, how long each stays, the glass clock with or without them */
   function apply(th) {
+    lastTh = th;
     var wantCouch = !!(th && th.scenes && th.scenes.set === 'couch');
     var wantCustom = !!(th && th.scenes && th.scenes.set === 'custom' && th.scenes.lib && th.scenes.lib.length);
     var want = wantCouch || wantCustom;
     secs = (th && th.scenes && th.scenes.secs) || 20;
 
+    if (wantCouch) askAddon(false);
+    var wantAddon = wantCouch && !!addonLib;
     /* rebuild the scene list when switching mode or theme */
-    var newCustom = wantCustom;
-    var newLib = wantCustom ? th.scenes.lib : COUCH;
+    var newCustom = wantCustom || wantAddon;
+    var newLib = wantCustom ? th.scenes.lib : wantAddon ? addonLib : COUCH;
     var libChanged =
       newCustom !== custom ||
       newLib.length !== lib.length ||
@@ -185,7 +250,7 @@ var SCENES = (function () {
       reset();
       lib = newLib;
       custom = newCustom;
-      customBase = wantCustom ? API + '/api/theme/scene/' + th.scenes.id + '/' : '';
+      customBase = wantCustom ? API + '/api/theme/scene/' + th.scenes.id + '/' : wantAddon ? API + '/api/scenes/photo/' : '';
     }
 
     on = want;
@@ -199,6 +264,7 @@ var SCENES = (function () {
     } else {
       if (box) box.style.display = 'none';
       sceneClass('');
+      credit(null);
     }
     soloClock();
     arm();
@@ -222,6 +288,7 @@ var SCENES = (function () {
   function tick() {
     var h = new Date().getHours();
     document.body.classList.toggle('late', h >= 22 || h < 6);
+    if (on && lastTh && lastTh.scenes && lastTh.scenes.set === 'couch') askAddon(false);
     if (!glassOn()) return;
     var x = hm();
     if (x === shownHm && fontIn) return;

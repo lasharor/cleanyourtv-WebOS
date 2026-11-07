@@ -1,0 +1,59 @@
+/* the card sheet (cardsheet.js): the second page of a card of an add-on, a sheet from the right edge over a dimmed Home. Only transform and
+   opacity animate. Sizes are px of the 1920x1080 canvas. Its right-to-left rules are in rtl.css. */
+#cs {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  z-index: 28;
+}
+#cs.on {
+  display: block;
+}
+#cs .sc {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transition: opacity calc(0.25s * var(--spd)) linear;
+}
+#cs.in .sc {
+  opacity: 1;
+}
+#cs .pn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 760px;
+  height: 1080px;
+  overflow: hidden;
+  border-radius: 40px 0 0 40px;
+  transform: translateX(100%);
+  transition: transform calc(0.32s * var(--spd)) cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+#cs.in .pn {
+  transform: none;
+}
+#cs .tg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+#cs .cs-t {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 14px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+#cs .cs-t.on {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.92);
+}
