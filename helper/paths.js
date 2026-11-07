@@ -48,6 +48,7 @@ module.exports = {
   SA_STANDIN: env.CYTV_SA_STANDIN || '/tmp/cleanyourtv-screensaver-standin', // LG's screen saver program while scripts/screensaver-standin.sh is mounted over it
   SA_METHOD: D + '/screensaver-method', // holding "mount": use that way also where the stand-in would do
   SA_DISABLE: D + '/DISABLE-SCREENSAVER', // present while LG's own screen saver is chosen
+  SA_FAILED: env.CYTV_SA_FAILED || '/tmp/cleanyourtv-saver-failed', // our page did not open this boot (scripts/screensaver-standin.sh)
   // child processes find the system tools first, as in a login shell on the TV
   ENV: Object.assign({}, env, { PATH: '/usr/bin:/usr/sbin:/bin:/sbin:' + (env.PATH || '') }),
 };

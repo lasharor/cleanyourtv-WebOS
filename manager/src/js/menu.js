@@ -1442,7 +1442,14 @@ function build() {
   } else if (tb === 'features') {
     rows.push({
       label: 'Screen saver',
-      sub: onoff(st.saver && st.saver.enabled) + (st.saver && st.saver.replaced ? ' \u00B7 ours now' : ' \u00B7 LG\u2019s own'),
+      /* failed: the stand-in could not open our page this boot and gave LG's screen saver back (scripts/screensaver-standin.sh) */
+      sub:
+        onoff(st.saver && st.saver.enabled) +
+        (st.saver && st.saver.failed
+          ? ' \u00B7 ours did not open, LG\u2019s own until the next restart'
+          : st.saver && st.saver.replaced
+            ? ' \u00B7 ours now'
+            : ' \u00B7 LG\u2019s own'),
       fn: function () {
         push('confirm-saver');
       },

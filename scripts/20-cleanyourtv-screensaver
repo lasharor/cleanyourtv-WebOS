@@ -33,6 +33,14 @@ SETUP=0; [ "$1" = setup ] && SETUP=1
 
 method=$(node $L/tvprofile.js get saverTakeover --saver "$(node $L/jtool.js kind $L/backup/screensaver-appinfo.orig.json 2>/dev/null)" 2>/dev/null)
 [ "$(cat $L/screensaver-method 2>/dev/null)" = mount ] && method=mount
+# The stand-in did not open our page at two boots in a row (screensaver-standin.sh counts them, and gave LG's saver back each time):
+# from now on the folder mount, as the setup does for Home with home-method. Removing screensaver-method tries the stand-in again.
+if [ "$method" = standin ] && [ "$(cat $L/screensaver-standin-fails 2>/dev/null || echo 0)" -ge 2 ]; then
+  echo "$(up) saver: the stand-in did not open the page at two boots; the folder mount from now on (screensaver-method)" >> $LOG
+  echo mount > $L/screensaver-method
+  rm -f $L/screensaver-standin-fails
+  method=mount
+fi
 EXE=""
 [ "$method" = standin ] && EXE=$(node $L/jtool.js exe $L/backup/screensaver-appinfo.orig.json 2>/dev/null)
 [ "$method" = standin ] && [ -z "$EXE" ] && { echo "$(up) saver: LG's screen saver program not found; using the mount" >> $LOG; method=mount; }

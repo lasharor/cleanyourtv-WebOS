@@ -1,6 +1,6 @@
 // The screen saver: our page in place of LG's screen saver app (scripts/20-cleanyourtv-screensaver, docs/screensaver.md). This module
 // serves that page, closes it again, and opens it over an idle launcher when tvpowerd did not:
-//   GET  /api/screensaver          {replaced, method, running, photos, every}
+//   GET  /api/screensaver          {replaced, method, failed, running, photos, every}
 //   GET  /api/screensaver/photos?cc=<country>   {photos, credits, from, every}   what Home has behind it (background() below):
 //        photos are library ids ('u/<id>', 's/<add-on>/<id>', 'l/<add-on>') or paths on this service; from: scenes, wallpapers, theme
 //   GET  /api/screensaver/scene/<night|golden|water|fog|dawn>   a couch scene of the launcher (app/scene-<id>.jpg)
@@ -262,7 +262,9 @@ function create(ctx) {
       try {
         method = String(fs.readFileSync(P.SA_METHOD, 'utf8')).trim();
       } catch (_) {}
-      return json({ replaced: replaced(), method, running: await running(), photos: photos().length, every: EVERY_S });
+      // failed: the stand-in could not open our page this boot and gave LG's screen saver back (scripts/screensaver-standin.sh)
+      const failed = fs.existsSync(P.SA_FAILED);
+      return json({ replaced: replaced(), method, failed, running: await running(), photos: photos().length, every: EVERY_S });
     }
     web.notFound(res);
   }

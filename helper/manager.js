@@ -82,7 +82,7 @@ function create(ctx) {
       icons: !!(ad && ad.module && ad.module('icons')), // the App icons add-on runs
       lang: config.get().lang || '', // the Language setting: '' follows the TV
       home: { enabled: !fs.existsSync(P.DISABLE), fullhome: fs.existsSync(P.FULLHOME_APP), ours },
-      saver: { enabled: !fs.existsSync(P.SA_DISABLE), replaced: saver.replaced() },
+      saver: { enabled: !fs.existsSync(P.SA_DISABLE), replaced: saver.replaced(), failed: fs.existsSync(P.SA_FAILED) },
       inputhook: inputhook.status(keys().input),
       keys: keys(),
       job: updates.job(),

@@ -461,6 +461,7 @@
    "repo": "lasharor/cleanyourtv-WebOS",
    "saver": {
     "enabled": true,
+    "failed": false,
     "replaced": false
    },
    "service": {
@@ -550,6 +551,7 @@
    "repo": "lasharor/cleanyourtv-WebOS",
    "saver": {
     "enabled": true,
+    "failed": false,
     "replaced": false
    },
    "service": {
@@ -657,6 +659,7 @@
    "repo": "lasharor/cleanyourtv-WebOS",
    "saver": {
     "enabled": true,
+    "failed": false,
     "replaced": false
    },
    "service": {
