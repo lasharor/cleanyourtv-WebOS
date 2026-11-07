@@ -318,6 +318,22 @@ run(async () => {
   );
   x = await call(f, '/api/screensaver');
   ok(x.code === 200 && x.j.running === true && x.j.photos === 3, 'GET /api/screensaver: what is replaced and whether the page is up');
+  ok(x.j.failed === false, 'GET /api/screensaver: failed is false while the stand-in has not reported a failure this boot');
+  {
+    // the stand-in's marker (/tmp/cleanyourtv-saver-failed): our page did not open this boot and LG's saver runs instead
+    const was = P.SA_FAILED;
+    P.SA_FAILED = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-failed-')), 'saver-failed');
+    fs.writeFileSync(P.SA_FAILED, '');
+    x = await call(f, '/api/screensaver');
+    P.SA_FAILED = was;
+    ok(x.j.failed === true, "GET /api/screensaver: failed once the stand-in gave LG's saver back this boot");
+  }
+  {
+    const menu = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'menu.js'), 'utf8');
+    ok(/st\.saver\.failed/.test(menu) && /did not open/.test(menu), 'the manager says when our screen saver did not open this boot');
+    const mgr = fs.readFileSync(path.join(root, 'helper', 'manager.js'), 'utf8');
+    ok(/failed: fs\.existsSync\(P\.SA_FAILED\)/.test(mgr), "the manager's status carries saver.failed");
+  }
   x = await call(f, '/api/screensaver/nothing');
   ok(x.code === 404, 'an unknown path of the part is a 404, not a crash');
   ok(saver.replaced() === false, 'without a mount and without the stand-in, nothing is reported as replaced');
@@ -340,7 +356,7 @@ run(async () => {
     const menu = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'menu.js'), 'utf8');
     const rows = menu.split("label: 'Screen saver'").slice(1);
     ok(
-      rows.length === 2 && rows.every(r => /^[\s\S]{0,400}?push\('confirm-saver'\)/.test(r)),
+      rows.length === 2 && rows.every(r => /^[\s\S]{0,900}?push\('confirm-saver'\)/.test(r)),
       'both "Screen saver" rows of the manager open the confirm screen of the switch (rows: ' + rows.length + ')'
     );
   }
@@ -407,46 +423,100 @@ run(async () => {
 
   // ---- scripts/screensaver-standin.sh with a luna-send that answers like the TV (the running list lags by seconds after a start) ----
   if (process.platform !== 'win32') {
-    const R = path.join(tmp, 'standin'),
-      L = path.join(R, 'media/developer/cleanyourtv'),
-      BIN = path.join(R, 'bin'),
-      LOG = path.join(R, 'boot.log'),
-      N = path.join(R, 'readings');
-    writeF(path.join(L, 'wam-launch-saver.json'), JSON.stringify({ appDesc: { id: 'com.webos.app.screensaver' }, folderPath: L }));
-    writeF(
-      path.join(BIN, 'luna-send'),
-      [
-        '#!/bin/sh',
-        'for a in "$@"; do case "$a" in luna://*) uri=$a ;; esac; done',
-        'case "$uri" in',
-        '  *launchApp*) echo \'{"returnValue": true}\' ;;',
-        '  *)',
-        '    n=$(cat "$SS_N" 2>/dev/null || echo 0); n=$((n + 1)); echo $n > "$SS_N"',
-        '    if [ "$n" -ge 2 ] && [ "$n" -le 3 ]; then echo \'{"running": [{"id": "com.webos.app.screensaver"}]}\'',
-        '    else echo \'{"running": []}\'; fi ;;',
-        'esac',
-        '',
-      ].join('\n')
-    );
-    fs.chmodSync(path.join(BIN, 'luna-send'), 0o755);
-    const t0 = Date.now();
-    const s = cp.spawnSync('sh', [path.join(root, 'scripts', 'screensaver-standin.sh')], {
-      encoding: 'utf8',
-      timeout: 60000,
-      env: Object.assign({}, process.env, {
-        PATH: BIN + ':' + process.env.PATH,
-        CYTV_DIR: L,
-        CYTV_BOOT_LOG: LOG,
-        CYTV_SS_SECS: '1',
-        SS_N: N,
-      }),
-    });
-    const log = fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8') : '';
+    // launch: what webapp-mgr answers to launchApp; listed: which readings of the running list show the page (none: never)
+    const standinRun = opts => {
+      const R = fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-standin-')),
+        L = path.join(R, 'media/developer/cleanyourtv'),
+        BIN = path.join(R, 'bin'),
+        LOG = path.join(R, 'boot.log'),
+        CALLS = path.join(R, 'calls'),
+        FAILED = path.join(R, 'saver-failed'),
+        PROG = path.join(R, 'lg-saver');
+      writeF(path.join(L, 'wam-launch-saver.json'), JSON.stringify({ appDesc: { id: 'com.webos.app.screensaver' }, folderPath: L }));
+      fs.copyFileSync(path.join(root, 'scripts', 'screensaver-standin.sh'), path.join(L, 'screensaver-standin.sh'));
+      if (opts.fails) writeF(path.join(L, 'screensaver-standin-fails'), opts.fails + '\n');
+      // LG's program: a fake that notes it ran with its arguments; or, for "still mounted", a copy of the stand-in itself
+      if (opts.stillOurs) fs.copyFileSync(path.join(root, 'scripts', 'screensaver-standin.sh'), PROG);
+      else writeF(PROG, '#!/bin/sh\necho "lg-saver ran $*" >> "$CYTV_CALLS"\n');
+      fs.chmodSync(PROG, 0o755);
+      const fake = (n, body) => {
+        writeF(path.join(BIN, n), '#!/bin/sh\n' + body + '\n');
+        fs.chmodSync(path.join(BIN, n), 0o755);
+      };
+      fake('umount', 'echo "umount $*" >> "$CYTV_CALLS"');
+      fake(
+        'luna-send',
+        [
+          'for a in "$@"; do case "$a" in luna://*) uri=$a ;; esac; done',
+          'case "$uri" in',
+          '  *launchApp*) echo "$SS_LAUNCH" ;;',
+          '  *killApp*) echo "killApp" >> "$CYTV_CALLS"; echo \'{"returnValue": true}\' ;;',
+          '  *)',
+          '    n=$(cat "$SS_N" 2>/dev/null || echo 0); n=$((n + 1)); echo $n > "$SS_N"',
+          '    if [ "$n" -ge "$SS_FROM" ] && [ "$n" -le "$SS_TO" ]; then echo \'{"running": [{"id": "com.webos.app.screensaver"}]}\'',
+          '    else echo \'{"running": []}\'; fi ;;',
+          'esac',
+        ].join('\n')
+      );
+      const t0 = Date.now();
+      const s = cp.spawnSync('sh', [path.join(root, 'scripts', 'screensaver-standin.sh'), 'argA', 'argB'], {
+        encoding: 'utf8',
+        timeout: 60000,
+        env: Object.assign({}, process.env, {
+          CYTV_TEST_BIN: BIN,
+          CYTV_DIR: L,
+          CYTV_BOOT_LOG: LOG,
+          CYTV_SS_SECS: '1',
+          CYTV_SA_PROGRAM: PROG,
+          CYTV_SA_FAILED: FAILED,
+          CYTV_CALLS: CALLS,
+          SS_N: path.join(R, 'readings'),
+          SS_LAUNCH: opts.launch || '{"returnValue": true}',
+          SS_FROM: String(opts.listed ? opts.listed[0] : 99),
+          SS_TO: String(opts.listed ? opts.listed[1] : 0),
+        }),
+      });
+      const read = f => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '');
+      const out = {
+        status: s.status,
+        ms: Date.now() - t0,
+        log: read(LOG),
+        calls: read(CALLS),
+        failed: fs.existsSync(FAILED),
+        fails: read(path.join(L, 'screensaver-standin-fails')).trim(),
+        PROG,
+      };
+      rmrf(R);
+      return out;
+    };
+
+    let st = standinRun({ listed: [2, 3], fails: 1 });
     ok(
-      s.status === 0 && /the page is listed/.test(log) && /the page is gone/.test(log),
-      'the stand-in waits for the page to be listed and only then calls the screen saver over: ' + log.trim().split('\n').pop()
+      st.status === 0 && /the page is listed/.test(st.log) && /the page is gone/.test(st.log),
+      'the stand-in waits for the page to be listed and only then calls the screen saver over: ' + st.log.trim().split('\n').pop()
     );
-    ok(Date.now() - t0 >= 2000, 'it did not decide from the first reading of the running apps (the list lags by seconds after a start)');
+    ok(st.ms >= 2000, 'it did not decide from the first reading of the running apps (the list lags by seconds after a start)');
+    ok(st.fails === '' && !st.failed, 'a page that opened clears the count of failed boots, and no failure is reported');
+
+    st = standinRun({ launch: '{"returnValue": false, "errorText": "denied"}' });
+    ok(
+      /refused the page/.test(st.log) &&
+        st.calls.indexOf('umount ' + st.PROG) >= 0 &&
+        /lg-saver ran argA argB/.test(st.calls) &&
+        st.failed &&
+        st.fails === '1',
+      "webapp-mgr refuses the page: the stand-in unmounts itself and starts LG's saver with the app manager's arguments, notes the failure and counts it"
+    );
+    st = standinRun({ fails: 1 });
+    ok(
+      /never appeared/.test(st.log) && /killApp/.test(st.calls) && /lg-saver ran/.test(st.calls) && st.fails === '2',
+      "the page never shows in the running list: closed, LG's saver instead, the second failed boot counted"
+    );
+    st = standinRun({ launch: '{"returnValue": false}', stillOurs: true });
+    ok(
+      st.status === 1 && /could not be brought back/.test(st.log) && !/lg-saver ran/.test(st.calls),
+      'when the file under that path is still the stand-in after the unmount, it does not run itself again: it says so and ends'
+    );
   }
 
   // ---- scripts/20-cleanyourtv-screensaver itself, in a folder that stands in for the TV, with fake mount, systemctl and luna-send ----
@@ -473,6 +543,7 @@ run(async () => {
       writeF(path.join(R, 'tmp', '.keep'), '');
       if (opts.sam) writeF(path.join(R, 'tmp', 'cleanyourtv-sam'), '');
       if (opts.method) writeF(path.join(L, 'screensaver-method'), opts.method + '\n');
+      if (opts.fails) writeF(path.join(L, 'screensaver-standin-fails'), opts.fails + '\n');
       if (opts.homeStandin) {
         writeF(path.join(R, 'tmp', 'cleanyourtv-home-standin'), '/usr/bin/home\n');
         writeF(MOUNTS, 'x /usr/bin/home ext4 rw 0 0\n');
@@ -530,6 +601,8 @@ run(async () => {
         H,
         exe,
         R,
+        method: fs.existsSync(path.join(L, 'screensaver-method')) ? fs.readFileSync(path.join(L, 'screensaver-method'), 'utf8').trim() : '',
+        failsLeft: fs.existsSync(path.join(L, 'screensaver-standin-fails')),
       };
       rmrf(R);
       return out;
@@ -548,6 +621,13 @@ run(async () => {
     ok(mounted(o, o.H) && !restarted(o), 'sam was already restarted after the mount this boot ($SAM): no second restart');
     o = saverRun({ kind: 'native' });
     ok(mounted(o, o.exe) && !mounted(o, o.H) && !restarted(o), 'a native saver: the stand-in over its program, no restart');
+    o = saverRun({ kind: 'native', fails: 1 });
+    ok(mounted(o, o.exe) && o.method === '', 'one boot where the stand-in failed: the stand-in is tried again');
+    o = saverRun({ kind: 'native', fails: 2, waitRestart: true });
+    ok(
+      mounted(o, o.H) && !mounted(o, o.exe) && o.method === 'mount' && !o.failsLeft && /two boots/.test(o.log),
+      'two boots in a row where the stand-in failed: the folder mount from now on (screensaver-method), and the count starts again'
+    );
 
     // the setup (bootstrap.sh start_install, "setup"): it never restarts the app manager for the saver. Where a mount needs that
     // restart and none came this boot (a TV whose Home is the stand-in), it leaves LG's saver working until the next boot, instead

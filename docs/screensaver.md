@@ -36,6 +36,10 @@ The same idea as for [Home](tv-changes.md#at-boot), on the app the TV starts whe
    the TV:
     - **a native program**: `screensaver-standin.sh` is bind-mounted over that program. The app manager keeps LG's manifest and starts
       the script when the screen saver starts; the script asks `webapp-mgr` to open the page. The app manager is not restarted.
+      If our page does not open (webapp-mgr refuses it, or it never shows up), the stand-in takes its own mount off and starts
+      LG's program, so the TV has LG's screen saver for that boot rather than none; the manager then shows "ours did not open"
+      under Features > Screen saver. After two boots in a row with such a failure, the boot script switches to the folder mount
+      (`screensaver-method` holding `mount`); deleting that file tries the stand-in again.
     - **anything else** (a QML or web screen saver): the page's folder is bind-mounted over
       `/usr/palm/applications/com.webos.app.screensaver` and the app manager is restarted so that it reads it.
 3. The page runs as LG's screen saver app, so the TV treats it as its screen saver, and closing it gives the app that was underneath back
