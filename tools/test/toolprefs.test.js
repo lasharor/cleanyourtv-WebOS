@@ -20,6 +20,7 @@ run(async () => {
   };
   let spotifyTools = [spotify];
   let addonsOn = { spotify: true, agent: true };
+  let lastArgs = null;
   const provider = (id, name, list) => ({
     id,
     name,
@@ -27,7 +28,7 @@ run(async () => {
       tools: {
         list: () => list(),
         call: async (n, a) => (
-          calls.push(id + ':' + n + ':' + (a && a.action)), { content: [{ type: 'text', text: 'ok' }], isError: false }
+          calls.push(id + ':' + n + ':' + (a && a.action)), (lastArgs = a), { content: [{ type: 'text', text: 'ok' }], isError: false }
         ),
       },
     },
@@ -236,6 +237,61 @@ run(async () => {
   ok((await call(hub, '/api/mcp/tools', 'POST', { newTools: 'maybe' })).code === 400, 'newTools is on or off');
   ok((await call(hub, '/api/mcp/tools', 'POST', { key: 'apps.list_apps' })).code === 400, 'a key needs on');
   ok((await call(hub, '/api/mcp/tools', 'POST', { group: 'apps', on: true })).code === 400, 'a group needs its keys');
+
+  // ---- review of the pull request: extra arguments, a name used twice, two lists at once ----
+  calls.length = 0;
+  await hub.call('spotify', { action: 'now_playing', evil: 'x', __proto__x: 1 });
+  ok(
+    calls.length === 1 && JSON.stringify(lastArgs) === '{"action":"now_playing"}',
+    'a tool gets only the arguments its schema declares: ' + JSON.stringify(lastArgs)
+  );
+  {
+    // two add-ons that give a tool of the same name: MCP lists the second as b__hello, and each has its own setting
+    const hello = d => ({ name: 'hello', description: d, inputSchema: { type: 'object', properties: {} } });
+    const twin = req('toolhub').create({
+      config: memoryConfig({}),
+      feature: w =>
+        w === 'addons'
+          ? {
+              providers: () => [provider('a', 'A', () => [hello('Hello from A.')]), provider('b', 'B', () => [hello('Hello from B.')])],
+              list: () => [],
+            }
+          : null,
+    });
+    let tn = (await twin.list()).map(x => x.name);
+    ok(tn.indexOf('hello') >= 0 && tn.indexOf('b__hello') >= 0, 'a name used twice: hello and b__hello');
+    await call(twin, '/api/mcp/tools', 'POST', { key: 'b.hello', on: false });
+    tn = (await twin.list()).map(x => x.name);
+    ok(tn.indexOf('hello') >= 0 && tn.indexOf('b__hello') < 0, "b's setting switches b__hello off, and A's hello stays");
+    const r2 = await twin.call('b__hello', {});
+    ok(r2.isError && /turned off/.test(r2.content[0].text), 'and a call to b__hello is refused as turned off');
+  }
+  {
+    // two lists at the same moment while new tools stay off: one card (config.update reads and writes in one step)
+    const cfg2 = memoryConfig({}),
+      cards = [];
+    let more = [];
+    const solo = req('toolhub').create({
+      config: cfg2,
+      notify: { show: async o => cards.push(o) },
+      feature: w =>
+        w === 'addons'
+          ? {
+              providers: () => [provider('solo', 'Solo', () => [{ name: 'one', description: 'One.', inputSchema: {} }].concat(more))],
+              list: () => [],
+            }
+          : null,
+    });
+    await solo.list();
+    await call(solo, '/api/mcp/tools', 'POST', { newTools: 'off' });
+    more = [{ name: 'two', description: 'Two.', inputSchema: {} }];
+    await Promise.all([solo.list(), solo.list(), solo.call('one', {})]);
+    await new Promise(r => setTimeout(r, 20));
+    ok(
+      cards.length === 1 && /Solo has 1 new tool/.test(cards[0].title),
+      'two lists at once while a tool is new: one card, not two (' + cards.length + ')'
+    );
+  }
 
   // ---- the 40-tool limit counts the tools that are on ----
   const many = [];

@@ -287,13 +287,20 @@ const today = () => ' Today is ' + new Date().toISOString().slice(0, 10) + '.';
 const YES = /^(yes|yeah|yep|yup|sure|ok|okay|do it|go ahead|confirm)\b/i;
 let pending = null; // {provider, name, args, description, at}: a tool that waits for the person's yes
 
-// the tools of every provider (toolhub.merge: the same names /api/mcp lists), as OpenRouter takes them
+// the tools /api/mcp lists, with the tool settings applied (deps.merged: toolhub's own list; a tool that is off is left out), as
+// OpenRouter takes them; without it (the tests' stand-ins), every provider's tools (toolhub.merge)
 async function gatherTools() {
-  let providers = [];
+  let m = null;
   try {
-    providers = deps.tools() || [];
+    m = deps.merged ? await deps.merged() : null;
   } catch (_) {}
-  const m = await hub.merge(providers);
+  if (!m) {
+    let providers = [];
+    try {
+      providers = deps.tools() || [];
+    } catch (_) {}
+    m = await hub.merge(providers);
+  }
   m.defs = m.names.map(n => ({
     type: 'function',
     function: { name: n, description: m.map[n].description, parameters: m.map[n].schema },
@@ -368,8 +375,10 @@ async function agentOne(p, l, turns, tools, ms, opts) {
         try {
           args = JSON.parse(c.function.arguments || '{}');
         } catch (_) {}
+        if (entry) args = hub.declaredArgs(entry.schema, args);
         const bad = entry ? hub.checkArgs(entry.schema, args) : '';
-        if (!entry) out = 'Error: there is no tool named ' + name.slice(0, 64);
+        if (entry && entry.off) out = 'Error: ' + name.slice(0, 64) + hub.OFF_TEXT;
+        else if (!entry || tools.names.indexOf(name) < 0) out = 'Error: there is no tool named ' + name.slice(0, 64);
         else if (bad) out = 'Error: ' + bad;
         else if (entry.confirm) {
           // never run here: the person says yes on the TV first (confirmPending)

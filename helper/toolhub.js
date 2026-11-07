@@ -22,6 +22,18 @@ const MAX_BODY = 64 * 1024,
   PER_MINUTE = 60;
 const PAGE_MS = 10 * 60 * 1000; // how long the page behind the QR code works
 const TOOL_NAME = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+const OFF_TEXT = ' is turned off on the TV (CleanYourTV manager: Features > AI agents (MCP) > Tools). Tell the user if they want it.';
+
+// only the arguments a tool's inputSchema declares (an extra key a model or an agent sends is dropped, so no tool gets what it did not
+// ask for); a schema that allows more (additionalProperties: true) or declares nothing at all gets them as they are
+function declaredArgs(schema, args) {
+  const props = schema && schema.properties;
+  if (!args || typeof args !== 'object' || Array.isArray(args)) return args;
+  if (!props || typeof props !== 'object' || schema.additionalProperties === true) return args;
+  const out = {};
+  for (const k of Object.keys(args)) if (Object.prototype.hasOwnProperty.call(props, k)) out[k] = args[k];
+  return out;
+}
 
 // a tool's arguments against its inputSchema: the required ones are there and the simple types and enums match; '' when fine
 function checkArgs(schema, args) {
@@ -137,7 +149,6 @@ function create(ctx) {
     }
     return { map: m.map, names, groups };
   }
-  const OFF_TEXT = ' is turned off on the TV (CleanYourTV manager: Features > AI agents (MCP) > Tools). Tell the user if they want it.';
 
   async function list() {
     const m = await current();
@@ -153,7 +164,7 @@ function create(ctx) {
       e = m.map[name];
     if (e && e.off) return fail(name + OFF_TEXT);
     if (!e || m.names.indexOf(name) < 0) return fail('unknown tool: ' + String(name).slice(0, 64));
-    const a = args === undefined ? {} : args;
+    const a = declaredArgs(e.schema, args === undefined ? {} : args);
     if (e.allowed && a && typeof a === 'object' && typeof a.action === 'string' && e.allowed.indexOf(a.action) < 0)
       return fail(name + ' ' + a.action.slice(0, 40) + OFF_TEXT);
     const bad = checkArgs(e.schema, a);
@@ -674,6 +685,9 @@ poll();
     start,
     stop,
     providers,
+    // the tools with the settings applied, for the voice assistant (answers.js): {map, names, groups}; a tool that is off is not in
+    // names and has off: true in map
+    merged: current,
     list,
     call,
     rpc,
@@ -682,4 +696,4 @@ poll();
   };
 }
 
-module.exports = { create, merge, checkArgs, MAX_TOOLS, LAN_DEFAULTS, PORT };
+module.exports = { create, merge, checkArgs, declaredArgs, OFF_TEXT, MAX_TOOLS, LAN_DEFAULTS, PORT };

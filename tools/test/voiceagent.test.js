@@ -218,6 +218,33 @@ run(async () => {
   r = await C.call('power_off', {}, { confirmed: true });
   ok(!r.isError && poweredOff === 1, 'and runs with it');
 
+  // ---- the tool settings hold for the voice assistant too (manager: AI agents (MCP) > Tools) ----
+  {
+    await call(hub, '/api/mcp/tools', 'GET');
+    await call(hub, '/api/mcp/tools', 'POST', { key: 'apps.list_apps', on: false });
+    A.init(() => ({ llm }), { tools: () => providers, merged: () => hub.merged() });
+    reset();
+    script = [{ content: null, tool_calls: [tc('list_apps', {})] }, { content: 'I cannot.' }];
+    await A.askLlm('which apps do I have');
+    const names2 = sent[0].tools.map(t => t.function.name);
+    ok(
+      names2.indexOf('list_apps') < 0 && names2.indexOf('launch_app') >= 0,
+      'voice: a tool that is off on the TV is not offered to the model'
+    );
+    const tm2 = sent[1].messages.filter(m => m.role === 'tool')[0];
+    ok(tm2 && /turned off on the TV/.test(tm2.content), 'voice: a call to it is refused as turned off: ' + (tm2 && tm2.content));
+    await call(hub, '/api/mcp/tools', 'POST', { key: 'apps.list_apps', on: true });
+    A.init(() => ({ llm }), { tools: () => providers, merged: null }); // back to the stand-ins (init keeps what it is not given)
+    // the model's extra arguments are dropped before the tool runs
+    reset();
+    script = [{ content: null, tool_calls: [tc('switch_input', { input: 'HDMI_2', evil: 'rm -rf' })] }, { content: 'Done.' }];
+    await A.askLlm('hdmi 2');
+    ok(
+      calls.length === 1 && JSON.stringify(calls[0].args) === '{"input":"HDMI_2"}',
+      'voice: a tool gets only its declared arguments: ' + JSON.stringify(calls[0] && calls[0].args)
+    );
+  }
+
   // ---- /api/mcp: the same tools for any MCP client on the TV ----
   const rpc = async b => (await call(hub, '/api/mcp', 'POST', b)).j;
   r = await rpc({ jsonrpc: '2.0', id: 1, method: 'initialize' });
