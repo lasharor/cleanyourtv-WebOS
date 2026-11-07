@@ -1,0 +1,774 @@
+/* The phone remote's page on the TV (1920x1080): one anchored stage on the left (pairing), the paired phones on the right at full
+   height, and at the bottom of the phones one setting row (when unused phones are removed) that opens a picker. The sizes are the
+   10-foot redesign's: a safe area of 96 px at the sides, 72 at the top and 64 at the bottom; the stage is 900x766, the list 764 wide.
+   The page sits over Home as a page of the book, so it keeps Home's dark look (Chromium 68, ES5 script). No flex gap (old Chromium):
+   spacing is by margins. No shadows: a fill step and a 1 px line. Motion is opacity and transform only (the TV's GPU is weak).
+   Green means only "connected"; a selection is inverted white; amber is expiry and "Never". Focus is a white 3 px ring 4 px outside. */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0a0c10;
+  color: #f2f6fc;
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  overflow: hidden;
+}
+#app {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 72px 96px 64px;
+}
+button {
+  font: inherit;
+  color: #f2f6fc;
+  background: #1a2029;
+  border: 1px solid #1e2735;
+  border-radius: 16px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  outline: none;
+  text-align: center;
+}
+/* the focus ring: white, outside the fill, so it shows on the blue primary too; the layout does not move */
+button:focus {
+  outline: 3px solid #e9f0fa;
+  outline-offset: 4px;
+}
+.hide {
+  display: none !important;
+}
+
+/* ---- header: the title, its line, and the status capsule (information, not a focus stop) ---- */
+.hd {
+  height: 94px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.ttl {
+  min-width: 0;
+}
+h1 {
+  font-size: 54px;
+  line-height: 1.05;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.8px;
+  white-space: nowrap;
+}
+.sub {
+  margin: 8px 0 0;
+  font-size: 26px;
+  color: #a9b8cb;
+}
+.cap {
+  box-sizing: border-box;
+  width: 360px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid #1e2735;
+  background: #101419;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 500;
+  color: #c9d4e3;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6fe39a;
+  margin-right: 10px;
+  flex: 0 0 auto;
+}
+.dot.off {
+  background: #4b5768;
+}
+
+/* ---- the section labels, over the stage and over the list ---- */
+.labels {
+  margin-top: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+}
+.labels h2 {
+  font-size: 27px;
+  line-height: 36px;
+  font-weight: 600;
+  color: #c9d4e3;
+  margin: 0;
+}
+.lpair {
+  width: 900px;
+  flex: 0 0 auto;
+}
+.lphones {
+  width: 764px;
+  margin-left: 64px !important;
+}
+.main {
+  margin-top: 12px;
+  height: 766px;
+  display: flex;
+}
+
+/* ---- the stage: idle (the two steps on the plate, the one primary, the address), pairing (the QR, the code, the countdown) ---- */
+.stage {
+  box-sizing: border-box;
+  width: 900px;
+  height: 766px;
+  flex: 0 0 auto;
+  padding: 32px;
+  background: #101419;
+  border: 1px solid #1e2735;
+  border-radius: 24px;
+}
+.pbody {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  animation: fade 0.12s ease-out;
+}
+.plate {
+  box-sizing: border-box;
+  width: 528px;
+  height: 100%;
+  flex: 0 0 auto;
+  border-radius: 20px;
+  border: 1px solid #1e2735;
+  background: #0d1117;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.how {
+  width: 420px;
+}
+.kicker,
+.eyebrow {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6cb2ff;
+}
+.kicker {
+  margin-bottom: 28px;
+}
+.step {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+.step.second {
+  margin-top: 22px;
+}
+.step.two {
+  margin-top: 26px;
+}
+.num {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  margin-right: 12px;
+  border-radius: 50%;
+  background: #1a2029;
+  color: #6cb2ff;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step .t {
+  font-size: 22px;
+  font-weight: 600;
+  color: #c9d4e3;
+}
+.phint {
+  font-size: 22px;
+  color: #a9b8cb;
+  margin: 36px 0 0;
+}
+.stack {
+  width: 280px;
+  height: 100%;
+  margin-left: 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.stack.open {
+  justify-content: space-between;
+}
+.ssub {
+  font-size: 20px;
+  color: #a9b8cb;
+  margin: 8px 0 18px;
+}
+button.pri {
+  width: 280px;
+  height: 72px;
+  border-color: #2b6fd6;
+  background: #2b6fd6;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+button.pri.renew {
+  margin-top: 22px;
+}
+.addr,
+.addr2 {
+  font:
+    20px/1.2 Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: -0.5px;
+  color: #c9d6e8;
+  white-space: nowrap;
+  direction: ltr; /* an address and a code read left to right in every language */
+}
+.addr {
+  margin-top: 18px;
+}
+.addr2 {
+  margin-top: 10px;
+}
+.addr.warn {
+  font:
+    20px/1.3 -apple-system,
+    "Segoe UI",
+    Roboto,
+    Arial,
+    sans-serif;
+  letter-spacing: 0;
+  color: #ffc46b;
+  white-space: normal;
+}
+.shint {
+  font-size: 21px;
+  color: #a9b8cb;
+  margin: 8px 0 0;
+}
+/* the QR card: the only pure white on the page, 480 modules in a 24 px quiet zone */
+.qrcard {
+  box-sizing: border-box;
+  width: 528px;
+  height: 528px;
+  flex: 0 0 auto;
+  padding: 24px;
+  border-radius: 20px;
+  background: #fff;
+  animation: qrin 0.12s ease-out;
+  transition: opacity 0.12s;
+}
+.qrcard.dimmed {
+  opacity: 0.28;
+}
+#qr {
+  display: block;
+  width: 480px;
+  height: 480px;
+}
+/* the code: 72 px in two groups ("428 731"), the groups 16 px apart so the six digits fit the 280 px stack; it becomes "Code expired"
+   in amber, never just disappears */
+.code {
+  font:
+    700 72px/1 Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: 0;
+  direction: ltr;
+  color: #fff;
+  margin: 12px 0 8px;
+  white-space: nowrap;
+}
+.code span {
+  display: inline-block;
+  animation: fade 0.12s ease-out both;
+}
+.code span.g {
+  margin-left: 16px;
+}
+.code.expired {
+  font-size: 36px;
+  letter-spacing: 0;
+  color: #ffc46b;
+  white-space: normal;
+}
+.exp {
+  font-size: 21px;
+  color: #ffc46b;
+}
+.exp.quiet {
+  color: #a9b8cb;
+}
+.rail {
+  width: 280px;
+  height: 4px;
+  margin-top: 14px;
+  border-radius: 2px;
+  background: #1e2735;
+  overflow: hidden;
+}
+.rail i {
+  display: block;
+  width: 280px;
+  height: 4px;
+  background: #6cb2ff;
+  transform-origin: 0 0;
+  transition: transform 1s linear;
+}
+button.close {
+  width: 160px;
+  height: 64px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ---- the phones: one card per phone, the whole card is one focus stop (OK opens Manage) ---- */
+.col {
+  width: 764px;
+  height: 766px;
+  margin-left: 64px;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.12s;
+}
+.col.dim {
+  opacity: 0.3;
+}
+.note {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  margin: 0 0 12px;
+  font-size: 20px;
+  color: #ffc46b;
+}
+.note span {
+  flex: 1;
+  min-width: 0;
+}
+button.small {
+  flex: 0 0 auto;
+  height: 48px;
+  padding: 0 18px;
+  margin-left: 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+/* the list shows whole cards only (its height is a multiple of a card, set by the script) and slides to keep the focused one in view */
+#phonelist {
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.foot.more {
+  margin: -4px 0 10px;
+}
+.phone,
+.quiet {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 764px;
+  height: 104px;
+  padding: 0 24px;
+  margin: 0 0 12px;
+  border-radius: 20px;
+  text-align: left;
+}
+button.phone {
+  background: #12161d;
+  border: 1px solid #1e2735;
+}
+/* A card fills the list's width and the list clips (overflow: hidden), so the usual outline outside would be cut off, and Chromium
+   before 94 draws an outline square over the rounded corners. The ring is drawn inside instead: the border turns white and an inset
+   shadow thickens it to 3px, following the radius on every Chromium, with no change to the layout. */
+button.phone:focus {
+  background: #1a2029;
+  outline: none;
+  border-color: #e9f0fa;
+  box-shadow: inset 0 0 0 2px #e9f0fa;
+}
+.quiet {
+  background: #0e131a;
+  border: 1px solid #1c2430;
+}
+.av {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  margin-right: 18px;
+  border-radius: 50%;
+  background: #1a2029;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.av svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: #7f93b3;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.who {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+.who b {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quiet .who b {
+  color: #c9d4e3;
+}
+.who .st {
+  display: block;
+  font-size: 18px;
+  color: #a9b8cb;
+  margin-top: 3px;
+  white-space: nowrap;
+}
+/* amber: when an unused phone is about to be removed by itself */
+.who .st em,
+.smeta em {
+  font-style: normal;
+  color: #ffc46b;
+}
+.who .st.on {
+  color: #6fe39a;
+}
+.who .st.no {
+  color: #ff9a9a;
+}
+/* "Manage" reads as the card's action; it is not a stop of its own */
+.mg {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  height: 48px;
+  min-width: 120px;
+  margin-left: 16px;
+  padding: 0 18px;
+  border-radius: 16px;
+  background: #1a2029;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 48px;
+  text-align: center;
+}
+button.phone:focus .mg {
+  background: #262e3a;
+}
+/* "Remove all phones": a text row that belongs to the list, only with two phones or more */
+button.rmall {
+  flex: 0 0 auto;
+  width: 764px;
+  height: 64px;
+  padding-left: 2px;
+  border: 0;
+  border-top: 1px solid #1e2735;
+  border-radius: 0;
+  background: transparent;
+  color: #ff9d9d;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: left;
+}
+.foot {
+  flex: 0 0 auto;
+  font-size: 19px;
+  color: #7d8ba0;
+  margin: 18px 0 0;
+}
+
+/* ---- the setting row: when unused phones are removed, pinned to the bottom of the phones; OK opens the picker ---- */
+button.setrow {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  width: 764px;
+  height: 88px;
+  margin-top: auto;
+  padding: 0 24px;
+  border-radius: 20px;
+  background: #12161d;
+  border: 1px solid #1e2735;
+  text-align: left;
+}
+/* the same inside ring as a phone card */
+button.setrow:focus {
+  background: #1a2029;
+  outline: none;
+  border-color: #e9f0fa;
+  box-shadow: inset 0 0 0 2px #e9f0fa;
+}
+.sr {
+  display: block;
+  min-width: 0;
+}
+.sa {
+  display: block;
+  font-size: 22px;
+  font-weight: 600;
+}
+.sb {
+  display: block;
+  font-size: 18px;
+  color: #a9b8cb;
+  margin-top: 2px;
+}
+.pill {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  min-width: 190px;
+  margin-left: auto;
+  padding: 0 20px;
+  border-radius: 16px;
+  background: #1a2029;
+  border: 1px solid transparent;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+button.setrow:focus .pill {
+  background: #262e3a;
+}
+.pill.never,
+button.setrow:focus .pill.never {
+  color: #ffc46b;
+  background: #2a2114;
+  border-color: #5a4420;
+}
+.pill .ch {
+  margin-left: 12px;
+  color: #a9b8cb;
+}
+/* the picker: the six choices in a list, the current one inverted white with a check */
+.sheet.pick {
+  padding: 36px 40px;
+}
+.ptext {
+  font-size: 22px;
+  color: #a9b8cb;
+  line-height: 1.35;
+  margin: 10px 0 24px;
+}
+button.opt {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 64px;
+  margin-top: 10px;
+  padding: 0 22px;
+  font-size: 20px;
+  font-weight: 600;
+  text-align: left;
+}
+button.opt .r {
+  margin-left: auto;
+  font-size: 16px;
+}
+button.opt.never {
+  color: #ffc46b;
+}
+button.opt.on {
+  background: #edf1f7;
+  border-color: #edf1f7;
+  color: #0a0c10;
+}
+
+/* ---- the manage sheet (640) and the confirm (720): centred over a 58% veil, nothing moves underneath ---- */
+.veil {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(6, 8, 12, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade 0.12s ease-out;
+}
+.sheet,
+.dialog {
+  box-sizing: border-box;
+  background: #151b24;
+  border: 1px solid #2a3546;
+  border-radius: 24px;
+}
+.sheet {
+  width: 640px;
+  padding: 40px 40px 32px;
+}
+.dialog {
+  width: 720px;
+  padding: 44px 44px 36px;
+}
+.sheet h2,
+.dialog h2 {
+  font-size: 36px;
+  font-weight: 600;
+  margin: 0;
+  color: #f2f6fc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.smeta {
+  font-size: 22px;
+  color: #a9b8cb;
+  margin: 8px 0 32px;
+}
+.smeta.on {
+  color: #6fe39a;
+}
+.smeta.no {
+  color: #ff9a9a;
+}
+button.sbtn {
+  display: block;
+  width: 100%;
+  height: 72px;
+  margin-bottom: 14px;
+  font-size: 22px;
+  font-weight: 600;
+}
+button.sbtn:last-child {
+  margin-bottom: 0;
+}
+button.danger {
+  color: #ff9d9d;
+  background: #1c1416;
+  border-color: #3a2226;
+}
+.dialog p {
+  font-size: 24px;
+  color: #a9b8cb;
+  margin: 14px 0 36px;
+}
+.row {
+  display: flex;
+  justify-content: flex-end;
+}
+button.dbtn {
+  height: 64px;
+  min-width: 180px;
+  margin-left: 16px;
+  padding: 0 28px;
+  font-size: 20px;
+  font-weight: 600;
+}
+button.dbtn.danger {
+  background: #8b2e2e;
+  border-color: #8b2e2e;
+  color: #fff;
+}
+
+#toast {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translate(-50%, 8px);
+  padding: 14px 26px;
+  border-radius: 12px;
+  background: #1c2634;
+  border: 1px solid #2a3546;
+  color: #fff;
+  font-size: 21px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.18s,
+    opacity 0.18s;
+}
+#toast.on {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes qrin {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* a right-to-left language mirrors the layout: the margins that space the columns and the rows change sides */
+[dir="rtl"] .lphones,
+[dir="rtl"] .col {
+  margin-left: 0 !important;
+  margin-right: 64px !important;
+}
+[dir="rtl"] .pill,
+[dir="rtl"] button.opt .r {
+  margin-left: 0;
+  margin-right: auto;
+}
+[dir="rtl"] .pill .ch {
+  margin-left: 0;
+  margin-right: 12px;
+}
+[dir="rtl"] button.setrow,
+[dir="rtl"] button.opt {
+  text-align: right;
+}
+[dir="rtl"] .stack {
+  margin-left: 0;
+  margin-right: 28px;
+}
+[dir="rtl"] .num,
+[dir="rtl"] .dot,
+[dir="rtl"] .av {
+  margin-right: 0;
+  margin-left: 12px;
+}
+[dir="rtl"] .av {
+  margin-left: 18px;
+}
+[dir="rtl"] .mg,
+[dir="rtl"] button.small,
+[dir="rtl"] button.dbtn {
+  margin-left: 0;
+  margin-right: 16px;
+}
+[dir="rtl"] .phone,
+[dir="rtl"] button.rmall {
+  text-align: right;
+}
+#debug {
+  display: none;
+}

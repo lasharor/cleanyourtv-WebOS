@@ -36,6 +36,14 @@ function pageText() {
               .filter(d => fs.existsSync(path.join(root, 'helper', 'addons-bundled', d, 'service.js')))
               .map(d => fs.readFileSync(path.join(root, 'helper', 'addons-bundled', d, 'service.js'), 'utf8'))
           )
+          // and a catalog add-on's service, when it translates through the service's table (the phone remote)
+          .concat(
+            fs
+              .readdirSync(path.join(root, 'addons', 'catalog'))
+              .filter(d => fs.existsSync(path.join(root, 'addons', 'catalog', d, 'service.js')))
+              .map(d => fs.readFileSync(path.join(root, 'addons', 'catalog', d, 'service.js'), 'utf8'))
+              .filter(s => s.indexOf('i18n.tr(') >= 0)
+          )
       )
       .join('\n')
   );
@@ -97,6 +105,23 @@ if (require.main === module) {
     const enFile = path.join(dir, 'en.json'),
       en = JSON.parse(fs.readFileSync(enFile, 'utf8')),
       found = {};
+    // the pages' scripts and the services that translate through the service's table (i18n.tr(lang, '...'): the catalog add-ons' services)
+    let extra = '';
+    for (const d of fs.readdirSync(path.join(root, 'addons', 'catalog'))) {
+      const js = path.join(root, 'addons', 'catalog', d, 'src', 'js');
+      if (fs.existsSync(js))
+        extra +=
+          '\n' +
+          fs
+            .readdirSync(js)
+            .map(f => fs.readFileSync(path.join(js, f), 'utf8'))
+            .join('\n');
+      const svc = path.join(root, 'addons', 'catalog', d, 'service.js');
+      if (fs.existsSync(svc)) {
+        const s = fs.readFileSync(svc, 'utf8');
+        if (s.indexOf('i18n.tr(') >= 0) extra += '\n' + s;
+      }
+    }
     const src = B.plain(
       ['app/src/js', 'manager/src/js', 'helper/addons-bundled/iptv/src/js']
         .map(d =>
@@ -105,11 +130,15 @@ if (require.main === module) {
             .map(f => fs.readFileSync(path.join(root, d, f), 'utf8'))
             .join('\n')
         )
-        .join('\n') + fs.readFileSync(path.join(root, 'picker/app/index.html'), 'utf8')
+        .join('\n') +
+        fs.readFileSync(path.join(root, 'picker/app/index.html'), 'utf8') +
+        extra
     );
-    const re = /\btr?\('((?:[^'\\]|\\.)+)'\)/g;
+    const re = /\btr?\('((?:[^'\\]|\\.)+)'\)/g,
+      reI18n = /\bi18n\.tr\([^,]+,\s*'((?:[^'\\]|\\.)+)'\)/g;
     let m;
     while ((m = re.exec(src))) found[m[1]] = 1;
+    while ((m = reI18n.exec(src))) found[m[1]] = 1;
     let added = 0;
     for (const k of Object.keys(found)) if (!Object.prototype.hasOwnProperty.call(en, k)) (en[k] = k), added++;
     fs.writeFileSync(enFile, JSON.stringify(en, null, 1) + '\n');

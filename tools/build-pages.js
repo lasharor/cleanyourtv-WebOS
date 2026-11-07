@@ -17,6 +17,7 @@ const PAGES = [
   ['manager/src', 'manager/app/index.html'],
   ['helper/addons-bundled/iptv/src', 'helper/addons-bundled/iptv/page/index.html'], // Live TV: the page of the iptv add-on
   ['addons/catalog/tuner/src', 'addons/catalog/tuner/page/index.html'], // the TV guide of the LG tuner add-on: the guide code of Live TV, built again
+  ['addons/catalog/phoneremote/src', 'addons/catalog/phoneremote/page/index.html'], // the phone remote's own page on the TV: pairing and the paired phones
   ['picker/app/index.html', 'picker/app/index.html'],
 ];
 // the manager shows the service's own messages (update steps, sync errors): it carries the translations of texts in helper/ too

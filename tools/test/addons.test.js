@@ -156,6 +156,25 @@ run(async () => {
       (await call(a, '/api/addons/old')).j.enabled,
     'switching it with its own switch needs no restart either (it stays loaded) and is saved'
   );
+  // an add-on whose start() throws: its stop() is called and the module dropped
+  put(
+    'badstart',
+    svc('badstart'),
+    'const log = (global.__badstart = global.__badstart || []); exports.create = () => ({ start() { log.push("start"); throw new Error("no port"); }, stop() { log.push("stop"); }, handle: (q, r) => r.end("{}") });'
+  );
+  // a.start() is what the service does at boot: load and start every ready add-on
+  a.start();
+  ok(
+    a.state('badstart') &&
+      a.state('badstart').status === 'failed' &&
+      /no port/.test(a.state('badstart').error) &&
+      !a.state('badstart').mod &&
+      global.__badstart.join() === 'start,stop',
+    'an add-on whose start() throws calls stop() and drops the module: ' + (global.__badstart || []).join()
+  );
+  // a service add-on is started at the service start; the switch says a restart is needed (the loader does not start one at once)
+  r = await call(a, '/api/addons/demo/enable', 'POST', { enabled: true });
+  a.load();
   ok(
     !a.list().filter(x => x.id === 'old')[0].page && a.match('/api/addons') && a.match('/addon/x/y') && !a.match('/api/live/x'),
     'match: the add-on paths only'
@@ -273,6 +292,12 @@ run(async () => {
   ok(g.code === 404, 'addon.json is not served');
   g = await fetchPage('/addon/sdk.js');
   ok(g.code === 200 && /cytvAddon/.test(g.body), 'the helper script for pages is served');
+  // the QR code generator an add-on page may draw with: one file in the repository (third-party/), served beside the pages
+  g = await fetchPage('/addon/qrcode.js');
+  ok(
+    g.code === 200 && /javascript/.test(g.type) && /\bqrcode\b/.test(g.body) && g.body.length > 10000,
+    'the shared QR code generator is served for add-on pages'
+  );
   ok(
     a.list().filter(x => x.id === 'pg')[0].page === '/addon/pg/index.html' &&
       a.list().filter(x => x.id === 'pg')[0].tile.placement === 'topbar',
