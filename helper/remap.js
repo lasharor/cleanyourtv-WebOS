@@ -233,7 +233,14 @@ function create(ctx) {
     const json = (o, c) => web.json(res, o, c);
     if (u === '/api/remap/learn-state') return json(learnState());
     if (u === '/api/remap' && req.method !== 'POST')
-      return json({ enabled: enabled(), keys: shown(), types: TYPES, max: MAX_KEYS, hook: inputhook.hookInfo().attached, blind: !!inputhook.hookInfo().blind });
+      return json({
+        enabled: enabled(),
+        keys: shown(),
+        types: TYPES,
+        max: MAX_KEYS,
+        hook: inputhook.hookInfo().attached,
+        blind: !!inputhook.hookInfo().blind,
+      });
     if (req.method !== 'POST') return json({ error: 'POST expected' }, 405);
     const b = (await body(req)) || {};
     if (u === '/api/remap/learn') {
