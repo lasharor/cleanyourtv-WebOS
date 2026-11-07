@@ -18,7 +18,7 @@ const POSITIONS = [
 ];
 const HOME = 'com.webos.app.home';
 // the tools that change what is on screen: LG's screen saver is closed before them (see wake)
-const ON_SCREEN = ['launch_app', 'switch_input', 'close_app', 'navigate', 'show_notification'];
+const ON_SCREEN = ['launch_app', 'switch_input', 'close_app', 'navigate', 'show_notification', 'remote_buttons'];
 // WMO weather codes as Open-Meteo gives them, in words (as the launcher's weather card names them)
 function sky(code) {
   if (code === 0) return 'clear';
@@ -115,6 +115,31 @@ const TOOLS = [
     name: 'new_conversation',
     description: "Forget what was said to the TV's voice assistant so far, and start a new conversation.",
     inputSchema: S(),
+  },
+  {
+    name: 'theme',
+    description:
+      "The look of the TV's Home screen. action list: the themes and the one in use; set: use a theme by id, optionally with an accent colour; revert: go back to the theme before.",
+    inputSchema: S(
+      {
+        action: { type: 'string', enum: ['list', 'set', 'revert'] },
+        id: { type: 'string', description: 'for set: a theme id from list' },
+        accent: { type: 'string', description: "for set: a colour such as #4c8dff, or empty for the theme's own" },
+      },
+      ['action']
+    ),
+  },
+  {
+    name: 'remote_buttons',
+    description:
+      'The remote buttons that were given another job (remapped) on this TV. action list: each button and what it does; press: do what a button does, by its code.',
+    inputSchema: S(
+      {
+        action: { type: 'string', enum: ['list', 'press'] },
+        code: { type: 'string', description: 'for press: the button code from list' },
+      },
+      ['action']
+    ),
   },
   {
     name: 'power_off',
@@ -315,6 +340,41 @@ function create(ctx) {
           now: r.now.temp + deg + ', ' + sky(r.now.code),
           days: r.days.map(d => ({ date: d.date, sky: sky(d.code), max: d.max + deg, min: d.min + deg })),
         });
+      }
+      if (name === 'theme') {
+        const th = feature('theme');
+        if (!th || !th.list) return fail('themes are not available');
+        if (x.action === 'set' || x.action === 'revert') {
+          if (x.action === 'set' && !x.id && x.accent === undefined) return fail('set needs an id (from list) or an accent');
+          const b = {};
+          if (x.id) b.id = String(x.id);
+          if (x.accent !== undefined) b.accent = String(x.accent);
+          const r = x.action === 'set' ? await th.set(b) : th.revert();
+          if (r.error) return fail(r.error);
+        } else if (x.action !== 'list') return fail('action is list, set or revert');
+        const l = await th.list();
+        return done({
+          current: l.current,
+          previous: l.previous || null,
+          themes: l.themes.map(t => ({ id: t.id, name: t.name, installed: t.installed })),
+        });
+      }
+      if (name === 'remote_buttons') {
+        const rm = feature('remap');
+        if (!rm || !rm.buttons) return fail('remote buttons are not available');
+        const b = rm.buttons();
+        if (x.action === 'list') {
+          const keys = Object.keys(b.keys).map(c => {
+            const e = b.keys[c];
+            return { code: c, button: e.name || c, does: e.type + (e.id ? ' ' + e.id : '') };
+          });
+          return done({ on: b.on, buttons: keys });
+        }
+        if (x.action !== 'press') return fail('action is list or press');
+        if (!b.on) return fail('remapping is switched off on this TV');
+        if (!b.keys[String(x.code)]) return fail('no remapped button with code ' + String(x.code).slice(0, 20) + '; list shows them');
+        const r = await rm.fire(String(x.code));
+        return r.returnValue ? done({ pressed: x.code }) : fail(r.error || 'the action did not run');
       }
       if (name === 'new_conversation') {
         require('./answers').forget();

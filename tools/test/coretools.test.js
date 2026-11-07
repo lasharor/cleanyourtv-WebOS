@@ -50,7 +50,34 @@ run(async () => {
   const config = memoryConfig({
     cards: { s1: { type: 'clock' }, s2: { type: 'weather', place: 'Tel Aviv', lat: 32.08, lon: 34.78, unit: 'f' } },
   });
-  const features = { apps, running, remap, manager: { status: () => mstatus }, cards: { weather } };
+  // themes: the current one, the one before, and a set / revert that remember each other
+  let th = { id: 'classic', accent: '', prev: null };
+  const theme = {
+    list: async () => ({
+      current: { id: th.id, accent: th.accent },
+      previous: th.prev,
+      themes: [
+        { id: 'classic', name: 'Classic', installed: true, description: 'long' },
+        { id: 'moon', name: 'Moon', installed: false },
+      ],
+    }),
+    set: async b => {
+      if (b.id && ['classic', 'moon'].indexOf(b.id) < 0) return { error: 'unknown theme', status: 400 };
+      th = { id: b.id || th.id, accent: b.accent !== undefined ? b.accent : '', prev: { id: th.id, accent: th.accent } };
+      return { ok: true };
+    },
+    revert: () => {
+      if (!th.prev) return { error: 'nothing to go back to', status: 400 };
+      th = { id: th.prev.id, accent: th.prev.accent, prev: { id: th.id, accent: th.accent } };
+      return { ok: true };
+    },
+  };
+  // remapped buttons: on, one key; fire runs it
+  let remapOn = true;
+  const fired = [];
+  remap.buttons = () => ({ on: remapOn, keys: { 403: { type: 'app', id: 'netflix', name: 'Red' }, 1249: { type: 'home' } } });
+  remap.fire = async c => (fired.push(c), { returnValue: true });
+  const features = { apps, running, remap, theme, manager: { status: () => mstatus }, cards: { weather } };
   const ctx = {
     config,
     version: '1.6.20',
@@ -175,6 +202,40 @@ run(async () => {
   ok(r.isError && shown.length === 2, 'a picture must be an http or https address');
   r = await C.call('show_notification', { title: 'x', position: 'everywhere' });
   ok(r.isError && shown.length === 2, 'a position must be one of the nine');
+
+  // theme
+  r = await C.call('theme', { action: 'list' });
+  ok(
+    val(r).current.id === 'classic' && val(r).themes.length === 2 && !val(r).themes[0].description,
+    'theme list: the themes and the current one'
+  );
+  r = await C.call('theme', { action: 'set', id: 'moon', accent: '#4c8dff' });
+  ok(
+    !r.isError && val(r).current.id === 'moon' && val(r).current.accent === '#4c8dff' && val(r).previous.id === 'classic',
+    'theme set: a theme with an accent'
+  );
+  r = await C.call('theme', { action: 'set', id: 'nope' });
+  ok(r.isError && /unknown theme/.test(txt(r)) && th.id === 'moon', 'an unknown theme is refused');
+  r = await C.call('theme', { action: 'set' });
+  ok(r.isError && th.id === 'moon', 'set needs an id or an accent');
+  r = await C.call('theme', { action: 'revert' });
+  ok(!r.isError && val(r).current.id === 'classic', 'theme revert: back to the one before');
+
+  // remote_buttons
+  const sc = closes();
+  r = await C.call('remote_buttons', { action: 'list' });
+  ok(
+    val(r).on === true && val(r).buttons[0].button === 'Red' && /app netflix/.test(val(r).buttons[0].does),
+    'remote_buttons list: each button and what it does'
+  );
+  r = await C.call('remote_buttons', { action: 'press', code: '403' });
+  ok(!r.isError && fired.join() === '403', 'remote_buttons press: runs the button');
+  r = await C.call('remote_buttons', { action: 'press', code: '7' });
+  ok(r.isError && fired.length === 1, 'a button that is not remapped is refused');
+  remapOn = false;
+  r = await C.call('remote_buttons', { action: 'press', code: '403' });
+  ok(r.isError && /switched off/.test(txt(r)) && fired.length === 1, 'nothing runs while remapping is off');
+  ok(closes() === sc, 'an awake screen is left alone by remote_buttons');
 
   // new_conversation
   r = await C.call('new_conversation', {});
