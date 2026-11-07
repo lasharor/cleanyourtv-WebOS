@@ -142,6 +142,13 @@ function create(ctx) {
     for (const p of (await a.listApps()) || []) if (p && p.id) out[p.id] = String(p.title || p.id);
     return out;
   }
+  // LG's screen saver starts when nobody pressed a key for a while, and the Inputs list and cards open under it (an app that
+  // opens ends it by itself): a tool that shows something on screen closes it first. Found by the wave 1 test on the TV.
+  async function wake() {
+    const pw = await luna('luna://com.webos.service.tvpower/power/getPowerState', {}).catch(() => null);
+    if (pw && /saver/i.test(String(pw.state || '')))
+      await luna('luna://com.webos.applicationManager/closeByAppId', { id: 'com.webos.app.screensaver' }).catch(() => null);
+  }
 
   // the inputs as the launcher has them: [{id, appId, name, port, connected}]
   async function inputs() {
@@ -206,6 +213,7 @@ function create(ctx) {
         };
         if (x.image) card.image = String(x.image);
         if (x.position) card.position = x.position;
+        await wake();
         await n.show(card);
         return done({ shown: true, seconds: card.seconds, position: card.position || 'top-right' });
       }
@@ -240,6 +248,7 @@ function create(ctx) {
         const rm = feature('remap');
         if (!rm || !rm.go) return fail('navigating is not available');
         if (['home', 'live_tv', 'input_list'].indexOf(x.to) < 0) return fail('to is home, live_tv or input_list');
+        await wake();
         const r = await rm.go(x.to);
         return r && r.returnValue === false ? fail(r.errorText || 'the TV did not go there') : done({ went: x.to });
       }

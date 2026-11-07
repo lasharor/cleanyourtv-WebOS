@@ -24,7 +24,7 @@ Where the tools come from:
 | `get_current_app` | The app or input on the screen now (Home is called Home) | |
 | `list_running_apps` | The apps that are open, and background services | |
 | `close_app` | Closes one running app (never Home) | `id` |
-| `navigate` | Goes to Home, the launcher's Live TV, or the Inputs list, as a remapped button does | `to`: `home`, `live_tv`, `input_list` |
+| `navigate` | Goes to Home, the launcher's Live TV, or the Inputs list, as a remapped button does; LG's screen saver is closed first (the Inputs list would open under it), as it is before a card | `to`: `home`, `live_tv`, `input_list` |
 | `get_volume` | The volume, mute, the maximum and the sound output | |
 | `tv_info` | Model, webOS (SDK) version, firmware, CleanYourTV version, power state, whether an update is available (from the last check; it does not check) | |
 | `most_used_apps` | The apps used most, from the launcher's usage counts | `limit?` (1-20, 5) |
