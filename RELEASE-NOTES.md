@@ -1,6 +1,6 @@
 ## New
 
-- **A mic button on the phone remote.** The round button between Inputs and Keyboard asks the TV's voice assistant (the AI chat, Home Assistant or your server). Speak or type on the phone (the keyboard's dictation works on any phone, the phone's own speech recognition where the browser allows the page to use the microphone), or let the TV listen on its remote. The question and the answer show on the phone in a full-screen conversation and on the TV as its card. The button is dimmed while nothing on the TV answers. Phone remote add-on 1.1.0. By @Edenik.
+- **A mic button on the phone remote.** The round button between Inputs and Keyboard asks the TV's voice assistant (the AI chat, Home Assistant or your server). Speak or type on the phone (the keyboard's dictation works on any phone, the phone's own speech recognition where the browser allows the page to use the microphone), or let the TV listen on its remote. The question and the answer show on the phone in a full-screen conversation and on the TV as its card. The button is dimmed while nothing on the TV answers. Phone remote add-on 1.1.0. By @Edenik (#206).
 
 ## What to know
 
