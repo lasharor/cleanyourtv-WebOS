@@ -46,7 +46,7 @@ function build() {
     return;
   }
   if (view === 'models') {
-    var cur = ((vo || {}).llm || {}).model;
+    var cur = (llmFind(pvId) || {}).model;
     mdl.forEach(function (x) {
       rows.push({
         label: x.name,
@@ -58,6 +58,14 @@ function build() {
     });
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'providers') {
+    provRows();
+    return;
+  }
+  if (view === 'provider') {
+    provOneRows();
     return;
   }
   if (view === 'agents') {
@@ -229,12 +237,18 @@ function build() {
         if (haOk) openAgents();
       },
     });
+    var lps = lm.providers || [],
+      chain = llmChain(lps);
     rows.push({
-      label: lm.base ? 'AI chat (self-hosted)' : 'AI chat (OpenRouter)',
-      sub: lm.hasKey || lm.base ? onoff(lm.enabled) + ' \u00B7 ' + lm.model : 'no key set',
+      label: 'AI chat',
+      sub: chain ? onoff(lm.enabled) + ' \u00B7 ' + chain : 'not set up',
       fn: function () {
-        if (!lm.hasKey && !lm.base) {
+        if (!lps.length) {
           openPair();
+          return;
+        }
+        if (!chain) {
+          push('providers');
           return;
         }
         api('/api/voice/set', { llm: { enabled: !lm.enabled } }).then(
@@ -253,7 +267,14 @@ function build() {
         );
       },
     });
-    rows.push({ label: 'Model', sub: lm.model || 'openrouter/auto', fn: openModels });
+    var lastP = llmFind(lm.lastVia);
+    rows.push({
+      label: 'AI providers',
+      sub: lps.length ? lps.length + ' set up' + (lastP ? ' \u00B7 ' + lastP.name + ' answered last' : '') : 'none',
+      fn: function () {
+        push('providers');
+      },
+    });
     rows.push({
       label: 'Send the text to',
       sub: v.url ? v.url.replace(/^(https?:\/\/[^\/]+).*/, '$1') : 'not set · shows a card only',
@@ -264,7 +285,7 @@ function build() {
       },
     });
     rows.push({ sep: true });
-    rows.push({ label: 'Set up from your phone', sub: 'key, model, server', fn: openPair });
+    rows.push({ label: 'Set up from your phone', sub: 'providers, keys, models', fn: openPair });
     rows.push({
       label: 'Set up with commands',
       sub: 'for scripts and ssh',

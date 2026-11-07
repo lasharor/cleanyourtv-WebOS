@@ -1,7 +1,8 @@
 # Voice (optional)
 
 Recognises speech from the remote's microphone **on the TV**. The text is shown on screen and can be sent to a server you run,
-to a language model (through OpenRouter, or on an AI server of your own), or both; the answer is shown as text on screen.
+to language models (OpenRouter, an AI server of your own, or both, one taking over when the other fails), or both; the answer is
+shown as text on screen.
 Answers are not spoken. No audio is recorded or sent anywhere.
 
 It is **off and not installed by default**. Nothing described here runs until you install it.
@@ -36,53 +37,60 @@ The TV sends `POST` with the JSON body `{"text":"...","source":"cleanyourtv","la
 `Authorization: Bearer <token>`. If the server answers with JSON (`{"title","text","image","seconds"}`) or plain text, the answer
 is shown as a card. The address and token are stored in `config.json` on the TV only.
 
-## AI chat (OpenRouter)
+## AI chat: providers and fallback
 
-In **Voice**, **Set up from your phone** shows a QR code. Scan it with a phone on the same Wi-Fi and enter:
+The answers come from one or more AI providers, asked in their order: the first answers; when it cannot be reached, does not
+answer in time or fails, the next one is asked, with the same conversation. A provider is either:
 
-- your OpenRouter key,
-- a model (the list is read from OpenRouter; any model name can be typed),
-- instructions, and, if you like, the address of your own server.
+- **OpenRouter**, with your OpenRouter key (paid per use; many models), or
+- **your own server**: a language model on a computer of yours, with any server that speaks the OpenAI-compatible chat API
+  (Ollama, LM Studio, llama.cpp's `llama-server`, vLLM, LocalAI, Jan, text-generation-webui and others). Nothing is paid and the
+  text stays on your network.
 
-The page is open for ten minutes or until you save, at a random address. It is plain HTTP, so use it on a network you trust.
-**Model** on the TV chooses among the newest models of the main providers, with their price. **AI chat (OpenRouter)** switches
-the answers on and off.
+A typical list: your own server first, OpenRouter as the fallback for when the computer is off.
 
-The same from a shell:
+### Setting them up
 
-```sh
-curl -X POST localhost:8765/api/voice/set -d '{"llm":{"key":"sk-or-...","model":"openrouter/auto"}}'
-curl -X POST localhost:8765/api/voice/set -d '{"llm":{"enabled":true}}'
-```
+In **Voice**, **Set up from your phone** shows a QR code. Scan it with a phone on the same Wi-Fi. The page shows one card per
+provider: **+ OpenRouter** and **+ Your own server** add one, ▲ and ▼ change the order, ✕ removes one. On each card:
 
-What you say is sent as text to `openrouter.ai` with the model you chose (a short instruction asks for one to three plain
-sentences; change it with `"system"`), and the answer appears on screen. The model remembers the last six exchanges for ten
-minutes (**Forget the conversation** clears them). The key is stored in `config.json` on the TV only. With a server address set
-as well, the server also receives the text and the model's answer (`{"text","answer"}`).
+- **Address** (your own server): the part before `/chat/completions`, usually ending with `/v1`: `http://<computer>:<port>/v1`.
+- **API key**: OpenRouter's key, or your server's if it needs one (most at home do not). A saved key is never shown; leave the
+  field empty to keep it.
+- **Model**: the list is read from that provider while you type the address; any model name can be typed.
+- **Wait for an answer**: 10, 25, 45 or 60 seconds (25 for a server, 30 for OpenRouter by default).
+- **Test** asks the provider "Say OK" with the values on the card and shows the time it took, or what went wrong.
 
-You can also ask by text, with the same result, and without the speech download:
+Below the cards: **Answer with the AI**, the instructions, which answers first (Home Assistant or the AI) and your own server
+for the text. **Save** checks every card first. The page is open for ten minutes or until you save, at a random address. It is
+plain HTTP, so use it on a network you trust.
 
-```sh
-curl -X POST localhost:8765/api/voice/ask -d '{"text":"..."}'
-```
+On the TV, **Voice** > **AI providers** lists them in their order with the last result of each (a green dot: answered; red: did
+not answer; grey: not tried yet). Channel up and down move the selected one; OK opens it: **Test now**, **Model**, **Wait for an
+answer**, **Use this provider** (switch it off without removing it), **Make first**, **Move up**, **Move down** and **Remove**.
+**AI chat** switches the answers on and off.
 
-It answers `{"text","answer","error"}`; add `"card":false` to skip the screen.
+### When the next one is asked
 
-## AI chat on your own server (self-hosted)
+- the provider cannot be reached within 4 seconds (the computer is off, a wrong address, nothing listening);
+- it does not answer within its wait;
+- it answers with an error, or refuses the key;
+- it gives an empty answer, or tries to call a tool, after one more try.
 
-Instead of OpenRouter, the answers can come from a language model on a computer of yours. Any server that speaks the
-OpenAI-compatible chat API works: Ollama, LM Studio, llama.cpp's `llama-server`, vLLM, LocalAI, Jan, text-generation-webui and
-others. Nothing is paid and the text stays on your network.
+All providers together have 60 seconds. A provider that could not be reached is skipped for one minute, so a computer that is off
+costs nothing on the next question. While a fallback is asked, the card on the TV says **Thinking · asking OpenRouter**; the answer
+then ends with a quiet line such as "via OpenRouter · Ollama on PC did not answer". When none answers, the card **Not answered**
+lists the reason of each one.
+
+### Your own server
 
 What the server needs:
 
-- the endpoints `/v1/chat/completions` (the answers) and `/v1/models` (the list of models on the TV and the phone page);
+- the endpoints `/v1/chat/completions` (the answers) and `/v1/models` (the list of models);
 - to listen on the network, not only on the computer itself (`localhost` or `127.0.0.1`, which many servers use by default);
 - its port open in the computer's firewall;
-- a model small enough to answer within 60 seconds: on a computer without a graphics card, take one of 1 to 4 billion parameters.
-
-The address you enter is the part before `/chat/completions`, so it usually ends with `/v1`: `http://<computer>:<port>/v1`.
-Examples:
+- a model small enough to answer within its wait: on a computer without a graphics card, take one of 1 to 4 billion parameters.
+  The first answer after a while can take longer, while the server loads the model again.
 
 | Server | Address | Listening on the network |
 |---|---|---|
@@ -98,22 +106,41 @@ ollama pull llama3.2:3b
 OLLAMA_HOST=0.0.0.0 ollama serve
 ```
 
-Then, on the phone page of **Set up from your phone**, set **AI server address** to the address of your server, leave **API key**
-empty (unless your server needs one), choose the model from the list (it is read from your server) and switch on **Answer with
-the AI**. The same from a shell:
+`http://` is fine on your own network. Home Assistant is another way to a local model: if it has a conversation agent backed by
+one (its Ollama integration, for example), choose that agent under **Assist agent** (below).
+
+### Keys and privacy
+
+What you say is sent as text to the providers that are asked, never audio. Each key is stored in `config.json` on the TV only and
+goes only to its own provider: the OpenRouter key never reaches your server, and your server's key never reaches OpenRouter. The
+status (`/api/voice/status`) says whether a provider has a key (`hasKey`), never which. A short instruction asks for one to three
+plain sentences (change it with `"system"`). The conversation remembers the last six exchanges for ten minutes, whichever provider
+answered (**Forget the conversation** clears them). With your own server set for the text as well, it also receives the text and
+the answer (`{"text","answer"}`).
+
+### From a shell
 
 ```sh
-curl -X POST localhost:8765/api/voice/set -d '{"llm":{"base":"http://192.168.1.20:11434/v1","model":"llama3.2:3b","enabled":true}}'
+curl -X POST localhost:8765/api/voice/set -d '{"llm":{"enabled":true,"providers":[
+  {"type":"server","name":"Ollama on PC","base":"http://192.168.1.20:11434/v1","model":"llama3.2:3b"},
+  {"type":"openrouter","key":"sk-or-...","model":"openrouter/auto"}]}}'
 ```
 
-- `http://` is fine on your own network. An empty address goes back to OpenRouter.
-- Your OpenRouter key is never sent to your server: it goes only to OpenRouter, and stays saved for when you clear the address. Most
-  servers at home need no key; if yours wants one (for example an API key you set in LM Studio, `llama-server` or vLLM), enter it
-  in **API key** on the phone page together with the address. It is kept apart from the OpenRouter key (`"serverKey"` from a shell)
-  and sent as `Authorization: Bearer <key>` to that server only.
-- **Model** on the TV then lists the models of your server; the manager app shows **AI chat (self-hosted)**.
-- Home Assistant is another way: if it has a conversation agent backed by a local model (its Ollama integration, for example),
-  choose that agent under **Assist agent** (below).
+`providers` replaces the list; an entry with the `id` of a saved provider changes it, and keeps its key unless `key` or
+`"clearKey":true` is given. Other changes: `{"llm":{"provider":{...}}}` adds one (no `id`) or changes one, `{"llm":{"remove":"<id>"}}`,
+`{"llm":{"order":["<id>",...]}}`, `{"llm":{"first":"<id>"}}`. A provider takes `type` (`server` or `openrouter`, at most one),
+`name`, `base`, `key`, `model`, `waitS` (10, 25, 45 or 60) and `off`. `POST /api/voice/test {"id":"<id>"}` tests one;
+`GET /api/voice/models?id=<id>` lists its models. The settings from before (one provider: `key`, `base`, `serverKey`, `model`)
+are read as a list (your own server first, OpenRouter second) and written as one at the next change.
+
+You can also ask by text, with the same result, and without the speech download:
+
+```sh
+curl -X POST localhost:8765/api/voice/ask -d '{"text":"..."}'
+```
+
+It answers `{"text","answer","via","provider","tried","error"}`: `provider` is the id of the one that answered, `tried` the ones
+asked before it, with their reason. Add `"card":false` to skip the screen.
 
 ## The speech model
 
@@ -134,7 +161,7 @@ curl -X POST localhost:8765/api/voice/set -d '{"llm":{"base":"http://192.168.1.2
 The TV's programs are 32-bit ARM on a 64-bit kernel and the recogniser is a 64-bit program, so `cytv-asr` runs through the 64-bit
 loader and libraries that the download places in the same folder. Nothing in the system folders is changed.
 
-Only text goes further: to your server, to OpenRouter or the AI server you set, or nowhere. LG's own assistant is a separate path
+Only text goes further: to your server, to the AI providers you set, or nowhere. LG's own assistant is a separate path
 with its own cloud recognition; **Switch off LG's voice assistant** pauses it while voice is on.
 
 ## Home Assistant (Assist)

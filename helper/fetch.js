@@ -6,7 +6,8 @@
 //   open(url, opts)          -> a readable stream of the body (for large files that are read line by line)
 //   toFile(url, file, opts)  -> {sha256} of what was written
 // Options: headers, method, body (sent as is, or JSON for an object), idleMs (no data for this long: 'timed out', default 20 s),
-// totalMs (the whole request, default none), maxBytes, redirects (how many to follow, default 5; never for a POST), allowHttp
+// totalMs (the whole request, default none), connectMs (no connection made this long: 'could not connect', code 'connect';
+// default none), maxBytes, redirects (how many to follow, default 5; never for a POST), allowHttp
 // (default true), insecure (accept any TLS certificate), refuseLocal (refuse addresses of the TV itself), anyStatus (resolve with
 // any status instead of rejecting what is not 200), statusText(status) for the message of a refused status, unzip: 'header'
 // (default) or 'sniff' (also unpack a body that starts like gzip). Errors carry .code: url, http, local, redirects, status (with
@@ -66,6 +67,13 @@ function connect(url, o, hops) {
       resolve({ res, url: u.toString(), req });
     });
     req.on('timeout', () => req.destroy(fail('timed out', 'timeout')));
+    if (o.connectMs) {
+      // only the connection: a server that is off or a wrong address is known in seconds, a slow answer is not cut short
+      const ct = setTimeout(() => req.destroy(fail('could not connect', 'connect')), o.connectMs);
+      req.on('socket', s => (s.connecting === false ? clearTimeout(ct) : s.once('connect', () => clearTimeout(ct))));
+      req.on('response', () => clearTimeout(ct));
+      req.on('error', () => clearTimeout(ct));
+    }
     req.on('error', reject);
     req.end(data || undefined);
   });

@@ -812,11 +812,10 @@
    "lgPaused": false,
    "listening": false,
    "llm": {
-    "base": "",
     "enabled": false,
-    "hasKey": false,
-    "hasServerKey": false,
-    "model": "openrouter/auto"
+    "lastVia": "",
+    "providers": [],
+    "system": ""
    },
    "pairedAt": 0,
    "pairing": false,

@@ -13,8 +13,29 @@ const fs = require('fs'),
 const nc = require('./netcompat'),
   { URL, URLSearchParams } = nc;
 const answers = require('./answers'),
-  { toServer, askLlm, askHa, haTest, haAgents, models, haBase, haReady, llmCfg, llmReady, haCfg, LLM_DEFAULTS, HA_DEFAULTS, HA_ROUTES } =
-    answers;
+  {
+    toServer,
+    askLlm,
+    askHa,
+    haTest,
+    haAgents,
+    models,
+    haBase,
+    haReady,
+    llmCfg,
+    llmReady,
+    llmStatus,
+    testProvider,
+    provider,
+    providersOf,
+    usable,
+    hostOf,
+    WAITS,
+    LEGACY,
+    haCfg,
+    HA_DEFAULTS,
+    HA_ROUTES,
+  } = answers;
 const P = require('./paths'),
   luna = require('./luna'),
   exec = require('./exec'),
@@ -444,12 +465,22 @@ async function respond(text, card) {
       out.error = 'Home Assistant: ' + e.message;
     }
   }
+  let aiFailed = false;
   if (!out.answer && useAi) {
     try {
-      out.answer = await askLlm(text);
+      // a fallback asked: the thinking card says which one
+      const r = await askLlm(text, p =>
+        say({ kind: 'thinking', title: 'Thinking · asking ' + p.name, question: text, text: '', seconds: 90 })
+      );
+      out.answer = r.answer;
       out.via = 'ai';
+      out.provider = r.via;
+      out.tried = r.tried;
+      if (r.tried.length) out.foot = 'via ' + r.name + ' · ' + r.tried.map(t => t.name).join(', ') + ' did not answer';
       if (out.error) out.error = '';
     } catch (e) {
+      aiFailed = !!e.tried;
+      out.tried = e.tried || [];
       out.error = (out.error ? out.error + '; ' : '') + e.message;
     }
   }
@@ -479,11 +510,18 @@ async function respond(text, card) {
           text: out.answer || '',
           seconds: readSeconds(out.answer),
         },
+        out.foot ? { foot: out.foot } : {},
         out.card && out.card.image ? { image: out.card.image } : {},
         out.card && out.card.seconds ? { seconds: out.card.seconds } : {}
       )
     );
-  else if (out.error) await say({ kind: 'answer', title: 'Not answered', question: text, text: out.error, seconds: 10 });
+  else if (out.error)
+    await say(
+      Object.assign(
+        { kind: 'answer', title: 'Not answered', question: text, text: out.error, seconds: aiFailed ? 12 : 10 },
+        aiFailed ? { foot: 'Check them in the manager app: Voice › AI providers' } : {}
+      )
+    );
   else await say({ kind: 'answer', title: 'You said', text, seconds: readSeconds(text) });
   return out;
 }
@@ -557,6 +595,124 @@ const lgPaused = () =>
   });
 
 // ---- the settings, from the API or from the phone page ----
+// The AI providers (answers.js): change or add one (provider), remove one, reorder (order, first), or replace the whole list
+// (providers, from the phone page). A key left empty keeps that provider's own saved key, never another provider's. Returns the
+// new llm settings, or the reason they are refused. The settings written before providers existed are moved into the list here.
+const MAX_PROVIDERS = 8;
+const sameAddress = b => String(b).toLowerCase().replace(/\/+$/, '').replace(/\/v1$/, '');
+function applyLlm(cur, b) {
+  const raw = Object.assign({ enabled: false, system: '' }, cur || {}); // no default list: an old setting has none yet
+  let list = providersOf(raw);
+  for (const k of LEGACY.concat('clearKey', 'clearServerKey'))
+    if (b[k] !== undefined) return 'the AI settings are a list of providers now: use "providers" or "provider" (docs/voice.md)';
+  LEGACY.forEach(k => delete raw[k]);
+  if (typeof b.enabled === 'boolean') raw.enabled = b.enabled;
+  if (typeof b.system === 'string') raw.system = b.system.slice(0, 1000);
+  const saved = {};
+  list.forEach(p => (saved[p.id] = p));
+  const newId = taken => {
+    let id;
+    do id = crypto.randomBytes(2).toString('hex');
+    while (saved[id] || taken.some(p => p.id === id));
+    return id;
+  };
+  // one provider: old is its saved settings (none: a new one), d the change
+  const change = (old, d, taken) => {
+    if (!d || typeof d !== 'object') return 'a provider must be an object';
+    if (old && d.type && d.type !== old.type) return 'the type of a provider cannot change';
+    if (!old && d.type !== 'openrouter' && d.type !== 'server') return 'the type of a provider must be openrouter or server';
+    const p = old
+      ? Object.assign({}, old)
+      : { id: newId(taken), type: d.type, name: '', base: '', key: '', model: '', waitS: 0, off: false };
+    if (typeof d.name === 'string') p.name = d.name.trim().slice(0, 40);
+    if (p.type === 'server' && typeof d.base === 'string') {
+      const u = d.base.trim().slice(0, 300),
+        base = u ? haBase(u) : '';
+      if (!base) return 'enter an http:// or https:// address';
+      if (old && base !== old.base && old.name === hostOf(old.base) && typeof d.name !== 'string') p.name = ''; // the default name follows the address
+      p.base = base;
+    }
+    if (typeof d.key === 'string' && d.key.trim()) p.key = d.key.trim().slice(0, 300);
+    if (d.clearKey) p.key = '';
+    if (typeof d.model === 'string' && d.model.trim()) {
+      if (!/^[\w.\-:\/~]{1,100}$/.test(d.model.trim())) return 'that model name is not valid';
+      p.model = d.model.trim();
+    }
+    if (d.waitS !== undefined) {
+      if (WAITS.indexOf(+d.waitS) < 0) return 'wait ' + WAITS.join(', ') + ' seconds';
+      p.waitS = +d.waitS;
+    }
+    if (typeof d.off === 'boolean') p.off = d.off;
+    if (p.type === 'openrouter' && !p.key) return 'OpenRouter needs a key';
+    if (p.type === 'server' && !p.base) return 'enter the address of your server';
+    const q = provider(p);
+    q.name = p.name; // empty: the default name (OpenRouter, or the server's host)
+    return q;
+  };
+  if (Array.isArray(b.providers)) {
+    if (b.providers.length > MAX_PROVIDERS) return 'at most ' + MAX_PROVIDERS + ' AI providers';
+    const out = [];
+    for (const d of b.providers) {
+      const old = d && d.id ? saved[d.id] : null;
+      if (d && d.id && !old) return 'no such AI provider';
+      const r = change(old, d, out);
+      if (typeof r === 'string') return r;
+      out.push(r);
+    }
+    list = out;
+  }
+  if (b.provider) {
+    const d = b.provider,
+      old = d && d.id ? saved[d.id] : null;
+    if (d && d.id && !old) return 'no such AI provider';
+    if (!old && list.length >= MAX_PROVIDERS) return 'at most ' + MAX_PROVIDERS + ' AI providers';
+    const r = change(old, d, list);
+    if (typeof r === 'string') return r;
+    list = old ? list.map(p => (p.id === r.id ? r : p)) : list.concat(r);
+  }
+  if (b.remove !== undefined) {
+    if (!list.some(p => p.id === b.remove)) return 'no such AI provider';
+    list = list.filter(p => p.id !== b.remove);
+  }
+  if (b.order !== undefined) {
+    const ids = list.map(p => p.id);
+    if (!Array.isArray(b.order) || b.order.length !== ids.length || !ids.every(i => b.order.indexOf(i) >= 0))
+      return 'the order must name every AI provider once';
+    list = b.order.map(i => list.filter(p => p.id === i)[0]);
+  }
+  if (b.first !== undefined) {
+    const p = list.filter(x => x.id === b.first)[0];
+    if (!p) return 'no such AI provider';
+    list = [p].concat(list.filter(x => x !== p));
+  }
+  if (list.filter(p => p.type === 'openrouter').length > 1) return 'OpenRouter can be in the list once';
+  const seen = {};
+  for (const p of list)
+    if (p.type === 'server') {
+      if (seen[sameAddress(p.base)]) return 'that address is already in the list';
+      seen[sameAddress(p.base)] = 1;
+    }
+  if (raw.enabled && !list.some(usable)) {
+    if (b.enabled === true) return 'add an AI provider first';
+    raw.enabled = false; // the last one that could answer was removed or switched off
+  }
+  raw.providers = list;
+  return raw;
+}
+// A provider from the phone page or the API: a saved one by id, with any unsaved values over it (a draft). The key: the draft's own,
+// else the saved key of that same provider, never another provider's.
+function draftProvider(o) {
+  const d = o && typeof o === 'object' ? o : {},
+    saved = llmCfg().providers.filter(p => p.id && p.id === d.id)[0];
+  const p = Object.assign({}, saved || { type: d.type === 'openrouter' ? 'openrouter' : 'server' });
+  if (typeof d.base === 'string' && p.type === 'server') p.base = haBase(d.base.trim()) || '';
+  if (typeof d.model === 'string' && /^[\w.\-:\/~]{1,100}$/.test(d.model.trim())) p.model = d.model.trim();
+  if (typeof d.key === 'string' && d.key.trim()) p.key = d.key.trim().slice(0, 300);
+  else if (!saved) p.key = '';
+  if (!saved) p.id = ''; // a draft's result is not kept
+  return p;
+}
+
 function applySet(b) {
   const v = cfg();
   if (typeof b.enabled === 'boolean') v.enabled = b.enabled && installed();
@@ -567,31 +723,10 @@ function applySet(b) {
   }
   if (typeof b.token === 'string') v.token = b.token.trim().slice(0, 300);
   if (typeof b.suppressLg === 'boolean') v.suppressLg = b.suppressLg;
+  let llm = null;
   if (b.llm && typeof b.llm === 'object') {
-    const l = Object.assign({}, LLM_DEFAULTS, v.llm || {});
-    if (typeof b.llm.enabled === 'boolean') l.enabled = b.llm.enabled;
-    if (typeof b.llm.key === 'string' && b.llm.key.trim()) l.key = b.llm.key.trim().slice(0, 300);
-    if (b.llm.clearKey) {
-      l.key = '';
-      l.enabled = false;
-    }
-    if (typeof b.llm.serverKey === 'string' && b.llm.serverKey.trim()) l.serverKey = b.llm.serverKey.trim().slice(0, 300);
-    if (b.llm.clearServerKey) l.serverKey = '';
-    if (typeof b.llm.base === 'string') {
-      // the address of a self-hosted, OpenAI-compatible chat API (such as http://<computer>:11434/v1); empty is OpenRouter
-      const u = b.llm.base.trim().slice(0, 300),
-        base = u ? haBase(u) : '';
-      if (u && !base) return 'the AI server address must start with http:// or https://';
-      if (base !== l.base) answers.forget(); // another server: the conversation starts again
-      l.base = base;
-    }
-    if (typeof b.llm.model === 'string' && b.llm.model.trim()) {
-      if (!/^[\w.\-:\/~]{1,100}$/.test(b.llm.model.trim())) return 'that model name is not valid';
-      l.model = b.llm.model.trim();
-    }
-    if (typeof b.llm.system === 'string') l.system = b.llm.system.slice(0, 1000);
-    if (l.enabled && !l.key && !l.base) return 'set the OpenRouter key or the address of your AI server first';
-    v.llm = l;
+    llm = applyLlm(v.llm, b.llm);
+    if (typeof llm === 'string') return llm;
   }
   if (b.ha && typeof b.ha === 'object') {
     const h = Object.assign({}, HA_DEFAULTS, v.ha || {});
@@ -616,6 +751,7 @@ function applySet(b) {
     if (b.ha.url !== undefined || b.ha.agent !== undefined || b.ha.clear) answers.forgetHa();
     v.ha = h;
   }
+  if (llm) v.llm = llm;
   ctx.config.update('voice', c => {
     c.voice = v;
   });
@@ -630,56 +766,146 @@ let pair = null,
   pairedAt = 0;
 const esc = web.esc,
   lanIp = web.lanIp;
-// only 'ha': the Home Assistant page of the manager (More > Home Assistant), just the address, the token and the certificate; the
-// voice page itself only chooses which answers first. Home Assistant stays in voice.ha: Voice and the cards (hacards.js) both use it.
-function pairPage(msg, done, list, token, lang, only) {
+// The phone pages, served on the local network while the setup QR code shows (startPair). The voice page edits the AI providers as
+// cards (order, add, remove, a test and the model list of each, read live from that provider) and saves everything at once with
+// a JSON POST; keys are never sent to the phone, a key left empty stays as saved. only 'ha': the Home Assistant page of the
+// manager (More > Home Assistant), just the address, the token and the certificate. Home Assistant stays in voice.ha: Voice and the
+// cards (hacards.js) both use it.
+function pairPage(msg, done, token, lang, only) {
   const T = x => esc(i18n.tr(lang, x)); // the phone's language (i18n.js)
-  const l = llmCfg(),
-    c = cfg(),
+  const c = cfg(),
     ha = haCfg(),
     title = only === 'ha' ? 'Home Assistant' : 'Voice setup';
-  const opts = (list || [])
-    .map(m => `<option value="${esc(m.id)}">${esc(m.name)}${m.price != null ? ' · $' + m.price + '/M' : ''}</option>`)
-    .join('');
-  return `<!doctype html><html lang=${lang}><meta name=viewport content="width=device-width,initial-scale=1"><title>${T(title)}</title>
-<style>body{font:18px system-ui,sans-serif;background:#111;color:#eee;max-width:560px;margin:32px auto;padding:0 18px}label{display:block;color:#aaa;font-size:15px;margin-top:14px}input,textarea,select,button{font:inherit;width:100%;box-sizing:border-box;padding:12px;margin:6px 0;border-radius:10px;border:1px solid #444;background:#1b1b1f;color:#eee}button{background:#f5f6f8;color:#111;font-weight:600;margin-top:20px}.m{padding:12px;border-radius:10px;background:#1f2a1f}small{color:#888}h2{margin:0 0 8px}.c{display:flex;gap:10px;align-items:center}.c input{width:auto;margin:0}</style>
-<h2>${T(title)}</h2>${msg ? `<p class=m>${T(msg)}</p>` : ''}${
-    done
-      ? ''
-      : only === 'ha'
-        ? `<form method=post action="/${token}/save">
+  const head = `<!doctype html><html lang=${lang}><meta name=viewport content="width=device-width,initial-scale=1"><title>${T(title)}</title>
+<style>body{font:18px system-ui,sans-serif;background:#111;color:#eee;max-width:560px;margin:32px auto;padding:0 18px}label{display:block;color:#aaa;font-size:15px;margin-top:14px}input,textarea,select,button{font:inherit;width:100%;box-sizing:border-box;padding:12px;margin:6px 0;border-radius:10px;border:1px solid #444;background:#1b1b1f;color:#eee}button{background:#f5f6f8;color:#111;font-weight:600;margin-top:20px}.m{padding:12px;border-radius:10px;background:#1f2a1f}.e{color:#ff9a8a;font-size:14px;margin:2px 0 0}.bad{border-color:#ff9a8a}small{color:#888}h2{margin:0 0 8px}.c{display:flex;gap:10px;align-items:center}.c input{width:auto;margin:0}
+.card{border:1px solid #444;border-radius:14px;padding:14px 16px 16px;margin:14px 0;background:#18181c}.card input,.card select{background:#111}.top{display:flex;align-items:center;gap:8px}.n{width:30px;height:30px;border-radius:15px;background:#2a2a31;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:none}.t{flex:1;min-width:0}.t b{display:block}.t span{font-size:13px;color:#aaa}.t span.f{color:#9be3b0}.ib{width:44px;height:44px;padding:0;margin:0;flex:none;background:transparent;color:#eee;font-weight:400}.ib:disabled{opacity:.3}.ask{display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:10px;background:#2a1b1b;margin-top:10px;font-size:15px}.ask span{flex:1;color:#ff9a8a}.ask button{width:auto;margin:0;padding:8px 14px}.sec{background:transparent;color:#eee;border:1px solid #444}.add{display:flex;gap:10px}.add button{background:transparent;color:#eee;border:1px dashed #666;margin-top:6px}.ok{padding:10px 12px;border-radius:10px;font-size:15px;margin-top:4px;background:#1f2a1f;color:#9be3b0}.no{padding:10px 12px;border-radius:10px;font-size:15px;margin-top:4px;background:#2a1b1b;color:#ff9a8a}</style>
+<h2>${T(title)}</h2>${msg ? `<p class=m>${T(msg)}</p>` : ''}`;
+  if (done) return head;
+  if (only === 'ha')
+    return `${head}<form method=post action="/${token}/save">
 <label>${T('Home Assistant address')}</label><input name=haurl type=url placeholder="http://homeassistant.local:8123" value="${esc(ha.url)}">
 <label>${T('Home Assistant access token')} <small>(${T('a long-lived token from your profile page')}${ha.token ? '; ' + T('one is saved, leave empty to keep it') : ''})</small></label><input name=hatoken type=password autocomplete=off>
 <label class=c><input type=checkbox name=hass value=1 ${ha.selfSigned ? 'checked' : ''}> ${T('Accept a self-signed certificate')}</label>
-<button>${T('Save')}</button></form>`
-        : `<form method=post action="/${token}/save">
-<label>${T('AI server address')} <small>${T('(empty: OpenRouter; or your own, such as http://computer:11434/v1)')}</small></label><input name=base type=url placeholder="https://openrouter.ai/api/v1" value="${esc(l.base)}">
-<label>${T('API key')} ${(l.base ? l.serverKey : l.key) ? T('(one is saved; leave empty to keep it)') : ''} <small>${T("(OpenRouter's key; with an AI server address, that server's key if it needs one, most at home do not)")}</small></label><input name=key type=password autocomplete=off placeholder="${l.base ? '' : 'sk-or-...'}">
-<label>${T('Model')} <small>${T('choose from the list or type any OpenRouter model name')}</small></label><input name=model list=ml value="${esc(l.model)}" autocomplete=off><datalist id=ml>${opts}</datalist>
-<label class=c><input type=checkbox name=enabled value=1 ${l.enabled ? 'checked' : ''}> ${T('Answer with the AI')}</label>
-<label>${T('Instructions for the AI')} <small>${T('(empty: short plain answers)')}</small></label><textarea name=system rows=3>${esc(l.system)}</textarea>
+<button>${T('Save')}</button></form>`;
+  const l = llmCfg();
+  // what the page needs: the providers without their keys, the texts in the phone's language
+  const data = {
+    token,
+    providers: l.providers.map(p => ({
+      id: p.id,
+      type: p.type,
+      name: p.name,
+      base: p.base,
+      model: p.model,
+      waitS: p.waitS,
+      off: p.off,
+      hasKey: !!p.key,
+    })),
+    waits: WAITS,
+    s: {},
+  };
+  [
+    'Your own server',
+    'OpenRouter',
+    'Answers first',
+    'If the one above does not answer',
+    'Move up',
+    'Move down',
+    'Remove',
+    'Remove this provider?',
+    'Yes',
+    'No',
+    'Address',
+    'Name',
+    'optional',
+    'API key',
+    '(one is saved; leave empty to keep it)',
+    '(only if your server needs one; most at home do not)',
+    'Remove the saved key',
+    'Model',
+    'read from your server',
+    'Reading models…',
+    'Could not read the model list: %s. Type the model name.',
+    'Wait for an answer',
+    '%d s',
+    'Test',
+    'Testing…',
+    'Answered in %s s',
+    'Use this provider',
+    'Enter an http:// or https:// address',
+    'This address is already in the list',
+    'OpenRouter needs a key',
+    'Choose a model',
+    'Saved. You can close this page.',
+    'No AI provider yet: add OpenRouter or a server of your own.',
+  ].forEach(k => (data.s[k] = i18n.tr(lang, k)));
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  return `${head}<div id=main><p style="color:#aaa;font-size:15px;margin:0">${T('AI providers are asked from the top. If one does not answer, the next one is asked.')}</p>
+<div id=cards></div>
+<div class=add><button type=button id=addor>+ ${T('OpenRouter')}</button><button type=button id=addsrv>+ ${T('Your own server')}</button></div>
+<label class=c><input type=checkbox id=enabled ${l.enabled ? 'checked' : ''}> ${T('Answer with the AI')}</label>
+<label>${T('Instructions for the AI')} <small>${T('(empty: short plain answers)')}</small></label><textarea id=system rows=3>${esc(l.system)}</textarea>
 <label>${T('Which answers first')}${
-            haReady(ha)
-              ? ''
-              : ` <small>${T('Home Assistant is not set up yet: set its address and token in the manager app, More > Home Assistant.')}</small>`
-          }</label><select name=haroute>${[
-            ['ha-first', 'Home Assistant first, then the AI'],
-            ['ha-only', 'Home Assistant only'],
-            ['ai-only', 'The AI only'],
-          ]
-            .map(x => `<option value="${x[0]}"${ha.route === x[0] ? ' selected' : ''}>${T(x[1])}</option>`)
-            .join('')}</select>
-<label>${T('Send the text to your own server')} <small>${T('(optional)')}</small></label><input name=url type=url placeholder="http://..." value="${esc(c.url)}">
-<label>${T('Server token')} <small>(${T('optional')}${c.token ? '; ' + T('one is saved, leave empty to keep it') : ''})</small></label><input name=token type=password autocomplete=off>
-<button>${T('Save')}</button></form>`
-  }`;
+    haReady(ha)
+      ? ''
+      : ` <small>${T('Home Assistant is not set up yet: set its address and token in the manager app, More > Home Assistant.')}</small>`
+  }</label><select id=haroute>${[
+    ['ha-first', 'Home Assistant first, then the AI'],
+    ['ha-only', 'Home Assistant only'],
+    ['ai-only', 'The AI only'],
+  ]
+    .map(x => `<option value="${x[0]}"${ha.route === x[0] ? ' selected' : ''}>${T(x[1])}</option>`)
+    .join('')}</select>
+<label>${T('Send the text to your own server')} <small>${T('(optional)')}</small></label><input id=url type=url placeholder="http://..." value="${esc(c.url)}">
+<label>${T('Server token')} <small>(${T('optional')}${c.token ? '; ' + T('one is saved, leave empty to keep it') : ''})</small></label><input id=token type=password autocomplete=off>
+<p class=e id=err></p><button type=button id=save>${T('Save')}</button></div>
+<script>var D=${json};
+(function(){var S=D.s,list=D.providers.map(function(p){return Object.assign({key:'',clearKey:false,models:null,mErr:'',res:null,err:{},ask:false},p)}),n=0;
+function tx(k,v){return String(S[k]||k).replace(/%[sd]/,v)}
+function el(t,a,k){var e=document.createElement(t);for(var x in a||{}){if(x==='text')e.textContent=a[x];else if(x.slice(0,2)==='on')e.addEventListener(x.slice(2),a[x]);else e.setAttribute(x,a[x])}(k||[]).forEach(function(c){if(c)e.appendChild(c)});return e}
+function post(path,body){return fetch('/'+D.token+'/'+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json()})}
+function draft(p){return{id:p.id,type:p.type,base:p.base,key:p.key,model:p.model}}
+function same(b){return String(b).toLowerCase().replace(/\\/+$/,'').replace(/\\/v1$/,'')}
+function check(p){var e={};if(p.type==='server'){if(!/^https?:\\/\\/\\S+$/.test(p.base))e.base=tx('Enter an http:// or https:// address');else if(list.some(function(q){return q!==p&&q.type==='server'&&same(q.base)===same(p.base)}))e.base=tx('This address is already in the list')}
+if(p.type==='openrouter'&&!p.key&&(!p.hasKey||p.clearKey))e.key=tx('OpenRouter needs a key');if(!p.model)e.model=tx('Choose a model');p.err=e;return!Object.keys(e).length}
+function loadModels(p){if(p.type==='server'&&!/^https?:\\/\\/\\S+$/.test(p.base))return;p.models=null;p.mErr='';p.loading=true;draw();post('models',draft(p)).then(function(r){p.loading=false;if(r.error)p.mErr=r.error;else{p.models=r.models;if(!p.model&&r.models.length)p.model=r.models[0].id}draw()},function(){p.loading=false;p.mErr='?';draw()})}
+function field(p,label,hint,input,errKey){return el('div',{},[el('label',{},[document.createTextNode(label+' '),hint?el('small',{text:hint}):null]),input,p.err[errKey]?el('p',{class:'e',text:p.err[errKey]}):null])}
+function card(p,i){var srv=p.type==='server',last=list.length-1,c=el('div',{class:'card'});
+c.appendChild(el('div',{class:'top'},[el('div',{class:'n',text:String(i+1)}),el('div',{class:'t'},[el('b',{text:srv?tx('Your own server'):tx('OpenRouter')}),el('span',{class:i?'':'f',text:i?tx('If the one above does not answer'):tx('Answers first')})]),
+el('button',{type:'button',class:'ib','aria-label':tx('Move up'),text:'\\u25B2',onclick:function(){move(i,-1)}}),el('button',{type:'button',class:'ib','aria-label':tx('Move down'),text:'\\u25BC',onclick:function(){move(i,1)}}),
+el('button',{type:'button',class:'ib','aria-label':tx('Remove'),text:'\\u2715',onclick:function(){p.ask=true;draw()}})]));
+var b=c.querySelectorAll('.ib');if(!i)b[0].disabled=true;if(i===last)b[1].disabled=true;
+if(p.ask)c.appendChild(el('div',{class:'ask'},[el('span',{text:tx('Remove this provider?')}),el('button',{type:'button',text:tx('Yes'),onclick:function(){list.splice(list.indexOf(p),1);draw()}}),el('button',{type:'button',class:'sec',text:tx('No'),onclick:function(){p.ask=false;draw()}})]));
+if(srv){c.appendChild(field(p,tx('Address'),'',el('input',{type:'url',value:p.base,placeholder:'http://computer:11434/v1',class:p.err.base?'bad':'',oninput:function(e){p.base=e.target.value.trim()},onchange:function(){check(p);loadModels(p)}}),'base'));
+c.appendChild(field(p,tx('Name'),tx('optional'),el('input',{type:'text',value:p.name||'',oninput:function(e){p.name=e.target.value}}),'name'))}
+var kh=p.hasKey&&!p.clearKey?tx('(one is saved; leave empty to keep it)'):srv?tx('(only if your server needs one; most at home do not)'):'';
+c.appendChild(field(p,tx('API key'),kh,el('input',{type:'password',autocomplete:'off',placeholder:srv?'':'sk-or-...',class:p.err.key?'bad':'',oninput:function(e){p.key=e.target.value.trim()}}),'key'));
+if(p.hasKey&&!p.clearKey&&srv)c.appendChild(el('a',{href:'#',style:'font-size:14px;color:#aaa',text:tx('Remove the saved key'),onclick:function(e){e.preventDefault();p.clearKey=true;draw()}}));
+var dl='m'+i,mi=el('input',{list:dl,value:p.model,autocomplete:'off',class:p.err.model?'bad':'',oninput:function(e){p.model=e.target.value.trim()}});
+var mh=p.loading?tx('Reading models…'):srv?tx('read from your server'):'';
+c.appendChild(field(p,tx('Model'),mh,mi,'model'));c.appendChild(el('datalist',{id:dl},(p.models||[]).map(function(m){return el('option',{value:m.id,text:m.price!=null?m.name+' \\u00B7 $'+m.price+'/M':m.name})})));
+if(p.mErr)c.appendChild(el('p',{class:'e',text:tx('Could not read the model list: %s. Type the model name.',p.mErr)}));
+var w=el('select',{onchange:function(e){p.waitS=+e.target.value}},D.waits.map(function(s){var o=el('option',{value:s,text:tx('%d s',s)});if(s===p.waitS)o.selected=true;return o}));
+c.appendChild(field(p,tx('Wait for an answer'),'',w,''));
+c.appendChild(el('label',{class:'c'},[el('input',{type:'checkbox',onchange:function(e){p.off=!e.target.checked}}),document.createTextNode(' '+tx('Use this provider'))]));c.querySelector('.c input').checked=!p.off;
+c.appendChild(el('button',{type:'button',class:'sec',text:p.testing?tx('Testing…'):tx('Test'),onclick:function(){if(p.testing||!check(p)){draw();return}p.testing=true;p.res=null;draw();post('test',draft(p)).then(function(r){p.testing=false;p.res=r;draw()},function(){p.testing=false;draw()})}}));
+if(p.res)c.appendChild(el('div',{class:p.res.ok?'ok':'no',text:p.res.ok?'\\u2713 '+tx('Answered in %s s',(p.res.ms/1000).toFixed(1)):'\\u2717 '+p.res.error}));
+return c}
+function move(i,d){var j=i+d;if(j<0||j>=list.length)return;var t=list[i];list[i]=list[j];list[j]=t;draw()}
+function draw(){var box=document.getElementById('cards');box.textContent='';if(!list.length)box.appendChild(el('p',{class:'e',style:'color:#aaa',text:tx('No AI provider yet: add OpenRouter or a server of your own.')}));list.forEach(function(p,i){box.appendChild(card(p,i))});document.getElementById('addor').style.display=list.some(function(p){return p.type==='openrouter'})?'none':''}
+function add(type){var p={id:'',type:type,name:'',base:'',model:type==='openrouter'?'openrouter/auto':'',waitS:type==='openrouter'?30:25,off:false,hasKey:false,key:'',clearKey:false,models:null,mErr:'',res:null,err:{},ask:false};list.push(p);draw();if(type==='openrouter')loadModels(p);var cs=document.querySelectorAll('.card');var last=cs[cs.length-1];last.scrollIntoView({behavior:'smooth',block:'center'});var f=last.querySelector('input');if(f)f.focus()}
+document.getElementById('addor').onclick=function(){add('openrouter')};document.getElementById('addsrv').onclick=function(){add('server')};
+document.getElementById('save').onclick=function(){var ok=true;list.forEach(function(p){if(!check(p))ok=false});draw();var er=document.getElementById('err');er.textContent='';if(!ok){var b=document.querySelector('.bad');if(b)b.scrollIntoView({block:'center'});return}
+var body={llm:{enabled:document.getElementById('enabled').checked,system:document.getElementById('system').value,providers:list.map(function(p){var o={type:p.type,name:p.name,model:p.model,waitS:p.waitS,off:p.off};if(p.id)o.id=p.id;if(p.type==='server')o.base=p.base;if(p.key)o.key=p.key;if(p.clearKey&&!p.key)o.clearKey=true;return o})},ha:{route:document.getElementById('haroute').value},url:document.getElementById('url').value};
+var tk=document.getElementById('token').value;if(tk)body.token=tk;
+post('save-json',body).then(function(r){if(r.error){er.textContent=r.error;return}document.getElementById('main').innerHTML='<p class=m></p>';document.querySelector('#main .m').textContent=tx('Saved. You can close this page.')},function(){er.textContent='?'})};
+draw();list.forEach(function(p){if(p.type==='openrouter'||p.base)loadModels(p)})})();</script>`;
 }
 function startPair(only) {
   stopPair();
   only = only === 'ha' ? 'ha' : '';
   const token = crypto.randomBytes(16).toString('hex');
-  let hits = 0,
-    list = [];
+  let hits = 0;
   const srv = http.createServer((req, res) => {
     const send = (c, html) => {
       res.writeHead(c, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
@@ -688,7 +914,44 @@ function startPair(only) {
     if (++hits > 120) return send(429, 'Too many requests');
     const p = req.url.split('?')[0];
     const lg = i18n.lang(req, ctx.config.get().lang);
-    if (req.method === 'GET' && p === '/' + token) return send(200, pairPage('', false, list, token, lg, only));
+    if (req.method === 'GET' && p === '/' + token) return send(200, pairPage('', false, token, lg, only));
+    const json = (code, o) => {
+      res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      res.end(JSON.stringify(o));
+    };
+    // the voice page's calls: save everything, test one provider, read one provider's models (a draft: its unsaved values)
+    if (req.method === 'POST' && !only && /^\/[0-9a-f]{32}\/(save-json|test|models)$/.test(p) && p.indexOf('/' + token + '/') === 0) {
+      let b = '';
+      req.on('data', c => {
+        b += c;
+        if (b.length > 65536) req.destroy();
+      });
+      req.on('end', () => {
+        let o;
+        try {
+          o = JSON.parse(b);
+        } catch (_) {
+          return json(400, { error: 'not JSON' });
+        }
+        const act = p.slice(token.length + 2);
+        if (act === 'save-json') {
+          const set = { llm: o.llm || {}, ha: { route: (o.ha && o.ha.route) || 'ha-first' }, url: typeof o.url === 'string' ? o.url : '' };
+          if (typeof o.token === 'string' && o.token) set.token = o.token;
+          const err = applySet(set);
+          if (err) return json(400, { error: i18n.tr(lg, err) });
+          pairedAt = Date.now();
+          json(200, { ok: true });
+          return setTimeout(stopPair, 2000);
+        }
+        const d = draftProvider(o);
+        if (act === 'test') return testProvider(d).then(r => json(200, r));
+        models(d).then(
+          m => json(200, { models: m.all.map(x => ({ id: x.id, name: x.name, price: x.price })) }),
+          e => json(200, { error: e.message })
+        );
+      });
+      return;
+    }
     if (req.method === 'POST' && p === '/' + token + '/save') {
       let b = '';
       req.on('data', c => {
@@ -699,29 +962,13 @@ function startPair(only) {
         const f = new URLSearchParams(b);
         /** @type {any} */
         let set;
-        if (only === 'ha') {
-          set = { ha: { url: f.get('haurl') || '', selfSigned: f.get('hass') === '1' } };
-          if (f.get('hatoken')) set.ha.token = f.get('hatoken');
-        } else {
-          set = {
-            llm: {
-              model: f.get('model') || '',
-              system: f.get('system') || '',
-              enabled: f.get('enabled') === '1',
-              base: f.get('base') || '',
-            },
-            url: f.get('url') || '',
-            ha: { route: f.get('haroute') || 'ha-first' },
-          };
-          // one key field: with an AI server address it is that server's key, else the OpenRouter key (kept apart, so the
-          // OpenRouter key never goes to a server of yours)
-          if (f.get('key')) set.llm[(f.get('base') || '').trim() ? 'serverKey' : 'key'] = f.get('key');
-          if (f.get('token')) set.token = f.get('token');
-        }
+        if (only !== 'ha') return send(404, 'Not found'); // the voice page saves with save-json
+        set = { ha: { url: f.get('haurl') || '', selfSigned: f.get('hass') === '1' } };
+        if (f.get('hatoken')) set.ha.token = f.get('hatoken');
         const err = applySet(set);
-        if (err) return send(400, pairPage(err, false, list, token, lg, only));
+        if (err) return send(400, pairPage(err, false, token, lg, only));
         pairedAt = Date.now();
-        send(200, pairPage('Saved. You can close this page.', true, [], token, lg, only));
+        send(200, pairPage('Saved. You can close this page.', true, token, lg, only));
         setTimeout(stopPair, 2000);
       });
       return;
@@ -739,12 +986,6 @@ function startPair(only) {
     until: Date.now() + PAIR_MS,
     url: 'http://' + lanIp() + ':' + PAIR_PORT + '/' + token,
   };
-  models().then(
-    m => {
-      list = m.all;
-    },
-    () => {}
-  ); // the page still works without the list
   return { url: pair.url, seconds: PAIR_MS / 1000 };
 }
 function stopPair() {
@@ -766,7 +1007,7 @@ const status = () => {
     enabled: !!c.enabled,
     url: c.url,
     hasToken: !!c.token,
-    llm: (l => ({ enabled: !!l.enabled, hasKey: !!l.key, model: l.model, base: l.base, hasServerKey: !!l.serverKey }))(llmCfg()),
+    llm: llmStatus(),
     ha: (h => ({ configured: haReady(h), url: h.url, hasToken: !!h.token, selfSigned: h.selfSigned, route: h.route, agent: h.agent }))(
       haCfg()
     ),
@@ -800,8 +1041,13 @@ async function handle(req, res, u, body) {
   const act = u.replace('/api/voice/', '');
   if (act === 'status') return json(status());
   if (act === 'models') {
+    // the models of one provider (?id=), else of the first one, else OpenRouter's
+    const id = new URLSearchParams(String(req.url || '').split('?')[1] || '').get('id') || '',
+      ps = llmCfg().providers,
+      p = id ? ps.filter(x => x.id === id)[0] : ps[0] || provider({ type: 'openrouter' });
+    if (!p) return json({ error: 'no such AI provider' }, 404);
     try {
-      const m = await models();
+      const m = await models(p);
       return json({ picks: m.picks.map(x => ({ id: x.id, name: x.name, price: x.price })), count: m.all.length });
     } catch (e) {
       return json({ error: e.message }, 502);
@@ -854,7 +1100,20 @@ async function handle(req, res, u, body) {
     if (!llmReady(l) && !cfg().url && !haReady(haCfg()))
       return json({ error: 'no destination: set up Home Assistant, switch on the AI chat or set a server address' }, 400);
     const r = await respond(text, b.card !== false);
-    return json({ text: r.text, answer: r.answer || '', via: r.via || '', error: r.error || '' });
+    return json({
+      text: r.text,
+      answer: r.answer || '',
+      via: r.via || '',
+      provider: r.provider || '',
+      tried: r.tried || [],
+      error: r.error || '',
+    });
+  }
+  if (act === 'test') {
+    // one AI provider: a saved one ({id}), or unsaved values over it ({id, base, key, model}) or a new one ({type, base, key, model})
+    const b = await body(req);
+    if (b.id && !llmCfg().providers.some(p => p.id === b.id)) return json({ error: 'no such AI provider' }, 404);
+    return json(await testProvider(draftProvider(b)));
   }
   if (act === 'set') {
     const err = applySet(await body(req));

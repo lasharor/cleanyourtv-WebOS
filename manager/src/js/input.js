@@ -5,6 +5,7 @@ document.addEventListener('keydown', function (e) {
   else if (k === 37) setTab(tab - 1);
   else if (k === 39) setTab(tab + 1);
   else if (k === 13) act();
+  else if ((k === 33 || k === 34) && view === 'providers') provKey(k === 33 ? -1 : 1); /* Channel up / down (PageUp / PageDown on webOS) */
   else if (k === 461 || k === 27 || k === 8 || k === 10009) {
     if (view === 'share') closeShare();
     else if (view === 'keys') closeKeys();

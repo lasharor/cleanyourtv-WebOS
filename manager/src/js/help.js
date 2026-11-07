@@ -62,12 +62,23 @@ var INFO = {
   'Trim now':
     'Trims the writable partitions on the built-in storage now and shows how much was freed. A second run right after frees almost nothing.',
   'Listen on the voice button': 'On: pressing the button you learned starts listening. A card shows what was heard.',
-  'AI chat (OpenRouter)':
-    'On: what you say is also sent as text to a language model through OpenRouter and the answer is shown on screen. Needs your OpenRouter key; the text goes to OpenRouter and the model provider, never audio.',
+  'AI chat':
+    'On: what you say is also sent as text to a language model and the answer is shown on screen. The providers are asked in order: if the first does not answer, the next one is. Only the text is sent, never audio.',
+  'AI providers':
+    'Where AI chat gets its answers: OpenRouter or a server of yours (Ollama, LM Studio, llama.cpp). They are asked from the top; if one does not answer, the next one is. Open it to test, reorder or switch one off.',
   'Set up from your phone':
-    'Shows a QR code. Scan it with a phone on the same Wi-Fi to enter your OpenRouter key, choose a model, write instructions and set a server address. Nothing is typed on the TV.',
+    'Shows a QR code. Scan it with a phone on the same Wi-Fi to add OpenRouter or your own server, enter keys, choose models and write instructions. Nothing is typed on the TV.',
   'Model':
-    'Choose the model that answers. The list is read from OpenRouter: the newest models of the main providers, with the price per million words in. The phone page lists every model.',
+    'Choose the model that answers. OpenRouter lists the newest models of the main providers, with the price per million words in; a server of yours lists the models it has. The phone page lists every model.',
+  'Test now': 'Asks this provider “Say OK” and shows how long the answer took, or why it failed.',
+  'Wait for an answer':
+    'How long this provider gets before the next one is asked. Choose to go to the next value: 10, 25, 45 or 60 seconds.',
+  'Use this provider': 'Off: this provider is skipped and keeps its place, key and model.',
+  'Make first': 'Moves this provider to the top: it is asked first.',
+  'Move up': 'Asks this provider one place earlier.',
+  'Move down': 'Asks this provider one place later.',
+  'Test all': 'Asks every provider “Say OK”, one after the other, and shows each result.',
+  'Add a provider': 'Shows a QR code. Add OpenRouter or a server of yours, its key and model, on your phone.',
   'Set up with commands': 'Shows the commands to set the key, model and instructions from a shell, and how to ask by text.',
   'Forget the conversation': 'The AI and Home Assistant remember the last turns for ten minutes. This clears them.',
   'Home Assistant (Assist)':
