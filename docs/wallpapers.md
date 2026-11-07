@@ -2,7 +2,7 @@
 
 Your own photos behind the home screen. Out of the box they are files: photos you upload from a phone. Other sources are
 [add-ons](development/addons.md) you install in the manager: [Immich](https://immich.app) albums, [Unsplash](https://unsplash.com), and more. Everything ends up in
-one rotation on the TV.
+one rotation on the TV. The same photos stand in for LG's screen saver when CleanYourTV's [Screen saver](screensaver.md) is on.
 
 ## Switching it on
 
