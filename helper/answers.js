@@ -49,13 +49,15 @@ async function toServer(c, payload) {
 
 // ---- chat with a language model (text only; the key and the questions go to OpenRouter, or to the server set as base) ----
 // base: '' is OpenRouter; otherwise the address of an OpenAI-compatible chat API (Ollama: http://<computer>:11434/v1, LM Studio,
-// llama.cpp's server, vLLM). Such a server usually needs no key, and gets none of OpenRouter's extra fields.
+// llama.cpp's server, vLLM). Such a server usually needs no key, and gets none of OpenRouter's extra fields. key is the OpenRouter
+// key and goes only to OpenRouter; serverKey goes only to the server of yours (it may be on plain http on the home network).
 const orApi = () => process.env.CYTV_OPENROUTER || 'https://openrouter.ai/api/v1'; // overridden only by the tests
-const LLM_DEFAULTS = { enabled: false, key: '', model: 'openrouter/auto', system: '', base: '' };
+const LLM_DEFAULTS = { enabled: false, key: '', model: 'openrouter/auto', system: '', base: '', serverKey: '' };
 const llmCfg = () => Object.assign({}, LLM_DEFAULTS, cfg().llm || {});
 const llmApi = l => l.base || orApi();
 const llmName = l => (l.base ? 'the AI server' : 'OpenRouter');
 const llmReady = l => !!(l.enabled && (l.key || l.base)); // OpenRouter needs a key; a server of yours may not
+const llmAuth = l => (l.base ? l.serverKey : l.key); // never the OpenRouter key to another server
 const DEFAULT_SYSTEM =
   'You are a voice assistant on a television. You have no tools and no internet access: answer from your own knowledge, and say when something may be out of date. The user speaks to you through the remote control and your answer appears as text on the screen, so keep it short: one to three plain sentences, no markdown, no lists, no emoji. If the speech looks like a recognition mistake, answer what was most likely meant.';
 let history = [],
@@ -91,7 +93,7 @@ async function askLlm(text) {
     ].concat(turns);
     const headers = l.base ? {} : { 'HTTP-Referer': 'https://github.com/lasharor/cleanyourtv-WebOS', 'X-Title': 'CleanYourTV' },
       payload = { model: l.model, messages, max_tokens: 500 };
-    if (l.key) headers.authorization = 'Bearer ' + l.key;
+    if (llmAuth(l)) headers.authorization = 'Bearer ' + llmAuth(l);
     if (!l.base) payload.reasoning = { exclude: true };
     const r = await request(llmApi(l) + '/chat/completions', headers, payload, 60000);
     let o = {};
@@ -197,7 +199,7 @@ function models() {
     name = l.base ? 'The AI server' : 'OpenRouter';
   if (modelCache && modelCache.api === api && Date.now() - modelCache.at < 3600000) return Promise.resolve(modelCache);
   const headers = { 'User-Agent': 'cleanyourtv-voice' };
-  if (l.base && l.key) headers.authorization = 'Bearer ' + l.key;
+  if (l.base && l.serverKey) headers.authorization = 'Bearer ' + l.serverKey;
   return fetch
     .read(api + '/models', {
       headers,

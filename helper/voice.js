@@ -575,6 +575,8 @@ function applySet(b) {
       l.key = '';
       l.enabled = false;
     }
+    if (typeof b.llm.serverKey === 'string' && b.llm.serverKey.trim()) l.serverKey = b.llm.serverKey.trim().slice(0, 300);
+    if (b.llm.clearServerKey) l.serverKey = '';
     if (typeof b.llm.base === 'string') {
       // the address of an OpenAI-compatible chat API (Ollama: http://<computer>:11434/v1); empty is OpenRouter
       const u = b.llm.base.trim().slice(0, 300),
@@ -653,6 +655,7 @@ function pairPage(msg, done, list, token, lang, only) {
         : `<form method=post action="/${token}/save">
 <label>${T('AI server address')} <small>${T('(empty: OpenRouter. Your own, such as Ollama: http://computer:11434/v1)')}</small></label><input name=base type=url placeholder="https://openrouter.ai/api/v1" value="${esc(l.base)}">
 <label>${T('OpenRouter key')} ${l.key ? T('(one is saved; leave empty to keep it)') : ''} <small>${T('(not needed for Ollama)')}</small></label><input name=key type=password autocomplete=off placeholder="sk-or-...">
+<label>${T('Key of your AI server')} <small>(${T('optional; Ollama needs none')}${l.serverKey ? '; ' + T('one is saved, leave empty to keep it') : ''})</small></label><input name=serverkey type=password autocomplete=off>
 <label>${T('Model')} <small>${T('choose from the list or type any OpenRouter model name')}</small></label><input name=model list=ml value="${esc(l.model)}" autocomplete=off><datalist id=ml>${opts}</datalist>
 <label class=c><input type=checkbox name=enabled value=1 ${l.enabled ? 'checked' : ''}> ${T('Answer with the AI')}</label>
 <label>${T('Instructions for the AI')} <small>${T('(empty: short plain answers)')}</small></label><textarea name=system rows=3>${esc(l.system)}</textarea>
@@ -712,6 +715,7 @@ function startPair(only) {
             ha: { route: f.get('haroute') || 'ha-first' },
           };
           if (f.get('key')) set.llm.key = f.get('key');
+          if (f.get('serverkey')) set.llm.serverKey = f.get('serverkey');
           if (f.get('token')) set.token = f.get('token');
         }
         const err = applySet(set);
@@ -762,7 +766,7 @@ const status = () => {
     enabled: !!c.enabled,
     url: c.url,
     hasToken: !!c.token,
-    llm: (l => ({ enabled: !!l.enabled, hasKey: !!l.key, model: l.model, base: l.base }))(llmCfg()),
+    llm: (l => ({ enabled: !!l.enabled, hasKey: !!l.key, model: l.model, base: l.base, hasServerKey: !!l.serverKey }))(llmCfg()),
     ha: (h => ({ configured: haReady(h), url: h.url, hasToken: !!h.token, selfSigned: h.selfSigned, route: h.route, agent: h.agent }))(
       haCfg()
     ),

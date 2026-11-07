@@ -1419,5 +1419,7 @@
  "AI chat (your server)": "AI chat (your server)",
  "AI server address": "AI server address",
  "(empty: OpenRouter. Your own, such as Ollama: http://computer:11434/v1)": "(empty: OpenRouter. Your own, such as Ollama: http://computer:11434/v1)",
- "(not needed for Ollama)": "(not needed for Ollama)"
+ "(not needed for Ollama)": "(not needed for Ollama)",
+ "Key of your AI server": "Key of your AI server",
+ "optional; Ollama needs none": "optional; Ollama needs none"
 }

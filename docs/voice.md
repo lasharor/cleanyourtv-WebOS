@@ -91,7 +91,9 @@ curl -X POST localhost:8765/api/voice/set -d '{"llm":{"base":"http://192.168.1.2
 ```
 
 - The address is the part before `/chat/completions`; `http://` is fine on your own network. An empty address goes back to OpenRouter.
-- A key is sent as `Authorization: Bearer <key>` only when one is set (LM Studio or vLLM with a key); Ollama needs none.
+- Your OpenRouter key is never sent to that server: it goes only to OpenRouter, and stays saved for when you clear the address. If
+  your server wants a key (LM Studio or vLLM with one), set **Key of your AI server** (`"serverKey"`); it is sent as
+  `Authorization: Bearer <key>` to that server only. Ollama needs none.
 - The answer must arrive within 60 seconds: on a computer without a graphics card, take a small model (1 to 4 billion parameters).
 - **Model** on the TV then lists the models of your server; the manager app shows **AI chat (your server)**.
 - Home Assistant with its Ollama integration is another way: choose that conversation agent under **Assist agent** (below).

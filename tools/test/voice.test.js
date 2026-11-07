@@ -211,11 +211,17 @@ run(async () => {
     r.code === 200 && r.j.count === 2 && r.j.picks[0].id === 'llama3.2:3b' && r.j.picks[1].id === 'qwen2.5:3b',
     'the model list comes from the server of yours, all of it'
   );
-  await vask('set', { llm: { key: 'lm-key' } });
+  await vask('set', { llm: { key: 'sk-or-secret' } });
   await vask('ask', { text: 'again', card: false });
-  ok(olLog[olLog.length - 1].headers.authorization === 'Bearer lm-key', 'a key, when one is set, is sent to the server of yours');
+  ok(!olLog[olLog.length - 1].headers.authorization, 'the OpenRouter key is never sent to the server of yours');
+  r = await vask('set', { llm: { serverKey: 'lm-key' } });
+  ok(r.j.llm.hasServerKey && JSON.stringify(r.j).indexOf('lm-key') < 0, 'the status says a server key is saved, never which');
+  await vask('ask', { text: 'once more', card: false });
+  ok(olLog[olLog.length - 1].headers.authorization === 'Bearer lm-key', 'the key of the server of yours is sent to it');
   r = await vask('set', { llm: { base: '' } });
   ok(r.code === 200 && r.j.llm.base === '' && r.j.llm.hasKey, 'an empty address goes back to OpenRouter');
+  r = await vask('set', { llm: { clearServerKey: true } });
+  ok(!r.j.llm.hasServerKey, 'the server key can be removed');
   ol.server.close();
   ha.server.close();
   ai.server.close();

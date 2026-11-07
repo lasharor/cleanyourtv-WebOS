@@ -815,6 +815,7 @@
     "base": "",
     "enabled": false,
     "hasKey": false,
+    "hasServerKey": false,
     "model": "openrouter/auto"
    },
    "pairedAt": 0,
