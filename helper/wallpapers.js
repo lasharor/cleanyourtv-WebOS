@@ -218,11 +218,25 @@ function create(ctx) {
     }
   }
   // what Home has now from a live source, for the screen saver: next() hands out a new photo on every call, so asking it again would
-  // show another photo than Home and make Home skip one. Before Home asked at all (a fresh start of the service) it asks once.
+  // show another photo than Home and make Home skip one. Before Home asked at all (a fresh start of the service) it asks once, and
+  // that photo waits for Home (forHome): Home's next request gets it instead of another one, so both show the same photo.
+  const forHome = {};
   async function liveCurrent(addon) {
     const s = srcOf(addon);
     if (!s || s.mod.wallpapers.live !== true) return { error: 'not a live source' };
-    return lastLive[addon] || liveNext(addon);
+    if (lastLive[addon]) return lastLive[addon];
+    const p = await liveNext(addon);
+    if (p.url) forHome[addon] = true;
+    return p;
+  }
+  // Home's request (/api/wallpapers/live/<add-on>): the photo the screen saver fetched first, once, else the source's next one
+  async function liveForHome(addon) {
+    if (forHome[addon] && lastLive[addon]) {
+      delete forHome[addon];
+      return lastLive[addon];
+    }
+    delete forHome[addon];
+    return liveNext(addon);
   }
   // a photo a live source wants Home to show now (Unsplash: the one "Test key and save" fetched), handed out once; Home asks every few
   // seconds while a live entry is in its list
@@ -401,7 +415,7 @@ function create(ctx) {
     const ms = /^\/api\/wallpapers\/photo\/s\/([a-z][a-z0-9-]{1,31})\/([\w.-]{1,64})$/.exec(u);
     if (ms) return sendSrcPhoto(res, ms[1], ms[2]);
     const ml = /^\/api\/wallpapers\/live\/([a-z][a-z0-9-]{1,31})$/.exec(u);
-    if (ml) return json(await liveNext(ml[1]));
+    if (ml) return json(await liveForHome(ml[1]));
     if (u === '/api/wallpapers/push') return json(pushNow());
     if (u === '/api/wallpapers/status') return json(status());
     if (u === '/api/wallpapers/list') return json({ photos: list(), stamp: stamp() });

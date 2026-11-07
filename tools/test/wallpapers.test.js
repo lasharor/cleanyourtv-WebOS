@@ -215,6 +215,45 @@ run(async () => {
     );
     cur = await ws.liveCurrent('nobody');
     ok(!!cur.error && !cur.url, 'liveCurrent of a source that is not live: an error, as for Home');
+    {
+      // a fresh service where the screen saver asks first: the photo it gets from next() is the one Home gets on its next request,
+      // so both show the same photo and Home does not skip one; after that Home moves on as before
+      let n = 0;
+      const fresh = W.create({
+        config: memoryConfig({}),
+        feature: k =>
+          k === 'addons'
+            ? {
+                providers: w =>
+                  w === 'wallpapers'
+                    ? [
+                        {
+                          id: 'demo',
+                          name: 'Demo',
+                          mod: {
+                            wallpapers: {
+                              label: 'Demo',
+                              list: () => [],
+                              live: true,
+                              next: async () => ({ url: 'https://images.example.com/p' + ++n + '.jpg', credit: 'c' + n }),
+                            },
+                          },
+                        },
+                      ]
+                    : [],
+              }
+            : null,
+      });
+      const saverFirst = await fresh.liveCurrent('demo');
+      const homeNext = (await call(fresh, '/api/wallpapers/live/demo')).j;
+      const asked = n;
+      const homeAfter = (await call(fresh, '/api/wallpapers/live/demo')).j;
+      ok(
+        saverFirst.url === 'https://images.example.com/p1.jpg' && homeNext.url === saverFirst.url && asked === 1,
+        'cold start, the saver asks first: Home then gets that same photo, not the next one (' + homeNext.url + ')'
+      );
+      ok(homeAfter.url === 'https://images.example.com/p2.jpg', "after that, Home's next request moves on to a new photo");
+    }
 
     let pj = (await call(ws, '/api/wallpapers/push')).j;
     ok(pj.id === '' && pj.url === '', 'nothing waiting for Home: an empty answer');
