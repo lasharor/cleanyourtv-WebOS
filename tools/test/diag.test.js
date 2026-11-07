@@ -65,4 +65,33 @@ run(async () => {
     'a start that finds the file of a dead process logs its last operations'
   );
   ok(JSON.parse(fs.readFileSync(process.env.CYTV_RUNFILE, 'utf8')).pid === process.pid, 'the file now belongs to the running process');
+
+  // Node 8 sometimes aborts a child it has just forked, before the program runs (SIGABRT, no output): exec.run starts it again, up to
+  // three times (here the first two starts abort)
+  const tries = require('path').join(require('os').tmpdir(), 'cytv-abort-' + process.pid);
+  const abortFirst = 'n=$(cat "$1" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "$1"; [ $n -le 2 ] && kill -ABRT $$; echo ran $n';
+  const saidLines = [],
+    realLog = console.log;
+  console.log = m => saidLines.push(String(m));
+  let ab = await exec.run('/bin/sh', ['-c', abortFirst, 'sh', tries]);
+  console.log = realLog;
+  ok(
+    ab.ok &&
+      ab.out === 'ran 3\n' &&
+      fs.readFileSync(tries, 'utf8').trim() === '3' &&
+      /started again \(2 of 3\)/.test(saidLines.join(' ')) &&
+      !('abortedAtStart' in ab),
+    'a child that Node aborted before it ran is started again (twice here), and the log says so'
+  );
+  // one that keeps aborting is given up after three more starts
+  fs.writeFileSync(tries, '0');
+  ab = await exec.run('/bin/sh', ['-c', 'n=$(cat "$1"); echo $((n+1)) > "$1"; kill -ABRT $$', 'sh', tries]);
+  ok(
+    !ab.ok && ab.error === 'exit SIGABRT' && fs.readFileSync(tries, 'utf8').trim() === '4',
+    'a child that keeps aborting is started at most four times'
+  );
+  fs.writeFileSync(tries, '0');
+  ab = await exec.run('/bin/sh', ['-c', 'echo partial; kill -ABRT $$']);
+  ok(!ab.ok && ab.error === 'exit SIGABRT' && ab.out === 'partial\n', 'a program that wrote something before it aborted is not run again');
+  fs.unlinkSync(tries);
 });

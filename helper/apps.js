@@ -95,6 +95,7 @@ function create(ctx) {
   // the app manager's changes: luna-send -i listApps {subscribe}. Its first answer is the list itself; every later one is a change, after
   // which the list is asked again (once for a burst of changes). The subscription is started again when it ends, waiting longer each time.
   const spawn = ctx.spawn || require('child_process').spawn;
+  const WATCH_AFTER = ctx.watchAfter !== undefined ? ctx.watchAfter : 5000;
   let watchProc = null,
     watchOn = false;
   function watchApps() {
@@ -139,8 +140,14 @@ function create(ctx) {
       proc.on('error', again);
       proc.on('close', again);
     };
-    // a subscription left by an earlier run of the service (it is not ended when the service stops abnormally) goes first
-    exec.run('pkill', ['-f', '^luna-send -i luna://com.webos.applicationManager/listApps'], { timeout: 5000 }).then(run, run);
+    // a subscription left by an earlier run of the service (it is not ended when the service stops abnormally) goes first. The
+    // subscription starts a few seconds later: a child forked while the service is still starting was aborted by Node 8 at every
+    // start on webOS 6.5.3 (see exec.js); the list is asked as usual meanwhile
+    const later = () => {
+      const t = setTimeout(run, WATCH_AFTER);
+      if (t && t.unref) t.unref();
+    };
+    exec.run('pkill', ['-f', '^luna-send -i luna://com.webos.applicationManager/listApps'], { timeout: 5000 }).then(later, later);
   }
   function unwatchApps() {
     watchOn = false;
