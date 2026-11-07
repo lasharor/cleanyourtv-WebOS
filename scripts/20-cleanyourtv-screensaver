@@ -6,6 +6,9 @@
 #   standin  a native program: screensaver-standin.sh is mounted over it; the app manager is not restarted
 #   mount    anything else (a QML or web screen saver): the page's folder is mounted over the app and the app manager reads it
 # "prepare" (called by 10-cleanyourtv-home just before it restarts the app manager) only mounts, so one restart reads both.
+# "setup" (called by bootstrap.sh when it installs) never restarts the app manager: it mounts where nothing more is needed (the
+# stand-in, or the folder after the Home takeover restarted sam this boot) and otherwise leaves LG's screen saver until the next boot.
+# A folder mounted without that restart would hide LG's files from an app manager that has not read the new manifest: no saver at all.
 # The screen saver starts by itself when the TV is idle: nothing is launched here.
 # The paths and commands can be pointed elsewhere for the tests (tools/test/screensaver.test.js: CYTV_TEST_ROOT, CYTV_TEST_BIN with fake
 # mount, systemctl and luna-send, CYTV_MOUNTS); on the TV none of them is set.
@@ -26,6 +29,7 @@ replaced() { grep -q " $H " $MOUNTS || { [ -f $STANDIN ] && grep -q " $(cat $STA
 [ -d $H ] || exit 0   # a TV without LG's screen saver app: nothing to replace
 [ -f $L/backup/screensaver-appinfo.orig.json ] || exit 0
 PREPARE=0; [ "$1" = prepare ] && PREPARE=1
+SETUP=0; [ "$1" = setup ] && SETUP=1
 
 method=$(node $L/tvprofile.js get saverTakeover --saver "$(node $L/jtool.js kind $L/backup/screensaver-appinfo.orig.json 2>/dev/null)" 2>/dev/null)
 [ "$(cat $L/screensaver-method 2>/dev/null)" = mount ] && method=mount
@@ -36,6 +40,10 @@ EXE=""
 # Staged on every run, as 10-cleanyourtv-home stages Home: a setup over a running install copies the new page while the folder is
 # already mounted, and without this the mounted folder kept the page of the build before. Unchanged files cost a cmp, nothing more.
 sh $L/stage-screensaver.sh || { echo "$(up) saver: the page could not be staged" >> $LOG; exit 1; }
+if [ $SETUP = 1 ] && [ "$method" != standin ] && [ ! -f $SAM ] && ! replaced; then
+  echo "$(up) saver: the setup does not restart the app manager; LG's screen saver stays until the next boot, ours comes then" >> $LOG
+  exit 0
+fi
 if ! replaced; then
   if [ "$method" = standin ]; then
     echo "$(up) saver: LG's screen saver is the program $EXE; mounting the stand-in over it" >> $LOG
@@ -50,6 +58,7 @@ fi
 
 [ "$method" = standin ] && exit 0                     # the program needs no app manager restart
 [ $PREPARE = 1 ] && exit 0
+[ $SETUP = 1 ] && exit 0
 [ -f $SAM ] && exit 0                                 # the Home takeover restarted the app manager after this mount
 systemctl is-active sam >/dev/null 2>&1 || exit 0     # it reads the mount when it starts
 # The app manager has to read the new manifest. Where Home is a stand-in its page lives in webapp-mgr, which such a restart takes

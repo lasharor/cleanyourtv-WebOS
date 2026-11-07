@@ -214,7 +214,8 @@ start_install() {
   say "starting (the screen blinks once while the system app manager restarts)"
   pkill -f "[c]leanyourtv/watchdog.sh"; pkill -f "[c]leanyourtv/helper.js"; pkill -f "[l]una-send -i -f"; sleep 1
   sh $D/10-cleanyourtv-home </dev/null
-  [ -f $D/20-cleanyourtv-screensaver ] && sh $D/20-cleanyourtv-screensaver prepare </dev/null   # the screen saver, where 10 did not
+  # the screen saver, where 10 did not: "setup" mounts only where no app manager restart is needed (20-cleanyourtv-screensaver)
+  [ -f $D/20-cleanyourtv-screensaver ] && sh $D/20-cleanyourtv-screensaver setup </dev/null
   [ "$(opt debloat)" = 1 ] && sh $D/debloat-stop.sh </dev/null
 }
 

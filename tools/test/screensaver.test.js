@@ -548,6 +548,25 @@ run(async () => {
     ok(mounted(o, o.H) && !restarted(o), 'sam was already restarted after the mount this boot ($SAM): no second restart');
     o = saverRun({ kind: 'native' });
     ok(mounted(o, o.exe) && !mounted(o, o.H) && !restarted(o), 'a native saver: the stand-in over its program, no restart');
+
+    // the setup (bootstrap.sh start_install, "setup"): it never restarts the app manager for the saver. Where a mount needs that
+    // restart and none came this boot (a TV whose Home is the stand-in), it leaves LG's saver working until the next boot, instead
+    // of hiding LG's files behind a folder the app manager has not read (which left no screen saver at all)
+    o = saverRun({ kind: 'qml', args: ['setup'], homeStandin: true });
+    ok(
+      !mounted(o, o.H) && !restarted(o) && /next boot/.test(o.log),
+      'setup, a QML saver and no app manager restart this boot: nothing mounted, LG\'s saver stays until the next boot (' +
+        o.log.trim().split('\n').pop() +
+        ')'
+    );
+    o = saverRun({ kind: 'qml', args: ['setup'], sam: true });
+    ok(mounted(o, o.H) && !restarted(o), 'setup after the Home takeover restarted sam ($SAM): the folder is mounted, no restart');
+    o = saverRun({ kind: 'native', args: ['setup'], homeStandin: true });
+    ok(mounted(o, o.exe) && !restarted(o), 'setup, a native saver: the stand-in is mounted at once (it needs no restart)');
+    ok(
+      /20-cleanyourtv-screensaver setup/.test(fs.readFileSync(path.join(root, 'scripts', 'bootstrap.sh'), 'utf8')),
+      'bootstrap.sh calls the screen saver script in its setup mode'
+    );
   }
 
   rmrf(tmp);
