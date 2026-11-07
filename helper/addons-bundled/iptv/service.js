@@ -723,6 +723,17 @@ const TOOL = {
     },
     required: ['action'],
   },
+  group: 'Live TV', // the manager's Tools screen
+  labels: {
+    status: 'Is it set up',
+    find_channel: 'Find a channel',
+    whats_on: 'What is on now',
+    schedule: 'The guide',
+    favourites: 'The favourites',
+    set_favourite: 'Add or remove a favourite',
+    check_stream: 'Check a stream',
+    refresh: 'Reload the playlist',
+  },
 };
 const toolDone = v => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v) }], isError: false });
 const toolFail = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });

@@ -146,6 +146,8 @@ function create(ctx) {
       },
       required: ['action', 'place'],
     },
+    group: 'Weather forecast', // the manager's Tools screen
+    labels: { forecast: 'A detailed forecast', find_place: 'Find a place' },
   };
   const done = v => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v) }], isError: false });
   const bad = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });

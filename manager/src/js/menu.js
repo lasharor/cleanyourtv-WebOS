@@ -477,6 +477,25 @@ function build() {
         );
       },
     });
+    rows.push({
+      label: 'Tools',
+      sub: mtools ? mtools.on + ' ' + tr('of') + ' ' + mtools.all + ' ' + tr('on') : '',
+      info: {
+        t: 'Tools',
+        d: 'Choose which tools the voice assistant and network agents may use, one group or one tool at a time, and what happens to new tools.',
+      },
+      fn: function () {
+        api('/api/mcp/tools').then(
+          function (r) {
+            mtools = r;
+            push('mcptools');
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
     if (mn.lan) {
       var full = ags.length >= (mn.max || 10);
       rows.push({
@@ -524,6 +543,190 @@ function build() {
     }
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* the tool settings: what happens to new tools, then each group (OK or Right opens it; its first row switches the whole group, the
+     rows under it one tool each). Every change is saved at once. */
+  if (view === 'mcptools') {
+    var mt = mtools || { newTools: 'on', groups: [], on: 0, all: 0 };
+    rows.push({
+      label: 'New tools',
+      sub: mt.newTools === 'off' ? 'Stay off' : 'Turn on by themselves',
+      info: {
+        t: 'New tools',
+        d: 'What happens to a tool the TV has not seen before: an add-on installed or updated, or a service update. **Turn on by themselves** is the default. Tools you already chose keep their state when you change this.',
+      },
+      fn: function () {
+        push('mcpnewtools');
+        idx = mt.newTools === 'off' ? 1 : 0;
+        draw();
+      },
+    });
+    rows.push({ sep: true });
+    mt.groups.forEach(function (g) {
+      var c = mtCount(g),
+        open = !!mtOpen[g.id],
+        fresh = g.items.filter(function (it) {
+          return it.fresh;
+        }).length;
+      rows.push({
+        label: g.name,
+        raw: true,
+        sub: g.off
+          ? 'Add-on is off'
+          : c.on === 0
+            ? 'Off'
+            : c.on === c.all
+              ? tr('All on') + ' · ' + c.all
+              : c.on + ' ' + tr('of') + ' ' + c.all + ' ' + tr('on'),
+        state: mtState(g),
+        chev: open ? 'open' : 'shut',
+        badge: fresh ? fresh + ' ' + tr('new') : '',
+        dim: !!g.off,
+        group: g.id,
+        info: {
+          t: g.name,
+          raw: true,
+          d:
+            (g.kind === 'service'
+              ? tr('Tools of the TV service.')
+              : tr('The add-on gives one tool,') +
+                ' **' +
+                g.tool +
+                '**, ' +
+                tr('with') +
+                ' ' +
+                c.all +
+                ' ' +
+                tr(c.all === 1 ? 'action' : 'actions') +
+                '. ' +
+                tr('Each is switched here.')) +
+            (g.off ? '\n\n' + tr('The add-on is switched off in Add-ons. Your choices are kept for when it is on again.') : '') +
+            '\n\n' +
+            c.on +
+            ' ' +
+            tr('of') +
+            ' ' +
+            c.all +
+            ' ' +
+            tr('on.') +
+            ' ' +
+            tr(open ? 'OK closes the group.' : 'OK opens the group.'),
+        },
+        fn: function () {
+          mtToggle(g);
+        },
+        right: function () {
+          if (!mtOpen[g.id]) mtToggle(g);
+        },
+        left: function () {
+          if (mtOpen[g.id]) mtToggle(g);
+        },
+      });
+      if (!open) return;
+      var gs = mtState(g);
+      rows.push({
+        cls: 'allrow',
+        label: tr('All') + ' ' + g.name + ' ' + tr('tools'),
+        raw: true,
+        sw: gs === 'on' ? 'on' : gs === 'part' ? 'mixed' : 'off',
+        dim: !!g.off,
+        group: g.id,
+        info: {
+          t: tr('All') + ' ' + g.name + ' ' + tr('tools'),
+          raw: true,
+          d:
+            gs === 'part'
+              ? 'Some are on. OK turns them all on; OK again turns them all off.'
+              : gs === 'on'
+                ? 'OK turns every tool of this group off.'
+                : 'OK turns every tool of this group on.',
+        },
+        fn: function () {
+          mtSet(
+            { group: g.id, on: gs !== 'on', keys: mtKeys(g) },
+            g.name + ': ' + (gs !== 'on' ? tr('all tools on') : tr('all tools off'))
+          );
+        },
+        left: function () {
+          mtToggle(g, true);
+        },
+      });
+      g.items.forEach(function (it) {
+        rows.push({
+          cls: 'child',
+          label: g.kind === 'addon' ? it.name.replace(/_/g, ' ') : it.name,
+          raw: true,
+          sw: it.on ? 'on' : 'off',
+          badge: it.fresh ? 'New' : '',
+          tag: it.confirm ? 'voice only, after a yes' : '',
+          dim: !!g.off,
+          group: g.id,
+          info: {
+            t: (g.kind === 'addon' && g.tool ? g.tool + ' › ' : '') + it.name,
+            raw: true,
+            d:
+              tr(it.label) +
+              '.' +
+              (it.confirm ? ' ' + tr('Runs by voice only, after you say yes on the TV; refused from the network.') : '') +
+              '\n\n' +
+              tr(it.on ? 'On: agents and the voice assistant can use it.' : 'Off: it is not offered, and a call to it is refused.'),
+          },
+          fn: function () {
+            mtSet({ key: it.key, on: !it.on });
+          },
+          left: function () {
+            mtToggle(g, true);
+          },
+        });
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'disconnect_from_tv',
+      raw: true,
+      sub: 'Always on',
+      lock: true,
+      cls: 'locked',
+      nofocus: true,
+      info: {
+        t: 'disconnect_from_tv',
+        raw: true,
+        d: 'Lets a network agent log itself out. It cannot be turned off: an agent must always be able to leave.',
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', info: { t: 'Back', d: 'Back to AI agents (MCP). Changes are saved as you make them.' }, fn: pop });
+    return;
+  }
+  /* what happens to a tool the TV has not seen before */
+  if (view === 'mcpnewtools') {
+    var nt = (mtools && mtools.newTools) || 'on';
+    [
+      ['on', 'Turn on by themselves', 'A new tool can be used at once. You can still turn it off here.'],
+      ['off', 'Stay off until you turn them on', 'A new tool waits here with a New badge, and a card tells you about it.'],
+    ].forEach(function (o) {
+      rows.push({
+        label: o[1],
+        check: nt === o[0],
+        info: { t: o[1], d: o[2] + '\n\n' + 'Applies to tools that appear from now on. Tools you already chose keep their state.' },
+        fn: function () {
+          api('/api/mcp/tools', { newTools: o[0] }).then(
+            function (r) {
+              if (r.error) return banner(r.error, 'err');
+              mtools = r;
+              pop();
+              banner(tr('New tools:') + ' ' + tr(o[1]).toLowerCase(), 'ok');
+            },
+            function () {
+              banner('The service did not answer', 'err');
+            }
+          );
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', info: { t: 'Back', d: 'Back to Tools.' }, fn: pop });
     return;
   }
   /* every paired device: manage one, remove unused ones, remove all */
@@ -1842,10 +2045,11 @@ function build() {
         d: 'What the AI may do on the TV: the voice assistant, and MCP clients on other computers. Both use the same tools: open apps, switch inputs, show a card, and the tools of the add-ons you approved. Both are off by default.',
       },
       fn: function () {
-        Promise.all([api('/api/mcp/lan'), api('/api/voice/status')]).then(
+        Promise.all([api('/api/mcp/lan'), api('/api/voice/status'), api('/api/mcp/tools')]).then(
           function (r) {
             mnet = r[0];
             vo = r[1];
+            mtools = r[2] && !r[2].error ? r[2] : null;
             push('mcpnet');
           },
           function () {
@@ -2229,4 +2433,58 @@ function volumeSub(theme) {
   if (theme === 'dial') return tr('Dial');
   if (theme === 'pill') return tr('Pill');
   return tr('System default (LG webOS)');
+}
+/* the Tools screen (AI agents (MCP) > Tools): a group's count and state, its keys, opening it, and saving a change */
+function mtCount(g) {
+  var on = 0;
+  g.items.forEach(function (it) {
+    if (it.on) on++;
+  });
+  return { on: on, all: g.items.length };
+}
+function mtState(g) {
+  var c = mtCount(g);
+  return c.on === 0 ? 'off' : c.on === c.all ? 'on' : 'part';
+}
+function mtKeys(g) {
+  return g.items.map(function (it) {
+    return it.key;
+  });
+}
+/* open or close a group; closing one with New tools in it clears the badges (they were seen). focus: back on the group's row */
+function mtToggle(g, focus) {
+  var was = !!mtOpen[g.id];
+  if (was) delete mtOpen[g.id];
+  else mtOpen[g.id] = true;
+  var seen =
+    was &&
+    g.items.some(function (it) {
+      return it.fresh;
+    });
+  build();
+  if (focus || was)
+    for (var i = 0; i < rows.length; i++)
+      if (rows[i].group === g.id && rows[i].state) {
+        idx = i;
+        break;
+      }
+  draw();
+  if (seen) mtSet({ seen: g.id, keys: mtKeys(g) });
+}
+/* one change: saved at once, then the screen drawn again from what the service says now */
+function mtSet(body, said) {
+  api('/api/mcp/tools', body).then(
+    function (r) {
+      if (r.error) return banner(r.error, 'err');
+      mtools = r;
+      if (said) banner(said, 'ok');
+      var was = rows[idx] && rows[idx].label;
+      build();
+      for (var i = 0; i < rows.length; i++) if (rows[i].label === was && !rows[i].sep) idx = i;
+      draw();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
 }

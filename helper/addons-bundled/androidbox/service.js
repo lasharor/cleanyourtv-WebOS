@@ -342,6 +342,13 @@ function create(ctx) {
       },
       required: ['action'],
     },
+    group: 'Android box', // the manager's Tools screen
+    labels: {
+      status: 'Is it set up',
+      list_apps: 'Apps that open on the box',
+      test: 'Test the connection',
+      set_app: 'Choose where an app opens',
+    },
   };
   const done = v => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v) }], isError: false });
   const bad = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });

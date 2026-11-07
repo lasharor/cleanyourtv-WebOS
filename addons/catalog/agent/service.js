@@ -136,6 +136,9 @@ function create(ctx) {
     description:
       'The apps and add-ons that sign tools for the assistant. action list_sources: each source, whether the user approved it, its tools and any error. Approving a source is done on the phone page only.',
     inputSchema: { type: 'object', properties: { action: { type: 'string', enum: ['list_sources'] } }, required: ['action'] },
+
+    group: 'Agent tools', // the manager's Tools screen (the signed tools are in the same group)
+    labels: { list_sources: 'Apps and add-ons that sign tools' },
   };
   function listSources(args) {
     if (!args || args.action !== 'list_sources') return { content: [{ type: 'text', text: 'action is list_sources' }], isError: true };

@@ -259,6 +259,9 @@ function create(ctx) {
     name: 'icons',
     description: 'App icons chosen on a phone. action list_custom: the apps that show a picture of their own instead of their icon.',
     inputSchema: { type: 'object', properties: { action: { type: 'string', enum: ['list_custom'] } }, required: ['action'] },
+
+    group: 'App icons', // the manager's Tools screen
+    labels: { list_custom: 'Apps with their own picture' },
   };
   async function callTool(name, args) {
     const bad = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });

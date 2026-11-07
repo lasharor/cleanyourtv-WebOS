@@ -52,6 +52,31 @@ installed and switched on.
 | App icons (bundled) | `icons` | `list_custom`: the apps that show a picture of their own. Resetting a picture is not a tool: it deletes it |
 | Agent tools (MCP) | `agent` | `list_sources`: every app and add-on that signs tools, whether it is approved, its tools and errors. Approving stays on the phone page: the model never approves tools for itself |
 
+## Choosing the tools
+
+In the manager app, **Features > AI agents (MCP) > Tools** chooses which tools the voice assistant and network agents may use. The same
+choice holds for both: they share one tool list. The row on the AI agents screen says how many are on (**38 of 44 on**).
+
+| Row | What it does |
+|---|---|
+| **New tools** | What happens to a tool the TV has not seen before (an add-on installed or updated, a service update): **Turn on by themselves** (the default) or **Stay off until you turn them on**. Tools you already chose keep their state when you change this |
+| A group | The service's tools in four groups (Apps and inputs, Screen and Home, TV and sound, Answers) and one group per add-on. A dot and a count: **All on · 7**, **5 of 7 on** (half dot), **Off**; **Add-on is off** when the add-on is switched off. OK or Right opens the group, Left closes it |
+| **All … tools** | The group's first row: switches the whole group. A group that is partly on is turned all on first, then all off |
+| A tool | One switch per tool, and per action of an add-on's tool (Spotify's `play`, `pause` …). `power_off` is marked **voice only, after a yes** |
+| `disconnect_from_tv` | Always on, and not a switch: an agent must always be able to leave |
+
+How it behaves:
+
+- Every tool gets an explicit on or off the first time the TV sees it, by the **New tools** setting, before any agent or the voice assistant
+  is given the list. The very first time (after the update that brings this screen) every tool is on.
+- A new tool has a **New** badge (and its group "2 new") until you close its group or switch it. With **Stay off**, a card says which
+  part has new tools: "Spotify has 2 new tools".
+- A tool that is off is not in `tools/list`, and a call to it answers that it is turned off on the TV. An add-on tool with some actions off
+  lists only the actions that are on; with all of them off it is left out.
+- An add-on that is switched off or removed keeps its choices; they come back with it. A tool an update takes away is forgotten.
+- At most 40 tools are sent, counting only the tools that are on, so turning tools off frees room.
+- Changes are saved at once (`config.json`: `tools {newTools, state, fresh, seen}`).
+
 ## The voice assistant uses them
 
 In the manager app, **Features > AI agents (MCP) > Let the voice assistant act on the TV** (or the box on the voice setup page) lets the AI use the tools. The

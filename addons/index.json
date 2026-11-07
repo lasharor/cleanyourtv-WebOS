@@ -19,7 +19,7 @@
         "README.md": "4f99509070bc496c524a369aebab2bda6f200d68965db592e2cf00a8864babce",
         "addon.json": "e4e38edc8a3854b153ac84533faf39ab7df69424b0f4d98583757a98e55a684e",
         "phone.js": "e427d5b68caffe8bbb5bdf1ba08cb4ecd162030efe31763a3579677b471caa32",
-        "service.js": "89c01a50589efe4d131fe2e17e1e2d77966f285e954ee9a687d0c42ca0e4e524",
+        "service.js": "69a222688733986363201b5c2e92de4000ba578aa47cd411170ee2dd352edfee",
         "tools.js": "515c83df002577387ceb237ae6302478351318355fba3a305f65986fec2bc421"
       }
     },
@@ -154,7 +154,7 @@
       "files": {
         "addon.json": "42eba53bf6647e9b5f143ae5af7d59cbfda89e665fa6e9b29730a6047a10cddc",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "8d91eb05af5b54665beb412e96ad5a10a7737deab653d32ef2ddd32a87d0e4e3",
+        "page/index.html": "4c6c3125e47b0d4e0d3e8b091caeea8a89efb6e3d2588c5f6c2e774f191d8317",
         "page.js": "f799f607274a0d0ba28cc67614b2a184b57400ef089e1ecb7ca60b98d20ddd3f",
         "pwa/icon-180.png": "57040c5ec7e1dfc01918b2295df594dbc034b85df865140e27829873f02c4aff",
         "pwa/icon-512.png": "08849f214ae06fda96123a5e13ec69f9f30a6b7d13e776e20f21c669af3581e4",
@@ -209,7 +209,7 @@
         "cards/nowplaying/preview.jpg": "b4ec2f53f497cc06bac9967277cb28250a289a0d578b5a9bf469fe2c71319a82",
         "nowplaying.js": "f71cbe723659db1e961842728c484ff0c05ba697efcd14cb6c8365d0b267f7d6",
         "phone.js": "ab2cb118a3ae58610aad7c6db01ead808d1f982fea6ef3a47e736739ce962f3c",
-        "service.js": "0b744b0c21ca1b8559c1953b1ff1ad88802f42e139a1b00177ac97ce242b111f",
+        "service.js": "096088e0d22f78142fc3d1954a376893ab6d085bd65d415077ea1e4aacc8f5ce",
         "spotifyconnect.js": "519ba58fecf2acf196e044b4a77181f6d562945befd02f916931cf3a962cb9d9"
       }
     },
@@ -248,7 +248,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "15229bcaac860619812d8bbe2cd86d4251695d0059ce1b8d832f44d60e2071ca",
+        "page/index.html": "4ea7965551fccc8d5efc060cf8d1617d5a18bd23b51923ba81febf90ba18c9f4",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
@@ -269,7 +269,7 @@
       "files": {
         "addon.json": "c3ed3ea1704744779e998a06998a61f749f25290f646128962622e870c82c93e",
         "phone.js": "d9f96764f349e821469a600bb1bf338057e4af1230f5367d939b05ede7d60a5e",
-        "service.js": "58245fbb14b9e8509fe5461bb64896b8a38eedce33dab540722380e7c9c164d4"
+        "service.js": "b589155f01ec8bac8b75aa7204e68325e2d0750e414155874b17f0d5a4784959"
       }
     },
     {
@@ -293,7 +293,7 @@
         "cards/forecast/drawer.html": "23d4a3120edfe92312fc55c95e1c5ec661f4eac1f3004026b4d532a5a3ea3eae",
         "cards/forecast/drawer.js": "e81e72db80ffdada6d98a414eb735268a37c86d4afb1c3ef93fcc5c388030a11",
         "cards/forecast/preview.jpg": "8f718df9627e1a18ed7754cef71ad4cf5b81c101693dda6e39dcf461c415cbd1",
-        "service.js": "781fbe52f4be68d866ccd68a4f0eec7774e364014bb8f3cfccfe72660b718e0c",
+        "service.js": "bf72c5ff25048bca78f958595a743cc3412c2d798b2772f4d5cd55f4cab9d2ee",
         "weather.js": "a0f80532ff74f5b272414c966297456b78bacb2a219639d31c11191d750c5821"
       }
     }

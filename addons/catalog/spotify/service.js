@@ -264,6 +264,16 @@ function create(ctx) {
       required: ['action'],
     },
     onScreen: ['open_on_tv'], // the service closes LG's screen saver first
+    group: 'Spotify', // the manager's Tools screen: the group's name and a few words per action
+    labels: {
+      now_playing: 'What plays',
+      play: 'Play',
+      pause: 'Pause',
+      next: 'Next track',
+      previous: 'Previous track',
+      devices: 'The Spotify devices',
+      open_on_tv: 'Open Spotify on the TV',
+    },
   };
   const done = v => ({ content: [{ type: 'text', text: typeof v === 'string' ? v : JSON.stringify(v) }], isError: false });
   const bad = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });
