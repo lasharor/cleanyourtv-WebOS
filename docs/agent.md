@@ -8,9 +8,29 @@ Where the tools come from:
 
 | Source | What it gives | Needs |
 |---|---|---|
-| The service itself (`helper/coretools.js`) | `list_apps`, `launch_app`, `list_inputs`, `switch_input`, `show_notification`, `power_off` | Nothing: always there |
+| The service itself (`helper/coretools.js`) | The table below | Nothing: always there |
 | Add-ons that provide `tools` | Whatever the add-on's service returns (see [Add-ons](development/addons.md#tools-for-the-assistant)) | The add-on installed and switched on |
 | Apps and add-ons that **sign** a `tools.json` | The tools they declare | The **Agent tools (MCP)** add-on, and your approval of that app or add-on |
+
+### The service's own tools
+
+| Tool | What it does | Arguments |
+|---|---|---|
+| `list_apps` | The installed apps (id and name) | `query?`: words of the name |
+| `launch_app` | Opens an app | `id` |
+| `list_inputs` | The HDMI ports and Live TV, with their names and whether something is connected | |
+| `switch_input` | Switches to an input | `input`: `HDMI_1`, `1` or its name |
+| `show_notification` | A card on the screen | `title`, `text?`, `image?` (http or https), `seconds?` (2-60, 10), `position?` (`top-right`, `bottom-center` and the other seven) |
+| `get_current_app` | The app or input on the screen now (Home is called Home) | |
+| `list_running_apps` | The apps that are open, and background services | |
+| `close_app` | Closes one running app (never Home) | `id` |
+| `navigate` | Goes to Home, the launcher's Live TV, or the Inputs list, as a remapped button does | `to`: `home`, `live_tv`, `input_list` |
+| `get_volume` | The volume, mute, the maximum and the sound output | |
+| `tv_info` | Model, webOS (SDK) version, firmware, CleanYourTV version, power state, whether an update is available (from the last check; it does not check) | |
+| `most_used_apps` | The apps used most, from the launcher's usage counts | `limit?` (1-20, 5) |
+| `get_weather` | The weather now and the next days (Open-Meteo); without a place, the place of the weather card on Home | `place?`, `unit?`: `c` or `f` |
+| `new_conversation` | The voice assistant forgets the conversation so far | |
+| `power_off` | Turns the TV off (destructive: only by voice, after a yes) | |
 
 ## The voice assistant uses them
 

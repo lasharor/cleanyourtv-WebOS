@@ -197,7 +197,8 @@ run(async () => {
   ok(
     C.list()
       .map(t => t.name)
-      .join() === 'list_apps,launch_app,list_inputs,switch_input,show_notification,power_off',
+      .join() ===
+      'list_apps,launch_app,list_inputs,switch_input,show_notification,get_current_app,list_running_apps,close_app,navigate,get_volume,tv_info,most_used_apps,get_weather,new_conversation,power_off',
     'the core tools'
   );
   let r = await C.call('list_apps', { query: 'tube' });
