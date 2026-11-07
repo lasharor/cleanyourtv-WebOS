@@ -1,9 +1,9 @@
-// The service's own abilities as tools for the voice assistant (answers.js, while llm.agent is on) and MCP clients: list, open and close
-// apps, the inputs, what is on screen, Home and Live TV, the volume, the TV and its weather, a card on the screen, and turning the TV off. The same shape as an add-on that provides "tools": {list(), call(name, args, opts)},
-// in MCP form ({content: [{type: 'text', text}], isError}). Each tool runs the code the service's API already runs (apps.js, running.js, remap.js, audio.js,
-// notify.js, the weather of cards.js);
-// nothing here goes through HTTP. power_off is marked destructive: answers.js asks the person first, and it runs here only with
-// {confirmed: true}.
+// The service's own abilities as tools for the voice assistant (answers.js, while llm.agent is on) and MCP clients: list, open and
+// close apps, the inputs, what is on screen, Home and Live TV, the volume, the TV and its weather, a card on the screen, and turning
+// the TV off. The same shape as an add-on that provides "tools": {list(), call(name, args, opts)}, in MCP form
+// ({content: [{type: 'text', text}], isError}). Each tool runs the code the service's API already runs (apps.js, running.js,
+// remap.js, audio.js, notify.js, the weather of cards.js); nothing here goes through HTTP. power_off is marked destructive:
+// answers.js asks the person first, and it runs here only with {confirmed: true}.
 const S = (props, req) => ({ type: 'object', properties: props || {}, required: req || [] });
 const POSITIONS = [
   'top-left',
