@@ -203,15 +203,26 @@ function create(ctx) {
       return { error: 'the source gave no usable picture address' };
     return { url: r.url, credit: line(r.credit, 120) };
   };
+  // the live photo each source last gave Home (from next() or push()): the screen saver shows that one (liveCurrent)
+  const lastLive = {};
   async function liveNext(addon) {
     const s = srcOf(addon);
     if (!s || s.mod.wallpapers.live !== true || typeof s.mod.wallpapers.next !== 'function') return { error: 'not a live source' };
     try {
       const r = (await s.mod.wallpapers.next()) || {};
-      return r.error ? { error: line(r.error, 160) } : livePhoto(r);
+      const p = r.error ? { error: line(r.error, 160) } : livePhoto(r);
+      if (p.url) lastLive[addon] = p;
+      return p;
     } catch (e) {
       return { error: line((e && e.message) || e, 160) };
     }
+  }
+  // what Home has now from a live source, for the screen saver: next() hands out a new photo on every call, so asking it again would
+  // show another photo than Home and make Home skip one. Before Home asked at all (a fresh start of the service) it asks once.
+  async function liveCurrent(addon) {
+    const s = srcOf(addon);
+    if (!s || s.mod.wallpapers.live !== true) return { error: 'not a live source' };
+    return lastLive[addon] || liveNext(addon);
   }
   // a photo a live source wants Home to show now (Unsplash: the one "Test key and save" fetched), handed out once; Home asks every few
   // seconds while a live entry is in its list
@@ -222,7 +233,10 @@ function create(ctx) {
       const r = guard(s, () => w.push(), null);
       if (r && !r.error) {
         const p = livePhoto(r);
-        if (p.url) return { id: 'l/' + s.id, url: p.url, credit: p.credit };
+        if (p.url) {
+          lastLive[s.id] = p;
+          return { id: 'l/' + s.id, url: p.url, credit: p.credit };
+        }
       }
     }
     return { id: '', url: '', credit: '' };
@@ -417,7 +431,7 @@ function create(ctx) {
     return web.notFound(res);
   }
 
-  return { name: 'wallpapers', prefix: '/api/wallpapers/', handle, status, stamp, adoptLegacy, addUpload, list, phone };
+  return { name: 'wallpapers', prefix: '/api/wallpapers/', handle, status, stamp, adoptLegacy, addUpload, list, phone, liveCurrent };
 }
 
 // the phone page: Upload photos. Plain script for iOS Safari and Android Chrome; photos are scaled in

@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- CleanYourTV screen saver: replaces LG's screen saver app (docs/screensaver.md). Photos come from the wallpaper library through
-     the service (GET /api/screensaver/photos, the pictures themselves from /api/wallpapers/photo/...), with the clock and date in
+     the service (GET /api/screensaver/photos; the pictures from /api/wallpapers/photo/..., a live source's current photo from
+     /api/wallpapers/live/<add-on>, as on Home), with the clock and date in
      the corner. Written for the TV's Chromium 68 and up: ES5 style, only opacity changes, nothing else animates.
      The first key, click or touch closes the page and the app that was on screen comes back. -->
 <html lang="en">
@@ -59,6 +60,23 @@
         letter-spacing: 0.01em;
         line-height: 1.05;
       }
+      /* the photographer's line, styled as Home's (#wpc in app/src/css/home.css) so it stays readable on a bright photo; in the left
+         corner, as the clock has the right one */
+      #credit {
+        position: fixed;
+        left: 40px;
+        bottom: 24px;
+        max-width: 900px;
+        padding: 6px 14px;
+        border-radius: 16px;
+        background: rgba(0, 0, 0, 0.45);
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 18px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: none;
+      }
       #date {
         margin-top: 0.5em;
         font-size: 1.35vw;
@@ -72,6 +90,7 @@
     <div id="p0"></div>
     <div id="p1"></div>
     <div id="scrim"></div>
+    <div id="credit"></div>
     <div id="clock">
       <div id="time"></div>
       <div id="date"></div>
@@ -145,27 +164,54 @@
         return a;
       }
 
+      /* where a photo of the library comes from, as on Home (app/src/js/wall.js): a file the service hands out (an upload u/<id>, a
+   source add-on's photo s/<add-on>/<id>), or a live source (l/<add-on>, Unsplash) that the service asks for its current photo:
+   {url, credit}, an address on the source's own server */
+      function photoRequest(id) {
+        /* a path on the service: a scene or the theme's wallpaper, which Home has instead of the library (helper/screensaver.js) */
+        if (id.charAt(0) === '/') return { photo: API + id };
+        /* the photo Home has now from that source; /api/wallpapers/live/ would hand out the next one and Home would skip it */
+        if (id.slice(0, 2) === 'l/') return { live: API + '/api/screensaver/live/' + id.slice(2) };
+        return { photo: API + '/api/wallpapers/photo/' + id };
+      }
+      /* end photoRequest */
+
       /* one photo at a time, cross-faded between the two layers: opacity only, the GPU of these TVs is weak */
-      function show() {
-        if (!order.length) return;
-        var id = order[pos % order.length],
-          url = API + '/api/wallpapers/photo/' + id;
-        pos++;
+      var shown = '';
+      function put(url, credit) {
+        if (url === shown) return; /* a live source still on the same photo: nothing to fade */
         var im = new Image();
         im.onload = function () {
           var on = el(side ? 'p1' : 'p0'),
             off = el(side ? 'p0' : 'p1');
           side ^= 1;
+          shown = url;
           on.style.backgroundImage = 'url("' + url + '")';
           on.className = 'on';
           off.className = '';
+          /* the photographer, where the source asks for a credit line (Unsplash), as Home shows it */
+          var c = el('credit');
+          c.textContent = credit || '';
+          c.style.display = c.textContent ? 'block' : 'none';
         };
         im.src = url;
+      }
+      function show() {
+        if (!order.length) return;
+        var id = order[pos % order.length],
+          r = photoRequest(id);
+        pos++;
+        if (r.photo) return put(r.photo, credits[id] || '');
+        /* nothing from the live source (no photo yet, no network): the photo on screen stays */
+        get(r.live).then(function (j) {
+          if (j && j.url) put(j.url, j.credit);
+        });
       }
 
       function arm() {
         clearInterval(timer);
-        if (order.length < 2) return;
+        /* one photo stays; a live source alone is asked again, so the saver follows Home when the source moves on */
+        if (order.length < 2 && !(order.length === 1 && photoRequest(order[0]).live)) return;
         timer = setInterval(show, Math.max(10, every) * 1000);
       }
 
@@ -184,8 +230,25 @@
         }
       }
 
+      /* the TV's country, as the launcher works it out for the scenes of an add-on (app/src/js/scenes.js) */
+      function country() {
+        var c = '';
+        try {
+          var w = window.webOSSystem && window.webOSSystem.country ? window.webOSSystem : window.PalmSystem;
+          var j = w && w.country ? (typeof w.country === 'string' ? JSON.parse(w.country) : w.country) : null;
+          c = (j && (j.smartServiceCountry || j.country)) || '';
+        } catch (e) {}
+        if (!c) {
+          var m = /[-_]([A-Za-z]{2,3})$/.exec((window.webOSSystem && window.webOSSystem.locale) || navigator.language || '');
+          c = m ? m[1] : '';
+        }
+        return String(c).toUpperCase();
+      }
+
+      var credits = {};
       function load() {
-        return get(API + '/api/screensaver/photos').then(function (r) {
+        return get(API + '/api/screensaver/photos?cc=' + encodeURIComponent(country())).then(function (r) {
+          credits = r.credits || {};
           list = (r.photos || []).slice();
           if (typeof r.every === 'number') every = r.every;
           order = shuffle(list.slice());

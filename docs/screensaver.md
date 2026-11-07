@@ -1,19 +1,24 @@
 # Screen saver
 
-CleanYourTV replaces LG's screen saver with its own page: your own photos from the [wallpaper library](wallpapers.md), cross-faded,
-with the clock and date in the corner. It appears when the TV is idle, exactly when LG's screen saver used to.
+CleanYourTV replaces LG's screen saver with its own page: the same pictures as behind Home (the theme's scenes, your photos from the
+[wallpaper library](wallpapers.md) or the theme's wallpaper), cross-faded, with the clock and date in the corner. It appears when the TV is idle, exactly when LG's screen saver used to.
 
 It is applied the same way as Home (**RAM only**): a reboot without the boot scripts, or the Homebrew Channel's failsafe mode, brings
 LG's screen saver back.
 
 ## What it shows
 
-- **Photos** from the wallpaper library (uploads from the phone and the photos of a source you install as an add-on, such as Immich:
-  the same photos as the ones behind Home; a live source such as Unsplash is not shown here), changed every
-  25 seconds. A new photo starts when the page opens.
+- **What Home has behind it**, worked out in Home's own order, changed every 25 seconds (a new photo starts when the page opens):
+    1. the theme's **scenes**: the five landscapes of the couch scenes (or an add-on's scenes in their place, such as Seasons, with
+       their credit line), or a theme's own scenes;
+    2. else, with [Wallpapers](wallpapers.md) on, the **wallpaper library**: uploads from the phone, the photos of a source add-on
+       (Immich), and a live source (Unsplash: the photo Home shows now, with the photographer's name; the saver does not ask the
+       source for another, which would make Home skip one; with only a live source the page looks again every 25 seconds and follows
+       Home when its photo changes);
+    3. else the **theme's wallpaper**.
 - **The clock and the date**, bottom right, solid white over the photo: no transparency, so it stays readable on a bright picture.
   It sits in the same corner all the time, which is the one thing to watch on a panel that retains static content.
-- **No photos**: the clock and date alone, on black.
+- **Nothing behind Home** (a plain theme, Wallpapers off): the clock and date alone, on black.
 
 The first key, click or touch closes it and the app that was on screen comes back. Nothing is saved or uploaded.
 
@@ -24,7 +29,8 @@ The same idea as for [Home](tv-changes.md#at-boot), on the app the TV starts whe
 1. `20-cleanyourtv-screensaver` runs at boot. It builds a folder with the page and an `appinfo.json` derived from **this TV's own**
    screen saver (saved in `backup/screensaver-appinfo.orig.json` the first time), switched to the web type while it keeps **this TV's
    own window type** (`screenSaver`, which is the only one `tvpowerd` counts — see [When it appears](#when-it-appears)). The app id
-   stays LG's, which is why the TV keeps asking for it.
+   stays LG's, which is why the TV keeps asking for it. The folder is built on every run, also while it is already mounted, so a
+   setup over a running install puts the new page in place (as `10-cleanyourtv-home` does for Home).
 2. How it is put in place is decided by `helper/tvprofile.js` (`saverTakeover`), from the kind of LG's screen saver as it came with
    the TV:
     - **a native program**: `screensaver-standin.sh` is bind-mounted over that program. The app manager keeps LG's manifest and starts

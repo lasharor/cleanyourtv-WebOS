@@ -1,7 +1,10 @@
 // The screen saver: our page in place of LG's screen saver app (scripts/20-cleanyourtv-screensaver, docs/screensaver.md). This module
 // serves that page, closes it again, and opens it over an idle launcher when tvpowerd did not:
 //   GET  /api/screensaver          {replaced, method, running, photos, every}
-//   GET  /api/screensaver/photos   {photos: ['u/<id>', 's/<add-on>/<id>', ...], stamp, every}   the wallpaper library (wallpapers.js)
+//   GET  /api/screensaver/photos?cc=<country>   {photos, credits, from, stamp, every}   what Home has behind it (background() below):
+//        photos are library ids ('u/<id>', 's/<add-on>/<id>', 'l/<add-on>') or paths on this service; from: scenes, wallpapers, theme
+//   GET  /api/screensaver/scene/<night|golden|water|fog|dawn>   a couch scene of the launcher (app/scene-<id>.jpg)
+//   GET  /api/screensaver/live/<add-on>   {url, credit}: the photo a live source (Unsplash) gave Home last, so the saver shows the same
 //   POST /api/screensaver/active   {returnValue}   the launcher reports a key: the TV is in use, do not open the page over it
 //   POST /api/screensaver/dismiss  {returnValue}   close the page: the app that was on screen comes back
 // The page keeps LG's own screen-saver window type, and a page that stayed up would keep the remote. The page closes itself on the
@@ -36,6 +39,9 @@ function replaced() {
 // starts when no key arrives. A launcher that never reported anything (LG's Home in front, a launcher from before this endpoint) is
 // no reason to open the page: then tvpowerd's own timer is the way in.
 const IDLE_MS = 120000;
+// the couch scenes that ship with the launcher (app/scene-<id>.jpg, the list in app/src/js/scenes.js): the page is another app and
+// cannot load the launcher's files by their relative names, so this module hands them out (only these names)
+const COUCH = ['night', 'golden', 'water', 'fog', 'dawn'];
 function mayOpen(now, homeSince, activeAt) {
   return !!activeAt && now - Math.max(homeSince, activeAt) >= IDLE_MS;
 }
@@ -43,16 +49,58 @@ function mayOpen(now, homeSince, activeAt) {
 function create(ctx) {
   const { luna, config } = ctx;
   const wp = () => ctx.feature('wallpapers');
-  // the photo files of the library: uploads (u/<id>) and the photos of source add-ons (s/<add-on>/<id>); a live source (l/<add-on>)
-  // is a URL that Home asks for, not a file /api/wallpapers/photo/ can hand out
+  // the library as Home shows it: uploads (u/<id>) and the photos of source add-ons (s/<add-on>/<id>), which the page loads from
+  // /api/wallpapers/photo/, and live sources (l/<add-on>, Unsplash), whose current photo the page asks /api/wallpapers/live/<add-on>
+  // for, as Home's wall.js does. An id of another kind is left out: the page would not know how to show it.
   const photos = () => {
     const w = wp();
     try {
-      return w ? w.list().filter(id => /^[us]\//.test(id)) : [];
+      return w ? w.list().filter(id => /^[usl]\//.test(id)) : [];
     } catch (_) {
       return [];
     }
   };
+  // What Home has behind it now, in Home's own order (app/src/js/scenes.js, wall.js, theme.js), so the saver shows the same:
+  //   1. the theme's scenes: an add-on's scenes where one provides them (Seasons), else the five landscapes of the launcher (couch),
+  //      or the theme's own scenes (custom); they take the place of the wallpaper and of Wallpapers, as on Home
+  //   2. Wallpapers switched on: the library (uploads, source add-ons, live sources)
+  //   3. the theme's wallpaper
+  //   4. nothing: the clock on black
+  // An entry is a library id, or a path on this service that the page loads as it is; credits holds the line a photo comes with.
+  async function background(cc) {
+    const c = config.get() || {};
+    const th = ctx.feature('theme');
+    let t = null;
+    try {
+      t = th ? th.resolved() : null;
+    } catch (_) {}
+    if (t && t.scenes) {
+      if (t.scenes.set === 'custom' && Array.isArray(t.scenes.lib) && t.scenes.lib.length)
+        return {
+          photos: t.scenes.lib.map(s => '/api/theme/scene/' + t.scenes.id + '/' + s.image),
+          credits: {},
+          from: 'scenes',
+        };
+      const sc = ctx.feature('scenes');
+      try {
+        const r = sc ? await sc.list(cc) : null;
+        if (r && r.addon && r.scenes && r.scenes.length) {
+          const credits = {};
+          const list = r.scenes.map(s => {
+            const p = '/api/scenes/photo/' + r.addon + '/' + s.id + '/image';
+            if (s.credit) credits[p] = String(s.credit);
+            return p;
+          });
+          return { photos: list, credits, from: 'scenes' };
+        }
+      } catch (_) {}
+      return { photos: COUCH.map(id => '/api/screensaver/scene/' + id), credits: {}, from: 'scenes' };
+    }
+    if (c.wall && c.wall.on) return { photos: photos(), credits: {}, from: 'wallpapers' };
+    if (t && t.wallpaper)
+      return { photos: ['/api/theme/wallpaper/' + t.wallpaper.id + '/' + t.wallpaper.file], credits: {}, from: 'theme' };
+    return { photos: [], credits: {}, from: '' };
+  }
   // the seconds between photos: 25, or "saver.every" in config.json when a later version sets it (nothing writes it today; the
   // launcher's own wallpaper rotation, wall.secs, is for Home)
   const every = () => {
@@ -148,7 +196,28 @@ function create(ctx) {
 
   async function handle(req, res, u) {
     const json = (o, c) => web.json(res, o, c);
-    if (u === '/api/screensaver/photos') return json({ photos: photos(), stamp: wp() ? wp().stamp() : '', every: every() });
+    if (u === '/api/screensaver/photos') {
+      // ?cc=<country>: the page passes the TV's country, as the launcher does for the scenes of an add-on (Seasons picks by it)
+      const m = /[?&]cc=([A-Za-z]{2,3})(?:&|$)/.exec(req.url || '');
+      const b = await background(m ? m[1].toUpperCase() : '');
+      return json({ photos: b.photos, credits: b.credits, from: b.from, stamp: wp() ? wp().stamp() : '', every: every() });
+    }
+    // a live source's photo: the one Home has now (wallpapers.js liveCurrent), not the next one the source would hand out
+    const lm = /^\/api\/screensaver\/live\/([a-z][a-z0-9-]{1,31})$/.exec(u);
+    if (lm) {
+      const w = wp();
+      return json(w && w.liveCurrent ? await w.liveCurrent(lm[1]) : { error: 'no wallpapers' });
+    }
+    const sm = /^\/api\/screensaver\/scene\/([a-z]+)$/.exec(u);
+    if (sm && COUCH.indexOf(sm[1]) >= 0) {
+      let b = null;
+      try {
+        b = fs.readFileSync(P.APP + '/scene-' + sm[1] + '.jpg');
+      } catch (_) {}
+      if (!b) return web.notFound(res);
+      res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'max-age=600' });
+      return res.end(b);
+    }
     if (u === '/api/screensaver/active' && req.method === 'POST') {
       active();
       return json({ returnValue: true });

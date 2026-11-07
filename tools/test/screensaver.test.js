@@ -8,6 +8,7 @@ const fs = require('fs'),
 const { root, ok, call, req, run } = require('./lib');
 const tv = req('tvprofile');
 const saver = req('screensaver');
+const P = req('paths');
 
 // write a file, creating the folders above it (fs.mkdirSync's own "recursive" is newer than Node 8.12)
 function writeF(file, data) {
@@ -73,22 +74,130 @@ run(async () => {
 
   // ---- the page's API (helper/screensaver.js) ----
   const calls = [];
+  // what Home has behind it, changed by each case below: the config (Wallpapers on or off), the resolved theme, an add-on's scenes
+  let cfgNow = { wall: { on: true } },
+    themeNow = null,
+    scenesNow = { scenes: [] },
+    askedCc = null;
   const ctx = {
-    config: { get: () => ({}) },
+    config: { get: () => cfgNow },
     luna: async uri => {
       calls.push(uri);
       if (/listRunningApps/.test(uri)) return { returnValue: true, running: [{ id: 'com.webos.app.screensaver' }] };
       return { returnValue: true };
     },
-    // an upload, a photo of a source add-on, and a live source (a URL the launcher asks for, not a file the page can show)
-    feature: n => (n === 'wallpapers' ? { list: () => ['u/aa', 's/immich/bb', 'l/unsplash'], stamp: () => '2:ab' } : null),
+    // an upload, a photo of a source add-on, a live source (the page asks /api/wallpapers/live/<add-on> for its photo, as Home does)
+    // and an id of a kind the page does not know
+    feature: n => {
+      if (n === 'wallpapers')
+        return {
+          list: () => ['u/aa', 's/immich/bb', 'l/unsplash', 'x/zz'],
+          stamp: () => '2:ab',
+          liveCurrent: async id =>
+            id === 'unsplash' ? { url: 'https://images.example.com/now.jpg', credit: 'Photo by D' } : { error: 'not a live source' },
+        };
+      if (n === 'theme') return { resolved: () => themeNow };
+      if (n === 'scenes')
+        return {
+          list: async cc => {
+            askedCc = cc;
+            return scenesNow;
+          },
+        };
+      return null;
+    },
   };
   const f = saver.create(ctx);
   let x = await call(f, '/api/screensaver/photos');
   ok(
-    x.code === 200 && x.j.photos.join(',') === 'u/aa,s/immich/bb' && x.j.stamp === '2:ab' && x.j.every === 25,
-    'GET /api/screensaver/photos: the photo files of the wallpaper library (no live sources) and the seconds between photos'
+    x.code === 200 &&
+      x.j.photos.join(',') === 'u/aa,s/immich/bb,l/unsplash' &&
+      x.j.from === 'wallpapers' &&
+      x.j.stamp === '2:ab' &&
+      x.j.every === 25,
+    'GET /api/screensaver/photos with Wallpapers on: the library as Home has it (uploads, source photos, live sources), 25 s each'
   );
+  // the other things Home can have behind it, in Home's order (scenes, then Wallpapers, then the theme's wallpaper)
+  themeNow = { id: 'still', wallpaper: { id: 'still', file: 'lake.jpg', dim: 0.4 } };
+  x = await call(f, '/api/screensaver/photos');
+  ok(x.j.photos.join(',') === 'u/aa,s/immich/bb,l/unsplash', 'Wallpapers on wins over the theme wallpaper, as on Home');
+  cfgNow = { wall: { on: false } };
+  x = await call(f, '/api/screensaver/photos');
+  ok(
+    x.j.photos.join(',') === '/api/theme/wallpaper/still/lake.jpg' && x.j.from === 'theme',
+    "Wallpapers off: the theme's own wallpaper, the one Home shows"
+  );
+  themeNow = { id: 'plain' };
+  x = await call(f, '/api/screensaver/photos');
+  ok(x.j.photos.length === 0 && x.j.from === '', 'no wallpaper on Home: nothing, so the page shows the clock on black');
+  themeNow = { id: 'couchtv', scenes: { set: 'couch', secs: 20 }, wallpaper: { id: 'couchtv', file: 'x.jpg', dim: 0.4 } };
+  cfgNow = { wall: { on: true } };
+  x = await call(f, '/api/screensaver/photos?cc=nl');
+  ok(
+    x.j.photos.join(',') ===
+      '/api/screensaver/scene/night,/api/screensaver/scene/golden,/api/screensaver/scene/water,/api/screensaver/scene/fog,/api/screensaver/scene/dawn' &&
+      x.j.from === 'scenes' &&
+      askedCc === 'NL',
+    "the couch scenes take the place of Wallpapers and the theme wallpaper, as on Home: the launcher's five landscapes"
+  );
+  scenesNow = { addon: 'seasons', scenes: [{ id: 'w1', credit: 'Photo: A' }, { id: 'w2' }] };
+  x = await call(f, '/api/screensaver/photos?cc=NL');
+  ok(
+    x.j.photos.join(',') === '/api/scenes/photo/seasons/w1/image,/api/scenes/photo/seasons/w2/image' &&
+      x.j.credits['/api/scenes/photo/seasons/w1/image'] === 'Photo: A',
+    "an add-on's scenes stand in for the five landscapes (asked with the TV's country), with their credit line"
+  );
+  themeNow = {
+    id: 'mine',
+    scenes: { set: 'custom', secs: 20, id: 'mine', lib: [{ id: 'a', image: 'a.jpg', glass: 'a-g.jpg' }] },
+  };
+  x = await call(f, '/api/screensaver/photos');
+  ok(x.j.photos.join(',') === '/api/theme/scene/mine/a.jpg', "a theme's own scenes: its scene images");
+  // the launcher's landscapes are handed out by name, only these five
+  {
+    const appDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-scene-')), 'app');
+    fs.mkdirSync(appDir);
+    fs.writeFileSync(path.join(appDir, 'scene-fog.jpg'), 'jpg');
+    const was = P.APP;
+    P.APP = appDir;
+    const a = await call(f, '/api/screensaver/scene/fog'),
+      b = await call(f, '/api/screensaver/scene/beach'),
+      c = await call(f, '/api/screensaver/scene/..');
+    P.APP = was;
+    ok(
+      a.code === 200 && String(a.out) === 'jpg' && b.code === 404 && c.code === 404,
+      'GET /api/screensaver/scene/<id>: a couch scene, nothing else'
+    );
+  }
+  x = await call(f, '/api/screensaver/live/unsplash');
+  ok(
+    x.j.url === 'https://images.example.com/now.jpg' && x.j.credit === 'Photo by D',
+    "GET /api/screensaver/live/<add-on>: the live photo Home has now (the wallpapers part's liveCurrent)"
+  );
+  cfgNow = { wall: { on: true } };
+  themeNow = null;
+
+  // the page asks for each kind of id the way Home's wall.js does: a file from the library, or the live source's current photo
+  {
+    const html = fs.readFileSync(path.join(root, 'screensaver', 'app', 'index.html'), 'utf8');
+    const src = html.slice(html.indexOf('function photoRequest'), html.indexOf('/* end photoRequest */'));
+    const sandbox = { API: 'http://127.0.0.1:8765' };
+    require('vm').runInNewContext(src, sandbox);
+    ok(
+      sandbox.photoRequest('/api/screensaver/scene/fog').photo === 'http://127.0.0.1:8765/api/screensaver/scene/fog',
+      'a path from the service (a scene, the theme wallpaper) is loaded as it is'
+    );
+    const u = sandbox.photoRequest('u/aa'),
+      s = sandbox.photoRequest('s/immich/bb'),
+      l = sandbox.photoRequest('l/unsplash');
+    ok(
+      u.photo === 'http://127.0.0.1:8765/api/wallpapers/photo/u/aa' &&
+        s.photo === 'http://127.0.0.1:8765/api/wallpapers/photo/s/immich/bb' &&
+        l.live === 'http://127.0.0.1:8765/api/screensaver/live/unsplash' &&
+        !l.photo,
+      'the page loads a library photo directly and asks a live source for its current photo (the same photo as Home)'
+    );
+  }
   x = await call(f, '/api/screensaver/dismiss', 'POST');
   ok(
     x.code === 200 && calls.some(u => /webappmanager\/killApp/.test(u)),
@@ -109,7 +218,7 @@ run(async () => {
     'the page is opened by the service only over an idle launcher: no report is no reason to open it, and a key holds it back for two minutes'
   );
   x = await call(f, '/api/screensaver');
-  ok(x.code === 200 && x.j.running === true && x.j.photos === 2, 'GET /api/screensaver: what is replaced and whether the page is up');
+  ok(x.code === 200 && x.j.running === true && x.j.photos === 3, 'GET /api/screensaver: what is replaced and whether the page is up');
   x = await call(f, '/api/screensaver/nothing');
   ok(x.code === 404, 'an unknown path of the part is a 404, not a crash');
   ok(saver.replaced() === false, 'without a mount and without the stand-in, nothing is reported as replaced');
@@ -137,6 +246,16 @@ run(async () => {
     'the Home boot script mounts the screen saver before it restarts the app manager'
   );
   ok(/rm -f \$SAM/.test(homeBoot), 'the marker of that restart starts each boot empty');
+  // A setup over a running install (bootstrap.sh install from the manager) copies the new page and calls this script while the folder
+  // is already mounted: the page has to be staged then too, as 10-cleanyourtv-home stages Home before it looks whether it is replaced.
+  // Seen on the 65UR91006LB: the mounted folder kept the page of the build before.
+  const saverBoot = fs.readFileSync(path.join(root, 'scripts', '20-cleanyourtv-screensaver'), 'utf8');
+  const stageAt = saverBoot.search(/^sh \$L\/stage-screensaver\.sh/m),
+    notReplacedAt = saverBoot.indexOf('if ! replaced; then');
+  ok(
+    stageAt >= 0 && notReplacedAt >= 0 && stageAt < notReplacedAt,
+    'the screen saver boot script stages the page on every run, also when the folder is already mounted'
+  );
 
   // ---- scripts/stage-screensaver.sh, run against a folder that stands in for the TV's root (CYTV_TEST_ROOT) ----
   if (process.platform !== 'win32') {
