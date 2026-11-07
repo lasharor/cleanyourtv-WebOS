@@ -1,6 +1,10 @@
 {
  "_name": "Русский",
  "_dir": "ltr",
+ "3 minutes": "3 минуты",
+ "5 minutes": "5 минут",
+ "10 minutes": "10 минут",
+ "Dim inactive cards": "Затухание виджетов",
  "%d channels": {
   "one": "%d канал",
   "few": "%d канала",

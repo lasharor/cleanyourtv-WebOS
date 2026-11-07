@@ -85,6 +85,8 @@ function create(ctx) {
     const next = Object.assign({}, cur);
     for (const k of ['debloat', 'inputKey', 'liveTv', 'tuner']) if (typeof o[k] === 'boolean') next[k] = o[k];
     if (require('./audio').THEMES.indexOf(o.volumeTheme) >= 0) next.volumeTheme = o.volumeTheme;
+    if (typeof o.cardsIdleDim === 'boolean') next.cardsIdleDim = o.cardsIdleDim;
+    if ([3, 5, 10].indexOf(o.cardsIdleMinutes) >= 0) next.cardsIdleMinutes = o.cardsIdleMinutes;
     if (Array.isArray(o.debloatOff)) next.debloatOff = debloat.cleanOff(o.debloatOff);
     if (Array.isArray(o.closePreloaded)) next.closePreloaded = require('./preload').clean(o.closePreloaded);
     config.update('manager', c => {

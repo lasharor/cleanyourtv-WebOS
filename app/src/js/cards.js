@@ -1000,18 +1000,25 @@ function cardAct(el) {
   if (ty.can && !ty.can(el._card)) return;
   ty.act(el, el._card);
 }
-/* OLED care: after three minutes without a key the cards dim, and every few minutes they shift a few pixels, so a card that stays on
-   screen for hours does not leave its outline in the panel */
-var cardsIdleT = 0;
-function cardsWake() {
+var cardsIdleMinutes = 0,
+  cardsIdleTimer = 0;
+function wakeCards() {
+  clearTimeout(cardsIdleTimer);
   document.body.classList.remove('cards-idle');
-  clearTimeout(cardsIdleT);
-  cardsIdleT = setTimeout(function () {
-    document.body.classList.add('cards-idle');
-  }, 180000);
+  if (cardsIdleMinutes)
+    cardsIdleTimer = setTimeout(function () {
+      document.body.classList.add('cards-idle');
+    }, cardsIdleMinutes * 60000);
 }
-document.addEventListener('keydown', cardsWake, true);
-cardsWake();
+function setCardsIdleMinutes(minutes) {
+  var next = [3, 5, 10].indexOf(minutes) >= 0 ? minutes : 0;
+  if (next === cardsIdleMinutes) return;
+  cardsIdleMinutes = next;
+  wakeCards();
+}
+document.addEventListener('keydown', wakeCards, true);
+
+/* OLED care: shift the cards a few pixels periodically. */
 setInterval(function () {
   var b = $('cards');
   if (b && !document.hidden)
