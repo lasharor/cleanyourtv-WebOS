@@ -58,7 +58,7 @@ provider: **+ OpenRouter** and **+ Your own server** add one, ▲ and ▼ change
 - **API key**: OpenRouter's key, or your server's if it needs one (most at home do not). A saved key is never shown; leave the
   field empty to keep it.
 - **Model**: the list is read from that provider while you type the address; any model name can be typed.
-- **Wait for an answer**: 10, 25, 45 or 60 seconds (25 for a server, 30 for OpenRouter by default).
+- **Wait for an answer**: 10, 25, 30, 45 or 60 seconds (25 for a server, 30 for OpenRouter by default).
 - **Test** asks the provider "Say OK" with the values on the card and shows the time it took, or what went wrong.
 
 Below the cards: **Answer with the AI**, the instructions, which answers first (Home Assistant or the AI) and your own server
@@ -129,7 +129,7 @@ curl -X POST localhost:8765/api/voice/set -d '{"llm":{"enabled":true,"providers"
 `providers` replaces the list; an entry with the `id` of a saved provider changes it, and keeps its key unless `key` or
 `"clearKey":true` is given. Other changes: `{"llm":{"provider":{...}}}` adds one (no `id`) or changes one, `{"llm":{"remove":"<id>"}}`,
 `{"llm":{"order":["<id>",...]}}`, `{"llm":{"first":"<id>"}}`. A provider takes `type` (`server` or `openrouter`, at most one),
-`name`, `base`, `key`, `model`, `waitS` (10, 25, 45 or 60) and `off`. `POST /api/voice/test {"id":"<id>"}` tests one;
+`name`, `base`, `key`, `model`, `waitS` (10, 25, 30, 45 or 60) and `off`. `POST /api/voice/test {"id":"<id>"}` tests one;
 `GET /api/voice/models?id=<id>` lists its models.
 
 **Coming from version 1.6 (OpenRouter only):** nothing to do. Your OpenRouter key, model and instructions become the first provider

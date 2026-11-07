@@ -2501,7 +2501,7 @@ var INFO = {
     'Choose the model that answers. OpenRouter lists the newest models of the main providers, with the price per million words in; a server of yours lists the models it has. The phone page lists every model.',
   'Test now': 'Asks this provider “Say OK” and shows how long the answer took, or why it failed.',
   'Wait for an answer':
-    'How long this provider gets before the next one is asked. Choose to go to the next value: 10, 25, 45 or 60 seconds.',
+    'How long this provider gets before the next one is asked. Choose to go to the next value: 10, 25, 30, 45 or 60 seconds.',
   'Use this provider': 'Off: this provider is skipped and keeps its place, key and model.',
   'Make first': 'Moves this provider to the top: it is asked first.',
   'Move up': 'Asks this provider one place earlier.',
@@ -2895,7 +2895,7 @@ function act() {
   if (r && r.fn && !(st && st.job && st.job.state === 'working' && r.dim)) r.fn();
 }
 function aiHelp() {
-  return 'Chat with language models: OpenRouter, a server of yours (Ollama, LM Studio and others) or both, the first answering and the next taking over when it fails. Run these on the TV (ssh):\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"enabled":true,"providers":[{"type":"server","base":"http://192.168.1.20:11434/v1","model":"llama3.2:3b"},{"type":"openrouter","key":"sk-or-...","model":"openrouter/auto"}]}}\'\n\nOptional: "system" sets the instructions; a provider takes "name", "key", "waitS" (10, 25, 45 or 60) and "off". Ask by text from anywhere on the TV:\ncurl -X POST localhost:8765/api/voice/ask -d \'{"text":"What is the capital of Peru?"}\'\n\nSpoken and typed questions go as text to the providers in their order; no audio does. Each key stays on the TV and goes only to its own provider.\n\nHome Assistant (Assist), with a long-lived access token:\ncurl -X POST localhost:8765/api/voice/set -d \'{"ha":{"url":"http://homeassistant.local:8123","token":"..."}}\'\nOptional: "route" is ha-first, ha-only or ai-only; "selfSigned":true accepts a self-signed certificate; "agent" is a conversation entity.';
+  return 'Chat with language models: OpenRouter, a server of yours (Ollama, LM Studio and others) or both, the first answering and the next taking over when it fails. Run these on the TV (ssh):\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"enabled":true,"providers":[{"type":"server","base":"http://192.168.1.20:11434/v1","model":"llama3.2:3b"},{"type":"openrouter","key":"sk-or-...","model":"openrouter/auto"}]}}\'\n\nOptional: "system" sets the instructions; a provider takes "name", "key", "waitS" (10, 25, 30, 45 or 60) and "off". Ask by text from anywhere on the TV:\ncurl -X POST localhost:8765/api/voice/ask -d \'{"text":"What is the capital of Peru?"}\'\n\nSpoken and typed questions go as text to the providers in their order; no audio does. Each key stays on the TV and goes only to its own provider.\n\nHome Assistant (Assist), with a long-lived access token:\ncurl -X POST localhost:8765/api/voice/set -d \'{"ha":{"url":"http://homeassistant.local:8123","token":"..."}}\'\nOptional: "route" is ha-first, ha-only or ai-only; "selfSigned":true accepts a self-signed certificate; "agent" is a conversation entity.';
 }
 function liveRefresh() {
   api('/api/live/status').then(
@@ -3983,7 +3983,7 @@ function provOneRows() {
     label: 'Wait for an answer',
     sub: (p.waitS || 25) + ' s',
     fn: function () {
-      var w = [10, 25, 45, 60],
+      var w = [10, 25, 30, 45, 60],
         n = w[(w.indexOf(p.waitS || 25) + 1) % w.length];
       llmSet({ provider: { id: p.id, waitS: n } });
     },

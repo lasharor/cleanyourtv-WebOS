@@ -72,7 +72,7 @@ var INFO = {
     'Choose the model that answers. OpenRouter lists the newest models of the main providers, with the price per million words in; a server of yours lists the models it has. The phone page lists every model.',
   'Test now': 'Asks this provider “Say OK” and shows how long the answer took, or why it failed.',
   'Wait for an answer':
-    'How long this provider gets before the next one is asked. Choose to go to the next value: 10, 25, 45 or 60 seconds.',
+    'How long this provider gets before the next one is asked. Choose to go to the next value: 10, 25, 30, 45 or 60 seconds.',
   'Use this provider': 'Off: this provider is skipped and keeps its place, key and model.',
   'Make first': 'Moves this provider to the top: it is asked first.',
   'Move up': 'Asks this provider one place earlier.',

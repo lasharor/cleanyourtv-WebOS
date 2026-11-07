@@ -922,7 +922,7 @@ var dl='m'+i,mi=el('input',{list:dl,value:p.model,autocomplete:'off',class:p.err
 var mh=p.loading?tx('Reading models…'):srv?tx('read from your server'):'';
 c.appendChild(field(p,tx('Model'),mh,mi,'model'));c.appendChild(el('datalist',{id:dl},(p.models||[]).map(function(m){return el('option',{value:m.id,text:m.price!=null?m.name+' \\u00B7 $'+m.price+'/M':m.name})})));
 if(p.mErr)c.appendChild(el('p',{class:'e',text:tx('Could not read the model list: %s. Type the model name.',p.mErr)}));
-var w=el('select',{onchange:function(e){p.waitS=+e.target.value}},D.waits.map(function(s){var o=el('option',{value:s,text:tx('%d s',s)});if(s===p.waitS)o.selected=true;return o}));
+var w=el('select',{onchange:function(e){p.waitS=+e.target.value}},D.waits.map(function(s){return el('option',{value:s,text:tx('%d s',s)})}));w.value=String(p.waitS);
 c.appendChild(field(p,tx('Wait for an answer'),'',w,''));
 c.appendChild(el('label',{class:'c'},[el('input',{type:'checkbox',onchange:function(e){p.off=!e.target.checked}}),document.createTextNode(' '+tx('Use this provider'))]));c.querySelector('.c input').checked=!p.off;
 c.appendChild(el('button',{type:'button',class:'sec',text:p.testing?tx('Testing…'):tx('Test'),onclick:function(){if(p.testing||!check(p)){draw();return}p.testing=true;p.res=null;draw();post('test',draft(p)).then(function(r){p.testing=false;p.res=r;draw()},function(){p.testing=false;draw()})}}));

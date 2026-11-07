@@ -202,6 +202,19 @@ run(async () => {
   });
   ok(/"providers":\[\{"id":"/.test(vpage) && /"hasKey":true/.test(vpage), 'the voice page carries the providers');
   ok(vpage.indexOf('sk-or-page-secret') < 0, 'the voice page never carries a key');
+  ok(
+    /"waitS":30/.test(vpage) && /"waits":\[[0-9,]*\b30\b/.test(vpage),
+    'OpenRouter’s default wait (30 s) is one of the choices the page offers'
+  );
+  sv = await jpost(vp + '/save-json', {
+    llm: { enabled: true, providers: [{ id: orId, type: 'openrouter', model: 'm/one', waitS: 30 }] },
+    ha: { route: 'ha-only' },
+  });
+  ok(sv.code === 200, 'the page saves a card with OpenRouter’s default wait as it got it (' + JSON.stringify(sv.j) + ')');
+  await sleep(2100);
+  r = await vask('pair');
+  await sleep(100);
+  vp = r.j.url.replace(/^http:\/\/[^/]+/, '');
   sv = await jpost(vp + '/save-json', {
     llm: {
       enabled: true,

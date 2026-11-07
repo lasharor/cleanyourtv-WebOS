@@ -56,7 +56,7 @@ async function toServer(c, payload) {
 // voice.llm = { enabled, system, providers: [{ id, type, name, base, key, model, waitS, off }] }
 const orApi = () => process.env.CYTV_OPENROUTER || 'https://openrouter.ai/api/v1'; // overridden only by the tests
 const LLM_DEFAULTS = { enabled: false, system: '', providers: [] };
-const WAITS = [10, 25, 45, 60]; // seconds to wait for one provider's answer
+const WAITS = [10, 25, 30, 45, 60]; // seconds to wait for one provider's answer (defaults: 25 for a server, 30 for OpenRouter)
 const CONNECT_MS = 4000, // a provider that is off or a wrong address is known this fast
   TOTAL_MS = 60000, // all providers of one question together
   SKIP_MS = 60000; // a provider that could not be reached is skipped this long, so a PC that is off costs nothing next time
