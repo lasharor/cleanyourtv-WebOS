@@ -88,20 +88,6 @@ function line(q, w, h) {
     '</svg>';
   return s.firstChild;
 }
-/* a round badge with the first letters of the symbol (one for a coin), in a colour of its own */
-function badge(q) {
-  var t = String(q.s)
-      .replace(/^\^/, '')
-      .replace(/[.=\-].*$/, ''),
-    h = 0,
-    i;
-  for (i = 0; i < q.s.length; i++) h = (h * 31 + q.s.charCodeAt(i)) % 360;
-  var b = el('span', 'badge', t.slice(0, q.t === 'coin' ? 1 : 2));
-  b.style.color = 'hsl(' + h + ',75%,68%)';
-  b.style.background = 'hsla(' + h + ',75%,68%,.2)';
-  b.style.boxShadow = 'inset 0 0 0 1px hsla(' + h + ',75%,68%,.4)';
-  return b;
-}
 function short(q) {
   return String(q.s).replace(/\.[A-Z]{1,3}$/, '');
 }
@@ -170,7 +156,7 @@ function panelView(box, d, L, rich) {
     rows = Math.max(1, Math.floor((H - 37 - 38) / 48)),
     k = Math.min(rich ? 5 : 3, rows),
     narrow = inner < 500,
-    lw = Math.min(110, inner - 48 - (narrow ? 200 : 226) - 110 - 36),
+    lw = Math.min(110, inner - (narrow ? 200 : 226) - 110 - 36),
     i;
   if (narrow) box.className += ' narrow'; /* the price and change columns are 110 and 90 instead of 130 and 96 */
   if (d.q.length > k && k > 1 && H - 37 - 38 - k * 48 < 28) k--;
@@ -181,7 +167,6 @@ function panelView(box, d, L, rich) {
     var q = d.q[i],
       r = el('div', 'row'),
       nm = el('div', 'nm');
-    r.appendChild(badge(q));
     nm.appendChild(el('b', '', q.s));
     if (rich) nm.appendChild(el('small', '', q.n || ''));
     r.appendChild(nm);

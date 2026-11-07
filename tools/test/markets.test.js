@@ -589,6 +589,10 @@ run(async () => {
     'a message in the strip (no key, the daily limit) scrolls sideways like the symbols when it is too long for one line'
   );
   ok(
+    !/badge/.test(card) && !/badge/.test(cardCss),
+    'no circle with the first letter: a symbol has no logo to show, so its name stands alone'
+  );
+  ok(
     /fullButton\('open'/.test(card) && /fullButton\('settings'/.test(card),
     'the whole card is one button: the drawer, or the settings when no symbol is chosen'
   );
