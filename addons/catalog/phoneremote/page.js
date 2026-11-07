@@ -120,12 +120,12 @@ function connect(){if(!tok||(ws&&ws.readyState<2))return;clearTimeout(timer);sta
  ws=w;lastRx=Date.now();upFail=0;
  w.onopen=function(){w.send(JSON.stringify({t:'hello',token:tok}))};
  w.onmessage=function(e){lastRx=Date.now();var m;try{m=JSON.parse(e.data)}catch(x){return}
-  if(m.t==='ready'){ready=true;tvDown=false;blocked=false;delay=1000;status('ok',t('Connected'));$('who').title=m.name||'';if(m.tv){$('tvname').textContent=m.tv;try{localStorage.setItem('cytv-tvname',m.tv)}catch(e){}}try{if(window.CYTV_APP&&CYTV_APP.setName)CYTV_APP.setName(m.tv||'')}catch(e){}me={name:m.name||'',seen:m.seen||0,created:m.created||0};mac=m.mac||'';wol=m.wol;offAt=0;ask();appsIn=false;liveIn=false;vbusy=false;loadLive();
+  if(m.t==='ready'){ready=true;tvDown=false;blocked=false;delay=1000;status('ok',t('Connected'));$('who').title=m.name||'';if(m.tv){$('tvname').textContent=m.tv;try{localStorage.setItem('cytv-tvname',m.tv)}catch(e){}}try{if(window.CYTV_APP&&CYTV_APP.setName)CYTV_APP.setName(m.tv||'')}catch(e){}me={name:m.name||'',seen:m.seen||0,created:m.created||0};mac=m.mac||'';wol=m.wol;offAt=0;ask();appsIn=false;liveIn=false;vbusy=false;vstat();loadLive();
    if(mac){try{localStorage.setItem(MK,mac)}catch(e){};try{if(window.CYTV_APP&&window.CYTV_APP.setMac)window.CYTV_APP.setMac(mac)}catch(e){}}}
   else if(m.t==='denied'){if(leaving)return;ready=false;if(m.reason==='blocked'){blocked=true;status('off',t('Blocked on the TV'))}else{store('');showPair(t('This phone was removed on the TV. Pair it again.'))}}
   else if(m.t==='bye'){if(lgAck)lgAck()}
   else if(m.t==='power'){pwrState=String(m.state||'');mark()}
-  else if(m.t==='vstat'){vst=m;vdraw()}else if(m.t==='answer'){vans(m)}else if(m.t==='vlive'){vlive(m)}
+  else if(m.t==='vstat'){vst=m;vdraw();micDraw()}else if(m.t==='answer'){vans(m)}else if(m.t==='vlive'){vlive(m)}
  else if(m.t==='ack'&&!m.ok&&padMv&&m.n===padMv){padKeysUntil=Date.now()+30000;padMv=0}
  else if(m.t==='ack'&&!m.ok&&m.e){if(pend)pendClear();say(t('TV said:')+' '+m.e,'bad',4000)}};
  w.onclose=function(e){if(ws===w)ws=null;ready=false;if(leaving)return;
@@ -435,7 +435,7 @@ function cfmOpen(on){$('cfm').className=on?'dlgw':'hide dlgw';if(!on)return;
 function lgDraw(a){var rows=[t('Closing the connection'),a[1]==='skip'?t('The TV could not be reached: its list is left as it is'):t('Removing this phone from the TV’s list'),t('Deleting what this phone stored')];
  $('lgl').innerHTML=rows.map(function(r,i){return '<div class="'+a[i]+'"><i>'+(a[i]==='done'?'✓':'')+'</i>'+r+'</div>'}).join('')}
 function wipe(){pendClear();store('');tok='';try{var k,del=[];for(k=0;k<localStorage.length;k++)if(/^cytv/.test(localStorage.key(k)))del.push(localStorage.key(k));del.forEach(function(x){localStorage.removeItem(x)})}catch(e){}
- me={name:'',seen:0,created:0};mac='';wol=null;appsIn=false;liveIn=false;pwrState='';$('tvname').textContent='TV';$('apgrid').innerHTML='';$('lvgrid').innerHTML='';$('txt').value='';prev='';$('code').value='';$('pname').value=guess();cells();vpref=vload();vst=null;miclb();vcur=null;$('vres').innerHTML='';$('vres').appendChild(vempty);vshow('vempty',true);tab('kb')}
+ me={name:'',seen:0,created:0};mac='';wol=null;appsIn=false;liveIn=false;pwrState='';$('tvname').textContent='TV';$('apgrid').innerHTML='';$('lvgrid').innerHTML='';$('txt').value='';prev='';$('code').value='';$('pname').value=guess();cells();vpref=vload();vst=null;vcur=null;$('vres').innerHTML='';$('vres').appendChild(vempty);vshow('vempty',true);tab('kb')}
 /* when the page's own socket is not open the TV may still answer (on standby with Quick Start+, or a socket that just dropped): a short one of its own tells it */
 function tellTv(cb){var w,done=false;function end(ok){if(done)return;done=true;try{w.close()}catch(e){}cb(ok)}
  try{w=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws')}catch(e){return cb(false)}
@@ -484,13 +484,14 @@ if(window.CYTV_APP){var eb=$('eb'),ps=$('psub');eb.textContent=eb.getAttribute('
 /* Voice: the mic button in the last row of the Remote and the Touchpad. It speaks to the TV's voice assistant from one of two places.
    On this phone: a box with the phone's keyboard up; the keyboard's own dictation key turns speech into text (a page on plain HTTP may not
    open the microphone itself, the keyboard may), and the text goes to the TV as a question. On the TV remote: the TV listens through the
-   remote's mic, and the drawer follows each step. The choice is kept on the phone (cytv-voice): a tap uses it, a hold asks again. */
+   remote's mic, and the voice screen follows each step. Where the browser allows it, On this phone listens itself (natStart, below).
+   The choice is kept on the phone (cytv-voice): a tap uses it, a hold asks again. While nothing on the TV answers the mic is dimmed and
+   a tap only says why (vOn). */
 var VK='cytv-voice',vpref=vload(),vst=null,vsrc='',vbusy=false,vlistening=false,vT=0,vHeld=false;
 function vload(){var d={src:'',remember:true,show:true};try{var j=JSON.parse(localStorage.getItem(VK)||'null');if(j&&typeof j==='object'){if(j.src==='phone'||j.src==='remote')d.src=j.src;d.remember=j.remember!==false;d.show=j.show!==false}}catch(e){}return d}
-function vsave(){try{localStorage.setItem(VK,JSON.stringify(vpref))}catch(e){}miclb();vdraw()}
+function vsave(){try{localStorage.setItem(VK,JSON.stringify(vpref))}catch(e){}vdraw()}
 function each(q,f){Array.prototype.forEach.call(document.querySelectorAll(q),f)}
 function srcName(s){return s==='phone'?t('On this phone'):s==='remote'?t('On the TV remote'):t('Ask each time')}
-function miclb(){var x=vpref.remember&&vpref.src?(vpref.src==='phone'?t('Phone'):t('TV remote')):t('Ask');each('.miclb',function(e){e.textContent=x})}
 function vstat(){if(ready&&ws&&ws.readyState===1)try{ws.send('{"t":"vstat"}')}catch(e){}}
 /* the TV listens on its remote only with voice installed; until the TV has said, the choice is offered */
 function vremOk(){return !vst||!!(vst.ok&&vst.installed&&!vst.unsupported)}
@@ -517,7 +518,7 @@ function vgo(src){vsrc=src;vshow('vcpick',false);vshow('vcmain',true);vfull(true
  if(!vremOk()){vshow('vlive',false);$('vwarnm').textContent=vwhy();vshow('vwarnm',true);vnote('');return}
  vstep('listening');vshow('vlive',true);vshow('vcancel',true);vlistening=true;
  if(!send({t:'listen'})){vlistening=false;vclose()}}
-/* one step of the TV's listening, in the drawer and in the status line */
+/* one step of the TV's listening, on the voice screen and in the status line */
 function vstep(st){var b=$('vlt'),s=$('vls');$('vbars').className=st==='listening'?'vbars live':'vbars idle';
  if(st==='listening'){b.textContent=t('Listening on the TV');s.textContent=t('Speak now. If nothing happens, hold the remote’s mic button while you speak.');vnote(t('The TV is listening'),'acc')}
  else if(st==='recognising'){b.textContent=t('Recognising');s.textContent=t('One moment.');vnote(t('Recognising'),'acc')}
@@ -535,7 +536,7 @@ function vout(cls,by,text){if(!vcur)vturn('');var o=vcur.querySelector('.vout');
 function vscroll(top){var r=$('vres');if(top&&vcur)r.scrollTop=Math.max(0,vcur.offsetTop-r.offsetTop-8);else r.scrollTop=r.scrollHeight}
 function vwait(q){vturn(q);vout('wait','',t('Thinking')+'…');vscroll(false);vnote(t('Thinking'),'acc')}
 function verr(e){e=String(e||'');
- if(/no destination/.test(e))return t('Nothing on the TV answers yet. Set up AI chat or Home Assistant in the manager: Voice.');
+ if(/no destination/.test(e))return t('Nothing on the TV answers yet. Set it up in the manager: Voice.');
  if(e==='busy')return t('Still answering the last question.');
  if(e==='nothing heard')return t('I did not hear anything');
  if(e==='nothing recognised')return t('I could not make out any words');
@@ -550,14 +551,15 @@ function vreply(m){vbusy=false;
  else if(m.answer)vout('',m.via==='ha'?t('Home Assistant'):m.via==='ai'?t('AI'):t('Answer'),m.answer);
  else vout('','',t('Sent to the TV.'));
  vscroll(true);vshow('vlive',false);vshow('vcancel',false);
- /* the next question: on the phone the field stays under the result; from the TV remote one button listens again */
+ /* the next question: on the phone the field stays under the conversation; from the TV remote one button listens again */
  if(vsrc==='phone'){vshow('vphone',true);natDraw()}else vshow('vagain',true);
  if(m.error)vnote('');else vnote(t('Answered · also on the TV'),'ok')}
-/* a new question replaces the last result; the field stays (and the keyboard with it), so the drawer does not jump */
+/* a new question is a new turn under the last one; the field stays (and the keyboard with it), so the screen does not jump.
+   With Show answers here off the screen closes once the question is sent. */
 function vask(text){text=String(text||'').trim();if(!text||vbusy)return;
  if(!send({t:'ask',text:text}))return;vbusy=true;buzz();
  $('vtxt').value='';vfit();
- if(!vpref.show){vclose();say(t('Sent to the TV'),'ok',3000);return}
+ if(!vpref.show){vclose();say(t('Sent to the TV.'),'ok',3000);return}
  vwait(text)}
 function vans(m){vbusy=false;if($('vcs').className==='hide'||!vpref.show)return;vreply(m)}
 function vlive(m){if($('vcs').className==='hide'||vsrc!=='remote'||!vlistening)return;
@@ -567,13 +569,17 @@ function vlive(m){if($('vcs').className==='hide'||vsrc!=='remote'||!vlistening)r
  if(m.state==='done'){if(!vpref.show){vclose();return}if(m.text&&!(vcur&&!vcur.getAttribute('data-done')))vturn(m.text);return vreply({answer:m.answer,via:m.via,error:m.error})}
  vreply({error:m.e||'error'})}
 function vfit(){var x=$('vtxt');x.style.height='auto';x.style.height=Math.max(38,Math.min(x.scrollHeight,96))+'px'}
-/* a tap uses the remembered place; a hold, as on the power button, asks again */
+/* a tap uses the remembered place; a hold, as on the power button, opens the chooser again.
+   Voice works when the TV has something that answers (the AI chat, Home Assistant or a server); until the TV has said, the mic is on */
+function vOn(){return !vst||!!(vst.ok&&vst.answers)}
+function vOffWhy(){return vst&&!vst.ok?t('The service on the TV has no voice yet. Update CleanYourTV.'):t('Nothing on the TV answers yet. Set it up in the manager: Voice.')}
+function micDraw(down){var on=vOn();each('.qmic',function(b){b.className='qmic'+(on?'':' off')+(down===b?' on':'');b.setAttribute('aria-disabled',on?'false':'true')})}
 function micDown(e){if(e.type==='touchstart')lastTouch=Date.now();else if(Date.now()-lastTouch<700)return;
- vHeld=false;clearTimeout(vT);e.currentTarget.className='qmic on';vT=setTimeout(function(){vHeld=true;buzz();vopen(true)},480)}
-function micUp(e){clearTimeout(vT);e.currentTarget.className='qmic'}
+ vHeld=false;clearTimeout(vT);micDraw(e.currentTarget);if(!vOn())return;vT=setTimeout(function(){vHeld=true;buzz();vopen(true)},480)}
+function micUp(){clearTimeout(vT);micDraw()}
 each('.qmic',function(b){['touchstart','mousedown'].forEach(function(ev){b.addEventListener(ev,micDown,{passive:true})});
  ['touchend','touchcancel','mouseup','mouseleave'].forEach(function(ev){b.addEventListener(ev,micUp)});
- b.onclick=function(){if(vHeld){vHeld=false;return}buzz();vopen(false)}});
+ b.onclick=function(){if(vHeld){vHeld=false;return}buzz();if(!vOn()){say(vOffWhy(),'warn',5000);vstat();return}vopen(false)}});
 each('.vopt',function(b){b.onclick=function(){var src=b.getAttribute('data-src');
  if(src==='remote'&&!vremOk()){buzz();say(vwhy(),'warn',5000);return}
  vpref.remember=$('vrem').getAttribute('aria-checked')==='true';vpref.src=vpref.remember?src:'';vsave();vgo(src)}});
@@ -591,7 +597,7 @@ $('vmic').onclick=function(){buzz();vgo(vsrc)};
 $('kvvoice').onclick=function(){thOpen(false);vopen(true)};
 $('kvshow').onclick=function(){vpref.show=!vpref.show;vsave()};
 /* The phone's own microphone: a browser opens it only on a secure page (HTTPS, localhost, or an address Chrome was told to trust in
-   chrome://flags, "Insecure origins treated as secure"). There the drawer listens at once with the phone's speech recognition, shows the
+   chrome://flags, "Insecure origins treated as secure"). There On this phone listens at once with the phone's speech recognition, shows the
    words as they come, and sends them when the phone hears the end; the box can still be typed in. Elsewhere the keyboard's mic is the way. */
 var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,recOn=false,natSend=false,natErr='';
 function natOk(){return !!(SR&&window.isSecureContext)}
@@ -613,9 +619,9 @@ function natStart(){if(!natOk()||recOn||vbusy)return false;
   else vnote(t('Speak or type…'),'acc')};
  try{r.start()}catch(e){rec=null;return false}
  recOn=true;natDraw();buzz();vnote(t('Listening on this phone'),'acc');return true}
-/* stop listening: what was heard is still sent (unless the drawer is closed or the place changed, quiet) */
+/* stop listening: what was heard is still sent (unless the voice screen is closed or the place changed: quiet) */
 function natStop(quiet){if(!rec)return;var r=rec;if(quiet){rec=null;recOn=false;natSend=false;try{r.abort()}catch(e){}natDraw();return}try{r.stop()}catch(e){}}
-var vempty=$('vempty');pullDown('vcsheet','xvc');miclb();vdraw();natDraw();
+var vempty=$('vempty');pullDown('vcsheet','xvc');vdraw();natDraw();micDraw();
 $('pname').value=guess();cells();try{var tn=localStorage.getItem('cytv-tvname');if(tn)$('tvname').textContent=tn}catch(e){}tok=stored();try{mac=localStorage.getItem(MK)||''}catch(e){}tab('kb');if(tok){show('remote');connect()}else show('pairbox');mark();autoPair();
 `;
 
@@ -754,10 +760,9 @@ textarea:focus{border:1.5px solid #ff8a5b;box-shadow:0 0 0 4px rgba(255,138,91,.
 #remote[data-p] #kb,#remote[data-p] #tp,#remote[data-p] #ap,#remote[data-p] #lv{opacity:.55;transition:opacity .2s}#remote[data-p=on] #kb,#remote[data-p=on] #tp,#remote[data-p=on] #ap,#remote[data-p=on] #lv{pointer-events:none}
 @keyframes pspin{to{transform:rotate(360deg)}}@keyframes ppop{0%{transform:scale(1);opacity:1}100%{transform:scale(1.5);opacity:0}}@keyframes pnudge{0%{transform:scale(1)}40%{transform:scale(.94)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){#pwring{animation:ppulse 1.6s ease-in-out infinite}.pop,.pwr.nudge{animation:none}}@keyframes ppulse{0%,100%{opacity:1}50%{opacity:.35}}
-/* the mic: the one filled round button of the last row, with the place it listens under it */
-.qr{align-items:center;margin-bottom:18px}.micw{position:relative;flex:none;width:64px;height:64px;margin:0 10px}
-.qr .qmic{flex:none;width:64px;height:64px;padding:0;border-radius:50%;border:0;background:#ff8a5b;color:#1b1008;box-shadow:0 0 0 6px rgba(255,138,91,.14)}.qr .qmic.on{background:#ffb08f}.qr .qmic .ic{width:28px;height:28px}
-.miclb{position:absolute;left:-24px;right:-24px;top:71px;text-align:center;font-size:11px;font-weight:600;color:#a3a8b8;white-space:nowrap}
+/* the mic: the one filled round button of the last row; .off dims it while nothing on the TV answers */
+.qr{align-items:center}.micw{position:relative;flex:none;width:64px;height:64px;margin:0 10px}
+.qr .qmic{flex:none;width:64px;height:64px;padding:0;border-radius:50%;border:0;background:#ff8a5b;color:#1b1008;box-shadow:0 0 0 6px rgba(255,138,91,.14)}.qr .qmic.on{background:#ffb08f}.qr .qmic.off,.qr .qmic.off.on{background:#2a2d3a;color:#7b8092;box-shadow:none}.qr .qmic .ic{width:28px;height:28px}
 .st.acc{color:#ff8a5b}.st.acc i{background:#ff8a5b}
 .vopt{display:flex;width:100%;align-items:center;justify-content:flex-start;text-align:left;padding:13px 14px;border:1px solid #2e3140;border-radius:16px;background:#14161d;margin-top:10px}.vsrc .vopt:first-child{margin-top:0}
 .vopt.sel{border-color:#ff8a5b;background:rgba(255,138,91,.14)}.vopt.off{opacity:.5}
@@ -851,8 +856,8 @@ function phonePage(i18n, lang, preCode, hint) {
     key('EXIT', `<span class=tx2>${T('Exit')}</span>`, T('Exit')) +
     key('0', '0', '0') +
     '<div></div>';
-  // the last row of the Remote and the Touchpad: Inputs, the mic (with the place it listens under it) and Keyboard
-  const qr = `<div class=qr><button class=qin aria-label="${T('Inputs')}">${ic('input')}<span>${T('Inputs')}</span></button><span class=micw><button class=qmic aria-label="${T('Speak to the TV')}">${ic('mic')}</button><small class=miclb aria-hidden=true></small></span><button class=qkb aria-label="${T('Keyboard')}">${ic('kb')}<span>${T('Keyboard')}</span></button></div>`;
+  // the last row of the Remote and the Touchpad: Inputs, the mic (no label) and Keyboard
+  const qr = `<div class=qr><button class=qin aria-label="${T('Inputs')}">${ic('input')}<span>${T('Inputs')}</span></button><span class=micw><button class=qmic aria-label="${T('Speak to the TV')}">${ic('mic')}</button></span><button class=qkb aria-label="${T('Keyboard')}">${ic('kb')}<span>${T('Keyboard')}</span></button></div>`;
   return (
     `<!doctype html><html lang=${lang}><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name=referrer content=no-referrer>
 <meta http-equiv=cache-control content=no-store>
@@ -894,8 +899,8 @@ ${qr}</div></div>
 <button id=lgo class=outb>${T('Log out of this TV')}</button></div></div>
 <div id=vcs class=hide><div id=vcsheet class=drawer role=dialog aria-label="${T('Speak to the TV')}"><div class=grab></div>
 <div id=vcpick><div class=top><b>${T('Speak to the TV')}</b><button id=xvc aria-label="${T('Close')}">${ic('close')}</button></div>
-<div class=vsrc><button class=vopt id=voptp data-src=phone><span class=oi>${ic('phone')}</span><span><b>${T('On this phone')}</b><small>${T('Use your keyboard’s mic, or type. Works without the TV’s speech download.')}</small></span></button>
-<button class=vopt id=voptr data-src=remote><span class=oi>${ic('rmic')}</span><span><b>${T('On the TV remote')}</b><small>${T('The TV listens through the remote’s mic button. Needs Voice installed on the TV.')}</small></span></button></div>
+<div class=vsrc><button class=vopt id=voptp data-src=phone><span class=oi>${ic('phone')}</span><span><b>${T('On this phone')}</b><small>${T('Speak or type on the phone. Needs no speech download on the TV.')}</small></span></button>
+<button class=vopt id=voptr data-src=remote><span class=oi>${ic('rmic')}</span><span><b>${T('On the TV remote')}</b><small>${T('The TV listens through its remote’s mic. Needs Voice installed in the manager.')}</small></span></button></div>
 <button class=vtog id=vrem role=switch aria-checked=true><span>${T('Remember my choice')}</span><i class=sw></i></button>
 <p class=vhint>${T('Change it later: hold the mic button, or This remote › Voice.')}</p></div>
 <div id=vcmain class=hide><div class=top><button id=vchip class=vchip aria-label="${T('Change where you speak')}"><i></i><span id=vchipt></span>${ic('chev')}</button><button id=xvc2 aria-label="${T('Close')}">${ic('close')}</button></div>

@@ -14,6 +14,7 @@
 //   {t:'ask', text}   -> {t:'answer', text, answer, via, error}: the text typed or dictated on the phone, as /api/voice/ask
 //   {t:'listen'}      -> {t:'vlive', state, ...}: the TV listens on the remote's microphone (/api/voice/listen); state follows the
 //                        TV (listening, recognising, thinking with the text) and ends with done {text, answer, via, error} or error {e}
+//   {t:'vstop'}       -> nothing: the phone no longer wants the vlive steps (the TV finishes on its own)
 // The settings are this add-on's settings in config.json (addons.phoneremote.settings): {expireDays, phones: [{id, name, hash, created,
 // seen, blocked}]}. A phone's token is "<id>.<secret>": the phone keeps it, the TV keeps only the SHA-256 of the secret, and it is never
 // logged.
@@ -839,7 +840,7 @@ function create(ctx, opts) {
     vstat: async c => tell(c, Object.assign({ t: 'vstat' }, await voiceState())),
     ask: voiceAsk,
     listen: voiceListen,
-    vstop: async c => stopWatch(c), // the phone closed the drawer: it no longer wants the steps (the TV finishes on its own)
+    vstop: async c => stopWatch(c), // the phone closed the voice screen or changed where it listens: no more steps (the TV finishes)
   };
 
   // text, delete and enter must reach the TV in the order they were typed, but each one is its own luna process: they run one after
