@@ -36,7 +36,7 @@ grep -E '^config: ' /tmp/cleanyourtv-helper.log 2>/dev/null | tail -20
 echo; echo "===== Input key mode (overlay, ondemand or launcher) and picker state ====="
 cat $D/picker-mode 2>&1
 echo; echo "===== config.json (secrets hidden) ====="
-node -e 'var c=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));(function m(o){for(var k in o){if(/token|key|secret|password|url|webhook|playlist/i.test(k)&&typeof o[k]==="string"&&o[k])o[k]="<set>";else if(o[k]&&typeof o[k]==="object")m(o[k])}})(c);console.log(JSON.stringify(c,null,1))' $D/config.json 2>&1
+node -e 'var c=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));(function m(o){for(var k in o){if(/token|key|secret|password|hash|url|webhook|playlist/i.test(k)&&typeof o[k]==="string"&&o[k])o[k]="<set>";else if(o[k]&&typeof o[k]==="object")m(o[k])}})(c);((c.phoneRemote||{}).phones||[]).forEach(function(p){p.name="<set>"});console.log(JSON.stringify(c,null,1))' $D/config.json 2>&1
 echo; echo "===== Themes on the TV ====="
 ls $D/themes 2>&1
 echo; echo "===== The service's last operations (a start that finds a dead process logs them) ====="

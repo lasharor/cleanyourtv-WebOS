@@ -11,7 +11,8 @@
 //   GET  /api/addons/<id>                  one add-on
 //   POST /api/addons/<id>/enable {enabled} stored in config.json; takes effect at the next start (a page add-on at once)
 //   ANY  /api/addons/<id>/<path>           answered by the add-on's own service.js (path = what follows the id)
-//   GET  /addon/<id>/<file>                a file of the add-on's page (only while it runs); GET /addon/sdk.js is the helper for pages
+//   GET  /addon/<id>/<file>                a file of the add-on's page (only while it runs); GET /addon/sdk.js is the helper for pages,
+//                                          GET /addon/qrcode.js the QR code generator a page may draw with
 // An add-on of kind "service" is Node code that runs as root in this process; it gets a small ctx (its folders, its settings, fetch,
 // a log line) and a failing one is switched off without touching the rest. Installed add-ons come only from the catalog, file by
 // file against the SHA-256 in its index. DISABLE-ADDONS in the CleanYourTV folder (or ADDONS/DISABLE) loads none.
@@ -168,6 +169,15 @@ function cleanIndex(raw) {
   return out;
 }
 
+// the QR code generator an add-on's page may load as /addon/qrcode.js: beside the helper files on the TV (the package puts it there),
+// and in third-party/ on a computer
+function qrcodeFile() {
+  const beside = path.join(__dirname, 'qrcode.js'),
+    repo = path.join(__dirname, '..', 'third-party', 'qrcode-generator', 'qrcode.js');
+  if (fs.existsSync(beside)) return beside;
+  return fs.existsSync(repo) ? repo : '';
+}
+
 const rmrf = d => {
   try {
     for (const f of fs.readdirSync(d)) {
@@ -307,6 +317,13 @@ function create(ctx) {
       a.status = 'failed';
       a.error = String((e && e.message) || e).slice(0, 200);
       console.error('addon ' + a.id + ' failed to start: ' + ((e && e.stack) || e));
+      // whatever start() set up before it failed (a listener, a timer) is stopped here, so a restart of the switch starts clean
+      try {
+        if (typeof a.mod.stop === 'function') a.mod.stop();
+      } catch (e2) {
+        console.error('addon ' + a.id + ' failed to stop after a failed start: ' + ((e2 && e2.stack) || e2));
+      }
+      a.mod = null;
     }
   }
 
@@ -751,6 +768,25 @@ function create(ctx) {
       res.writeHead(200, { 'content-type': TYPES.js, 'cache-control': 'no-cache' });
       return res.end(SDK);
     }
+    if (u === '/addon/qrcode.js') {
+      // a shared page asset: the QR code generator (third-party/qrcode-generator), for an add-on page that shows a QR (the phone remote's
+      // pairing screen). One copy in the repository: it ships in the package beside the helper files (ipk/build.py) and is read from
+      // third-party/ on a computer, where the package's flat layout does not exist.
+      const f = qrcodeFile();
+      if (!f) return web.notFound(res);
+      try {
+        const st = fs.statSync(f);
+        res.writeHead(200, {
+          'content-type': TYPES.js,
+          'content-length': st.size,
+          'cache-control': 'no-cache',
+          'x-content-type-options': 'nosniff',
+        });
+        return fs.createReadStream(f).pipe(res);
+      } catch (_) {
+        return web.notFound(res);
+      }
+    }
     const pg = /^\/addon\/([a-z][a-z0-9-]*)\/(.*)$/.exec(u);
     if (pg) {
       const a = find(pg[1]);
@@ -871,6 +907,12 @@ function create(ctx) {
     return a && a.status === 'running' && a.mod ? a.mod : null;
   };
 
+  // the loader's record of an add-on whatever its status, the module included (the tests check what it holds; module(id) is for a running one)
+  const state = id => {
+    const a = find(id);
+    return a ? { id: a.id, dir: a.dir, bundled: a.bundled, enabled: a.enabled, status: a.status, error: a.error, mod: a.mod } : null;
+  };
+
   // the running, switched-on add-ons that provide something ("provides" in their manifest): [{id, name, mod}]
   const providers = what =>
     list
@@ -891,6 +933,7 @@ function create(ctx) {
     match,
     pageMay,
     module,
+    state,
     providers,
     cardsOf,
     handle,

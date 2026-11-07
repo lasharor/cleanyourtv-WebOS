@@ -93,13 +93,19 @@ function addonSel() {
   for (var i = 0; i < ad.installed.length; i++) if (ad.installed[i].id === ad.sel) return ad.installed[i];
   return null;
 }
-function addonDo(path, body, done) {
+function addonDo(path, body, done, after) {
   banner('Working\u2026', 'work');
   api(path, body).then(
     function (r) {
-      if (r.error) return banner(r.error, 'err');
+      if (r.error) {
+        /* refused, or a stop that failed: the add-on may still be running, so show the real status and do not go on as if it had worked */
+        banner(r.error, 'err');
+        loadAddons();
+        return;
+      }
       banner(r.restartNeeded ? done + ' \u00B7 restart the TV to apply it' : done, 'ok');
       loadAddons();
+      if (after && !r.restartNeeded) after();
     },
     function () {
       banner('The service did not answer', 'err');
