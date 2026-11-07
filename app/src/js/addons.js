@@ -50,7 +50,7 @@ var PAGER = {
       function () {}
     );
   },
-  /* The page strip: a coloured dot or a number for each page, so you see what the buttons do. Its look and place come from the theme
+  /* The page strip: a coloured dot or a number for each page, so you see what the buttons do; the pointer can click one to turn to it. Its look and place come from the theme
      (themeStrip: style, labels, colours, edge, size); the user can put it in one of six places (manager > Add-ons), which wins. */
   draw: function () {
     var s = $('pagestrip');
@@ -100,6 +100,10 @@ var PAGER = {
       l.textContent = p.label;
       e.appendChild(d);
       e.appendChild(l);
+      /* the pointer of the Magic Remote (or a mouse) turns to the page it clicks, as its number or colour button does */
+      e.addEventListener('click', function () {
+        PAGER.go(p.id);
+      });
       s.appendChild(e);
     });
   },
