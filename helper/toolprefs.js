@@ -49,6 +49,7 @@ const CORE_LABELS = {
   get_weather: 'The weather for a place',
   new_conversation: 'Start a new conversation',
 };
+const ADDON_ORDER = ['spotify', 'weather', 'iptv', 'androidbox', 'unsplash', 'icons', 'agent'];
 const ITEM = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 const actionsOf = t => {
   const p = t && t.inputSchema && t.inputSchema.properties && t.inputSchema.properties.action;
@@ -107,7 +108,15 @@ function groupsOf(lists) {
     }
     byId[id].name = name || String(l.provider.name || id).slice(0, 40);
   }
-  return groups.filter(g => g.items.length);
+  // the service's groups first, then the add-ons in the order of the manager's screen (the ones it does not name by name)
+  const rank = g => (g.kind === 'service' ? -1 : ADDON_ORDER.indexOf(g.id) >= 0 ? ADDON_ORDER.indexOf(g.id) : ADDON_ORDER.length);
+  return groups
+    .filter(g => g.items.length)
+    .map((g, i) => ({ g, i }))
+    .sort(
+      (x, y) => rank(x.g) - rank(y.g) || (rank(x.g) === ADDON_ORDER.length ? String(x.g.name).localeCompare(String(y.g.name)) : x.i - y.i)
+    )
+    .map(x => x.g);
 }
 const isConfirm = t => !!(t && (t.confirm === true || (t.annotations && t.annotations.destructiveHint)));
 

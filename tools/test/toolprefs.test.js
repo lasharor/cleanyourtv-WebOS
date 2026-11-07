@@ -83,6 +83,25 @@ run(async () => {
     s.groups.filter(g => g.id === 'tv')[0].items.filter(i => i.name === 'power_off')[0].confirm === true,
     'power_off is marked (voice only, after a yes)'
   );
+  ok(
+    s.groups
+      .map(g => g.id)
+      .slice(4)
+      .join() === 'spotify,agent',
+    'the add-ons in the order of the manager screen'
+  );
+  ok(
+    req('toolprefs')
+      .groupsOf([
+        { provider: { id: 'zeta', name: 'Zeta' }, tools: [{ name: 'z', description: 'Z.' }] },
+        { provider: { id: 'agent', name: 'Agent' }, tools: [{ name: 'a', description: 'A.' }] },
+        { provider: { id: 'alpha', name: 'Alpha' }, tools: [{ name: 'y', description: 'Y.' }] },
+        { provider: { id: 'iptv', name: 'Live TV' }, tools: [{ name: 'i', description: 'I.' }] },
+      ])
+      .map(g => g.id)
+      .join() === 'iptv,agent,alpha,zeta',
+    'known add-ons in their order (found on the TV: the loader gave them in its own order), others after them by name'
+  );
   ok(s.on === s.all && s.all > 15, 'the count: all on');
   ok(JSON.stringify(s).indexOf('disconnect_from_tv') < 0, 'disconnect_from_tv is not a setting (always on)');
 
