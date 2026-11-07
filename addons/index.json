@@ -3,16 +3,16 @@
     {
       "id": "bigclock",
       "name": "Midnight Clock",
-      "version": "1.1.0",
-      "description": "A stylish full-screen clock with seconds and the date.",
-      "about": "A calm midnight design with a large, readable local time, live seconds and the full date. It opens as a page beside Home; press Back to return.",
+      "version": "1.3.0",
+      "description": "Large blue digital time on a black screen with soft white separator dots.",
+      "about": "A clean full-screen digital clock with oversized blue digits and two soft white dots on black. It opens as a page beside Home; press Back to return.",
       "preview": "preview.jpg",
       "kind": "page",
       "permissions": [],
       "luna": [],
       "files": {
-        "addon.json": "f2e3b9bc3635f91f56aa4b2a316da114290b735bc4687d20219b8c4874cb4b5c",
-        "index.html": "f6d9a0e6f3342d022c896556b840d6c91a4eb54da9b87605c99bb4e83e140662"
+        "addon.json": "30860f70a379230b597a49c7091566f541a22450859e7b1201dd611f5e4a0e55",
+        "index.html": "54f85733dc50e2577a6f07390055970f796dba69048ce23d14d9923c9fad72fe"
       }
     },
     {
