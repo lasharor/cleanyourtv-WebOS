@@ -38,6 +38,10 @@
         {
           "name": "settings",
           "label": "Choose stocks"
+        },
+        {
+          "name": "chart",
+          "label": "Chart"
         }
       ],
       "options": [
@@ -120,6 +124,10 @@
         {
           "name": "settings",
           "label": "Choose coins"
+        },
+        {
+          "name": "chart",
+          "label": "Chart"
         }
       ],
       "options": [

@@ -89,21 +89,21 @@
       ],
       "luna": [],
       "files": {
-        "addon.json": "70dbacdc0209e5d5bcd3a76369e295d901f96f790a66d6112e3d07e78be476ae",
+        "addon.json": "7e858c80472e69bb88e4aa3e79403ab34fc006818125c3b1f89623c2a8667331",
         "cards/crypto/card.css": "c5f273e0f32b19cf0e599f711a6f444bc12e8d08443fa286fa87c8f62c870658",
         "cards/crypto/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
         "cards/crypto/card.js": "0fb004bea11e10a233a5caf765383d7aa65a6e9cda62c8f426f8540c8ec34a0b",
-        "cards/crypto/drawer.css": "e2d56fad8d47e9cd7089bbc2215a3e68105d2920f6ad627ee7e73589643b37e9",
-        "cards/crypto/drawer.html": "23d4a3120edfe92312fc55c95e1c5ec661f4eac1f3004026b4d532a5a3ea3eae",
-        "cards/crypto/drawer.js": "1deb198c033f00def0e82afab788b5053db3bc9d696e5b0f7eccc8a54860e8f1",
+        "cards/crypto/drawer.css": "fc261592ba8c1288fc03ebfbf9cbbaab31d566e7d37e873ed3d2cb992603aae2",
+        "cards/crypto/drawer.html": "1411157ab10ef9883bb9fff34be2a8e8f0109935690f059ff5b027bda1aa0501",
+        "cards/crypto/drawer.js": "b9262ee78f16fb9bea72d79208a025c4b307f6b44bbbe9e57d8762691eb57d4f",
         "cards/stocks/card.css": "c5f273e0f32b19cf0e599f711a6f444bc12e8d08443fa286fa87c8f62c870658",
         "cards/stocks/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
         "cards/stocks/card.js": "0fb004bea11e10a233a5caf765383d7aa65a6e9cda62c8f426f8540c8ec34a0b",
-        "cards/stocks/drawer.css": "e2d56fad8d47e9cd7089bbc2215a3e68105d2920f6ad627ee7e73589643b37e9",
-        "cards/stocks/drawer.html": "23d4a3120edfe92312fc55c95e1c5ec661f4eac1f3004026b4d532a5a3ea3eae",
-        "cards/stocks/drawer.js": "1deb198c033f00def0e82afab788b5053db3bc9d696e5b0f7eccc8a54860e8f1",
-        "markets.js": "46209583f525c76f5634d520ba0651d37a61150d2b8bf6698327b2a884a9c9f8",
-        "service.js": "768e56c759c880e7db19fdd7a912355259cbc9596058449ec17a08a1d3a0acb6"
+        "cards/stocks/drawer.css": "fc261592ba8c1288fc03ebfbf9cbbaab31d566e7d37e873ed3d2cb992603aae2",
+        "cards/stocks/drawer.html": "1411157ab10ef9883bb9fff34be2a8e8f0109935690f059ff5b027bda1aa0501",
+        "cards/stocks/drawer.js": "b9262ee78f16fb9bea72d79208a025c4b307f6b44bbbe9e57d8762691eb57d4f",
+        "markets.js": "2c8a7501245c09a686a390c764405ea2e4cab7b816be62c5ef8430663ac2b851",
+        "service.js": "4b51cd714e88540d4a050d108d61fcd53f99bbc658ca54eb501eb18222d889de"
       }
     },
     {
@@ -128,7 +128,7 @@
       "files": {
         "addon.json": "4e5f3eab4b00b15608f4c0b05dd3bd8161748cc1844052a1ed038bd6e60806c9",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "31ab2b51fd816046c511d2f26c422e9d35e796097ef0d445498adb8fc2541004",
+        "page/index.html": "a8a976295906514690d1500efd7ba06ef29df8218d36ddbf392676b16b1bef80",
         "page.js": "985cedb9ca9b6038eff61f4ac45f0db1a803b0ee6b0adcf99430c9b0dec926ee",
         "remotekeys.js": "2f65affbb6a6ff057947d81a553ee3d2063d293edaed4cdcb4a0019b380ea8d3",
         "service.js": "b78115301ab56e0c4244279b420ff4ab76da4686fc33fb49332c96a0d4a83c3e",
@@ -220,7 +220,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "22ca22b39607f4bb8fae19eee6d1fd78c8bd82ddca326aa365e79351eebf1e9e",
+        "page/index.html": "1d7e411083da2b0b4b50f6b355d7f3a4adf61a814c79e7d38ec88b9c97f6788d",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
