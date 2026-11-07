@@ -449,5 +449,120 @@ run(async () => {
     ok(Date.now() - t0 >= 2000, 'it did not decide from the first reading of the running apps (the list lags by seconds after a start)');
   }
 
-  cp.spawnSync('rm', ['-rf', tmp]);
+  // ---- scripts/20-cleanyourtv-screensaver itself, in a folder that stands in for the TV, with fake mount, systemctl and luna-send ----
+  // (the $SAM / prepare coordination with 10-cleanyourtv-home and the setup is what these runs check; not on Windows: no sh there)
+  if (process.platform !== 'win32') {
+    const saverRun = opts => {
+      const R = fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-saverboot-'));
+      const L = path.join(R, 'media/developer/cleanyourtv'),
+        H = path.join(R, 'usr/palm/applications/com.webos.app.screensaver'),
+        BIN = path.join(R, 'bin'),
+        MOUNTS = path.join(R, 'mounts'),
+        CALLS = path.join(R, 'calls');
+      const exe = path.join(H, 'ScreenSaver');
+      writeF(path.join(H, 'appinfo.json'), '{}');
+      writeF(exe, 'LG');
+      const stock = { id: 'com.webos.app.screensaver', type: opts.kind, main: opts.kind === 'native' ? exe : 'qml/main.qml' };
+      writeF(path.join(L, 'backup', 'screensaver-appinfo.orig.json'), JSON.stringify(stock));
+      writeF(path.join(L, 'screensaver', 'app', 'index.html'), '<p>saver</p>');
+      fs.copyFileSync(path.join(root, 'helper', 'tvprofile.js'), path.join(L, 'tvprofile.js'));
+      for (const s of ['jtool.js', 'stage-screensaver.sh', 'screensaver-standin.sh'])
+        fs.copyFileSync(path.join(root, 'scripts', s), path.join(L, s));
+      writeF(path.join(L, 'after-sam.sh'), 'echo after-sam >> "$CYTV_CALLS"\n');
+      writeF(path.join(L, 'reload-home.sh'), 'echo reload-home >> "$CYTV_CALLS"\n');
+      writeF(path.join(R, 'tmp', '.keep'), '');
+      if (opts.sam) writeF(path.join(R, 'tmp', 'cleanyourtv-sam'), '');
+      if (opts.method) writeF(path.join(L, 'screensaver-method'), opts.method + '\n');
+      if (opts.homeStandin) {
+        writeF(path.join(R, 'tmp', 'cleanyourtv-home-standin'), '/usr/bin/home\n');
+        writeF(MOUNTS, 'x /usr/bin/home ext4 rw 0 0\n');
+      } else writeF(MOUNTS, '');
+      const fake = (n, body) => {
+        writeF(path.join(BIN, n), '#!/bin/sh\n' + body + '\n');
+        fs.chmodSync(path.join(BIN, n), 0o755);
+      };
+      fake('mount', 'echo "mount $*" >> "$CYTV_CALLS"; echo "x $3 ext4 rw 0 0" >> "$CYTV_MOUNTS"');
+      fake(
+        'umount',
+        'echo "umount $*" >> "$CYTV_CALLS"; grep -v " $1 " "$CYTV_MOUNTS" > "$CYTV_MOUNTS.n"; mv "$CYTV_MOUNTS.n" "$CYTV_MOUNTS"'
+      );
+      fake('systemctl', 'echo "systemctl $*" >> "$CYTV_CALLS"; exit 0');
+      fake('pkill', 'exit 0');
+      fake(
+        'luna-send',
+        [
+          'for a in "$@"; do case "$a" in luna://*) uri=$a ;; esac; done',
+          'echo "luna $uri" >> "$CYTV_CALLS"',
+          'case "$uri" in',
+          '  *listRunningApps*) echo \'{"running": [{"id": "com.webos.app.home"}]}\' ;;',
+          '  *getForegroundAppInfo*) echo "{\\"appId\\": \\"$CYTV_FG\\"}" ;;',
+          '  *) echo \'{"returnValue": true}\' ;;',
+          'esac',
+        ].join('\n')
+      );
+      const env = Object.assign({}, process.env, {
+        CYTV_TEST_ROOT: R,
+        CYTV_TEST_BIN: BIN,
+        CYTV_MOUNTS: MOUNTS,
+        CYTV_CALLS: CALLS,
+        CYTV_FG: opts.fg === undefined ? 'com.webos.app.home' : opts.fg,
+        CYTV_SETTLE: '0',
+      });
+      const r = cp.spawnSync('sh', [path.join(root, 'scripts', '20-cleanyourtv-screensaver')].concat(opts.args || []), {
+        encoding: 'utf8',
+        env,
+      });
+      // the app manager restart runs in the background: wait for its end (after-sam), or a moment when none was started
+      const t0 = Date.now();
+      const calls = () => (fs.existsSync(CALLS) ? fs.readFileSync(CALLS, 'utf8') : '');
+      while (Date.now() - t0 < (opts.waitRestart ? 20000 : 1500)) {
+        if (opts.waitRestart && /after-sam/.test(calls()) && (!opts.waitReload || /reload-home|luna .*launch/.test(calls()))) break;
+        cp.spawnSync('sleep', ['0.2']);
+      }
+      cp.spawnSync('sleep', ['0.5']);
+      const out = {
+        status: r.status,
+        calls: calls(),
+        mounts: fs.readFileSync(MOUNTS, 'utf8'),
+        log: fs.existsSync(path.join(R, 'tmp', 'cleanyourtv-boot.log'))
+          ? fs.readFileSync(path.join(R, 'tmp', 'cleanyourtv-boot.log'), 'utf8')
+          : '',
+        H,
+        exe,
+        R,
+      };
+      rmrf(R);
+      return out;
+    };
+    const mounted = (o, p) => o.mounts.indexOf(' ' + p + ' ') >= 0;
+    const restarted = o => /systemctl restart sam/.test(o.calls);
+
+    let o = saverRun({ kind: 'qml', waitRestart: true });
+    ok(
+      mounted(o, o.H) && restarted(o),
+      'boot, a QML saver, nothing restarted the app manager yet: the folder is mounted and sam restarted'
+    );
+    o = saverRun({ kind: 'qml', args: ['prepare'] });
+    ok(mounted(o, o.H) && !restarted(o), 'prepare (10-cleanyourtv-home restarts sam next): the folder is mounted, no restart here');
+    o = saverRun({ kind: 'qml', sam: true });
+    ok(mounted(o, o.H) && !restarted(o), 'sam was already restarted after the mount this boot ($SAM): no second restart');
+    o = saverRun({ kind: 'native' });
+    ok(mounted(o, o.exe) && !mounted(o, o.H) && !restarted(o), 'a native saver: the stand-in over its program, no restart');
+  }
+
+  rmrf(tmp);
 });
+
+// remove a folder and what is in it (fs.rmSync and the "recursive" options are newer than Node 8.12; "rm -rf" is not on Windows)
+function rmrf(p) {
+  let st;
+  try {
+    st = fs.lstatSync(p);
+  } catch (_) {
+    return;
+  }
+  if (st.isDirectory()) {
+    for (const f of fs.readdirSync(p)) rmrf(path.join(p, f));
+    fs.rmdirSync(p);
+  } else fs.unlinkSync(p);
+}
