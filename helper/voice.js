@@ -31,7 +31,6 @@ const answers = require('./answers'),
     usable,
     hostOf,
     WAITS,
-    LEGACY,
     haCfg,
     HA_DEFAULTS,
     HA_ROUTES,
@@ -603,9 +602,10 @@ const sameAddress = b => String(b).toLowerCase().replace(/\/+$/, '').replace(/\/
 function applyLlm(cur, b) {
   const raw = Object.assign({ enabled: false, system: '' }, cur || {}); // no default list: an old setting has none yet
   let list = providersOf(raw);
-  for (const k of LEGACY.concat('clearKey', 'clearServerKey'))
+  // only fields of this branch's unreleased single-server step are refused; key, model and clearKey (versions 1.6 and before) still work
+  for (const k of ['base', 'serverKey', 'clearServerKey'])
     if (b[k] !== undefined) return 'the AI settings are a list of providers now: use "providers" or "provider" (docs/voice.md)';
-  LEGACY.forEach(k => delete raw[k]);
+  const pendingModel = list.some(p => p.type === 'openrouter') ? '' : raw.model || ''; // a model set before the OpenRouter key
   if (typeof b.enabled === 'boolean') raw.enabled = b.enabled;
   if (typeof b.system === 'string') raw.system = b.system.slice(0, 1000);
   const saved = {};
@@ -649,6 +649,35 @@ function applyLlm(cur, b) {
     q.name = p.name; // empty: the default name (OpenRouter, or the server's host)
     return q;
   };
+  // The calls from before providers (scripts, the docs of version 1.6: {"llm":{"key":"sk-or-...","model":"..."}}, clearKey) act on
+  // the OpenRouter provider: key adds it or changes its key, clearKey removes it, model changes its model (without one: the
+  // first provider's, else it waits for the key).
+  const legacyOr = () => list.filter(p => p.type === 'openrouter')[0];
+  if (typeof b.model === 'string' && b.model.trim() && !/^[\w.\-:\/~]{1,100}$/.test(b.model.trim())) return 'that model name is not valid';
+  const legacyModel = typeof b.model === 'string' ? b.model.trim() : '';
+  if (typeof b.key === 'string' && b.key.trim()) {
+    const or = legacyOr();
+    if (or) list = list.map(p => (p === or ? Object.assign({}, p, { key: b.key.trim().slice(0, 300) }) : p));
+    else if (list.length >= MAX_PROVIDERS) return 'at most ' + MAX_PROVIDERS + ' AI providers';
+    else
+      list = list.concat(
+        provider({
+          id: newId(list),
+          type: 'openrouter',
+          key: b.key.trim().slice(0, 300),
+          model: legacyModel || pendingModel || 'openrouter/auto',
+        })
+      );
+  }
+  if (b.clearKey) {
+    list = list.filter(p => p.type !== 'openrouter');
+    if (b.enabled === undefined && !list.some(usable)) raw.enabled = false; // as before: no key, no AI chat
+  }
+  if (legacyModel) {
+    const or = legacyOr() || (list.length ? list[0] : null);
+    if (or) list = list.map(p => (p === or ? Object.assign({}, p, { model: legacyModel }) : p));
+    else raw.model = legacyModel; // kept for when the OpenRouter key comes
+  }
   if (Array.isArray(b.providers)) {
     if (b.providers.length > MAX_PROVIDERS) return 'at most ' + MAX_PROVIDERS + ' AI providers';
     const out = [];
@@ -697,6 +726,14 @@ function applyLlm(cur, b) {
     raw.enabled = false; // the last one that could answer was removed or switched off
   }
   raw.providers = list;
+  // A service from before providers (after going back to the previous version in the manager) reads llm.key and llm.model: they
+  // keep the OpenRouter provider's, so OpenRouter still answers there. This service reads only providers once they exist.
+  ['base', 'serverKey'].forEach(k => delete raw[k]);
+  const or = list.filter(p => p.type === 'openrouter')[0];
+  if (or) {
+    raw.key = or.key;
+    raw.model = or.model;
+  } else delete raw.key;
   return raw;
 }
 // A provider from the phone page or the API: a saved one by id, with any unsaved values over it (a draft). The key: the draft's own,

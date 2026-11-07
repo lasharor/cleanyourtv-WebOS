@@ -263,8 +263,6 @@ run(async () => {
   ok(r.code === 400 && /http/.test(r.j.error), 'an address that is not http(s) is refused');
   r = await vask('set', { llm: { providers: [], enabled: true } });
   ok(r.code === 400 && /add an AI provider first/.test(r.j.error), 'with no provider the AI chat cannot be switched on');
-  r = await vask('set', { llm: { key: 'sk-old' } });
-  ok(r.code === 400 && /list of providers/.test(r.j.error), 'the old single-provider fields are refused with a pointer');
   r = await vask('set', {
     llm: {
       providers: [
@@ -415,4 +413,76 @@ run(async () => {
   );
   r = await call(v2, '/api/voice/set', 'POST', { llm: { provider: { id: ps[0].id, waitS: 45 } } });
   ok(r.code === 200 && r.j.llm.providers[0].waitS === 45 && r.j.llm.providers[1].hasKey, 'a change writes the list and keeps both keys');
+  // ---- an update from version 1.6 with OpenRouter set up: it keeps answering, now as the first provider of the list ----
+  const orLog = [];
+  const or16 = await serve((q, rs) => {
+    let b = '';
+    q.on('data', c => (b += c));
+    q.on('end', () => {
+      orLog.push({ url: q.url, headers: q.headers, body: b ? JSON.parse(b) : null });
+      rs.writeHead(200, { 'content-type': 'application/json' });
+      rs.end(JSON.stringify({ choices: [{ message: { content: 'OpenRouter as before' } }] }));
+    });
+  });
+  process.env.CYTV_OPENROUTER = or16.url;
+  const c16 = memoryConfig({
+    voice: { enabled: true, llm: { enabled: true, key: 'sk-or-16', model: 'anthropic/claude-x', system: 'Answer like a pirate.' } },
+  });
+  const v16 = req('voice').create({ config: c16, notify: { show: async () => {} } });
+  const ask16 = (act, b, m) => call(v16, '/api/voice/' + act, m || 'POST', b);
+  r = await ask16('status', null, 'GET');
+  ps = r.j.llm.providers;
+  ok(
+    r.j.llm.enabled && ps.length === 1 && ps[0].type === 'openrouter' && ps[0].model === 'anthropic/claude-x' && ps[0].hasKey,
+    '1.6 settings: OpenRouter with its model is the one provider, AI chat stays on'
+  );
+  ok(r.j.llm.hasKey === true && r.j.llm.model === 'anthropic/claude-x', 'the status keeps hasKey and model for readers from 1.6');
+  r = await ask16('ask', { text: 'hello', card: false });
+  const o16 = orLog[orLog.length - 1];
+  ok(
+    r.j.answer === 'OpenRouter as before' &&
+      o16.headers.authorization === 'Bearer sk-or-16' &&
+      o16.body.model === 'anthropic/claude-x' &&
+      /pirate/.test(o16.body.messages[0].content),
+    'it answers through OpenRouter with the same key, model and instructions, before anything is saved'
+  );
+  // the calls of 1.6 (scripts, the old docs) still work, on the OpenRouter provider
+  r = await ask16('set', { llm: { model: 'openrouter/auto' } });
+  ok(
+    r.code === 200 && r.j.llm.providers.length === 1 && r.j.llm.providers[0].model === 'openrouter/auto',
+    '1.6 call: model changes OpenRouter’s model'
+  );
+  r = await ask16('set', { llm: { key: 'sk-or-new' } });
+  ok(r.code === 200 && r.j.llm.providers.length === 1 && r.j.llm.providers[0].hasKey, '1.6 call: key changes OpenRouter’s key');
+  await ask16('ask', { text: 'again', card: false });
+  ok(orLog[orLog.length - 1].headers.authorization === 'Bearer sk-or-new', 'the new key is used');
+  let saved = c16.get().voice.llm;
+  ok(
+    Array.isArray(saved.providers) &&
+      saved.key === 'sk-or-new' &&
+      saved.model === 'openrouter/auto' &&
+      saved.system === 'Answer like a pirate.',
+    'the saved settings are the list, with OpenRouter’s key and model kept for a service of 1.6 after going back'
+  );
+  r = await ask16('set', { llm: { clearKey: true } });
+  ok(
+    r.code === 200 && r.j.llm.providers.length === 0 && r.j.llm.enabled === false,
+    '1.6 call: clearKey removes OpenRouter and switches the AI chat off'
+  );
+  saved = c16.get().voice.llm;
+  ok(!('key' in saved), 'and no key is left in the settings');
+  r = await ask16('set', { llm: { key: 'sk-or-3', model: 'm/three', enabled: true } });
+  ok(
+    r.code === 200 && r.j.llm.enabled && r.j.llm.providers[0].type === 'openrouter' && r.j.llm.providers[0].model === 'm/three',
+    '1.6 call: key and model together add OpenRouter again'
+  );
+  r = await ask16('set', {
+    llm: { providers: [{ type: 'server', base: 'http://127.0.0.1:9/v1', model: 'local' }, { id: r.j.llm.providers[0].id }] },
+  });
+  ok(r.code === 200 && r.j.llm.providers[1].hasKey, 'adding a server first keeps OpenRouter and its key as the fallback');
+  r = await ask16('ask', { text: 'fallback?', card: false });
+  ok(r.j.answer === 'OpenRouter as before' && r.j.tried.length === 1, 'with the server off, OpenRouter answers');
+  r = await ask16('set', { llm: { base: 'http://x/v1' } });
+  ok(r.code === 400 && /list of providers/.test(r.j.error), 'a single-server field of the unreleased step is refused with a pointer');
+  or16.server.close();
 });

@@ -246,6 +246,9 @@ const llmStatus = () => {
       };
     }),
     lastVia,
+    // for readers from before providers (version 1.6: the manager, scripts): an OpenRouter key is saved, the model that answers first
+    hasKey: l.providers.some(p => p.type === 'openrouter' && !!p.key),
+    model: (l.providers.filter(usable)[0] || l.providers[0] || { model: 'openrouter/auto' }).model,
   };
 };
 

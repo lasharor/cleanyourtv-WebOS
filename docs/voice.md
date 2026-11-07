@@ -130,8 +130,14 @@ curl -X POST localhost:8765/api/voice/set -d '{"llm":{"enabled":true,"providers"
 `"clearKey":true` is given. Other changes: `{"llm":{"provider":{...}}}` adds one (no `id`) or changes one, `{"llm":{"remove":"<id>"}}`,
 `{"llm":{"order":["<id>",...]}}`, `{"llm":{"first":"<id>"}}`. A provider takes `type` (`server` or `openrouter`, at most one),
 `name`, `base`, `key`, `model`, `waitS` (10, 25, 45 or 60) and `off`. `POST /api/voice/test {"id":"<id>"}` tests one;
-`GET /api/voice/models?id=<id>` lists its models. The settings from before (one provider: `key`, `base`, `serverKey`, `model`)
-are read as a list (your own server first, OpenRouter second) and written as one at the next change.
+`GET /api/voice/models?id=<id>` lists its models.
+
+**Coming from version 1.6 (OpenRouter only):** nothing to do. Your OpenRouter key, model and instructions become the first provider
+and answer as before; add your own server on the phone page to put it first, with OpenRouter as the fallback. The commands of 1.6
+still work and act on the OpenRouter provider: `{"llm":{"key":"sk-or-...","model":"..."}}` adds it or changes its key or model,
+`{"llm":{"clearKey":true}}` removes it, `{"llm":{"enabled":true}}` switches the answers on. The status still has `hasKey` (an
+OpenRouter key is saved) and `model` (of the provider asked first). The settings keep OpenRouter's key and model where 1.6 reads
+them, so going back to the previous version in the manager keeps OpenRouter answering.
 
 You can also ask by text, with the same result, and without the speech download:
 

@@ -813,7 +813,9 @@
    "listening": false,
    "llm": {
     "enabled": false,
+    "hasKey": false,
     "lastVia": "",
+    "model": "openrouter/auto",
     "providers": [],
     "system": ""
    },
