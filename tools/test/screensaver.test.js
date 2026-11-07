@@ -113,7 +113,7 @@ run(async () => {
     x.code === 200 &&
       x.j.photos.join(',') === 'u/aa,s/immich/bb,l/unsplash' &&
       x.j.from === 'wallpapers' &&
-      x.j.stamp === '2:ab' &&
+      x.j.stamp === undefined &&
       x.j.every === 25,
     'GET /api/screensaver/photos with Wallpapers on: the library as Home has it (uploads, source photos, live sources), 25 s each'
   );

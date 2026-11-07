@@ -1,7 +1,7 @@
 // The screen saver: our page in place of LG's screen saver app (scripts/20-cleanyourtv-screensaver, docs/screensaver.md). This module
 // serves that page, closes it again, and opens it over an idle launcher when tvpowerd did not:
 //   GET  /api/screensaver          {replaced, method, running, photos, every}
-//   GET  /api/screensaver/photos?cc=<country>   {photos, credits, from, stamp, every}   what Home has behind it (background() below):
+//   GET  /api/screensaver/photos?cc=<country>   {photos, credits, from, every}   what Home has behind it (background() below):
 //        photos are library ids ('u/<id>', 's/<add-on>/<id>', 'l/<add-on>') or paths on this service; from: scenes, wallpapers, theme
 //   GET  /api/screensaver/scene/<night|golden|water|fog|dawn>   a couch scene of the launcher (app/scene-<id>.jpg)
 //   GET  /api/screensaver/live/<add-on>   {url, credit}: the photo a live source (Unsplash) gave Home last, so the saver shows the same
@@ -18,7 +18,8 @@ const SA = 'com.webos.app.screensaver',
   WEBMGR = 'luna://com.palm.webappmanager/',
   AM = 'luna://com.webos.applicationManager/',
   CHECK_MS = 10000,
-  GRACE_MS = 60000;
+  GRACE_MS = 60000,
+  EVERY_S = 25; // the seconds each photo stays on the page
 
 // is LG's screen saver replaced now (the app folder, or its program by the stand-in)?
 function replaced() {
@@ -101,12 +102,6 @@ function create(ctx) {
       return { photos: ['/api/theme/wallpaper/' + t.wallpaper.id + '/' + t.wallpaper.file], credits: {}, from: 'theme' };
     return { photos: [], credits: {}, from: '' };
   }
-  // the seconds between photos: 25, or "saver.every" in config.json when a later version sets it (nothing writes it today; the
-  // launcher's own wallpaper rotation, wall.secs, is for Home)
-  const every = () => {
-    const s = config.get().saver || {};
-    return typeof s.every === 'number' && s.every >= 10 ? Math.min(s.every, 3600) : 25;
-  };
   async function running() {
     const r = await luna(WEBMGR + 'listRunningApps', {});
     return JSON.stringify(r).indexOf('"' + SA + '"') >= 0;
@@ -222,7 +217,7 @@ function create(ctx) {
       // ?cc=<country>: the page passes the TV's country, as the launcher does for the scenes of an add-on (Seasons picks by it)
       const m = /[?&]cc=([A-Za-z]{2,3})(?:&|$)/.exec(req.url || '');
       const b = await background(m ? m[1].toUpperCase() : '');
-      return json({ photos: b.photos, credits: b.credits, from: b.from, stamp: wp() ? wp().stamp() : '', every: every() });
+      return json({ photos: b.photos, credits: b.credits, from: b.from, every: EVERY_S });
     }
     // a live source's photo: the one Home has now (wallpapers.js liveCurrent), not the next one the source would hand out
     const lm = /^\/api\/screensaver\/live\/([a-z][a-z0-9-]{1,31})$/.exec(u);
@@ -254,7 +249,7 @@ function create(ctx) {
       try {
         method = String(fs.readFileSync(P.SA_METHOD, 'utf8')).trim();
       } catch (_) {}
-      return json({ replaced: replaced(), method, running: await running(), photos: photos().length, every: every() });
+      return json({ replaced: replaced(), method, running: await running(), photos: photos().length, every: EVERY_S });
     }
     web.notFound(res);
   }
