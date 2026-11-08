@@ -4,15 +4,15 @@
 //   config.keys()                the learned remote buttons with their defaults
 //   config.update(source, fn)    fn changes a copy, which is then written at once (atomically). The read, the change and the write
 //                                happen in one go, so two parts of the service can never overwrite each other's settings.
-// Every change of an option, a learned key or the Input-key mode is logged with its source ("manager", "launcher", "setup", ...),
+// Every change of an option, a learned key, a remapped key or the Input-key mode is logged with its source ("manager", "launcher", "setup", ...),
 // so a setting that changes by itself shows up in the service log and in Share log.
 const fs = require('fs');
 const P = require('./paths');
 
-const OPTIONS = { debloat: true, inputKey: true, liveTv: true, tuner: true };
+const OPTIONS = { debloat: true, inputKey: true, liveTv: true, tuner: true, volumeTheme: 'system' };
 const KEYS = { input: '', home: '', voice: '', guide: '', learned: false };
 // what the launcher saves with POST /api/config; everything else belongs to the service and the manager
-const LAUNCHER_KEYS = ['dock', 'hidden', 'sort', 'clock', 'topbar', 'runDots', 'wall', 'cards'];
+const LAUNCHER_KEYS = ['dock', 'hidden', 'sort', 'order', 'clock', 'topbar', 'runDots', 'wall', 'cards', 'shelfShow'];
 
 // file: config.json; opts.log(line) for the change log; opts.memory: keep the settings in memory instead (tests)
 function create(file, opts) {
@@ -38,6 +38,8 @@ function create(file, opts) {
     options: Object.assign({}, OPTIONS, c.options),
     keys: Object.assign({}, KEYS, c.keys),
     picker: { mode: (c.picker || {}).mode },
+    remap: c.remap && typeof c.remap === 'object' ? c.remap : {},
+    remapOn: { on: c.remapOn === true },
   });
   function report(source, before, after) {
     const a = watched(before),

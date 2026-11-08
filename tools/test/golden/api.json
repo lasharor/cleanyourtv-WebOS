@@ -148,6 +148,8 @@
      "stamp": "0:d41d8cd9"
     }
    },
+   "icons": true,
+   "stamp": 1,
    "usage": {},
    "version": "<version>"
   },
@@ -382,6 +384,8 @@
      "stamp": "0:d41d8cd9"
     }
    },
+   "icons": true,
+   "stamp": 1,
    "usage": {},
    "version": "<version>"
   },
@@ -406,6 +410,7 @@
     "fullhome": false,
     "ours": false
    },
+   "icons": true,
    "inputhook": {
     "bound": false,
     "hook": {
@@ -437,7 +442,8 @@
     "debloat": false,
     "inputKey": false,
     "liveTv": true,
-    "tuner": true
+    "tuner": true,
+    "volumeTheme": "system"
    },
    "picker": {
     "mode": "overlay",
@@ -463,7 +469,6 @@
     "installed": false
    },
    "wallpapers": {
-    "immich": 0,
     "total": 0,
     "uploads": 0
    }
@@ -489,6 +494,7 @@
     "fullhome": false,
     "ours": false
    },
+   "icons": true,
    "inputhook": {
     "bound": false,
     "hook": {
@@ -520,7 +526,8 @@
     "debloat": false,
     "inputKey": false,
     "liveTv": true,
-    "tuner": true
+    "tuner": true,
+    "volumeTheme": "system"
    },
    "picker": {
     "mode": "overlay",
@@ -546,7 +553,6 @@
     "installed": false
    },
    "wallpapers": {
-    "immich": 0,
     "total": 0,
     "uploads": 0
    }
@@ -590,6 +596,7 @@
     "fullhome": false,
     "ours": false
    },
+   "icons": true,
    "inputhook": {
     "bound": false,
     "hook": {
@@ -621,7 +628,8 @@
     "debloat": false,
     "inputKey": false,
     "liveTv": false,
-    "tuner": true
+    "tuner": true,
+    "volumeTheme": "system"
    },
    "picker": {
     "mode": "overlay",
@@ -647,7 +655,6 @@
     "installed": false
    },
    "wallpapers": {
-    "immich": 0,
     "total": 0,
     "uploads": 0
    }
@@ -809,6 +816,7 @@
    "pairedAt": 0,
    "pairing": false,
    "suppressLg": false,
+   "unsupported": "",
    "url": ""
   },
   "cors": "null",
@@ -861,7 +869,8 @@
    "debloat": false,
    "inputKey": false,
    "liveTv": false,
-   "tuner": true
+   "tuner": true,
+   "volumeTheme": "system"
   },
   "sort": "alpha",
   "theme": {

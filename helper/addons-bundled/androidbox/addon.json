@@ -1,0 +1,13 @@
+{
+  "id": "androidbox",
+  "name": "Android box",
+  "version": "1.0.0",
+  "kind": "service",
+  "description": "Open chosen apps on an Android box (NVIDIA Shield, ...) over ADB instead of on the TV.",
+  "about": "Opens chosen apps on an Android box such as an NVIDIA Shield over ADB instead of on the TV: pressing the app on Home switches the TV to the box's HDMI input and starts the app there. Set up from the manager (Features > Android box).",
+  "entry": {
+    "service": "service.js"
+  },
+  "permissions": [],
+  "routes": ["/api/androidbox"]
+}

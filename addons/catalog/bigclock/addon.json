@@ -1,0 +1,17 @@
+{
+  "id": "bigclock",
+  "name": "Big clock",
+  "version": "1.0.0",
+  "kind": "page",
+  "description": "A full-screen clock. A small example of a page add-on.",
+  "about": "A full-screen clock with the date, as a page next to Home. Press its colour or number button to open it, Back returns to Home. Also a small example of a page add-on for people who want to make their own.",
+  "entry": {
+    "page": "index.html"
+  },
+  "permissions": [],
+  "tile": {
+    "label": "Clock",
+    "icon": "clock",
+    "placement": "page"
+  }
+}

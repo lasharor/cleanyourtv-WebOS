@@ -1,0 +1,92 @@
+{
+  "id": "jellyfin",
+  "name": "Jellyfin continue watching",
+  "version": "1.0.0",
+  "description": "A row on Home with where you were in Jellyfin, with the pictures; OK opens your Jellyfin app.",
+  "about": "A card for Home with the films and episodes you did not finish on your Jellyfin server, and if you like the next episode of a series you follow: the picture, the title and how far you got. Each one is a button: OK opens your Jellyfin app, the official one, Litefin or Moonfin. Litefin opens the title itself (after its version 2.0.20); the others open on their own Home. The card talks only to your own server. Set up: Add-ons > Jellyfin continue watching > Set up from your phone. The TV keeps only the access token, never your password.",
+  "kind": "service",
+  "entry": { "service": "service.js" },
+  "permissions": ["net.fetch", "luna"],
+  "luna": [{ "uri": "luna://com.webos.applicationManager/getAppInfo" }, { "uri": "luna://com.webos.applicationManager/launch" }],
+  "provides": ["cards"],
+  "minService": "1.6.17",
+  "cards": [
+    {
+      "id": "continue",
+      "name": "Continue watching",
+      "version": "1.0.0",
+      "description": "Where you were in Jellyfin, with the pictures; OK opens the app.",
+      "about": "The films and episodes you did not finish on your Jellyfin server, newest first, with the picture, the title and a bar for how far you got. Each one is a button: OK opens your Jellyfin app. Set up first: Add-ons > Jellyfin continue watching > Set up from your phone.",
+      "size": "large",
+      "page": "card.html",
+      "poll": 60,
+      "actions": [
+        { "name": "open1", "label": "Continue 1" },
+        { "name": "open2", "label": "Continue 2" },
+        { "name": "open3", "label": "Continue 3" },
+        { "name": "open4", "label": "Continue 4" },
+        { "name": "open5", "label": "Continue 5" },
+        { "name": "open6", "label": "Continue 6" }
+      ],
+      "options": [
+        {
+          "key": "style",
+          "kind": "choice",
+          "label": "Pictures",
+          "default": "wide",
+          "choices": [
+            ["wide", "Wide stills"],
+            ["poster", "Posters"]
+          ]
+        },
+        {
+          "key": "count",
+          "kind": "choice",
+          "label": "How many",
+          "default": "auto",
+          "choices": [
+            ["auto", "As many as fit at a readable size"],
+            ["2", "2"],
+            ["3", "3"],
+            ["4", "4"],
+            ["5", "5"],
+            ["6", "6"]
+          ]
+        },
+        {
+          "key": "nextup",
+          "kind": "choice",
+          "label": "Next episodes",
+          "default": "on",
+          "choices": [
+            ["on", "Also the next episode of a series"],
+            ["off", "Only what you started"]
+          ]
+        },
+        {
+          "key": "app",
+          "kind": "choice",
+          "label": "App to open",
+          "default": "auto",
+          "choices": [
+            ["auto", "The first one installed"],
+            ["org.jellyfin.webos", "Jellyfin"],
+            ["org.litefin.app", "Litefin"],
+            ["org.moonfin.webos", "Moonfin"]
+          ]
+        },
+        {
+          "key": "size",
+          "kind": "choice",
+          "label": "Size",
+          "default": "large",
+          "choices": [
+            ["large", "Large"],
+            ["medium", "Medium"],
+            ["small", "Small"]
+          ]
+        }
+      ]
+    }
+  ]
+}

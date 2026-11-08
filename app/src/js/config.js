@@ -26,6 +26,19 @@ function setDock(ids) {
   cfg.dock = ids.slice(0, TH.dockN);
   saveCfg();
 }
+function gridApps() {
+  var di = dockIds();
+  return apps
+    .filter(function (a) {
+      return !isHidden(a.id) && di.indexOf(a.id) < 0;
+    })
+    .sort(byOrder);
+}
+function gridAppIds() {
+  return gridApps().map(function (a) {
+    return a.id;
+  });
+}
 function hideApp(id) {
   cfg.hidden = (cfg.hidden || []).concat(id);
   cfg.dock = dockIds().filter(function (i) {
@@ -47,13 +60,23 @@ function liveOn() {
   return !(cfg.options && cfg.options.liveTv === false);
 }
 function shownBar() {
-  return liveOn()
+  var tb = liveOn()
     ? topbar()
     : topbar().filter(function (o) {
         return o.action !== 'live';
       });
+  return tb.concat(addonBar); /* the add-ons' entries (addons.js) come last and are not part of the saved layout */
 }
 function byOrder(a, b) {
+  if (cfg.sort === 'custom') {
+    var ord = cfg.order || [];
+    var ia = ord.indexOf(a.id);
+    var ib = ord.indexOf(b.id);
+    if (ia >= 0 && ib >= 0) return ia - ib;
+    if (ia >= 0) return -1;
+    if (ib >= 0) return 1;
+    return a.title.localeCompare(b.title);
+  }
   if (cfg.sort !== 'alpha') {
     var d = (usage[b.id] || 0) - (usage[a.id] || 0);
     if (Math.abs(d) > 1e-9) return d > 0 ? 1 : -1;
@@ -79,8 +102,10 @@ function act(e) {
   }
   var o = e._o || {};
   if (o.action === 'card') return cardAct(e);
+  if (o.action === 'cardbtn') return cardBtnAct(e);
   if (o.action === 'customize') return customizeMenu();
   if (o.action === 'live') return LIVE.enter();
+  if (o.action === 'addon') return PAGER.go(o.addon);
   if (o.action === 'inputs') return inputsMenu();
   if (o.action === 'poweroff') return confirmPowerOff();
   if (o.app) launch(o.app, o.params);

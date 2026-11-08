@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>DNS check</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #07080b; color: #f5f6f8; font-family: "LG Smart UI", Helvetica, Arial, sans-serif; overflow: hidden; }
+  #wrap { position: absolute; left: 96px; right: 96px; top: 60px; bottom: 80px; }
+  h1 { margin: 0; font-size: 56px; font-weight: 600; }
+  #sum { margin: 14px 0 26px; font-size: 30px; color: #aab; }
+  .row { display: flex; align-items: center; margin: 0 0 12px; padding: 16px 26px; border-radius: 16px; background: #14161b; font-size: 28px; }
+  .row .host { flex: 1; }
+  .row .how { margin-right: 24px; color: #889; font-size: 22px; }
+  .pill { min-width: 150px; text-align: center; padding: 6px 16px; border-radius: 20px; font-size: 24px; font-weight: 600; }
+  .blocked { background: #1f6b3d; }
+  .reachable { background: #8f2f35; }
+  .unknown { background: #55575f; }
+  #hint { position: absolute; left: 0; right: 0; bottom: 0; color: #667; font-size: 22px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>DNS check</h1>
+  <div id="sum">Checking…</div>
+  <div id="rows"></div>
+  <div id="hint">OK checks again. Back goes to Home.</div>
+</div>
+<script src="/addon/sdk.js"></script>
+<script>
+  /* ES5 only: this page runs on Chromium 68 (webOS 5) too */
+  var busy = false;
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function run() {
+    if (busy) return;
+    busy = true;
+    document.getElementById('sum').textContent = 'Checking…';
+    CYTV.api('/check').then(function (r) {
+      busy = false;
+      var rows = (r.results || []).map(function (x) {
+        return '<div class="row"><span class="host">' + esc(x.host) + '</span><span class="how">' + esc(x.how) + '</span><span class="pill ' + x.state + '">' + (x.state === 'blocked' ? 'Blocked' : x.state === 'reachable' ? 'Reachable' : 'No answer') + '</span></div>';
+      });
+      document.getElementById('rows').innerHTML = rows.join('');
+      document.getElementById('sum').textContent = r.dnsWorks === false
+        ? 'DNS does not answer on this TV, so these results mean nothing. Check the network.'
+        : r.blocked + ' of ' + (r.blocked + r.reachable) + ' hosts are blocked' + (r.reachable ? '. ' + r.reachable + ' can still be reached.' : '.');
+    }, function () {
+      busy = false;
+      document.getElementById('sum').textContent = 'The service did not answer.';
+    });
+  }
+  document.addEventListener('keydown', function (e) { if (e.keyCode === 13) run(); });
+  run();
+</script>
+</body>
+</html>

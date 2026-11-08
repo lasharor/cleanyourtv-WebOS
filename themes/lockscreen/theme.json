@@ -93,12 +93,22 @@
    "grid": "keep"
   },
   {
+   "id": "under-clock",
+   "anchor": "top",
+   "align": "left",
+   "x": 102,
+   "y": 262,
+   "w": 900,
+   "h": 60,
+   "grid": "keep"
+  },
+  {
    "id": "clock-side",
    "anchor": "top",
    "align": "left",
    "x": 560,
    "y": 104,
-   "w": 420,
+   "w": 480,
    "h": 120,
    "grid": "keep"
   },
@@ -109,16 +119,16 @@
    "x": 96,
    "y": 170,
    "w": 520,
-   "h": 520
+   "h": 260
   },
   {
    "id": "row",
    "anchor": "bottom",
    "align": "right",
    "x": 96,
-   "y": 178,
-   "w": 900,
-   "h": 250
+   "y": 300,
+   "w": 520,
+   "h": 260
   }
  ]
 }

@@ -1,0 +1,248 @@
+/* Home is the first page of a book and the add-ons are the pages after it: turning a page moves Home and the page sideways
+   (transform only; the GPU is weak). #homepage holds everything Home draws. */
+#homepage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  transition: transform 0.32s ease;
+}
+#pages {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  pointer-events: none;
+}
+#pages iframe.pgframe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  border: 0;
+  background: #000;
+  pointer-events: auto;
+  transition: transform 0.32s ease;
+}
+/* The page strip: which button turns to which page. Its look, edge and size come from the theme (strip.* in a theme) through the data
+   attributes and --st-* set by addons.js; sizes are in --u so that the theme's strip.size scales everything. */
+#pagestrip {
+  --u: calc(var(--st-s, 1) * 1px);
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: auto;
+  bottom: var(--st-y, 22px);
+  padding: 0 var(--st-x, 96px);
+  display: none;
+  justify-content: center;
+  align-items: flex-end;
+  pointer-events: none;
+  font-size: calc(20 * var(--u));
+}
+#pagestrip[data-anchor="top"] {
+  top: var(--st-y, 22px);
+  bottom: auto;
+  align-items: flex-start;
+}
+#pagestrip[data-align="left"] {
+  justify-content: flex-start;
+}
+#pagestrip[data-align="right"] {
+  justify-content: flex-end;
+}
+#pagestrip[data-align="center"] {
+  padding: 0;
+}
+#pagestrip .pg {
+  display: flex;
+  align-items: center;
+  margin: 0 calc(5 * var(--u));
+  color: var(--ink2);
+  white-space: nowrap;
+}
+#pagestrip .pg i {
+  display: block;
+  flex: none;
+  width: calc(26 * var(--u));
+  height: calc(26 * var(--u));
+  border-radius: 50%;
+  font-style: normal;
+  font-size: calc(15 * var(--u));
+  font-weight: 700;
+  line-height: calc(26 * var(--u));
+  text-align: center;
+  color: #fff;
+  /* a soft highlight on the top left and a thin ring: the dot reads as a button, not as a flat disc */
+  background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 58%),
+    var(--dot, rgba(128, 128, 128, 0.55));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+#pagestrip .pg i.c0 {
+  --dot: #e5484d;
+}
+#pagestrip .pg i.c1 {
+  --dot: #30a46c;
+}
+#pagestrip .pg i.c2 {
+  --dot: #f5b800;
+}
+#pagestrip .pg i.c3 {
+  --dot: #3e63dd;
+}
+#pagestrip .pg span {
+  margin-left: calc(10 * var(--u));
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+#pagestrip[data-labels="none"] .pg span,
+#pagestrip[data-labels="current"] .pg:not(.cur) span {
+  display: none;
+}
+/* pills: a rounded button for each page; the page you are on is filled with the accent */
+#pagestrip[data-style="pills"] .pg {
+  padding: calc(7 * var(--u)) calc(18 * var(--u)) calc(7 * var(--u)) calc(8 * var(--u));
+  border-radius: calc(999 * var(--u));
+  background: var(--pill-bg);
+  box-shadow: inset 0 0 0 1px var(--pill-ring);
+}
+/* the same glass as the buttons at the top, with a light wash of the key's colour; the page you are on has the colour itself */
+#pagestrip[data-style="pills"] .pg.k0 {
+  --rgb: 229, 72, 77;
+}
+#pagestrip[data-style="pills"] .pg.k1 {
+  --rgb: 48, 164, 108;
+}
+#pagestrip[data-style="pills"] .pg.k2 {
+  --rgb: 245, 184, 0;
+}
+#pagestrip[data-style="pills"] .pg.k3 {
+  --rgb: 62, 99, 221;
+}
+#pagestrip[data-style="pills"] .pg.k0,
+#pagestrip[data-style="pills"] .pg.k1,
+#pagestrip[data-style="pills"] .pg.k2,
+#pagestrip[data-style="pills"] .pg.k3 {
+  background: linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)),
+    linear-gradient(rgba(var(--rgb), 0.1), rgba(var(--rgb), 0.1));
+  box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.7);
+  color: var(--ink);
+}
+#pagestrip[data-style="pills"] .pg.k0.cur,
+#pagestrip[data-style="pills"] .pg.k1.cur,
+#pagestrip[data-style="pills"] .pg.k2.cur,
+#pagestrip[data-style="pills"] .pg.k3.cur {
+  background: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0)),
+    linear-gradient(rgba(var(--rgb), 0.2), rgba(var(--rgb), 0.2));
+  box-shadow:
+    inset 0 0 0 calc(2 * var(--u)) rgba(255, 255, 255, 0.65),
+    0 calc(4 * var(--u)) calc(14 * var(--u)) rgba(0, 0, 0, 0.35);
+  color: #fff;
+}
+#pagestrip[data-style="pills"] .pg i.ic {
+  width: calc(26 * var(--u));
+  height: calc(26 * var(--u));
+  margin: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  line-height: 0;
+}
+#pagestrip[data-style="pills"] .pg i.ic svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+#pagestrip[data-style="pills"] .pg i:not([class]) {
+  margin: 0;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: none;
+}
+#pagestrip[data-style="pills"][data-labels="none"] .pg,
+#pagestrip[data-style="pills"][data-labels="current"] .pg:not(.cur) {
+  padding-right: calc(8 * var(--u));
+}
+#pagestrip[data-style="pills"] .pg.cur {
+  background: var(--acc);
+  color: var(--acc-ink);
+  box-shadow: 0 calc(4 * var(--u)) calc(14 * var(--u)) rgba(0, 0, 0, 0.35);
+}
+
+/* tabs: book tabs standing on the edge of the screen, each with a coloured edge */
+#pagestrip[data-style="tabs"] .pg {
+  margin: 0 calc(3 * var(--u));
+  padding: calc(9 * var(--u)) calc(20 * var(--u));
+  background: var(--pill-bg);
+  box-shadow: inset 0 0 0 1px var(--pill-ring);
+  border-radius: calc(14 * var(--u)) calc(14 * var(--u)) 0 0;
+  border-top: calc(5 * var(--u)) solid var(--dot-edge, rgba(128, 128, 128, 0.55));
+}
+#pagestrip[data-style="tabs"][data-anchor="top"] .pg {
+  border-radius: 0 0 calc(14 * var(--u)) calc(14 * var(--u));
+  border-top: 0;
+  border-bottom: calc(5 * var(--u)) solid var(--dot-edge, rgba(128, 128, 128, 0.55));
+}
+#pagestrip[data-style="tabs"] .pg:nth-child(1) {
+  --dot-edge: #e5484d;
+}
+#pagestrip[data-style="tabs"] .pg:nth-child(2) {
+  --dot-edge: #30a46c;
+}
+#pagestrip[data-style="tabs"] .pg:nth-child(3) {
+  --dot-edge: #f5b800;
+}
+#pagestrip[data-style="tabs"] .pg:nth-child(4) {
+  --dot-edge: #3e63dd;
+}
+#pagestrip[data-style="tabs"] .pg i {
+  width: calc(22 * var(--u));
+  height: calc(22 * var(--u));
+  line-height: calc(22 * var(--u));
+  font-size: calc(13 * var(--u));
+}
+#pagestrip[data-style="tabs"] .pg i.c0,
+#pagestrip[data-style="tabs"] .pg i.c1,
+#pagestrip[data-style="tabs"] .pg i.c2,
+#pagestrip[data-style="tabs"] .pg i.c3 {
+  display: none; /* the colour is the edge of the tab */
+}
+#pagestrip[data-style="tabs"] .pg i.c0 + span,
+#pagestrip[data-style="tabs"] .pg i.c1 + span,
+#pagestrip[data-style="tabs"] .pg i.c2 + span,
+#pagestrip[data-style="tabs"] .pg i.c3 + span {
+  margin-left: 0; /* the dot is not shown, so the name has no gap before it */
+}
+#pagestrip[data-style="tabs"] .pg.cur {
+  background: var(--acc);
+  color: var(--acc-ink);
+  padding-top: calc(13 * var(--u));
+  padding-bottom: calc(13 * var(--u));
+}
+/* dots: only the dots; the page you are on opens into a pill with its name */
+#pagestrip[data-style="dots"] .pg {
+  margin: 0 calc(6 * var(--u));
+}
+#pagestrip[data-style="dots"] .pg:not(.cur) {
+  opacity: 0.8;
+}
+#pagestrip[data-style="dots"] .pg.cur {
+  padding: calc(6 * var(--u)) calc(18 * var(--u)) calc(6 * var(--u)) calc(6 * var(--u));
+  border-radius: calc(999 * var(--u));
+  background: var(--acc);
+  color: var(--acc-ink);
+  box-shadow: 0 calc(3 * var(--u)) calc(12 * var(--u)) rgba(0, 0, 0, 0.35);
+}
+#pagestrip[data-style="dots"][data-labels="none"] .pg.cur {
+  padding: calc(6 * var(--u));
+}
+#pagestrip[data-style="dots"] .pg:not(.cur) span {
+  display: none;
+}
+#pagestrip[data-style="dots"] .pg.cur i {
+  box-shadow:
+    0 0 0 calc(2 * var(--u)) var(--acc-ink),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}

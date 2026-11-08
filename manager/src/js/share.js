@@ -71,10 +71,33 @@ function closeShare() {
     openCards();
     return;
   }
+  if (shareMode === 'icons') {
+    api('/api/icons/pair', { stop: true }).catch(function () {});
+    pop();
+    return;
+  }
   if (shareMode === 'wall') {
     api('/api/wallpapers/pair', { stop: true }).catch(function () {});
     pop();
     wallRefresh();
+    return;
+  }
+  if (shareMode === 'wallsrc') {
+    api(pairPath, { stop: true }).catch(function () {});
+    pop();
+    wallRefresh();
+    return;
+  }
+  if (shareMode === 'addonpair') {
+    api(pairPath, { stop: true }).catch(function () {});
+    pop();
+    if (view === 'addonrepos') loadAddons();
+    return;
+  }
+  if (shareMode === 'abox') {
+    api('/api/androidbox/pair', { stop: true }).catch(function () {});
+    pop();
+    abRefresh();
     return;
   }
   if (shareMode === 'pair') {

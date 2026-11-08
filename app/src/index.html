@@ -5,15 +5,17 @@
 <style>
 @include css/home.css
 @include css/menus.css
-@include css/live.css
+@include css/addons.css
+@include css/cardsheet.css
 @include css/rtl.css
 </style></head><body>
-<div class="glow" id="gA"></div><div class="glow" id="gB"></div>
+<div id="homepage"><div class="glow" id="gA"></div><div class="glow" id="gB"></div>
 <div id="top"><div id="clock"><div id="greet"></div><div id="time"></div><div id="date"></div></div><div id="bar"></div></div>
 <div id="shelf"><div id="name"></div></div>
-<div id="cards"></div>
+<div id="cards"></div><div id="cs"></div><input id="csq" type="text" autocomplete="off">
 <div id="view"><div id="scroll"><div id="dock"></div><div id="grid"></div></div></div>
-<div id="lv"><div id="lv-stage"></div><div id="lv-spin" class="layer"></div><div id="lv-osd" class="layer"><img class="logo" id="lv-ologo" alt=""><div class="num" id="lv-onum"></div><div class="info"><div class="name" id="lv-oname"></div><div class="now" id="lv-onow"></div><div class="next" id="lv-onext"></div><div class="facts" id="lv-ofacts"></div><div class="pbar"><i id="lv-obar"></i></div></div></div><div id="lv-numin" class="layer"></div><div id="lv-guide" class="layer"><div id="lv-glow"></div><div id="lv-gtop"><div id="lv-gtitle"></div><div id="lv-gtabs"></div><input id="lv-search" type="text" autocomplete="off"><div id="lv-gclock"></div></div><div id="lv-rows"></div><div id="lv-detail"></div></div><div id="lv-filter" class="layer"></div><div id="lv-menu" class="layer"></div><div id="lv-msg" class="layer"></div><div id="lv-tune" class="layer"></div><div id="lv-toast" class="layer"></div><div id="lv-stats" class="layer"></div></div>
+<div id="pagestrip"></div></div>
+<div id="pages"></div>
 <div id="toast"></div>
 <script>
 @i18n
@@ -23,6 +25,8 @@
 @include js/tiles.js
 @include js/theme.js
 @include js/cards.js
+@include js/cardsheet.js
+@include js/cardsettings.js
 @include js/scenes.js
 @include js/wall.js
 @include js/config.js
@@ -31,5 +35,6 @@
 @include js/layout.js
 @include js/input.js
 @include js/live.js
+@include js/addons.js
 @include js/start.js
 </script></body></html>

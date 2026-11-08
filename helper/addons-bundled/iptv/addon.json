@@ -1,0 +1,21 @@
+{
+  "id": "iptv",
+  "name": "Live TV (IPTV)",
+  "version": "1.0.0",
+  "kind": "service",
+  "description": "Live TV from your own M3U playlist and XMLTV guide.",
+  "about": "Live TV from your own M3U playlist and XMLTV guide: a channel list, a guide and an info banner, with the number buttons to tune, favourites and recent channels. It is a page next to Home, on the green button.",
+  "entry": {
+    "service": "service.js",
+    "page": "page/index.html"
+  },
+  "permissions": [],
+  "tile": {
+    "label": "Live TV",
+    "icon": "tv",
+    "placement": "page"
+  },
+  "claims": ["digits", "colors", "back"],
+  "routes": ["/api/live/"],
+  "enabledOption": "liveTv"
+}

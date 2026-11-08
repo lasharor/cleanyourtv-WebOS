@@ -1,0 +1,18 @@
+{
+  "id": "hello",
+  "name": "Hello",
+  "version": "1.0.0",
+  "kind": "service",
+  "description": "A page that says hello and counts how often it was opened. The sample add-on to copy.",
+  "about": "The sample add-on of the repository template: a page next to Home (press its button or number), a service part that answers /api/addons/hello/hit and keeps a counter in its own settings. Copy this folder, rename the id, change the page.",
+  "entry": {
+    "service": "service.js",
+    "page": "index.html"
+  },
+  "permissions": [],
+  "tile": {
+    "label": "Hello",
+    "icon": "star",
+    "placement": "page"
+  }
+}

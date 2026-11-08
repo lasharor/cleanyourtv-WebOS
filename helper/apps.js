@@ -1,6 +1,9 @@
 // The launcher's own API: the list of apps with their icons, how often each is used, the inputs, launching, and the launcher's
 // settings (dock, hidden apps, sort order, clock, top buttons).
 //   GET /api/apps  GET /api/inputs  GET /api/foreground  POST /api/launch {id, params}  POST /api/config {...}  GET /icon/<app id>
+//   GET /api/apps/stamp: a number that changes whenever the list of apps changes (the launcher checks it every few seconds)
+//   GET /icon/<app id> sends the app's custom picture first (the App icons add-on); /api/apps marks such an app with iv, the picture's version,
+//   and with it: 1 when the picture is shown as Full tile
 //   GET /api/inputs: the HDMI ports, plus LG's own Live TV (the tuner) while its app is installed ({appId, tuner: true})
 //   POST /api/power/off   switch the TV off completely (the cold-boot power-off, not the standby of the remote)
 //   POST /api/inputs/pin {id, on}   pin an input (its input app, e.g. com.webos.app.hdmi2) to Home, or take it off again
@@ -11,25 +14,47 @@ const fs = require('fs'),
 const P = require('./paths'),
   web = require('./web'),
   exec = require('./exec'),
+  lunaCompat = require('./luna'),
   cardsShape = require('./cards'),
   { LAUNCHER_KEYS } = require('./config');
 
 const HALF_LIFE = 30 * 24 * 3600 * 1000; // usage counts halve every 30 days
 const WALL_SECS = [0, 10, 30, 60, 180, 300, 900, 3600]; // the photo-change intervals Customise > Wallpapers offers
 const HOME = 'com.webos.app.home';
+// never offered for uninstall: the Homebrew Channel runs the boot scripts (root, CleanYourTV, the update blocking), and the other two keep
+// LG's firmware updates away
+const KEEP = ['org.webosbrew.hbchannel', 'org.webosbrew.safeupdate', 'org.webosbrew.appupdateblocker'];
 
 function create(ctx) {
   const { config, luna } = ctx;
+  const audio = ctx.audio || (ctx.audio = require('./audio').create(ctx));
+  if (audio.start) audio.start();
 
   // ---- the installed apps. The app manager takes a moment to answer (a luna-send each time), and Home is opened often: after the first
-  // answer the list is given at once from memory and asked again in the background when it is older than 5 seconds, so an app installed
-  // a moment ago shows up on the next opening of Home ----
+  // answer the list is given at once from memory and asked again in the background when it is older than 5 seconds. The service also
+  // follows the app manager's changes (watchApps: an app installed from the Homebrew Channel, the LG store or removed), and every change
+  // of the list raises appsStamp, which the launcher compares every few seconds (GET /api/apps/stamp), so a new app shows up on Home by
+  // itself, also when Home comes back without the TV telling the page (Back from another app on webOS 6) ----
   let appCache = null,
     appCacheAt = 0,
-    asking = null;
+    asking = null,
+    appsStamp = 0,
+    appsSig = '',
+    watching = false; // the app manager's change notifications arrive (the subscription answered)
   const uninstalledRecently = {};
+  // an app uninstalled from the launcher a moment ago (the app manager can list it for a few seconds more); after a minute it may come back, as
+  // when the same app is installed again from the Homebrew Channel
+  const removedRecently = id => !!uninstalledRecently[id] && Date.now() - uninstalledRecently[id] < 60000;
+  function setApps(list) {
+    appCache = list;
+    const sig = list.map(a => a.id + '|' + a.title + '|' + (a.removable ? 1 : 0)).join(',');
+    if (sig !== appsSig) {
+      appsSig = sig;
+      appsStamp++;
+    }
+  }
   function isRemovable(a) {
-    if (!a || !a.id || a.id === HOME || /^com\.cleanyourtv\./.test(a.id)) return false;
+    if (!a || !a.id || a.id === HOME || /^com\.cleanyourtv\./.test(a.id) || KEEP.indexOf(a.id) >= 0) return false;
     if (a.removable === true) return true;
     if (a.removable === false || a.systemApp === true) return false;
     if (a.folderPath && (a.folderPath.indexOf('/media/developer/apps') === 0 || a.folderPath.indexOf('/var/luna/user/data/apps') === 0))
@@ -42,13 +67,15 @@ function create(ctx) {
       asking = luna('luna://com.webos.applicationManager/listApps', {}).then(r => {
         asking = null;
         if (!Array.isArray(r.apps)) return appCache || [];
-        appCache = r.apps
-          .filter(a => a.visible !== false && a.id !== HOME && !uninstalledRecently[a.id])
-          .map(a => {
-            const item = { id: a.id, title: a.title, icon: a.largeIcon || a.icon, folder: a.folderPath, type: a.type };
-            if (isRemovable(a)) item.removable = true;
-            return item;
-          });
+        setApps(
+          r.apps
+            .filter(a => a.visible !== false && a.id !== HOME && !removedRecently(a.id))
+            .map(a => {
+              const item = { id: a.id, title: a.title, icon: a.largeIcon || a.icon, folder: a.folderPath, type: a.type };
+              if (isRemovable(a)) item.removable = true;
+              return item;
+            })
+        );
         appCacheAt = Date.now();
         return appCache;
       });
@@ -57,12 +84,82 @@ function create(ctx) {
   async function installed() {
     if (!appCache) return askApps();
     if (Date.now() - appCacheAt > 5000) askApps();
-    return (appCache || []).filter(a => !uninstalledRecently[a.id]);
+    return (appCache || []).filter(a => !removedRecently(a.id));
+  }
+  // the launcher's check (every few seconds while its page runs): the stamp of the list. The change notifications ask for the list at once;
+  // as a safety net (an app manager that does not tell every install) it is asked again when older than 30 seconds, or 15 without them.
+  async function stampNow() {
+    if (!appCache || Date.now() - appCacheAt > (watching ? 30000 : 15000)) await askApps();
+    return appsStamp;
+  }
+  // the app manager's changes: luna-send -i listApps {subscribe}. Its first answer is the list itself; every later one is a change, after
+  // which the list is asked again (once for a burst of changes). The subscription is started again when it ends, waiting longer each time.
+  const spawn = ctx.spawn || require('child_process').spawn;
+  let watchProc = null,
+    watchOn = false;
+  function watchApps() {
+    if (watchOn) return;
+    watchOn = true;
+    let delay = 3000,
+      soon = null;
+    const run = () => {
+      let proc,
+        seen = 0,
+        next = false;
+      try {
+        proc = watchProc = spawn('luna-send', ['-i', 'luna://com.webos.applicationManager/listApps', '{"subscribe":true}'], {
+          stdio: [lunaCompat.keepStdinOpen() ? 'pipe' : 'ignore', 'pipe', 'ignore'], // an open stdin where luna-send exits at EOF (luna-stdin-open)
+        });
+      } catch (_) {
+        return;
+      }
+      proc.stdout.on('data', d => {
+        const lines = String(d).split('\n').length - 1;
+        if (!lines) return;
+        delay = 3000;
+        if (!seen) watching = true;
+        seen += lines;
+        if (seen > 1) {
+          clearTimeout(soon);
+          soon = setTimeout(() => {
+            appCacheAt = 0;
+            askApps();
+          }, 500);
+        }
+      });
+      const again = () => {
+        if (next) return;
+        next = true;
+        watching = false;
+        if (!watchOn) return;
+        const t = setTimeout(run, delay);
+        delay = Math.min(delay * 2, 60000);
+        if (t && t.unref) t.unref();
+      };
+      proc.on('error', again);
+      proc.on('close', again);
+    };
+    // a subscription left by an earlier run of the service (it is not ended when the service stops abnormally) goes first
+    exec.run('pkill', ['-f', '^luna-send -i luna://com.webos.applicationManager/listApps'], { timeout: 5000 }).then(run, run);
+  }
+  function unwatchApps() {
+    watchOn = false;
+    if (watchProc)
+      try {
+        watchProc.kill();
+      } catch (_) {}
   }
 
   async function uninstallApp(id) {
     // an app id: letters, digits, dots and dashes, never starting with a dot (a folder name with rm -rf behind it)
-    if (!id || typeof id !== 'string' || !/^[\w\-][\w.\-]*$/.test(id) || /^com\.cleanyourtv\./.test(id) || id === HOME) {
+    if (
+      !id ||
+      typeof id !== 'string' ||
+      !/^[\w\-][\w.\-]*$/.test(id) ||
+      /^com\.cleanyourtv\./.test(id) ||
+      id === HOME ||
+      KEEP.indexOf(id) >= 0
+    ) {
       return { returnValue: false, error: 'refused' };
     }
     const all = await installed();
@@ -114,9 +211,7 @@ function create(ctx) {
     for (const k in uninstalledRecently) {
       if (now - uninstalledRecently[k] > 60000) delete uninstalledRecently[k];
     }
-    if (Array.isArray(appCache)) {
-      appCache = appCache.filter(x => x.id !== id);
-    }
+    if (Array.isArray(appCache)) setApps(appCache.filter(x => x.id !== id));
     appCacheAt = Date.now();
     return { returnValue: true, id };
   }
@@ -201,8 +296,20 @@ function create(ctx) {
         return { id: p.id, title: label, input: (d && d.port) || p.port || 0, off: d ? !d.hdmiPlugIn : false };
       });
   }
+  // the App icons add-on (addons-bundled/icons), while it runs; without it every app shows its own icon
+  const icons = () => {
+    const ad = ctx.feature && ctx.feature('addons');
+    return (ad && ad.module && ad.module('icons')) || null;
+  };
   async function apps() {
-    return (await installed()).concat(pinned());
+    const ic = icons();
+    const own = ic ? ic.versions() : {};
+    return (await installed())
+      .map(a => {
+        const x = own[a.id];
+        return x ? Object.assign({}, a, { iv: x.v }, x.tile ? { it: 1 } : {}) : a;
+      })
+      .concat(pinned());
   }
   async function pin(b) {
     const id = String(b.id || '');
@@ -272,7 +379,7 @@ function create(ctx) {
     exec.execFile(
       'luna-send',
       ['-n', '1', '-w', '3000', '-f', 'luna://com.webos.applicationManager/getForegroundAppInfo', '{}'],
-      { timeout: 6000 },
+      { timeout: 6000, keepStdinOpen: lunaCompat.keepStdinOpen() },
       (e, out) => {
         try {
           const o = JSON.parse(out);
@@ -288,9 +395,11 @@ function create(ctx) {
     const out = {};
     if (strs(b.dock)) out.dock = strs(b.dock).slice(0, 8);
     if (strs(b.hidden)) out.hidden = strs(b.hidden);
-    if (b.sort === 'usage' || b.sort === 'alpha') out.sort = b.sort;
+    if (b.sort === 'usage' || b.sort === 'alpha' || b.sort === 'custom') out.sort = b.sort;
+    if (strs(b.order)) out.order = strs(b.order);
     if (['auto', '24', '12'].includes(b.clock)) out.clock = b.clock;
     if (b.runDots === true) out.runDots = true; // the green dot on open apps (off unless switched on)
+    if (b.shelfShow === false) out.shelfShow = false; // app name hidden (shown by default, saved only when hidden)
     // Wallpapers in the launcher: on or off, and how often the photo changes
     if (b.wall && typeof b.wall === 'object') {
       // secs: how often the photo changes while Home is shown, in seconds (0: each time Home opens); "every" (minutes) came before it
@@ -323,7 +432,9 @@ function create(ctx) {
     delete c.voice;
     delete c.notifyApi;
     delete c.theme;
-    delete c.wallpapers; // holds the Immich key; the launcher gets only a stamp that changes with the set of photos
+    delete c.wallpapers; // the launcher gets only a stamp that changes with the set of photos
+    delete c.addons; // the settings of add-ons: the address and key of a photo source, for example
+    delete c.androidBox; // the box's address stays with the service
     const theme = ctx.feature('theme'),
       wp = ctx.feature('wallpapers');
     if (wp) c.wallpapers = { stamp: wp.stamp() };
@@ -332,17 +443,57 @@ function create(ctx) {
 
   async function handle(req, res, u, body) {
     if (u === '/api/apps') {
-      const reply = { apps: await apps(), config: launcherConfig(), usage: usageScores(), version: ctx.version };
+      const reply = { apps: await apps(), config: launcherConfig(), usage: usageScores(), version: ctx.version, stamp: appsStamp };
       // the launcher offers its TV button only where LG's Live TV is installed (a TV without a tuner has no such app)
       if (tunerShown() && (await askTuner())) reply.tuner = true;
+      // downloaded cards (cardcatalog.js): what the launcher needs to draw them, only when there are any
+      const cp = ctx.feature && ctx.feature('cards'),
+        have = cp && cp.packs ? cp.packs() : {};
+      if (Object.keys(have).length) {
+        reply.cardPacks = {};
+        for (const id of Object.keys(have))
+          reply.cardPacks[id] = {
+            name: have[id].name,
+            about: have[id].about || have[id].description,
+            template: have[id].template,
+            page: have[id].page,
+            size: have[id].size,
+            poll: have[id].poll || 0,
+            actions: have[id].addon ? have[id].actions : [],
+            // the drawer and the settings of a card of an add-on: the launcher opens them itself (the page is a file in the card's folder, served like the card's own)
+            drawer: have[id].drawer ? { page: have[id].drawer.page, action: have[id].drawer.action, label: have[id].drawer.label } : null,
+            settings: have[id].settings ? { action: have[id].settings.action, title: have[id].settings.title } : null,
+            options: have[id].options.map(o => ({
+              key: o.key,
+              kind: o.kind,
+              def: o.kind === 'choice' && !o.default ? o.choices[0][0] : o.default,
+              // raw, as the card declares them: the launcher translates with t()
+              label: o.label,
+              choices: o.choices || [],
+            })),
+          };
+      }
+      // the launcher offers Change icon only while the App icons add-on runs
+      if (icons()) {
+        reply.icons = true;
+        // the Live TV tile's own picture (it is not an app, so it is not in apps): its version, and Full tile
+        const lv = icons().versions().__live;
+        if (lv) reply.liveIcon = Object.assign({ iv: lv.v }, lv.tile ? { it: 1 } : {});
+      }
       return web.json(res, reply);
     }
+    if (u === '/api/apps/stamp') return web.json(res, { stamp: await stampNow() });
     if (u === '/api/inputs') return web.json(res, await inputsWithTuner());
     if (u === '/api/inputs/pin' && req.method === 'POST') return web.json(res, await pin(await body(req)));
     if (u === '/api/foreground') return web.json(res, await luna('luna://com.webos.applicationManager/getForegroundAppInfo', {}));
     if (u === '/api/launch' && req.method === 'POST') {
       const b = await body(req);
       if (!/^[\w.\-]+$/.test(b.id || '')) return web.json(res, { error: 'bad id' }, 400);
+      // an app set up to open on an Android box (androidbox.js) switches the input instead of opening on the TV
+      const addons = ctx.feature && ctx.feature('addons');
+      const box = addons && addons.module && addons.module('androidbox');
+      const moved = box && box.handles(b.id) ? await box.open(b.id) : null;
+      if (moved) return web.json(res, moved);
       return web.json(res, await luna('luna://com.webos.applicationManager/launch', { id: b.id, params: b.params || {} }));
     }
     // a full power-off (tvpower/power/shutDown, issue 50): not the standby of the remote's power key, which keeps Quick Start+ and draws power.
@@ -360,8 +511,15 @@ function create(ctx) {
       const out = await uninstallApp(b && b.id);
       return web.json(res, out, out.returnValue ? 200 : 400);
     }
+    if (u === '/api/audio/volume') return audio.handle(req, res, u);
     const m = u.match(/^\/icon\/([\w.\-]+)$/);
     if (m) {
+      const ic = icons();
+      const own = ic ? ic.find(m[1]) : '';
+      if (own) {
+        res.writeHead(200, { 'content-type': ic.mime(own), 'cache-control': 'max-age=3600' });
+        return fs.createReadStream(own).pipe(res);
+      }
       const a = (await apps()).find(x => x.id === m[1]);
       const f = a && a.icon && path.join(a.folder, a.icon);
       if (!f || !path.resolve(f).startsWith(path.resolve(a.folder)) || !fs.existsSync(f)) return web.notFound(res);
@@ -381,11 +539,17 @@ function create(ctx) {
       '/api/launch',
       '/api/config',
       '/api/apps/uninstall',
+      '/api/apps/stamp',
       '/api/power/off',
+      '/api/audio/volume',
     ],
     prefix: '/icon/',
     handle,
-    start: () => setInterval(pollForeground, 4000),
+    start: () => {
+      setInterval(pollForeground, 4000);
+      watchApps();
+    },
+    stop: unwatchApps,
     apps,
     onForeground, // which app is in front: it marks the tuner as the active input
   };

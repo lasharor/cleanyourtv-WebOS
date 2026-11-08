@@ -14,6 +14,18 @@ main() {
   ID=com.cleanyourtv.manager
   export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
   say() { echo "[cleanyourtv] $*"; }
+  # luna-send exits at once on a closed stdin on a few TVs (docs/troubleshooting.md): with the flag file luna-stdin-open it gets an
+  # input that never ends (a private FIFO, unlinked at once); otherwise stdin is closed, as always. This runs in a subshell.
+  luna_send() (
+    if [ -f "${CYTV_DIR:-/media/developer/cleanyourtv}/luna-stdin-open" ]; then
+      d=$(umask 077; mktemp -d /tmp/cytv-luna.XXXXXX) || exit 1
+      mkfifo "$d/in" || { rmdir "$d"; exit 1; }
+      exec 3<> "$d/in" || { rm -f "$d/in"; rmdir "$d"; exit 1; }
+      rm -f "$d/in"; rmdir "$d"
+      exec luna-send "$@" <&3 3<&-
+    fi
+    exec luna-send "$@" </dev/null
+  )
   die() { echo "[cleanyourtv] ERROR: $*" >&2; exit 1; }
   case "$1" in -h|--help) sed -n '2,8p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//'; return 0 ;; "") ;; *) die "unknown option: $1" ;; esac
 
@@ -49,19 +61,31 @@ main() {
     IPK=$T/pkg.ipk
   fi
 
-  # right after a system app manager restart an install can be silently dropped, so check and retry
+  # right after a system app manager restart an install can be silently dropped, so check and retry. The TV reports each step to a
+  # subscription and ends with "installed": wait for that. The files alone say yes at once on an update (they are there already), and
+  # the package would be removed while the TV is still unpacking it, which left the old version in place without a word.
   cp "$IPK" /tmp/cytv-manager.ipk
   n=0; ok=0
   while [ $n -lt 4 ]; do
-    luna-send -n 1 -w 30000 -f luna://com.webos.appInstallService/dev/install "{\"id\":\"$ID\",\"ipkUrl\":\"/tmp/cytv-manager.ipk\",\"subscribe\":false}" </dev/null >/dev/null 2>&1
+    rm -f /tmp/cytv-install.log
+    luna_send -i luna://com.webos.appInstallService/dev/install "{\"id\":\"$ID\",\"ipkUrl\":\"/tmp/cytv-manager.ipk\",\"subscribe\":true}" >/tmp/cytv-install.log 2>&1 &
+    lp=$!
+    for i in $(seq 1 45); do
+      sleep 2
+      grep -Eq '"state": *"installed"' /tmp/cytv-install.log 2>/dev/null && break
+      kill -0 $lp 2>/dev/null || break
+    done
+    kill $lp 2>/dev/null; wait $lp 2>/dev/null
+    pkill -f '[l]una-send -i luna://com.webos.appInstallService/dev/install' 2>/dev/null   # luna_send runs luna-send in a subshell of its own
+    # firmware that words the steps differently still ends here: the files and the app's registration decide
     for i in 1 2 3 4 5 6 7 8; do
+      [ -f /media/developer/apps/usr/palm/services/$ID.service/bootstrap.sh ] && luna_send -n 1 -w 5000 -f luna://com.webos.applicationManager/getAppInfo "{\"id\":\"$ID\"}" </dev/null 2>/dev/null | grep -q '"returnValue": true' && { ok=1; break; }
       sleep 3
-      [ -f /media/developer/apps/usr/palm/services/$ID.service/bootstrap.sh ] && luna-send -n 1 -w 5000 -f luna://com.webos.applicationManager/getAppInfo "{\"id\":\"$ID\"}" </dev/null 2>/dev/null | grep -q '"returnValue": true' && { ok=1; break; }
     done
     [ $ok = 1 ] && break
     n=$((n+1))
   done
-  rm -f /tmp/cytv-manager.ipk
+  rm -f /tmp/cytv-install.log /tmp/cytv-manager.ipk
   [ $ok = 1 ] || die "the package did not install (see Troubleshooting in the documentation: https://lasharor.github.io/cleanyourtv-WebOS/troubleshooting/)"
   if [ -n "$CYTV_CHANNEL" ]; then mkdir -p /media/developer/cleanyourtv && echo dev > /media/developer/cleanyourtv/channel; say "the manager app now follows the dev builds (Update channel in the manager switches back to the stable releases)."; fi
   say "the CleanYourTV app is installed."

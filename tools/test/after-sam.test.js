@@ -13,6 +13,7 @@ run(async () => {
   fs.writeFileSync(path.join(service, 'backup/home-appinfo.orig.json'), JSON.stringify({ id: 'com.webos.app.home', type: 'flutter' }));
   fs.copyFileSync(path.join(root, 'helper/tvprofile.js'), path.join(service, 'tvprofile.js'));
   fs.copyFileSync(path.join(root, 'scripts/jtool.js'), path.join(service, 'jtool.js'));
+  fs.copyFileSync(path.join(root, 'scripts/luna-compat.sh'), path.join(service, 'luna-compat.sh'));
   fs.symlinkSync(process.execPath, path.join(bin, 'node'));
   fs.writeFileSync(path.join(bin, 'luna-send'), '#!/bin/sh\nprintf \'%s\\n\' "$FACTS"\n', { mode: 0o755 });
   fs.writeFileSync(
@@ -37,6 +38,36 @@ run(async () => {
         CALLS: calls,
       }),
     });
-    ok(r.status === 0 && fs.readFileSync(calls, 'utf8') === (state === 'active' ? 'arccontroller\n' : ''), 'post-SAM hook: ARC ' + state);
+    ok(
+      r.status === 0 && fs.readFileSync(calls, 'utf8') === (state === 'active' ? 'arccontroller\numediaserver\n' : ''),
+      'post-SAM hook: ARC controller and media server ' + state
+    );
   }
+  // issue 122: webOS 25 restarts the video output and then the media server; a file in the service folder replaces the list on one TV
+  const run25 = () => {
+    fs.writeFileSync(calls, '');
+    const r = cp.spawnSync('sh', ['-s'], {
+      input: script,
+      encoding: 'utf8',
+      env: Object.assign({}, process.env, {
+        FACTS: JSON.stringify({ returnValue: true, sdkVersion: '10.3.2', modelName: 'OLED65B2RLA' }),
+        STATE: 'active',
+        CALLS: calls,
+      }),
+    });
+    return [r.status, fs.readFileSync(calls, 'utf8'), fs.readFileSync(path.join(tmp, 'boot.log'), 'utf8')];
+  };
+  let r25 = run25();
+  ok(r25[0] === 0 && r25[1] === 'videooutputd\numediaserver\n', 'post-SAM hook on webOS 25: the video output first, then the media server');
+  const own = path.join(service, 'after-sam-services');
+  fs.writeFileSync(own, '');
+  r25 = run25();
+  ok(
+    r25[1] === '' && /services: none \(from after-sam-services\)/.test(r25[2]),
+    'an empty after-sam-services switches the restarts off on that TV'
+  );
+  fs.writeFileSync(own, 'umediaserver\n');
+  r25 = run25();
+  ok(r25[1] === 'umediaserver\n', 'and a list in it replaces the profile; an update leaves the file alone');
+  fs.unlinkSync(own);
 });

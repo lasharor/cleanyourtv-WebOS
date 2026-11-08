@@ -179,6 +179,16 @@ when the focus moves down into it (Back or Up closes it); a dock at the top leav
 | `bar.y` | 0 to 900 | `54` | Distance from the top or bottom edge, in px. |
 | `bar.size` | 40 to 100 | `64` | Height of a button, in px. |
 | `bar.gap` | 4 to 40 | `16` | Space between buttons, in px. |
+| **strip** | | | |
+| `strip.show` | `true` or `false` | `true` | Show the page strip: the row that tells which button turns to which page (Home, Live TV and other add-on pages). It only shows when there is a page besides Home. |
+| `strip.style` | `pills`, `tabs`, `dots` | `pills` | `pills`: a rounded button for each page; `tabs`: book tabs, each with a coloured edge; `dots`: only the dots, the page you are on is opened with its name. |
+| `strip.labels` | `all`, `current`, `none` | `all` | Page names: on `all` pages, only on the `current` page, or `none`. |
+| `strip.colors` | `colour`, `numbers` | `colour` | `colour`: the first four pages carry the colour of their remote button (red, green, yellow, blue); `numbers`: every page carries its number, which also works as a button. |
+| `strip.anchor` | `top`, `bottom` | `bottom` | Which screen edge `strip.y` counts from. |
+| `strip.align` | `left`, `center`, `right` | `center` | Which side `strip.x` counts from; `center` centres the strip. |
+| `strip.x` | 0 to 900 | `96` | Distance from that side, in px. Not used when centred. |
+| `strip.y` | 0 to 900 | `22` | Distance from the top or bottom edge, in px. |
+| `strip.size` | 0.7 to 1.6 | `1` | Scale of the strip. |
 | **shelf** | | | |
 | `shelf.show` | `true` or `false` | `true` | Show the large name of the focused app. |
 | `shelf.align` | `left`, `center`, `right` | `left` | Text alignment of the name. |
@@ -231,7 +241,7 @@ when the focus moves down into it (Back or Up closes it); a dock at the top leav
 | `effects.speed` | 0 to 2 | `1` | Animation speed multiplier; 0 switches the animations off. |
 | `effects.wallpaper` | a file name | none | A file name in `themes/wallpapers/`: `.jpg`, `.png` or `.webp`, at most 1.5 MB; drawn at 1920 x 1080. |
 | `effects.wallpaperDim` | 0 to 0.9 | `0.4` | How far the wallpaper is darkened with the background colour. |
-| `effects.scenes` | `off`, `couch` | `off` | `couch`: five landscapes shipped with the launcher take turns behind Home (Night, Golden hour, Waterline, Fog, Dawn); with `clock.style` glass the scenery stands in front of the clock. Takes the place of the wallpaper and of Wallpapers. |
+| `effects.scenes` | `off`, `couch`, `custom` | `off` | `couch`: five landscapes shipped with the launcher take turns behind Home (Night, Golden hour, Waterline, Fog, Dawn); with `clock.style` glass the scenery stands in front of the clock. Takes the place of the wallpaper and of Wallpapers. `custom`: the theme brings its own scenes as a `"scenes"` array in `theme.json`. |
 | `effects.sceneSecs` | 10 to 600 | `20` | Seconds each scene stays (`effects.scenes`). |
 | **cards** | | | |
 | `cards.style` | `flat`, `glass` | `flat` | `glass`: the weather and Home Assistant cards sit on frosted glass (a blurred copy of the scene behind them, no live blur). |

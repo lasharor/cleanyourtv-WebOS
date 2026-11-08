@@ -3,7 +3,7 @@
 // This file only wires the parts together. Each part is a feature module with create(ctx) -> { name, paths/prefix, handle, start };
 // ctx carries what they share (config, the TV profile, luna). A part that fails to load is left out and reported at /api/service;
 // the rest keeps working. AGENTS.md has the map of the files.
-const VERSION = '1.6.10';
+const VERSION = '1.6.20';
 const fs = require('fs');
 const P = require('./paths'),
   diag = require('./diag');
@@ -50,18 +50,24 @@ const core = {
 };
 loaded.push(core);
 
+// Live TV is a bundled add-on now (addons-bundled/iptv, loaded by addons.js below, still answering /api/live/)
 // the order matters where one part uses another: voice and the notification port show cards through notify
 const notify = load('notify', () => require('./notify').create(ctx));
 if (notify) load('voice', () => require('./voice').create(ctx));
-load('live', () => require('./live').create(ctx));
 load('theme', () => require('./theme').create(ctx));
 load('wallpapers', () => require('./wallpapers').create(ctx));
+load('scenes', () => require('./scenes').create(ctx));
 load('cards', () => require('./cards').create(ctx));
 const inputkey = load('inputkey', () => require('./inputkey').create(ctx));
 if (notify) load('notifyapi', () => require('./notifyapi').create(ctx));
 const manager = load('manager', () => require('./manager').create(ctx));
+load('remap', () => require('./remap').create(ctx));
 load('apps', () => require('./apps').create(ctx));
 load('running', () => require('./running').create(ctx));
+load('zram', () => require('./zram').create(ctx));
+load('preload', () => require('./preload').create(ctx));
+load('fstrim', () => require('./fstrim').create(ctx));
+load('addons', () => require('./addons').create(ctx));
 
 require('./server')
   .create({ features: () => loaded })
@@ -87,5 +93,11 @@ require('./server')
     }
     // what this TV is (webOS version, firmware): the Input key's default follows it
     ctx.profile.refresh().then(() => inputkey && inputkey.syncMode());
+    try {
+      if (!ctx.audio) ctx.audio = require('./audio').create(ctx);
+      ctx.audio.start();
+    } catch (e) {
+      console.error('audio failed to start: ' + e.message);
+    }
     if (manager) setTimeout(() => manager.check(), 60000);
   });

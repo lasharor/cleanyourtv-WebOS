@@ -79,12 +79,36 @@
   },
   {
    "id": "side",
+   "name": "Right column (Top)",
+   "stack": "right-column",
    "anchor": "top",
    "align": "right",
    "x": 96,
    "y": 150,
    "w": 520,
-   "h": 460
+   "h": 209
+  },
+  {
+   "id": "side-middle",
+   "name": "Right column (Middle)",
+   "stack": "right-column",
+   "anchor": "top",
+   "align": "right",
+   "x": 96,
+   "y": 375,
+   "w": 520,
+   "h": 209
+  },
+  {
+   "id": "side-bottom",
+   "name": "Right column (Bottom)",
+   "stack": "right-column",
+   "anchor": "top",
+   "align": "right",
+   "x": 96,
+   "y": 600,
+   "w": 520,
+   "h": 209
   },
   {
    "id": "row",

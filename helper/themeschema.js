@@ -16,7 +16,12 @@ const HEX = /^#[0-9a-f]{6}$/i,
   FILE = /^[\w-]{1,40}\.(?:jpg|png|webp)$/,
   FONT_FILE = /^[\w-]{1,40}\.(?:woff2|woff|ttf|otf)$/,
   ID = /^[a-z0-9-]{1,30}$/,
-  PREVIEW_PATH = /^([a-z0-9-]{1,30})\/preview\.(?:jpg|png|webp)$/;
+  PREVIEW_PATH = /^([a-z0-9-]{1,30})\/preview\.(?:jpg|png|webp)$/,
+  SCENE_IMG = /^[\w-]{1,60}\.(?:jpg|webp)$/,
+  SCENE_FRONT = /^[\w-]{1,60}\.webp$/,
+  SCENE_ID_RE = /^[a-z][a-z0-9-]{0,29}$/;
+const MAX_CUSTOM_SCENES = 10,
+  MAX_SCENE_FILE = 3 * 1024 * 1024;
 const ACCENTS = [
   ['Theme default', ''],
   ['White', '#f5f6f8'],
@@ -100,6 +105,33 @@ const SCHEMA = [
   ['bar.y', 'int', [0, 900], 54, 'Distance from the top or bottom edge, in px.'],
   ['bar.size', 'int', [40, 100], 64, 'Height of a button, in px.'],
   ['bar.gap', 'int', [4, 40], 16, 'Space between buttons, in px.'],
+  [
+    'strip.show',
+    'bool',
+    null,
+    true,
+    'Show the page strip: the row that tells which button turns to which page (Home, Live TV and other add-on pages). It only shows when there is a page besides Home.',
+  ],
+  [
+    'strip.style',
+    'enum',
+    ['pills', 'tabs', 'dots'],
+    'pills',
+    '`pills`: a rounded button for each page; `tabs`: book tabs, each with a coloured edge; `dots`: only the dots, the page you are on is opened with its name.',
+  ],
+  ['strip.labels', 'enum', ['all', 'current', 'none'], 'all', 'Page names: on `all` pages, only on the `current` page, or `none`.'],
+  [
+    'strip.colors',
+    'enum',
+    ['colour', 'numbers'],
+    'colour',
+    '`colour`: the first four pages carry the colour of their remote button (red, green, yellow, blue); `numbers`: every page carries its number, which also works as a button.',
+  ],
+  ['strip.anchor', 'enum', TOPBOT, 'bottom', 'Which screen edge `strip.y` counts from.'],
+  ['strip.align', 'enum', POS, 'center', 'Which side `strip.x` counts from; `center` centres the strip.'],
+  ['strip.x', 'int', [0, 900], 96, 'Distance from that side, in px. Not used when centred.'],
+  ['strip.y', 'int', [0, 900], 22, 'Distance from the top or bottom edge, in px.'],
+  ['strip.size', 'num', [0.7, 1.6], 1, 'Scale of the strip.'],
   ['shelf.show', 'bool', null, true, 'Show the large name of the focused app.'],
   ['shelf.align', 'enum', POS, 'left', 'Text alignment of the name.'],
   ['shelf.x', 'int', [0, 900], 96, 'Margin on both sides, in px.'],
@@ -186,9 +218,9 @@ const SCHEMA = [
   [
     'effects.scenes',
     'enum',
-    ['off', 'couch'],
+    ['off', 'couch', 'custom'],
     'off',
-    '`couch`: five landscapes shipped with the launcher take turns behind Home (Night, Golden hour, Waterline, Fog, Dawn); with `clock.style` glass the scenery stands in front of the clock. Takes the place of the wallpaper and of Wallpapers.',
+    '`couch`: five landscapes shipped with the launcher take turns behind Home (Night, Golden hour, Waterline, Fog, Dawn); with `clock.style` glass the scenery stands in front of the clock. Takes the place of the wallpaper and of Wallpapers. `custom`: the theme brings its own scenes as a `"scenes"` array in `theme.json`.',
   ],
   ['effects.sceneSecs', 'int', [10, 600], 20, 'Seconds each scene stays (`effects.scenes`).'],
   [
@@ -294,6 +326,12 @@ function normalize(raw, id, base, wallDir) {
   } else if (f === '') v['type.fontFile'] = '';
   // slots for cards: a list in the theme (not in SCHEMA, which holds single values); a theme without "slots" keeps its base's
   if (raw.slots !== undefined) v.slots = slots(raw.slots);
+  // custom scenes: a list of landscape images the theme brings; validated against files on disk
+  if (v['effects.scenes'] === 'custom') {
+    const cs = customScenes(raw.scenes, wallDir || path.join(dir(), id));
+    if (cs) v.customScenes = cs;
+    else v['effects.scenes'] = 'off';
+  }
   return {
     id,
     name: String(raw.name || id).slice(0, 40),
@@ -327,9 +365,59 @@ function slots(list) {
       h: num(o.h, 30, 1080, 120),
       card: typeof o.card === 'string' && /^[a-z][a-z0-9-]{0,30}$/.test(o.card) ? o.card : '',
       keep: o.grid === 'keep',
+      name:
+        typeof o.name === 'string'
+          ? o.name
+              .replace(/[<>\x00-\x1f]/g, '')
+              .trim()
+              .slice(0, 60)
+          : '',
+      stack:
+        o.anchor === 'top' && (o.align === 'left' || o.align === 'right') && typeof o.stack === 'string' && SLOT_ID.test(o.stack)
+          ? o.stack
+          : '',
     });
   }
   return out;
+}
+
+// Custom scenes: a theme brings its own landscape images (jpg/webp + glass copy + optional foreground cut-out), each with its own clock
+// and date position. Validated against the files on disk; only scenes whose images are present make it through.
+//   { id, image, glass, front?, clock?: {top, size}, date?: {top}, water?: 0–1 }
+function customScenes(list, themeDir) {
+  if (!Array.isArray(list)) return null;
+  const num = (n, lo, hi) => (typeof n === 'number' && isFinite(n) ? Math.round(Math.min(hi, Math.max(lo, n))) : null);
+  const out = [];
+  for (const s of list) {
+    if (out.length >= MAX_CUSTOM_SCENES) break;
+    if (!s || typeof s !== 'object' || !SCENE_ID_RE.test(s.id) || out.some(x => x.id === s.id)) continue;
+    if (!SCENE_IMG.test(s.image) || !SCENE_IMG.test(s.glass)) continue;
+    if (s.front !== undefined && !SCENE_FRONT.test(s.front)) continue;
+    try {
+      const imgBuf = fs.readFileSync(path.join(themeDir, s.image));
+      if (!imageOk(imgBuf, s.image, MAX_SCENE_FILE)) continue;
+      fs.statSync(path.join(themeDir, s.glass));
+      if (s.front) fs.statSync(path.join(themeDir, s.front));
+    } catch (_) {
+      continue;
+    }
+    const entry = { id: String(s.id), image: String(s.image), glass: String(s.glass) };
+    if (s.front) entry.front = String(s.front);
+    if (s.darkSky === true) entry.darkSky = true;
+    const w = typeof s.water === 'number' && isFinite(s.water) ? Math.min(1, Math.max(0, s.water)) : 0;
+    if (w) entry.water = w;
+    const ct = s.clock ? num(s.clock.top, 0, 900) : null;
+    const cs = s.clock ? num(s.clock.size, 100, 600) : null;
+    if (ct !== null || cs !== null) {
+      entry.clock = {};
+      if (ct !== null) entry.clock.top = ct;
+      if (cs !== null) entry.clock.size = cs;
+    }
+    const dt = s.date ? num(s.date.top, 0, 900) : null;
+    if (dt !== null) entry.date = { top: dt };
+    out.push(entry);
+  }
+  return out.length ? out : null;
 }
 
 // What the launcher applies: CSS variables, attributes for the few layouts that need more than a variable, and the numbers its scrolling needs.
@@ -477,12 +565,32 @@ function resolve(t, accent) {
     nightRgb: night.join(','),
     wallpaper: w ? { id: t.id, file: w, dim: v['effects.wallpaperDim'] } : null,
   };
-  if (v['effects.scenes'] !== 'off') out.scenes = { set: v['effects.scenes'], secs: v['effects.sceneSecs'] };
+  // only a theme that changes the page strip carries this key, so the replies for the other themes stay as they were
+  if (SCHEMA.some(r => String(r[0]).indexOf('strip.') === 0 && v[/** @type {string} */ (r[0])] !== r[3]))
+    out.strip = {
+      show: v['strip.show'],
+      style: v['strip.style'],
+      labels: v['strip.labels'],
+      colors: v['strip.colors'],
+      anchor: v['strip.anchor'],
+      align: v['strip.align'],
+      x: v['strip.x'],
+      y: v['strip.y'],
+      size: v['strip.size'],
+    };
+  if (dockBottom) out.dockBottom = true;
+  if (v['effects.scenes'] !== 'off') {
+    out.scenes = { set: v['effects.scenes'], secs: v['effects.sceneSecs'] };
+    if (v['effects.scenes'] === 'custom' && v.customScenes) {
+      out.scenes.lib = v.customScenes;
+      out.scenes.id = t.id;
+    }
+  }
   // only a theme with slots has this key (the same reason)
   if (v.slots && v.slots.length)
     out.slots = v.slots.map(sl => {
       const o = place(sl.anchor, sl.align, sl.x, sl.y);
-      return {
+      const slot = {
         id: sl.id,
         align: sl.align,
         l: o.l,
@@ -495,6 +603,7 @@ function resolve(t, accent) {
         card: sl.card,
         keep: sl.keep,
       };
+      return Object.assign(slot, sl.name ? { name: sl.name } : {}, sl.stack ? { stack: sl.stack } : {});
     });
   // only a theme with a typeface has this key, so the replies for the other themes stay as they were
   // only a theme that lines the name up with the dock carries this; the dock's own width at a given app count is worked out on the page
@@ -512,17 +621,23 @@ module.exports = {
   FONT_FILE,
   HEX,
   ID,
+  MAX_CUSTOM_SCENES,
   MAX_FONT,
   MAX_INDEX,
   MAX_PREVIEW,
+  MAX_SCENE_FILE,
   MAX_THEME,
   MAX_WALLPAPER,
   POS,
   PREVIEW_PATH,
+  SCENE_FRONT,
+  SCENE_ID_RE,
+  SCENE_IMG,
   SCHEMA,
   SLOT_ID,
   TOPBOT,
   check,
+  customScenes,
   dir,
   fontOk,
   fontType,

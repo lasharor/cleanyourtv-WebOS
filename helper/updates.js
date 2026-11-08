@@ -38,6 +38,12 @@ const repo = () => {
   const src = readText(P.SOURCE).split(/\s+/)[0];
   return /^[\w.-]+\/[\w.-]+$/.test(src) ? src : DEFAULT_REPO;
 };
+// the branch the catalogs (themes, add-ons, cards) are read from: the one D/source names, else dev on the dev channel, else main
+const catalogRef = () => {
+  const x = readText(P.SOURCE).split(/\s+/)[1];
+  if (/^[\w.\/-]{1,60}$/.test(x || '')) return x;
+  return channel() ? 'dev' : 'main';
+};
 const baseRepo = () => apiBase() + '/repos/' + repo();
 const releaseUrl = conf => {
   if (conf && conf.releasesUrl) return conf.releasesUrl;
@@ -369,4 +375,4 @@ function create(ctx) {
   };
 }
 
-module.exports = { create, latest, download, parseRelease, differs, channel, repo, releaseUrl, DEV_TAG };
+module.exports = { create, latest, download, parseRelease, differs, channel, repo, catalogRef, releaseUrl, DEV_TAG };

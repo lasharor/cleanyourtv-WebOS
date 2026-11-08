@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>TV status</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #07080b; color: #f5f6f8; font-family: "LG Smart UI", Helvetica, Arial, sans-serif; overflow: hidden; }
+  #wrap { position: absolute; left: 96px; right: 96px; top: 60px; bottom: 80px; }
+  h1 { margin: 0 0 40px; font-size: 56px; font-weight: 600; }
+  .m { margin: 0 0 34px; }
+  .l { display: flex; font-size: 30px; margin-bottom: 12px; }
+  .l span:first-child { flex: 1; color: #aab; }
+  .bar { height: 26px; border-radius: 13px; background: #1a1c22; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 100%; background: #3e8f5a; transform-origin: 0 50%; transform: scaleX(0); transition: transform 0.5s linear; }
+  .bar i.hot { background: #c4572f; }
+  #foot { margin-top: 30px; font-size: 26px; color: #889; }
+  #hint { position: absolute; left: 0; right: 0; bottom: 0; color: #667; font-size: 22px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>TV status</h1>
+  <div class="m"><div class="l"><span>Memory</span><span id="mt"></span></div><div class="bar"><i id="mb"></i></div></div>
+  <div class="m"><div class="l"><span>Swap</span><span id="st"></span></div><div class="bar"><i id="sb"></i></div></div>
+  <div id="foot"></div>
+  <div id="hint">Back goes to Home.</div>
+</div>
+<script src="/addon/sdk.js"></script>
+<script>
+  /* ES5 only: this page runs on Chromium 68 (webOS 5) too */
+  function bar(id, used, total) {
+    var f = total ? used / total : 0, e = document.getElementById(id);
+    e.style.transform = 'scaleX(' + Math.max(0, Math.min(1, f)) + ')';
+    e.className = f > 0.85 ? 'hot' : '';
+  }
+  function days(s) {
+    var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+    return (d ? d + ' d ' : '') + h + ' h ' + m + ' min';
+  }
+  function tick() {
+    CYTV.api('/stats').then(function (r) {
+      document.getElementById('mt').textContent = r.memUsedMB + ' of ' + r.memTotalMB + ' MB used';
+      document.getElementById('st').textContent = r.swapTotalMB ? r.swapUsedMB + ' of ' + r.swapTotalMB + ' MB used' : 'off';
+      bar('mb', r.memUsedMB, r.memTotalMB);
+      bar('sb', r.swapUsedMB, r.swapTotalMB);
+      document.getElementById('foot').textContent = 'Load ' + r.load.join(' · ') + '   ·   Up ' + days(r.uptimeS);
+    }, function () {});
+  }
+  tick();
+  setInterval(tick, 3000);
+</script>
+</body>
+</html>

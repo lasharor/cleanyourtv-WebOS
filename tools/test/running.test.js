@@ -1,5 +1,7 @@
 // The Running apps menu's service side (running.js, issue 16): what is listed, what can be closed, and how.
-const { ok, call, req, run } = require('./lib');
+const fs = require('fs'),
+  path = require('path');
+const { ok, call, req, run, tmp } = require('./lib');
 const running = req('running');
 
 run(async () => {
@@ -70,4 +72,76 @@ run(async () => {
   ok(x.j.returnValue === false && /nothing is running/.test(x.j.errorText), 'nothing to close');
   x = await call(r, '/api/running/close', 'POST', { all: 'yes' });
   ok(x.j.returnValue === false, 'only all: true closes everything');
+
+  const mine = running.pick([{ id: 'com.cleanyourtv.manager' }, { id: 'com.cleanyourtv.picker' }, { id: 'com.cleanyourtv.notify' }], apps);
+  ok(
+    mine.length === 1 && mine[0].id === 'com.cleanyourtv.manager' && mine[0].title === 'CleanYourTV',
+    'the manager is listed, the picker and notify apps that stay up are not'
+  );
+
+  // background services: an installed app's packageinfo.json names them; one that runs is a process with the service's id as its name
+  const pkgs = path.join(tmp, 'running-packages'),
+    proc = path.join(tmp, 'running-proc');
+  const pkg = (dir, app, svcs) => {
+    fs.mkdirSync(path.join(pkgs, dir));
+    fs.writeFileSync(path.join(pkgs, dir, 'packageinfo.json'), JSON.stringify({ id: dir, app, services: svcs }));
+  };
+  const ps = (pid, cmd) => {
+    fs.mkdirSync(path.join(proc, pid));
+    fs.writeFileSync(path.join(proc, pid, 'cmdline'), cmd);
+  };
+  fs.mkdirSync(pkgs);
+  fs.mkdirSync(proc);
+  pkg('io.strem.tv', 'io.strem.tv', ['io.strem.tv.server']);
+  pkg('org.webosbrew.hbchannel', 'org.webosbrew.hbchannel', ['org.webosbrew.hbchannel.service']);
+  pkg('other.app', 'other.app', ['other.app.service']);
+  fs.mkdirSync(path.join(pkgs, 'broken'));
+  fs.writeFileSync(path.join(pkgs, 'broken', 'packageinfo.json'), '{');
+  ps('101', 'io.strem.tv.server\0');
+  ps('102', 'org.webosbrew.hbchannel.service\0');
+  ps('103', 'other.app.service\0');
+  ps('104', 'node\0/media/developer/cleanyourtv/helper.js\0');
+  fs.mkdirSync(path.join(proc, 'self'));
+  const killed = [];
+  let killWorks = true;
+  const bgApps = apps.concat([
+    { id: 'io.strem.tv', title: 'Stremio' },
+    { id: 'org.webosbrew.hbchannel', title: 'Homebrew Channel' },
+  ]);
+  const rb = running.create({
+    luna,
+    packages: [pkgs, path.join(tmp, 'no-such-folder')],
+    proc,
+    kill: (pid, sig) => {
+      if (!killWorks) throw new Error('EPERM');
+      killed.push(pid + ' ' + sig);
+    },
+    feature: n => (n === 'apps' ? { apps: async () => bgApps } : null),
+  });
+  runningNow = [{ id: 'netflix' }];
+  x = await call(rb, '/api/running');
+  ok(
+    JSON.stringify(x.j.apps) ===
+      JSON.stringify([
+        { id: 'netflix', title: 'Netflix' },
+        { id: 'io.strem.tv.server', title: 'Stremio', background: true },
+      ]),
+    "a background service of an installed app is listed with its app's title; never the Homebrew Channel's, never one of an app " +
+      'the launcher does not list: ' +
+      JSON.stringify(x.j.apps)
+  );
+  x = await call(rb, '/api/running/close', 'POST', { id: 'io.strem.tv.server' });
+  ok(x.j.returnValue === true && killed.join() === '101 SIGTERM', 'closing a background service stops its process');
+  x = await call(rb, '/api/running/close', 'POST', { id: 'org.webosbrew.hbchannel.service' });
+  ok(x.j.returnValue === false && killed.length === 1, "the Homebrew Channel's service cannot be stopped");
+  killed.length = 0;
+  calls = [];
+  x = await call(rb, '/api/running/close', 'POST', { all: true });
+  ok(
+    x.j.returnValue === true && x.j.closed.join() === 'netflix,io.strem.tv.server' && killed.join() === '101 SIGTERM',
+    'Close all closes the apps and stops the background services'
+  );
+  killWorks = false;
+  x = await call(rb, '/api/running/close', 'POST', { id: 'io.strem.tv.server' });
+  ok(x.j.returnValue === false, 'a service that cannot be stopped is reported');
 });

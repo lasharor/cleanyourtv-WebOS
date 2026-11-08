@@ -52,6 +52,13 @@
  "shelf": {
   "show": false
  },
+ "strip": {
+  "style": "pills",
+  "anchor": "bottom",
+  "align": "center",
+  "y": 14,
+  "size": 0.92
+ },
  "slots": [
   {
    "id": "greeting",

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hello</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+  #t { position: absolute; left: 0; right: 0; top: 38%; text-align: center; font-size: 8vw; font-weight: 300; }
+  #n { position: absolute; left: 0; right: 0; top: 60%; text-align: center; font-size: 3vw; color: #9aa; }
+  #h { position: absolute; left: 0; right: 0; bottom: 4%; text-align: center; font-size: 1.6vw; color: #566; }
+</style>
+</head>
+<body>
+<div id="t">Hello</div><div id="n"></div><div id="h">Back to go home</div>
+<script src="/addon/sdk.js"></script>
+<script>
+  /* ES5 only: this page runs on Chromium 68 (webOS 5) too. /addon/sdk.js gives Back = Home and CYTV.api(). */
+  CYTV.api('/hit', {}).then(function (r) {
+    document.getElementById('n').textContent = 'Opened ' + r.hits + (r.hits === 1 ? ' time' : ' times');
+  });
+</script>
+</body>
+</html>

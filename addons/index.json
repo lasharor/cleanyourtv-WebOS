@@ -1,0 +1,243 @@
+{
+  "addons": [
+    {
+      "id": "bigclock",
+      "name": "Big clock",
+      "version": "1.0.0",
+      "description": "A full-screen clock. A small example of a page add-on.",
+      "about": "A full-screen clock with the date, as a page next to Home. Press its colour or number button to open it, Back returns to Home. Also a small example of a page add-on for people who want to make their own.",
+      "preview": "preview.jpg",
+      "kind": "page",
+      "permissions": [],
+      "luna": [],
+      "files": {
+        "addon.json": "e82a2d9b9353500c67c87797538914299a6cc5b22029084714c5033a2206f205",
+        "index.html": "ad47a31114832658c41cbbcb46ef2e4cdb9be8ab7cad4308cdea90a2d9da784f"
+      }
+    },
+    {
+      "id": "dnscheck",
+      "name": "DNS check",
+      "version": "1.0.0",
+      "description": "Shows which ad and tracking hosts your network blocks, as the TV itself sees them.",
+      "about": "Checks which ad and tracking hosts your network blocks, as the TV itself sees them: ad servers of LG and others, with Blocked, Reachable or No answer for each. Useful after changing your router or DNS blocker. OK checks again.",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [],
+      "luna": [],
+      "files": {
+        "addon.json": "5b8aecd48cb3813a404cb93391482d5f1be54e2504a0be77feb9696b3f82fde0",
+        "index.html": "f844a216c574a7bf965ad85e3d13cadae06c9b5f18cd8f9d04d30577e41f25c8",
+        "service.js": "1036e54bd3556779f2f2bafca460793852f98e49833569bb18862e150f641cbc"
+      }
+    },
+    {
+      "id": "immich",
+      "name": "Immich",
+      "version": "1.0.0",
+      "description": "Photos from your Immich albums as the Home wallpaper, synced to the TV.",
+      "about": "",
+      "preview": "",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "luna": [],
+      "files": {
+        "addon.json": "b16b363150bbe9dc1ba3b6fc7a98073f8ed11c11996507691d33ce75a67b00c9",
+        "phone.js": "7f64427c617e10baac60e6c711b7a86ad74929f39409f2b603f7526fb85f3a3d",
+        "service.js": "ccb1bb3d0094f93cb1d4f52ca847f5ff59cd790470183e0616cf373933b8b349"
+      }
+    },
+    {
+      "id": "jellyfin",
+      "name": "Jellyfin continue watching",
+      "version": "1.0.0",
+      "description": "A row on Home with where you were in Jellyfin, with the pictures; OK opens your Jellyfin app.",
+      "about": "A card for Home with the films and episodes you did not finish on your Jellyfin server, and if you like the next episode of a series you follow: the picture, the title and how far you got. Each one is a button: OK opens your Jellyfin app, the official one, Litefin or Moonfin. Litefin opens the title itself (after its version 2.0.20); the others open on their own Home. The card talks only to your own server. Set up: Add-ons > Jellyfin continue watching > Set up from your phone. The TV keeps only the access token, never your password.",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "net.fetch",
+        "luna"
+      ],
+      "luna": [
+        "luna://com.webos.applicationManager/getAppInfo",
+        "luna://com.webos.applicationManager/launch"
+      ],
+      "files": {
+        "addon.json": "46c4c4f785042586eab9bf04b46c9588a243008eb9a7f9c474af364c88b2f176",
+        "cards/continue/card.css": "4fa91cf45225cb62e120295378dc72bcd6f4ee9442ee7f2059fb17ccdb636841",
+        "cards/continue/card.html": "625e062837cbda14fc3d37f7c716adeaed0ef65ca0b2c87346ee03bbc7213f8d",
+        "cards/continue/card.js": "070f228981684091b7da9f9c25af638321f100c53ba1b5bb6263f757a7d22942",
+        "cards/continue/preview.jpg": "0ac03a4a4243c4534eddbfee7a7ae1996491f5036b663d690044e2f769446009",
+        "jellyfin.js": "65511aad779fe149625e5f2805fa14be35a2cb60c06fff5a4d0a8b5ea786684b",
+        "phone.js": "2746902ef82be054d1fee24d8e34b9a0c99e732332ca1e2c2de08cddbe2b8f2a",
+        "service.js": "d3e56e2263ae2b7447428ca09b45d894d5b7c0f207cab5153cceb777ac1e6213"
+      }
+    },
+    {
+      "id": "phoneremote",
+      "name": "Phone remote",
+      "version": "1.0.0",
+      "description": "A phone on your Wi-Fi as the TV's remote: buttons, a touchpad, the keyboard, the apps and Live TV.",
+      "about": "A phone on the same Wi-Fi becomes the TV's remote control. It pairs once with a 6-digit code the TV shows, then its browser page reconnects by itself: the remote's buttons, a touchpad that moves the TV's pointer, a keyboard that types into the field open on the TV, the TV's apps and the channels of your Live TV playlist, and a power button. Each phone can be blocked or removed, and a phone that is not used for a while is removed by itself. The phone remote is off until you switch it on in Add-ons; its page (Add-ons > Phone remote, and a page of the book on Home) pairs a phone and lists the paired ones.",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "luna"
+      ],
+      "luna": [
+        "luna://com.webos.service.networkinput/",
+        "luna://com.webos.service.ime/",
+        "luna://com.webos.service.audio/",
+        "luna://com.webos.service.tvpower/power/",
+        "luna://com.webos.service.settings/getSystemSettings",
+        "luna://com.webos.service.tv.systemproperty/getSystemInfo"
+      ],
+      "files": {
+        "addon.json": "2959fe83f5b026b28ec9e9fff37c821a81b14a852b8ac8372d37a49cf9f05975",
+        "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
+        "page/index.html": "9bde3887d2f0a1a16386596a6a8b60e0be0851d3eaf601e0f7db184a4c1e91f2",
+        "page.js": "985cedb9ca9b6038eff61f4ac45f0db1a803b0ee6b0adcf99430c9b0dec926ee",
+        "remotekeys.js": "2f65affbb6a6ff057947d81a553ee3d2063d293edaed4cdcb4a0019b380ea8d3",
+        "service.js": "b78115301ab56e0c4244279b420ff4ab76da4686fc33fb49332c96a0d4a83c3e",
+        "src/css/page.css": "63830f9abe5d49fbf15a55e3e3c8dd957d0e0d7ce957cf514d22f25e5f8a2f97",
+        "src/html/body.html": "992ae98d98f7d1b984c99003f0b9ab60036571d4eabe6fdcd7e7eb7ae4c9720f",
+        "src/index.html": "0b5bf4e17fbb9d9af05d28a881851b3b9a95d8aa37c6269261cccd8f64367cba",
+        "src/js/page.js": "7acecaa1b8c635457589974fe0a25fe8ec8016bb1cb56930c3d7049764b5acec",
+        "tvname.js": "f2b79e333f234bbf0052164f9273b225a9a1d2360ae22a32c85ff70511328ca6",
+        "ws.js": "c2cd76df01a680c1c7baf0b41b4eb11effec4b5eb0d2d555fe1ccc0a8419a210"
+      }
+    },
+    {
+      "id": "seasons",
+      "name": "Seasons",
+      "version": "1.0.0",
+      "description": "Photos for the Couch scenes that follow the calendar: Christmas, New Year and the four seasons.",
+      "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. South of the equator the seasons turn around; the tulip fields of spring show in the Netherlands and Belgium. The photos are from Unsplash (free to use), the photographer shows in the corner. About 8 MB is kept on the TV, so every set shows at least two photos without network.",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "luna": [],
+      "files": {
+        "addon.json": "d50da41d5dbc0548a22338ff21e1e7d22791173a86b146682308dc97ff568b63",
+        "photos.js": "81051e7844fc059e22cb12b4e9c1df339fff4ade4640ffcff46e3987a11ad91b",
+        "service.js": "c9fd51d3f3d398cce347d729e22b801bb8401886082215ca7f76b18069b90d50"
+      }
+    },
+    {
+      "id": "spotify",
+      "name": "Spotify now playing",
+      "version": "1.1.0",
+      "description": "A card for Home with what plays on your Spotify account, and buttons for the remote.",
+      "about": "A card for Home that shows what plays, or is paused, on any device of your Spotify account: the cover, the title, the artist and a thin progress bar, with previous, play or pause, next and the output (where it plays) as buttons for the remote, and the cover opens the Spotify app of the TV on the song (the controls need Spotify Premium). It asks Spotify's Web API with your own Spotify developer app (only its Client ID: the sign-in uses PKCE, so the project holds no credential and no client secret is needed); the tokens stay on the TV, in this add-on's settings. Set it up from your phone: Add-ons > Spotify now playing > Set up from your phone. The idea and the first version are from @Edenik (pull request 127).",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "net.fetch",
+        "luna"
+      ],
+      "luna": [
+        "luna://com.webos.applicationManager/launch"
+      ],
+      "files": {
+        "addon.json": "59870d7b02a11fd24e91bd5673a558c72c533472971e32241effe689b41615be",
+        "cards/nowplaying/card.css": "13ecfa7ba271f3186860529edeb9ec04c4120165a52c2957eee8d51011d9c514",
+        "cards/nowplaying/card.html": "d58e43f0b0e52be39c5abd1e6875ccb08de280372486e56ed85543938f96b557",
+        "cards/nowplaying/card.js": "f916a8642e1298d15a2d20a05a2b870a3593c42a0f8fdb0845b1878c3313cf71",
+        "cards/nowplaying/preview.jpg": "b4ec2f53f497cc06bac9967277cb28250a289a0d578b5a9bf469fe2c71319a82",
+        "nowplaying.js": "f71cbe723659db1e961842728c484ff0c05ba697efcd14cb6c8365d0b267f7d6",
+        "phone.js": "ab2cb118a3ae58610aad7c6db01ead808d1f982fea6ef3a47e736739ce962f3c",
+        "service.js": "57c6ca58b3a772e645cb7a089c08743a50312738b3c770026f584e1d4db3862b",
+        "spotifyconnect.js": "519ba58fecf2acf196e044b4a77181f6d562945befd02f916931cf3a962cb9d9"
+      }
+    },
+    {
+      "id": "sysinfo",
+      "name": "TV status",
+      "version": "1.0.0",
+      "description": "Memory, swap, load and uptime of the TV, live. Useful on a TV with little memory.",
+      "about": "Memory, swap, load and uptime of the TV, live, as a page next to Home. Shows at a glance whether the TV is running out of memory, for example before you switch on Compressed memory.",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [],
+      "luna": [],
+      "files": {
+        "addon.json": "02cb4add590dfa7ee9d950123d59752a44cf7e1c1613cf1b36e9f5c891a133b0",
+        "index.html": "cbc683b2bf5aab30023e05284f12a1652a422b7c7dbec2efe4bbcb375756aca6",
+        "service.js": "724692ff559fafed1d4f3318d83101af7988700c281b496492c46405385c5903"
+      }
+    },
+    {
+      "id": "tuner",
+      "name": "TV guide (LG tuner)",
+      "version": "1.0.0",
+      "description": "A guide for LG's own tuner (antenna or cable): the channels, what is on now and next, the schedule.",
+      "about": "A guide for the channels of the TV's own tuner (antenna, cable), in the look of the Live TV guide: the channels, what is on now and next, and the schedule of the channel you select, read from the same data LG's own guide uses. OK on a channel opens LG's Live TV on it. It is a page next to Home, on its own colour button, and it works on its own: it needs neither Live TV (IPTV) nor a playlist. Nothing is read until you open it. The guide itself is the code of the Live TV guide, built again, so both stay alike. The idea and the first version are from @Tech-Dex (pull request 144, issue 126).",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "luna",
+        "key.guide"
+      ],
+      "luna": [
+        "luna://com.webos.service.iepg/getChannelList",
+        "luna://com.webos.epgdb/find",
+        "luna://com.webos.applicationManager/launch"
+      ],
+      "files": {
+        "addon.json": "5b3ff2aeaa688b0f9d9ce89c69d7738f77852d9d343e9fdce90418d7e1419718",
+        "page/index.html": "c4306feac4a0d09f29a06074714eb505d67b00acf8790f64d052a31f319e905d",
+        "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
+        "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
+        "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
+      }
+    },
+    {
+      "id": "unsplash",
+      "name": "Unsplash",
+      "version": "1.0.0",
+      "description": "A new landscape photo from Unsplash behind Home now and then, with your own free Access Key. Nothing is saved on the TV.",
+      "about": "",
+      "preview": "",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "luna": [],
+      "files": {
+        "addon.json": "29c29a4faaac4a9434080f1405a9e6f187341f9253ca623df6f7ed185743e616",
+        "phone.js": "d9f96764f349e821469a600bb1bf338057e4af1230f5367d939b05ede7d60a5e",
+        "service.js": "feac5e89cddac3b6b9b5d6bb9b90606d237e71b12dde1ed6e83aca939e781fc3"
+      }
+    },
+    {
+      "id": "weather",
+      "name": "Weather forecast",
+      "version": "1.4.0",
+      "description": "A weather card with the next hours and days, for any place on Home.",
+      "about": "A card for Home that shows the weather at a city you choose on the TV (Customise > Weather) or on the phone page (Cards > Set up from your phone): now, with the temperature, feels like, humidity, wind, rain chance, UV, air pressure, air quality and sunrise and sunset; the next hours; and the next days. The card is one button for the remote: OK opens a drawer of the add-on with Now, Hours and Days. The weather comes from Open-Meteo (free, no key, no account): only the coordinates of the city you chose leave the TV, at most every 30 minutes. The idea and the first version are from @Edenik (pull request 129).",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "luna": [],
+      "files": {
+        "addon.json": "f1423c5588a116d0014f7ce48e1da86b45a7a224821aecf7c756f01cb16c4220",
+        "cards/forecast/card.css": "d10d6c560e1c7232c283dfe361e4e18699b38008394c2e29ed8ab0f57d474845",
+        "cards/forecast/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
+        "cards/forecast/card.js": "92322445f11e4945e1921a447116c4b7644d2f5d593d4863ec6ca42dc738a043",
+        "cards/forecast/drawer.css": "6b8e5b6acbc5ef825dcb0ea3ec113c43449189701ffb5595c9d3254f29816ebd",
+        "cards/forecast/drawer.html": "23d4a3120edfe92312fc55c95e1c5ec661f4eac1f3004026b4d532a5a3ea3eae",
+        "cards/forecast/drawer.js": "e81e72db80ffdada6d98a414eb735268a37c86d4afb1c3ef93fcc5c388030a11",
+        "cards/forecast/preview.jpg": "8f718df9627e1a18ed7754cef71ad4cf5b81c101693dda6e39dcf461c415cbd1",
+        "service.js": "820aab46c4fd352d72df9f51e522b6d63e9d88c628599fd96a0ffb883bf68952",
+        "weather.js": "a0f80532ff74f5b272414c966297456b78bacb2a219639d31c11191d750c5821"
+      }
+    }
+  ]
+}

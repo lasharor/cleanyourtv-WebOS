@@ -1,11 +1,11 @@
-// Live TV (live.js): pairing from a phone, reading and parsing a playlist, what the viewer did, why a stream does not play, and a
+// Live TV (helper/addons-bundled/iptv/service.js, the bundled add-on iptv): pairing from a phone, reading and parsing a playlist, what the viewer did, why a stream does not play, and a
 // playlist read on a connection that drops.
 const fs = require('fs'),
   path = require('path'),
   http = require('http');
 const { root, ok, fake, serve, sleep, req, run } = require('./lib');
 const nc = req('netcompat');
-const live = req('live');
+const live = require(path.join(root, 'helper', 'addons-bundled', 'iptv', 'service.js'));
 
 // POST a form to a local address
 const post = (url, body) =>
@@ -334,7 +334,7 @@ run(async () => {
   }
   // the launcher plays an Xtream .ts link as a plain src first; the typed HLS tries are fallbacks (issues 9 and 13)
   {
-    const src = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'live.js'), 'utf8');
+    const src = fs.readFileSync(path.join(root, 'helper', 'addons-bundled', 'iptv', 'src', 'js', 'live.js'), 'utf8');
     const at = src.indexOf('function variantsFor(url) {');
     let i = src.indexOf('{', at),
       depth = 0,

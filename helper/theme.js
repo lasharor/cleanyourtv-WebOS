@@ -20,12 +20,17 @@ const {
   FONT_FILE,
   HEX,
   ID,
+  MAX_CUSTOM_SCENES,
   MAX_FONT,
   MAX_INDEX,
   MAX_PREVIEW,
+  MAX_SCENE_FILE,
   MAX_THEME,
   MAX_WALLPAPER,
   PREVIEW_PATH,
+  SCENE_FRONT,
+  SCENE_ID_RE,
+  SCENE_IMG,
   SCHEMA,
   dir,
   fontOk,
@@ -76,7 +81,7 @@ function load() {
 }
 
 // ---- reading from GitHub ----
-// the themes folder of the repository (main branch); https only, except the address a test sets
+// the themes folder of the repository (main branch, dev on the dev channel); https only, except the address a test sets
 function baseUrl(slug, ref) {
   return process.env.CYTV_THEMES_URL || 'https://raw.githubusercontent.com/' + slug + '/' + (ref || 'main') + '/themes';
 }
@@ -117,14 +122,7 @@ const rmrf = d => {
 function create(ctx) {
   // the repository and branch the themes come from: this project's main branch, unless D/source names another (to try a theme)
   const slug = () => (ctx.slug && ctx.slug()) || require('./updates').repo();
-  const ref = () => {
-    if (ctx.ref) return ctx.ref();
-    let x = '';
-    try {
-      x = fs.readFileSync(require('./paths').SOURCE, 'utf8').trim().split(/\s+/)[1];
-    } catch (_) {}
-    return /^[\w.\/-]{1,60}$/.test(x || '') ? x : 'main';
-  };
+  const ref = () => (ctx.ref ? ctx.ref() : require('./updates').catalogRef());
   const conf = () => ctx.config.get();
   const base = () => baseUrl(slug(), ref());
   const cur = () => {
@@ -205,11 +203,28 @@ function create(ctx) {
       font = await fetchBuf(base() + '/' + id + '/' + f, MAX_FONT, 25000);
       if (!fontOk(font, f)) throw new Error('the typeface is not a font of that type');
     }
+    const sceneFiles = {};
+    if (getPath(raw, 'effects.scenes') === 'custom' && Array.isArray(raw.scenes)) {
+      for (const s of raw.scenes.slice(0, MAX_CUSTOM_SCENES)) {
+        if (!s || typeof s !== 'object' || !SCENE_ID_RE.test(s.id)) continue;
+        const filenames = [];
+        if (SCENE_IMG.test(s.image)) filenames.push(s.image);
+        if (SCENE_IMG.test(s.glass) && !filenames.includes(s.glass)) filenames.push(s.glass);
+        if (s.front && SCENE_FRONT.test(s.front) && !filenames.includes(s.front)) filenames.push(s.front);
+        for (const fn of filenames) {
+          if (sceneFiles[fn]) continue;
+          const b = await fetchBuf(base() + '/' + id + '/' + fn, MAX_SCENE_FILE, 30000);
+          if (!imageOk(b, fn, MAX_SCENE_FILE)) throw new Error('scene image ' + fn + ' is not a valid image');
+          sceneFiles[fn] = b;
+        }
+      }
+    }
     const d = path.join(dir(), id),
       had = fs.existsSync(path.join(d, 'theme.json'));
     mkdirs(d);
     if (wall) writeAtomic(path.join(d, w), wall);
     if (font) writeAtomic(path.join(d, f), font);
+    for (const fn of Object.keys(sceneFiles)) writeAtomic(path.join(d, fn), sceneFiles[fn]);
     writeAtomic(path.join(d, 'theme.json'), JSON.stringify(raw));
     cache = null;
     if (!load()[id]) {
@@ -319,6 +334,23 @@ function create(ctx) {
         if (!ok) throw new Error('not a theme typeface');
         const b = fs.readFileSync(path.join(dir(), m[1], m[2]));
         res.writeHead(200, { 'content-type': fontType(m[2]), 'cache-control': 'max-age=86400', 'access-control-allow-origin': '*' });
+        return res.end(b);
+      } catch (_) {
+        res.writeHead(404);
+        return res.end();
+      }
+    }
+    m = /^scene\/([a-z0-9-]{1,30})\/([\w-]{1,60}\.(?:jpg|webp))$/.exec(act);
+    if (m) {
+      const t = load()[m[1]];
+      const cs = t && t.v.customScenes;
+      if (!cs || !cs.some(s => s.image === m[2] || s.glass === m[2] || s.front === m[2])) {
+        res.writeHead(404);
+        return res.end();
+      }
+      try {
+        const b = fs.readFileSync(path.join(dir(), m[1], m[2]));
+        res.writeHead(200, { 'content-type': imageType(m[2]), 'cache-control': 'max-age=3600' });
         return res.end(b);
       } catch (_) {
         res.writeHead(404);

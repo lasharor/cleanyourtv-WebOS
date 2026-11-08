@@ -1,0 +1,570 @@
+/* Live TV (the page of the iptv add-on, shown by the launcher in a frame). The channel banner, the guide and its menus take the theme's colours (--panel, --acc, ...);
+   the error and setup cards keep their own. */
+#lv {
+  --ink2: rgba(245, 246, 248, 0.76);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  z-index: 60;
+  background: #000;
+  display: none;
+}
+#lv.on {
+  display: block;
+}
+#lv-stage,
+#lv-stage video {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: #000;
+}
+#lv .layer {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s linear;
+}
+#lv .layer.on {
+  opacity: 1;
+}
+#lv-guide.on,
+#lv-filter.on,
+#lv-menu.on {
+  pointer-events: auto; /* the pointer works on them while they are open */
+}
+/* channel banner: a floating panel in the launcher's style */
+#lv-osd {
+  left: 96px;
+  right: 96px;
+  bottom: 64px;
+  height: 232px;
+  border-radius: 44px;
+  padding: 0 44px 0 36px;
+  display: flex;
+  align-items: center;
+  background: var(--panel);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 30px 60px rgba(0, 0, 0, 0.5);
+}
+/* channel banner: a floating panel in the launcher's style */
+#lv-osd > * + * {
+  margin-left: 32px;
+}
+#lv-osd .logo {
+  width: 150px;
+  height: 150px;
+  border-radius: 34px;
+  background: var(--panel2);
+  object-fit: contain;
+  flex: none;
+}
+#lv-osd .num {
+  font-size: 92px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  min-width: 120px;
+  flex: none;
+}
+#lv-osd .info {
+  flex: 1;
+  min-width: 0;
+}
+#lv-osd .name {
+  font-size: 50px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#lv-osd .now {
+  font-size: 32px;
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#lv-osd .next {
+  font-size: 26px;
+  color: var(--ink2);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pbar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+.pbar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: currentColor;
+  width: 0;
+}
+#lv-osd .pbar {
+  margin-top: 16px;
+  color: var(--acc);
+}
+#lv-numin {
+  right: 96px;
+  top: 64px;
+  font-size: 88px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+#lv-msg {
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 34px;
+}
+#lv-msg > * + * {
+  margin-top: 18px;
+}
+#lv-msg.on {
+  background: rgba(0, 0, 0, 0.62);
+}
+#lv-msg b {
+  font-size: 56px;
+  letter-spacing: -0.02em;
+}
+#lv-msg .small {
+  font-size: 26px;
+  color: var(--ink2);
+  max-width: 1100px;
+}
+#lv.gd #lv-spin,
+#lv.gd #lv-tune {
+  visibility: hidden; /* the guide list covers the middle of the screen */
+}
+#lv-tune {
+  left: 0;
+  right: 0;
+  top: 590px;
+  text-align: center;
+  font-size: 30px;
+  color: var(--ink2);
+}
+#lv-toast {
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  padding: 16px 34px;
+  border-radius: 30px;
+  background: rgba(12, 13, 17, 0.94);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font-size: 28px;
+  white-space: nowrap;
+}
+#lv-stats {
+  left: 48px;
+  top: 40px;
+  padding: 14px 22px;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.65);
+  font: 24px/1.35 monospace;
+  white-space: pre;
+  color: #cfe;
+}
+#lv-menu,
+#lv-filter {
+  right: 96px;
+  top: 196px;
+  width: 640px;
+  padding: 30px 28px 22px;
+  border-radius: 40px;
+  background: var(--panel);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 30px 60px rgba(0, 0, 0, 0.5);
+}
+#lv-menu h3,
+#lv-filter h3 {
+  font-size: 34px;
+  margin: 0 0 14px 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mrow {
+  display: flex;
+  align-items: center;
+  height: 76px;
+  margin-bottom: 10px;
+  padding: 0 28px;
+  border-radius: var(--row-r);
+  background: var(--panel2);
+  font-size: 28px;
+}
+.mrow .ml {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mrow .mv {
+  color: var(--ink2);
+  flex: none;
+  margin-left: 20px;
+}
+.mrow.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+}
+.mrow.f .mv {
+  color: inherit;
+  opacity: 0.62;
+}
+.bds {
+  display: flex;
+  align-items: center;
+  margin-left: 16px;
+  flex: none;
+}
+.bds > * + * {
+  margin-left: 8px;
+}
+/* the badges keep their own 16 px on top of the row's spacing */
+.crow > .bds {
+  margin-left: 38px;
+}
+.bd {
+  font-size: 19px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  white-space: nowrap;
+}
+.bd.w {
+  background: rgba(255, 200, 80, 0.22);
+  color: #ffd27a;
+}
+.crow.f .bd {
+  background: rgba(11, 12, 16, 0.14);
+  color: var(--acc-ink);
+}
+.crow.f .bd.w {
+  background: rgba(160, 100, 0, 0.2);
+  color: #6a4200;
+}
+svg.st {
+  width: 26px;
+  height: 26px;
+  fill: #ffcc4d;
+  flex: none;
+}
+.crow.f svg.st {
+  fill: #c98a00;
+} /* the favourite star; a plain .st is the menu's right-hand text */
+.empty {
+  padding: 40px 30px;
+  font-size: 30px;
+  color: var(--ink2);
+  max-width: 860px;
+  line-height: 1.35;
+}
+.ctab.f {
+  background: none;
+  box-shadow: none;
+  color: var(--ink2);
+  font-size: 23px;
+}
+#lv-search {
+  display: none;
+  flex: none;
+  width: 420px;
+  height: 56px;
+  border-radius: 28px;
+  border: 0;
+  outline: 0;
+  padding: 0 24px;
+  font: inherit;
+  font-size: 26px;
+  background: var(--ink);
+  color: #0b0c10;
+}
+#lv-osd .facts {
+  font-size: 24px;
+  color: var(--ink2);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#lv-spin {
+  left: 932px;
+  top: 512px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 6px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  animation: lvsp 1s linear infinite;
+}
+@keyframes lvsp {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* guide screen (OK) */
+#lv-guide {
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: rgba(var(--night-rgb), 0.9);
+}
+#lv-glow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 720px;
+  background: radial-gradient(ellipse 1400px 640px at 26% -6%, rgba(var(--c), 0.3), transparent 70%);
+}
+#lv-gtop {
+  position: absolute;
+  left: 96px;
+  right: 96px;
+  top: 54px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+}
+#lv-gtop > * + * {
+  margin-left: 36px;
+}
+#lv-gtitle {
+  font-size: 56px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  flex: none;
+}
+#lv-gtabs {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  align-items: center;
+}
+#lv-gtabs > * + * {
+  margin-left: 14px;
+}
+.ctab {
+  height: 56px;
+  padding: 0 26px;
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 28px;
+  font-size: 25px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  flex: none;
+  background: var(--pill-bg);
+  box-shadow: inset 0 0 0 1px var(--pill-ring);
+}
+.ctab.on {
+  background: var(--acc);
+  color: var(--acc-ink);
+}
+.ctab.m {
+  background: none;
+  box-shadow: none;
+  color: var(--ink2);
+  padding: 0 6px;
+}
+#lv-gclock {
+  font-size: 56px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+#lv-rows {
+  position: absolute;
+  left: 96px;
+  top: 196px;
+  width: 900px;
+}
+.crow {
+  display: flex;
+  align-items: center;
+  height: 104px;
+  margin-bottom: 12px;
+  padding: 0 28px 0 18px;
+  border-radius: var(--row-r);
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+.crow > * + * {
+  margin-left: 22px;
+}
+.crow .lg {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: var(--panel);
+  object-fit: contain;
+  flex: none;
+}
+.crow .n {
+  width: 78px;
+  font-size: 27px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.crow .t {
+  flex: 1;
+  min-width: 0;
+}
+.crow .nm {
+  font-size: 30px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crow .nw {
+  font-size: 24px;
+  color: var(--ink2);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crow .pbar {
+  margin-top: 9px;
+  height: 6px;
+  color: var(--acc);
+}
+.crow.cur .n {
+  color: var(--ink);
+}
+.crow.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+  box-shadow: 0 20px 34px rgba(0, 0, 0, 0.5);
+}
+.crow.f .n,
+.crow.f .nw {
+  color: inherit;
+  opacity: 0.62;
+}
+.crow.f .pbar {
+  background: rgba(11, 12, 16, 0.18);
+  color: var(--acc-ink);
+}
+.crow.f .lg {
+  background: #e9ebef;
+}
+.cmore {
+  height: 22px;
+  text-align: center;
+  font-size: 20px;
+  color: var(--ink2);
+  width: 900px;
+  position: absolute;
+  left: 0;
+}
+#lv-detail {
+  position: absolute;
+  left: 1070px;
+  top: 196px;
+  width: 754px;
+}
+#lv-detail .dn {
+  font-size: 64px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#lv-detail .dg {
+  font-size: 24px;
+  color: var(--ink2);
+  margin-top: 6px;
+}
+#lv-detail .card {
+  margin-top: 30px;
+  padding: 30px 34px;
+  border-radius: 36px;
+  background: var(--panel2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+#lv-detail .dt {
+  font-size: 24px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+}
+#lv-detail .dp {
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+  line-height: 1.12;
+  max-height: 96px;
+  overflow: hidden;
+}
+#lv-detail .dd {
+  font-size: 26px;
+  color: rgba(245, 246, 248, 0.82);
+  margin-top: 14px;
+  line-height: 1.35;
+  max-height: 140px;
+  overflow: hidden;
+}
+#lv-detail .card .pbar {
+  margin-top: 20px;
+  color: var(--acc);
+}
+#lv-detail h3 {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--ink2);
+  margin: 30px 0 10px;
+}
+#lv-detail .up {
+  display: flex;
+  font-size: 27px;
+  height: 50px;
+  align-items: center;
+  white-space: nowrap;
+}
+#lv-detail .up > * + * {
+  margin-left: 22px;
+}
+#lv-detail .up .tm {
+  width: 86px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+#lv-detail .up .tt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

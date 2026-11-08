@@ -1,0 +1,34 @@
+{
+  "id": "quote",
+  "name": "Quote",
+  "version": "1.0.0",
+  "description": "A line you like, with who said it.",
+  "about": "A short quote in italics with the name of who said it, in three sizes. Type the text and the name on the phone page. A quiet card for a place beside the clock.",
+  "size": "medium",
+  "options": [
+    {
+      "key": "text",
+      "kind": "long",
+      "label": "Quote",
+      "default": "Simplicity is the ultimate sophistication."
+    },
+    {
+      "key": "author",
+      "kind": "text",
+      "label": "Said by",
+      "default": "Leonardo da Vinci"
+    },
+    {
+      "key": "size",
+      "kind": "choice",
+      "label": "Size",
+      "default": "Medium",
+      "choices": [
+        ["medium", "Medium"],
+        ["small", "Small"],
+        ["large", "Large"]
+      ]
+    }
+  ],
+  "template": "*{{opt.text}}*\n{{opt.author}}"
+}

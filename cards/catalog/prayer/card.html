@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Prayer times</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  body { color: #f5f6f8; line-height: 1.15; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); --fs: 1; }
+  #n { font-size: calc(22px * var(--fs)); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(245, 246, 248, 0.8); }
+  #t { margin-top: 4px; font-size: calc(54px * var(--fs)); font-weight: 300; }
+  #l { margin-top: 4px; font-size: calc(22px * var(--fs)); color: rgba(245, 246, 248, 0.7); }
+  #all { display: flex; margin-top: 18px; font-size: calc(18px * var(--fs)); }
+  #all div { display: flex; flex-direction: column; margin-right: 22px; color: rgba(245, 246, 248, 0.55); }
+  #all div b { margin-top: 2px; font-weight: 500; }
+  #all div.on { color: #f5f6f8; }
+  [dir="rtl"] #n { letter-spacing: 0; }
+  [dir="rtl"] #all div { margin-right: 0; margin-left: 22px; }
+</style>
+</head>
+<body>
+<div id="n"></div><div id="t"></div><div id="l"></div><div id="all"></div>
+<script src="prayer.js"></script>
+<script>
+  /* ES5 only: this page runs on Chromium 68 (webOS 5) too. The launcher sends {cytvCard: {opt, lang, clock, size, align, dir, ink, font, fs}};
+     the page keeps its own time. It has no network (the service serves it with a content security policy that allows none). */
+  var ctx = null;
+  var TX = {
+    en: { sunrise: 'Sunrise', h: 'in %s h', m: 'in %s min', place: 'Choose a place in Cards' },
+    nl: { sunrise: 'Zonsopkomst', h: 'over %s u', m: 'over %s min', place: 'Kies een plaats bij Kaarten' },
+    de: { sunrise: 'Sonnenaufgang', h: 'in %s Std.', m: 'in %s Min.', place: 'Wähle einen Ort bei Karten' },
+    fr: { sunrise: 'Lever du soleil', h: 'dans %s h', m: 'dans %s min', place: 'Choisissez un lieu dans Cartes' },
+    es: { sunrise: 'Amanecer', h: 'en %s h', m: 'en %s min', place: 'Elige un lugar en Tarjetas' },
+    tr: { sunrise: 'Gün doğumu', h: '%s sa sonra', m: '%s dk sonra', place: "Kartlar'da bir yer seçin" },
+    ar: { sunrise: 'الشروق', h: 'بعد %s س', m: 'بعد %s د', place: 'اختر المدينة من إعدادات البطاقات' }
+  };
+  var AR = { fajr: 'الفجر', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' };
+  var LAT = { fajr: 'Fajr', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' };
+  function lang() { return String((ctx && ctx.lang) || 'en').split('-')[0].toLowerCase(); }
+  function tx(k) { return (TX[lang()] || TX.en)[k] || TX.en[k]; }
+  function name(id) { return id === 'sunrise' ? tx('sunrise') : lang() === 'ar' ? AR[id] : LAT[id]; }
+  function clock(d) { try { return d.toLocaleTimeString(ctx.lang, ctx.clock); } catch (e) { return ''; } }
+  function left(ms) {
+    var s = PRAYER.left(ms);
+    return tx(s.indexOf(':') > 0 ? 'h' : 'm').replace('%s', s);
+  }
+  function $(id) { return document.getElementById(id); }
+  function render() {
+    if (!ctx) return;
+    var o = ctx.opt || {}, now = new Date();
+    var ready = o.lat !== undefined && o.lon !== undefined && o.lat !== '' && o.lon !== '' && isFinite(+o.lat) && isFinite(+o.lon);
+    var nx = ready ? PRAYER.next(now, { lat: o.lat, lon: o.lon, method: o.method, asr: o.asr }) : null;
+    var all = $('all');
+    all.textContent = '';
+    if (!nx) {
+      $('n').textContent = tx('place');
+      $('t').textContent = '';
+      $('l').textContent = '';
+      return;
+    }
+    $('n').textContent = name(nx.id);
+    $('t').textContent = clock(nx.at);
+    $('l').textContent = left(nx.at - now);
+    if (o.show === 'all') {
+      PRAYER.ORDER.forEach(function (id) {
+        var d = document.createElement('div'), s = document.createElement('span'), b = document.createElement('b');
+        if (id === nx.id) d.className = 'on';
+        s.textContent = name(id);
+        b.textContent = clock(nx.times[id]);
+        d.appendChild(s);
+        d.appendChild(b);
+        all.appendChild(d);
+      });
+    }
+  }
+  function apply() {
+    var b = document.body;
+    document.documentElement.dir = ctx.dir === 'rtl' ? 'rtl' : 'ltr';
+    b.style.setProperty('--fs', String(ctx.fs || 1));
+    if (ctx.font) b.style.fontFamily = ctx.font;
+    if (ctx.ink) b.style.color = ctx.ink;
+    b.style.textAlign = ctx.align === 'right' ? 'right' : ctx.align === 'center' ? 'center' : 'left';
+    $('all').style.justifyContent = ctx.align === 'right' ? 'flex-end' : ctx.align === 'center' ? 'center' : 'flex-start';
+  }
+  window.addEventListener('message', function (e) {
+    var m = e.data && e.data.cytvCard;
+    if (!m || typeof m !== 'object') return;
+    ctx = m;
+    apply();
+    render();
+  });
+  setInterval(render, 20000);
+  parent.postMessage({ cytvCard: 'ready' }, '*');
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "id": "hello",
+  "name": "Hello, name",
+  "version": "1.0.0",
+  "description": "A greeting by the time of day, with your name.",
+  "about": "Good morning, good afternoon or good evening by the time of day, with the name you type on the phone page, for example Good evening, Sam. The name is kept apart from the rest of the sentence, so a Hebrew or Arabic name reads correctly in an English greeting. With no name it is the plain greeting. The idea is from @Edenik (pull request 128).",
+  "size": "medium",
+  "options": [
+    {
+      "key": "name",
+      "kind": "text",
+      "label": "Your name",
+      "default": ""
+    },
+    {
+      "key": "size",
+      "kind": "choice",
+      "label": "Size",
+      "default": "medium",
+      "choices": [
+        ["medium", "Medium"],
+        ["small", "Small"],
+        ["large", "Large"]
+      ]
+    }
+  ],
+  "template": "# {{greeting.name}}"
+}

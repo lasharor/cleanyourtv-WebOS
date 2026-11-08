@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Big clock</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+  #t { position: absolute; left: 0; right: 0; top: 38%; text-align: center; font-size: 22vw; font-weight: 300; }
+  #d { position: absolute; left: 0; right: 0; top: 64%; text-align: center; font-size: 3vw; color: #9aa; }
+  #h { position: absolute; left: 0; right: 0; bottom: 4%; text-align: center; font-size: 1.6vw; color: #566; }
+</style>
+</head>
+<body>
+<div id="t"></div><div id="d"></div><div id="h">Back to go home</div>
+<script src="/addon/sdk.js"></script>
+<script>
+  /* ES5 only: this page runs on Chromium 68 (webOS 5) too */
+  function two(n) { return (n < 10 ? '0' : '') + n; }
+  function tick() {
+    var n = new Date();
+    document.getElementById('t').textContent = two(n.getHours()) + ':' + two(n.getMinutes());
+    document.getElementById('d').textContent = n.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+  tick();
+  setInterval(tick, 5000);
+</script>
+</body>
+</html>

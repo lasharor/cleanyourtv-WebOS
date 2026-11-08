@@ -25,18 +25,20 @@ var INFO = {
     'The language of CleanYourTV\u2019s screens: the launcher, this app and the Inputs list. Automatic follows the TV\u2019s menu language. The percentage says how much of a language is translated; the rest stays English. Translations are files in the repository that anyone can add to.',
   'Automatic': 'Follows the TV\u2019s menu language. English when CleanYourTV has no translation for it.',
   'Wallpapers':
-    'Your own photos behind Home: uploaded from a phone, or synced from Immich albums. Switch them on in the launcher: Customise > Wallpapers.',
+    'Your own photos behind Home: uploaded from a phone, or from a photo source you installed in Add-ons (Immich, Unsplash). Switch them on in the launcher: Customise > Wallpapers.',
+  'App icons':
+    'A picture of your own for an app, chosen on a phone: shows a QR code. The app keeps it when it updates. On Home, hold OK on an app for Change icon and Reset icon.',
   'Manage from your phone':
-    'Shows a QR code. On the phone page you upload photos (they are made the right size on the phone), delete uploads, connect Immich, choose albums and hide single photos.',
+    'Shows a QR code. On the phone page you upload photos (they are made the right size on the phone) and delete uploads.',
   'Local uploads': 'Photos uploaded from a phone, kept on the TV. At most 100.',
-  'Immich':
-    'Photos from the Immich albums you chose, downloaded to the TV every six hours (and with Sync now), so Home never waits for Immich. At most 300.',
+  'Immich is an add-on now':
+    'Immich moved out of CleanYourTV\u2019s core: install the Immich add-on in Add-ons and it takes over your saved address, key, albums and photos once. Until then they stay on the TV, unused.',
+  'Remove old Immich data':
+    'Deletes the Immich photos and the saved address and key that an earlier version kept. Use it when you do not want the Immich add-on.',
   'Total': 'Every photo Wallpapers can show, and the space they use on the TV (at most 150 MB).',
-  'Sync now': 'Downloads new and changed photos from the chosen albums now and removes the ones that left them.',
   'Picture size':
     '4K (the default) keeps photos at 3840 pixels, the size the TV draws Home at, so they look sharp; Full HD at 1920 fits about four times as many photos in 150 MB. It applies to new uploads and to the next Immich sync.',
-  'Remove all uploads': 'Deletes every uploaded photo from the TV. Immich photos stay.',
-  'Disconnect Immich': 'Forgets the address and the key and deletes the Immich photos from the TV. Uploads stay.',
+  'Remove all uploads': 'Deletes every uploaded photo from the TV. Photos from other sources stay.',
   'Reset Home customisation':
     'Puts the dock, the top buttons, hidden apps, the app order and the clock back to the defaults. The theme stays.',
   'Yes, reset Home': 'The launcher\u2019s own settings go back to the defaults. Apps, the theme and everything in this app stay.',
@@ -55,6 +57,10 @@ var INFO = {
     'Optional. Speak into the remote and the TV turns it into text on the TV itself (Moonshine, English). The text can be sent to a server you run. Audio never leaves the TV. Needs a download of about 80 MB.',
   'Install voice':
     'Downloads the speech engine, a 64-bit C library and the model (checksums are verified), then tests them. About a minute. Nothing is installed in the system folders.',
+  'Weekly trim':
+    'LG ships a trim tool but never runs it, so the built-in storage is never told which blocks are free: over time writes get slower and wear goes up. On: once a week, a few minutes after the service starts, the writable partitions on the built-in storage are trimmed (not the small key partitions). Nothing else changes.',
+  'Trim now':
+    'Trims the writable partitions on the built-in storage now and shows how much was freed. A second run right after frees almost nothing.',
   'Listen on the voice button': 'On: pressing the button you learned starts listening. A card shows what was heard.',
   'AI chat (OpenRouter)':
     'On: what you say is also sent as text to a language model through OpenRouter and the answer is shown on screen. Needs your OpenRouter key; the text goes to OpenRouter and the model provider, never audio.',
@@ -80,12 +86,23 @@ var INFO = {
   'Remove voice': 'Deletes the downloaded engine and model. The rest of CleanYourTV is not affected.',
   'Input key':
     'The remote\u2019s Input button opens our Inputs list over the running app instead of LG\u2019s picker. Open this screen to switch it off or to learn the button.',
+  'Key remapping':
+    'Makes a remote button open an app, switch to an input, open Live TV, go to Home or show the Inputs list, instead of LG\u2019s action. You press the button so the TV can tell us which one it is. It is off until you switch it on; while it is off nothing runs for it.',
+  'Add a button':
+    'Press the button you want to use on the remote. Arrows, OK and Back cannot be used, and neither can the Input, Guide, voice or Home key. You can add up to 12.',
+  'Give every button back to LG':
+    'Removes every remapped button. Each goes back to LG\u2019s action at once. A reboot without the boot scripts does the same.',
+  'Give the button back to LG': 'Removes this button\u2019s action. It goes back to LG\u2019s action at once.',
   'Share log':
     'Shows a QR code. Scan it with a phone on the same Wi-Fi to copy a report for a bug report. Addresses and URL paths are masked; the page closes after ten minutes.',
   'Uninstall': 'Removes the apps, the boot scripts and your settings, then restarts the TV so LG\u2019s Home comes back.',
   'Input key opens our Inputs list': 'On: pressing Input shows our Inputs list. Off: LG\u2019s picker comes back at once.',
   'Learn the Input key':
     'Reads the code of your remote\u2019s Input button from the hook, then tests that our list opens. The default is 241. Clear goes back to it.',
+  'Add-ons':
+    'Features that are installed on their own: Live TV ships with CleanYourTV, others come from repositories: the project\u2019s own and any you add (Repositories). Each file is checked against the repository\u2019s index before it is installed, and add-ons from other repositories ask first because they run as root. Install, switch off or remove them here.',
+  Repositories:
+    'The places add-ons come from. The project\u2019s own always stays; add someone else\u2019s with the address user/repo (GitHub) or an https folder, typed on your phone. Code from another repository runs as root on your TV: you are asked first.',
   'Live TV': 'Settings for Live TV: switch it on or off, set up or remove your playlist, refresh the guide and learn the Guide key.',
   'Show Live TV':
     'On: the launcher has a Live TV button and tile, the Inputs list has Live TV, and the Guide key can open the channel guide. Off: all of that is hidden and LG\u2019s own player and guide are used. Your playlist is kept.',
@@ -98,7 +115,7 @@ var INFO = {
   'Remove the playlist': 'Deletes the playlist address, the channel list, the guide and your favourites from the TV.',
   'Yes, remove the playlist': 'Deletes the playlist and everything stored for it on the TV. You can set it up again.',
   'Learn the Guide key':
-    'Records the Guide button\u2019s code. Afterwards it opens the Live TV channel guide over whatever is running (only while Live TV is on). Clear it to get LG\u2019s guide back.',
+    'Records the Guide button\u2019s code. Afterwards it opens the TV guide (LG tuner) when that add-on is on, else the Live TV channel guide, over whatever is running. It does nothing while both are off. Clear it to get LG\u2019s guide back.',
   'Input key shows':
     'How the Input button shows the Inputs. Over the running app, ready in the background: instant, tested on webOS 25. Over the running app, started when pressed: nothing runs hidden, so it cannot keep the remote; the default on older webOS, where the background one showed a loading circle. The launcher\u2019s Inputs list: the TV goes to our Home (needs CleanYourTV as Home; otherwise the key stays with LG). Choose to go to the next one.',
   'Learn the Home key': 'Optional. Records the Home button\u2019s code. The Home key keeps working exactly as before.',

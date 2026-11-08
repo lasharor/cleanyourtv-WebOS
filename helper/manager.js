@@ -50,7 +50,8 @@ function create(ctx) {
     const opts = config.options(),
       voice = ctx.feature('voice'),
       napi = ctx.feature('notifyapi'),
-      wp = ctx.feature('wallpapers');
+      wp = ctx.feature('wallpapers'),
+      ad = ctx.feature('addons');
     let ours = false;
     try {
       const mounts = fs.readFileSync(P.PROC + '/mounts', 'utf8');
@@ -63,7 +64,8 @@ function create(ctx) {
       picker: Object.assign({}, config.get().picker || {}, { mode: inputkey().mode(), released: !!opts.inputKey && !inputkey().on() }),
       voice: voice ? (v => ({ installed: v.installed, enabled: v.enabled, ha: v.ha.configured }))(voice.status()) : null,
       notifyApi: napi ? { enabled: napi.info().enabled, port: napi.info().port } : { enabled: false },
-      wallpapers: wp ? (w => ({ total: w.total, uploads: w.uploads, immich: w.immich.photos }))(wp.status()) : null,
+      wallpapers: wp ? (w => ({ total: w.total, uploads: w.uploads }))(wp.status()) : null,
+      icons: !!(ad && ad.module && ad.module('icons')), // the App icons add-on runs
       lang: config.get().lang || '', // the Language setting: '' follows the TV
       home: { enabled: !fs.existsSync(P.DISABLE), fullhome: fs.existsSync(P.FULLHOME_APP), ours },
       inputhook: inputhook.status(keys().input),
@@ -77,7 +79,9 @@ function create(ctx) {
     const cur = config.options();
     const next = Object.assign({}, cur);
     for (const k of ['debloat', 'inputKey', 'liveTv', 'tuner']) if (typeof o[k] === 'boolean') next[k] = o[k];
+    if (require('./audio').THEMES.indexOf(o.volumeTheme) >= 0) next.volumeTheme = o.volumeTheme;
     if (Array.isArray(o.debloatOff)) next.debloatOff = debloat.cleanOff(o.debloatOff);
+    if (Array.isArray(o.closePreloaded)) next.closePreloaded = require('./preload').clean(o.closePreloaded);
     config.update('manager', c => {
       // the language of every screen: a two-letter code, or '' to follow the TV
       if (typeof o.lang === 'string' && /^([a-z]{2})?$/.test(o.lang)) {
@@ -102,6 +106,11 @@ function create(ctx) {
     inputkey().syncMode();
     if (next.debloat !== cur.debloat) await debloat.apply(next.debloat);
     else if (next.debloat) await debloat.change(debloat.cleanOff(cur.debloatOff), debloat.cleanOff(next.debloatOff));
+    if (next.volumeTheme !== cur.volumeTheme && ctx.audio && ctx.audio.syncStockVolumeOSD) {
+      ctx.audio.syncStockVolumeOSD(next.volumeTheme);
+    }
+    if (next.closePreloaded && next.closePreloaded.length && String(next.closePreloaded) !== String(cur.closePreloaded))
+      ((ctx.feature('preload') || {}).apply || (() => Promise.resolve()))(true).catch(() => {});
     ensureHook();
     return next;
   }
@@ -113,6 +122,9 @@ function create(ctx) {
       config.update('manager', c => {
         c.keys = Object.assign({ input: '241', home: '', voice: '' }, c.keys || {});
         c.keys[l.name] = l.code;
+        // a button that becomes one of ours cannot stay remapped: the hook binds a code once, to the Input/Guide/voice key. Remove its
+        // action here (and log it) so the manager does not keep showing a button that no longer does what it says.
+        if (c.remap && c.remap[l.code]) delete c.remap[l.code];
       });
       if (inputhook.markSaved) inputhook.markSaved();
       if (l.name === 'input') ensureHook(l.code);
@@ -210,7 +222,9 @@ function create(ctx) {
     prefix: '/api/manager/',
     paths: ['/api/frontend-ok', '/api/undo'],
     handle,
-    start: () => setInterval(updates.watchPackage, 120000),
+    start: () => {
+      return setInterval(updates.watchPackage, 120000);
+    },
     check: updates.check,
     status,
     frontendLoaded: updates.frontendLoaded,

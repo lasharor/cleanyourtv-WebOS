@@ -10,12 +10,27 @@ const web = require('./web');
 // "file://" on webOS 4, whose Chromium 53 names no app, so it is no more specific than "null") and programs
 const OUR_APPS = /^file:\/\/((com\.webos\.app\.home|com\.cleanyourtv\.(manager|picker|notify|live))-webos)?$/;
 
+// An add-on's page is served by this service (http://127.0.0.1:8765/addon/<id>/...), so its own requests carry that address as their
+// origin. They are accepted only for /addon/ and for the page's own API (/api/addons/<id>/..., and only when the Referer is that
+// add-on's page), and only when the Host is the loopback address itself, so a web page on the Internet cannot use this way in.
+function addonPageCall(req, origin, u, may) {
+  const host = req.headers.host || '';
+  if (!/^(127\.0\.0\.1|localhost):8765$/.test(host) || origin !== 'http://' + host) return false;
+  if (u.indexOf('/addon/') === 0) return true;
+  const ref = /^\/addon\/([a-z][a-z0-9-]*)\//.exec(String(req.headers.referer || '').slice(origin.length));
+  if (!ref || String(req.headers.referer).indexOf(origin) !== 0) return false;
+  if (may && may(ref[1], u)) return true; // the old API paths of a bundled add-on, called by its own page (Live TV: /api/live/)
+  const m = /^\/api\/addons\/([a-z][a-z0-9-]*)\/./.exec(u);
+  return !!m && m[1] === ref[1] && ['catalog', 'install', 'remove'].indexOf(m[1]) < 0;
+}
+
 function create(opts) {
   const features = opts.features; // a function returning the loaded features, in order
   const route = u => {
     for (const f of features()) {
       if (f.paths && f.paths.indexOf(u) >= 0) return f;
       if (f.prefix && u.indexOf(f.prefix) === 0) return f;
+      if (f.match && f.match(u)) return f; // a part with paths that change while it runs (add-ons, and the old paths of bundled ones)
     }
     return null;
   };
@@ -23,7 +38,11 @@ function create(opts) {
     let origin = req.headers.origin;
     const rawOrigin = origin;
     if (OUR_APPS.test(origin || '')) origin = 'null';
-    if (origin !== undefined && origin !== 'null') {
+    const pageCall =
+      origin !== undefined &&
+      origin !== 'null' &&
+      addonPageCall(req, origin, req.url.split('?')[0], (id, u) => features().some(f => f.pageMay && f.pageMay(id, u)));
+    if (origin !== undefined && origin !== 'null' && !pageCall) {
       console.log('refused origin ' + origin + ' ' + req.method + ' ' + req.url.slice(0, 60));
       return web.json(res, { error: 'origin not allowed' }, 403);
     }
@@ -51,4 +70,4 @@ function create(opts) {
   });
 }
 
-module.exports = { create };
+module.exports = { create, addonPageCall };

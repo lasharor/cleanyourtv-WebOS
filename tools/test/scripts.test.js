@@ -127,6 +127,8 @@ run(async () => {
       fs.lstatSync(path.join(initd, '15-cleanyourtv-debloat')).isSymbolicLink(),
     'the boot scripts are linked'
   );
+  const stdinFlag = path.join(D, 'luna-stdin-open');
+  fs.writeFileSync(stdinFlag, '');
   b = boot(['update', '1.6.0', '--no-start']);
   const out2 = b.stdout + b.stderr;
   conf = JSON.parse(fs.readFileSync(path.join(D, 'config.json'), 'utf8'));
@@ -135,6 +137,7 @@ run(async () => {
     'an update keeps the Input key switched off (issues 6 and 7)'
   );
   ok(fs.existsSync(path.join(D, 'backup', 'service-prev.tgz')), 'an update keeps the previous service files for a rollback');
+  ok(fs.existsSync(stdinFlag), 'an update preserves the Luna stdin opt-in flag');
   fs.writeFileSync(
     path.join(R, 'usr/palm/applications/com.webos.app.home/appinfo.json'),
     JSON.stringify({ id: 'com.webos.app.home', type: 'native' })
@@ -156,6 +159,49 @@ run(async () => {
     /mount --bind \/tmp\/cleanyourtv-hosts \/etc\/hosts/.test(stop) && /umount \/etc\/hosts/.test(undo),
     'where /etc/hosts is read-only (issue 11) the ad servers go into a copy in RAM, and the undo removes it'
   );
+  // the installer waits until the TV says "installed" before it removes the package: on an update the files are there already, and an early
+  // yes deleted the package while the TV was still unpacking it, so the old version stayed in place
+  const installSh = fs.readFileSync(path.join(root, 'install.sh'), 'utf8');
+  ok(
+    /dev\/install "[^\n]*\\"subscribe\\":true/.test(installSh) &&
+      /"state": \*"installed"/.test(installSh) &&
+      installSh.indexOf('"state": *"installed"') < installSh.indexOf('rm -f /tmp/cytv-install.log /tmp/cytv-manager.ipk'),
+    'install.sh subscribes to the install and waits for installed before it removes the package'
+  );
+  // the undo unmounts /etc/hosts only when the RAM copy is what it shows: a table mounted over it later (Glasshouse) stays
+  const line = undo.split('\n').filter(l => /^if \[ -e \/tmp\/cleanyourtv-hosts\.mounted \]/.test(l))[0];
+  ok(!!line && /\/etc\/hosts -ef \/tmp\/cleanyourtv-hosts/.test(line), 'the undo checks that the RAM copy is the top /etc/hosts mount');
+  const ours = path.join(tmp, 'hosts-ours'),
+    top = path.join(tmp, 'hosts-top'),
+    etc = path.join(tmp, 'hosts-etc'),
+    mark = path.join(tmp, 'hosts-mounted'),
+    log = path.join(tmp, 'umount.log');
+  const undoHosts = () => {
+    fs.writeFileSync(log, '');
+    const code = line
+      .replace(/\/etc\/hosts/g, etc)
+      .replace(/\/tmp\/cleanyourtv-hosts\.mounted/g, mark)
+      .replace(/\/tmp\/cleanyourtv-hosts/g, ours);
+    cp.spawnSync('/bin/sh', ['-c', 'umount() { echo "$1" >> "$LOG"; return 0; }; ' + code], {
+      env: Object.assign({}, process.env, { LOG: log }),
+    });
+    return { umounted: fs.readFileSync(log, 'utf8').trim(), copy: fs.existsSync(ours), marker: fs.existsSync(mark) };
+  };
+  for (const f of [ours, top, etc, mark]) if (fs.existsSync(f)) fs.unlinkSync(f);
+  fs.writeFileSync(ours, '127.0.0.1 x # cleanyourtv-debloat\n');
+  fs.linkSync(ours, etc); // the same file: our copy is what /etc/hosts shows
+  fs.writeFileSync(mark, '');
+  let h = undoHosts();
+  ok(h.umounted === etc && !h.copy && !h.marker, 'our RAM copy on top: unmounted and removed');
+  for (const f of [ours, etc, mark]) if (fs.existsSync(f)) fs.unlinkSync(f);
+  fs.writeFileSync(ours, '127.0.0.1 x # cleanyourtv-debloat\n');
+  fs.writeFileSync(etc, '0.0.0.0 ads.example\n'); // another table on top (a different file)
+  fs.writeFileSync(mark, '');
+  h = undoHosts();
+  ok(h.umounted === '' && h.copy && h.marker, 'another table on top: nothing is unmounted and the marker stays');
+  fs.unlinkSync(mark);
+  h = undoHosts();
+  ok(h.umounted === '', 'without the marker nothing is unmounted');
   // admanager is not stubbed (HBO Max and Disney+ stay on their loader without it, issue 47); a stub of an older version is lifted
   ok(
     /on ads && bins="\$bins adoverlay-service"/.test(stop) &&
@@ -292,4 +338,59 @@ run(async () => {
   fs.unlinkSync(path.join(B, 'helper.js'));
   await waitFor(() => wb.gone, 10000);
   if (!wb.gone) wb.kill();
+
+  // tools/release.sh: RELEASE-HOLD stops a release (and the move of main) even when the package changed since the last tag
+  {
+    const rd = path.join(tmp, 'releasetest'),
+      g = (...a) => cp.spawnSync('git', ['-C', rd].concat(a), { encoding: 'utf8' });
+    cp.spawnSync('mkdir', ['-p', path.join(rd, 'tools'), path.join(rd, 'helper'), path.join(rd, 'app')]);
+    fs.copyFileSync(path.join(root, 'tools', 'release.sh'), path.join(rd, 'tools', 'release.sh'));
+    fs.writeFileSync(path.join(rd, 'helper', 'helper.js'), "const VERSION = '1.0.0';\n");
+    fs.writeFileSync(path.join(rd, 'app', 'version.json'), '{"version":"1.0.0"}');
+    g('init', '-q');
+    g('config', 'user.email', 'a@b.c');
+    g('config', 'user.name', 'T');
+    g('add', '-A');
+    g('commit', '-q', '-m', 'first');
+    g('tag', 'v1.0.0');
+    fs.appendFileSync(path.join(rd, 'helper', 'helper.js'), '// changed\n');
+    g('commit', '-q', '-am', 'a change in the package');
+    fs.writeFileSync(path.join(rd, 'RELEASE-HOLD'), 'trying something\n');
+    cp.spawnSync('mkdir', ['-p', path.join(rd, 'tmp')]);
+    const outFile = path.join(rd, 'out.txt');
+    const run1 = () =>
+      cp.spawnSync('sh', ['tools/release.sh'], {
+        cwd: rd,
+        encoding: 'utf8',
+        // RUNNER_TEMP: release.sh writes the release notes there, and in the Release workflow this test runs between the real release.sh and
+        // the publishing, so it must not write into the real one (the notes of 1.6.15 and 1.6.16 were these test notes)
+        env: Object.assign({}, process.env, { GITHUB_OUTPUT: outFile, CYTV_DRY: '1', RUNNER_TEMP: path.join(rd, 'tmp') }),
+      });
+    let r1 = run1();
+    ok(
+      r1.status === 0 && /RELEASE-HOLD is present/.test(r1.stderr) && /^tag=$/m.test(fs.readFileSync(outFile, 'utf8')),
+      'release.sh: with RELEASE-HOLD there is no release, tag is empty: ' + r1.stderr.trim().split('\n').pop()
+    );
+    fs.unlinkSync(path.join(rd, 'RELEASE-HOLD'));
+    fs.writeFileSync(outFile, '');
+    r1 = run1();
+    ok(
+      r1.status === 0 && /^tag=v1\.0\.1$/m.test(fs.readFileSync(outFile, 'utf8')),
+      'release.sh: without it the same change is released (dry run: v1.0.1)'
+    );
+    // RELEASE-NOTES.md is the notes, after the line with the versions, in place of the commit subjects
+    fs.writeFileSync(path.join(rd, 'RELEASE-NOTES.md'), '## New\n\n- **A thing.** By @someone.\n');
+    r1 = run1();
+    ok(
+      /^Service 1\.0\.1, launcher 1\.0\.0\.\n\n## New\n\n- \*\*A thing\.\*\* By @someone\.$/m.test(r1.stderr) &&
+        !/a change in the package/.test(r1.stderr),
+      'release.sh: RELEASE-NOTES.md is the release notes, not the commit subjects: ' + r1.stderr.trim().split('\n').slice(-3).join(' | ')
+    );
+    // and the notes went to the temporary folder of this test, not to the RUNNER_TEMP the test itself runs in
+    ok(
+      fs.existsSync(path.join(rd, 'tmp', 'release-notes.md')) &&
+        /A thing/.test(fs.readFileSync(path.join(rd, 'tmp', 'release-notes.md'), 'utf8')),
+      'release.sh: the notes are written to RUNNER_TEMP, which the test points into its own folder'
+    );
+  }
 });

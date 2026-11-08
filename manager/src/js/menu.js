@@ -8,6 +8,10 @@ function build() {
     rows = kRows;
     return;
   }
+  if (view.indexOf('remap') === 0) {
+    rmRows();
+    return;
+  }
   if (view === 'notifyhow' || view === 'voicehow') {
     rows.push({ label: 'Back', fn: pop });
     return;
@@ -86,7 +90,16 @@ function build() {
     var ha = v.ha || {},
       haOk = !!ha.configured,
       HR = { 'ha-first': 'Home Assistant first, then the AI', 'ha-only': 'Home Assistant only', 'ai-only': 'The AI only' };
-    if (!v.installed) {
+    if (!v.installed && v.unsupported) {
+      /* a 32-bit kernel cannot start the 64-bit recogniser: nothing is offered to download */
+      rows.push({
+        label: 'Voice is not available on this TV',
+        sub: 'its kernel is 32-bit',
+        info: { t: 'Voice is not available on this TV', d: v.unsupported },
+        dim: true,
+        fn: function () {},
+      });
+    } else if (!v.installed) {
       rows.push({
         label: 'Install voice',
         sub: wk ? 'installing…' : 'downloads about 80 MB',
@@ -424,6 +437,140 @@ function build() {
     });
     return;
   }
+  if (view === 'addonrepos') {
+    ad.repos.forEach(function (x) {
+      rows.push({
+        label: x.name,
+        sub: x.url + (x.official ? ' · the project’s own' : ''),
+        fn: function () {
+          ad.repoSel = x.name;
+          push('addonrepo');
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Add from your phone', sub: 'user/repo, or the address of a folder with an index.json', fn: openRepoDialog });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'addonrepo') {
+    var rp = repoSel() || {};
+    rows.push({ label: rp.name || '', sub: rp.url || '', fn: function () {} });
+    if (rp.official)
+      rows.push({ label: 'The project’s own repository always stays', sub: 'it cannot be removed', dim: true, fn: function () {} });
+    else
+      rows.push({
+        label: 'Remove this repository',
+        sub: 'what you installed from it stays installed',
+        fn: function () {
+          addonDo('/api/addons/repos', { remove: rp.name }, rp.name + ' removed');
+        },
+      });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* before anything from another repository: what it means, then Cancel (the default) or the deliberate button that says what it does */
+  if (view === 'confirm-addon' || view === 'confirm-repo') {
+    var pe = ad.pend || {},
+      isRepo = view === 'confirm-repo',
+      warn = trustAbout(isRepo ? [] : pe.items),
+      wl = 'Code from outside the project';
+    rows.push({ label: 'Cancel', about: warn, ablabel: wl, fn: pop });
+    rows.push({
+      label: isRepo
+        ? 'Add a repository, from my phone'
+        : pe.all
+          ? 'Update code from other repositories'
+          : 'Install code from ' + (pe.repo || ''),
+      sub: isRepo ? '' : pe.all ? '' : pe.name,
+      about: warn,
+      ablabel: wl,
+      fn: function () {
+        pop();
+        if (isRepo) openRepoPair();
+        else if (pe.all) addonDo('/api/addons/update', { confirm: true }, 'Add-ons updated');
+        else addonDo('/api/addons/install', { id: pe.id, repo: pe.repo, confirm: true }, pe.name + ' installed');
+      },
+    });
+    return;
+  }
+  if (view === 'addon') {
+    var a1 = addonSel() || {};
+    rows.push({
+      label: a1.name || '',
+      pv: a1.preview ? a1.id : '',
+      about: a1.about || a1.description,
+      sub: (a1.description || '') + (a1.error ? ' \u00B7 ' + a1.error : ''),
+      fn: function () {},
+    });
+    if (a1.bookable) {
+      var bp = bookPages().filter(function (p) {
+          return p.inBook;
+        }),
+        bi = bp
+          .map(function (p) {
+            return p.id;
+          })
+          .indexOf(a1.id);
+      rows.push({
+        label: 'Page of the book',
+        sub: onoff(a1.inBook) + (a1.inBook && bi >= 0 ? ' \u00B7 page ' + (bi + 2) : '') + ' \u00B7 Home is page 1',
+        fn: function () {
+          bookShow(a1.id, !a1.inBook);
+        },
+      });
+      if (a1.inBook) {
+        rows.push({
+          label: 'Move earlier',
+          dim: bi <= 0,
+          fn: function () {
+            bookMove(a1.id, -1);
+          },
+        });
+        rows.push({
+          label: 'Move later',
+          dim: bi < 0 || bi >= bp.length - 1,
+          fn: function () {
+            bookMove(a1.id, 1);
+          },
+        });
+      }
+    }
+    if ((a1.permissions || []).indexOf('key.guide') >= 0)
+      rows.push({
+        label: 'Learn the Guide key',
+        sub: st.keys && st.keys.guide ? 'now: ' + st.keys.guide : 'not learned \u00B7 LG\u2019s guide stays',
+        fn: function () {
+          openKeys('guide');
+        },
+      });
+    if (a1.settings)
+      rows.push({
+        label: 'Set up from your phone',
+        fn: function () {
+          openAddonPair(a1.id, a1.name);
+        },
+      });
+    rows.push({
+      label: a1.enabled ? 'Switch off' : 'Switch on',
+      sub: a1.enabled ? 'on' : 'off',
+      fn: function () {
+        addonDo('/api/addons/' + a1.id + '/enable', { enabled: !a1.enabled }, a1.name + (a1.enabled ? ' off' : ' on'));
+      },
+    });
+    if (!a1.bundled)
+      rows.push({
+        label: 'Remove',
+        sub: 'deletes the add-on, keeps its data',
+        fn: function () {
+          addonDo('/api/addons/remove', { id: a1.id }, a1.name + ' removed');
+        },
+      });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
   if (view === 'livetv') {
     var lo = st.options.liveTv !== false,
       l2 = lv || {},
@@ -472,10 +619,9 @@ function build() {
     });
     rows.push({
       label: 'Learn the Guide key',
-      sub: lo ? (gk ? 'now: ' + gk : 'not learned \u00B7 LG\u2019s guide stays') : 'Live TV is off',
-      dim: !lo,
+      sub: gk ? 'now: ' + gk : 'not learned \u00B7 LG\u2019s guide stays',
       fn: function () {
-        if (lo) openKeys('guide');
+        openKeys('guide');
       },
     });
     rows.push({ sep: true });
@@ -524,6 +670,116 @@ function build() {
     rows.push({ label: 'No, keep it', fn: pop });
     return;
   }
+  if (view === 'preload') {
+    rows.push({
+      label: 'Preloaded apps',
+      sub: 'LG starts these in the background so they open faster, and checks again every 5 minutes · off frees memory · set again at every boot',
+      fn: function () {},
+    });
+    if (!preSet || !preSet.available)
+      rows.push({ label: 'Not available', sub: (preSet && preSet.error) || 'this TV has no preload manager', fn: function () {} });
+    else
+      preSet.apps.forEach(function (a) {
+        var fixed = preloadFixed(a);
+        rows.push({
+          label: preloadName(a.id),
+          sub: fixed
+            ? fixed
+            : preloadState(a) +
+              (a.enabled ? ' · ' + a.type : '') +
+              ' · ' +
+              a.memory +
+              ' MB free needed' +
+              (a.saved ? ' · changed by you' : ''),
+          fn: function () {
+            if (fixed) return banner(fixed, 'err');
+            preApp = a.id;
+            push('preloadapp');
+          },
+        });
+      });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'preloadapp') {
+    var pa = preloadApp(preApp);
+    if (!pa) {
+      pop();
+      return;
+    }
+    /* only the modes this TV itself uses for some app (now, or when it started) and this app's own: criu or full are not offered where
+       LG uses neither, since the row steps through them one by one and a TV without that kernel support could be left with a mode it cannot run */
+    var seen = {};
+    (preSet.apps || []).forEach(function (x) {
+      seen[x.mode] = true;
+      if (x.base) seen[x.base.mode] = true;
+    });
+    seen[pa.mode] = true;
+    var states = ['off'].concat(
+      preSet.modes.filter(function (m) {
+        return seen[m];
+      })
+    );
+    rows.push({
+      label: preloadName(pa.id),
+      sub: pa.id + ' · LG preloads it only while ' + pa.memory + ' MB of memory is free (LG’s own figure)',
+      fn: function () {},
+    });
+    rows.push({
+      label: 'State',
+      sub:
+        preloadState(pa) +
+        ' · off: never preloaded · partial < semi-full < full: more of the app is started · criu: restored from a snapshot',
+      fn: function () {
+        var to = states[(states.indexOf(preloadState(pa)) + 1) % states.length];
+        preloadSet(pa.id, to === 'off' ? { enabled: false } : { enabled: true, mode: to });
+      },
+    });
+    rows.push({
+      label: 'How often',
+      sub: pa.type + ' · periodic: again at every check · oneshot: once',
+      fn: function () {
+        preloadSet(pa.id, { type: preSet.types[(preSet.types.indexOf(pa.type) + 1) % preSet.types.length] });
+      },
+    });
+    rows.push({
+      label: 'Back to the TV’s own',
+      sub: pa.base ? (pa.base.enabled ? pa.base.mode : 'off') + ' · ' + pa.base.type + ' (as it was when the TV started)' : 'not known',
+      fn: function () {
+        if (pa.base) preloadSet(pa.id, { reset: true });
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'volumebar') {
+    var curV = (st.options && st.options.volumeTheme) || 'system';
+    rows.push({
+      label: 'Volume bar',
+      sub: 'Replaces LG\u2019s own bar; System default puts it back. Tried on webOS 5 only.',
+      fn: function () {},
+    });
+    var themes = [
+      { id: 'pill', label: tr('Pill'), sub: tr('Vertical pill on the right') },
+      { id: 'capsule', label: tr('Capsule'), sub: tr('Horizontal bar at the top') },
+      { id: 'dial', label: tr('Dial'), sub: tr('Circular dial on the right') },
+      { id: 'system', label: tr('System default (LG webOS)'), sub: tr('Stock TV volume bar') },
+    ];
+    themes.forEach(function (t) {
+      rows.push({
+        label: t.label,
+        sub: (t.id === curV ? 'selected \u00B7 ' : '') + t.sub,
+        fn: function () {
+          opt({ volumeTheme: t.id });
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
   if (view === 'inputkey') {
     var hk = st.inputhook || {},
       na = hk.hook && !hk.hook.attached;
@@ -539,6 +795,13 @@ function build() {
       sub: st.keys && st.keys.inputIsDefault ? 'default (' + st.keys.input + ')' : 'learned: ' + (st.keys && st.keys.input),
       fn: function () {
         openKeys('input');
+      },
+    });
+    rows.push({
+      label: 'Learn the Guide key',
+      sub: st.keys && st.keys.guide ? 'now: ' + st.keys.guide : 'not learned \u00B7 LG\u2019s guide stays',
+      fn: function () {
+        openKeys('guide');
       },
     });
     var pk = st.picker || {},
@@ -581,26 +844,71 @@ function build() {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
-  if (view === 'debloat') {
-    DEBLOAT.forEach(function (g) {
-      rows.push({
-        label: g.label,
-        sub: onoff(debloatOn(g.id)) + ' \u00B7 ' + g.what,
-        fn: function () {
-          debloatToggle(g.id);
-        },
-      });
-    });
-    rows.push({ sep: true });
-    var anyOff = DEBLOAT.some(function (g) {
-      return !debloatOn(g.id);
+  if (view === 'experimental') {
+    rows.push({
+      label: 'Experimental',
+      sub: 'off by default · tried on one TV · switch off to get LG\u2019s own setup back',
+      fn: function () {},
     });
     rows.push({
-      label: anyOff ? 'Switch all on' : 'Switch all off',
+      label: 'Volume bar',
+      sub: volumeSub((st.options || {}).volumeTheme) + ' \u00B7 replaces LG\u2019s own bar',
       fn: function () {
-        opt(anyOff ? { debloat: true, debloatOff: [] } : { debloat: false, debloatOff: [] });
+        push('volumebar');
       },
     });
+    rows.push({
+      label: 'Preloaded apps',
+      sub: 'choose which apps LG starts in the background, and how much',
+      fn: preloadLoad,
+    });
+    if (zr && zr.available) {
+      rows.push({
+        label: 'Compressed memory',
+        sub: onoff(zr.on) + ' \u00B7 keeps idle memory compressed in RAM instead of on the built-in storage',
+        fn: function () {
+          zramSet(zr.on ? 0 : zrSize);
+        },
+      });
+      rows.push({
+        label: 'Size',
+        sub: zrSize + ' MB',
+        fn: function () {
+          var s = zr.sizes || [256, 512, 768, 1024];
+          zrSize = s[(s.indexOf(zrSize) + 1) % s.length];
+          if (zr.on) zramSet(zrSize);
+          else {
+            build();
+            draw();
+          }
+        },
+      });
+      rows.push({
+        label: 'Refresh',
+        sub: (zr.on ? zr.stored + ' MB kept in ' + zr.ram + ' MB of memory \u00B7 ' : '') + 'free memory ' + zr.memAvailable + ' MB',
+        fn: function () {
+          zramLoad(true);
+        },
+      });
+    } else {
+      rows.push({ label: 'Compressed memory', sub: 'not available on this TV', fn: function () {} });
+    }
+    if (tm && tm.available) {
+      rows.push({
+        label: 'Weekly trim',
+        sub: onoff(tm.on) + ' \u00B7 tells the built-in storage which blocks are free \u00B7 ' + trimLast(tm),
+        fn: function () {
+          trimSet(!tm.on);
+        },
+      });
+      rows.push({
+        label: 'Trim now',
+        sub: tm.running ? 'running\u2026' : 'takes a few seconds',
+        fn: trimNow,
+      });
+    } else {
+      rows.push({ label: 'Weekly trim', sub: 'not available on this TV', fn: function () {} });
+    }
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
     return;
@@ -701,6 +1009,7 @@ function build() {
       });
     });
     rows.push({ sep: true });
+    rows.push({ label: 'Get more cards', sub: 'download from the catalog', fn: openCardCatalog });
     rows.push({
       label: 'Set up from your phone',
       sub: 'names, texts, card options',
@@ -726,10 +1035,59 @@ function build() {
     });
     return;
   }
+  if (view === 'cardcat') {
+    cardCat.cards.forEach(function (c) {
+      rows.push({
+        label: c.name,
+        pvu: c.preview ? '/api/cards/preview/' + c.id : '',
+        about: c.about || c.description,
+        sub: c.needs
+          ? 'needs service ' + c.needs
+          : c.update
+            ? 'Update to ' + c.version
+            : c.installed
+              ? 'installed \u00B7 ' + c.installed
+              : 'Install \u00B7 ' + c.version,
+        dim: !!c.needs,
+        fn: function () {
+          cardCat.sel = c.id;
+          if (c.needs) banner('Update the service first: this card needs service ' + c.needs, 'err');
+          else if (c.installed && !c.update) push('cardone');
+          else cardDo('/api/cards/install', c.id, c.name + (c.update ? ' updated' : ' installed'));
+        },
+      });
+    });
+    if (!cardCat.cards.length && !cardCat.error) rows.push({ label: 'The catalog has no cards yet', dim: true, fn: function () {} });
+    if (cardCat.error) rows.push({ label: 'The catalog could not be read', sub: cardCat.error, dim: true, fn: function () {} });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  if (view === 'cardone') {
+    var c1 = cardSel() || {};
+    rows.push({
+      label: c1.name || '',
+      pvu: c1.preview ? '/api/cards/preview/' + c1.id : '',
+      about: c1.about || c1.description,
+      sub: 'installed \u00B7 ' + (c1.installed || ''),
+      fn: function () {},
+    });
+    rows.push({
+      label: 'Remove',
+      sub: 'a place that used it shows the theme\u2019s own card again',
+      fn: function () {
+        cardDo('/api/cards/remove', c1.id, c1.name + ' removed');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
   if (view === 'cardtype') {
     var curT = cardTypeOf(cardSlot) || 'none';
     rows.push({
       label: 'Empty',
+      about: 'Leave this place empty.',
       sub: curT === 'none' ? 'selected' : '',
       fn: function () {
         setCardType('none');
@@ -738,6 +1096,8 @@ function build() {
     ((cs && cs.types) || []).forEach(function (x) {
       rows.push({
         label: x.name,
+        about: x.about,
+        pvu: x.preview ? '/api/cards/preview/' + x.preview : '',
         sub:
           (curT === x.type ? 'selected' : '') +
           (/^ha-/.test(x.type) && !cs.ha ? (curT === x.type ? ' \u00B7 ' : '') + 'needs Home Assistant' : ''),
@@ -750,90 +1110,112 @@ function build() {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
-  if (view === 'more') {
-    rows.push({ label: 'Home Assistant', sub: st.voice && st.voice.ha ? 'set up' : 'not set up', fn: openHa });
+  if (view === 'abapps') {
     rows.push({
-      label: 'Voice',
-      sub: st.voice ? (st.voice.installed ? onoff(st.voice.enabled) : 'not installed') : '',
-      fn: function () {
-        api('/api/voice/status').then(
-          function (v) {
-            vo = v;
-            push('voice');
-            if ((v.job && v.job.state === 'working') || v.listening) voiceRefresh();
-          },
-          function () {
-            banner('The service did not answer', 'err');
-          }
-        );
-      },
+      label: 'Apps on the box',
+      sub: 'OK moves an app to the box or back to the TV. The others stay on the TV.',
+      fn: function () {},
     });
-    rows.push({
-      label: 'Language',
-      sub: (function () {
-        var n = 'Automatic';
-        languages().forEach(function (x) {
-          if (x.code === st.lang) n = x.name;
-        });
-        return n;
-      })(),
-      fn: function () {
-        push('language');
-      },
-    });
-    rows.push({
-      label: 'Network notifications',
-      sub: onoff(st.notifyApi && st.notifyApi.enabled),
-      fn: function () {
-        api('/api/manager/notify-api').then(
-          function (n) {
-            napi = n;
-            push('notifyapi');
-          },
-          function () {
-            banner('The service did not answer', 'err');
-          }
-        );
-      },
+    abl.forEach(function (a) {
+      rows.push({
+        label: a.title || a.id,
+        sub: a.on
+          ? 'on the box \u00B7 ' + a.pkg
+          : a.suggest
+            ? 'on the TV \u00B7 ' + a.suggest + ' on the box'
+            : 'on the TV \u00B7 needs its package from your phone',
+        fn: function () {
+          abToggle(a);
+        },
+      });
     });
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
     return;
   }
+  if (view === 'androidbox') {
+    var a = ab || { configured: false, settings: null, key: {}, last: null },
+      cfg = a.settings || {},
+      lastRun = a.last;
+    rows.push({
+      label: 'Set up from your phone',
+      sub: a.configured ? cfg.host + ' \u00B7 ' + cfg.input.replace('com.webos.app.hdmi', 'HDMI ') : 'address, HDMI input and apps',
+      fn: openAbPair,
+    });
+    rows.push({
+      label: 'Choose apps',
+      sub: a.configured
+        ? Object.keys(cfg.apps).length
+          ? Object.keys(cfg.apps).join(', ')
+          : 'none yet: the apps stay on the TV'
+        : 'set it up first',
+      dim: !a.configured,
+      fn: function () {
+        if (a.configured) openAbApps();
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Test the connection',
+      sub: a.configured ? 'the first time, accept the question on the box' : 'set it up first',
+      dim: !a.configured,
+      fn: function () {
+        if (a.configured) abTest();
+      },
+    });
+    rows.push({
+      label: 'Last start',
+      sub: !lastRun ? 'none yet' : lastRun.ok ? lastRun.app + ' started' : lastRun.error,
+      fn: null,
+    });
+    rows.push({
+      label: 'Key of this TV',
+      sub: a.key && a.key.ready ? 'ready' : 'made at the first test',
+      fn: null,
+    });
+    if (a.configured) {
+      rows.push({ sep: true });
+      rows.push({ label: 'Switch off', sub: 'apps open on the TV again', fn: abOff });
+    }
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
   if (view === 'wallpapers') {
-    var w = wp || { uploads: 0, immich: {}, total: 0, limits: { uploads: 100 }, bytes: 0 },
-      im = w.immich || {},
-      ago = function (t) {
-        if (!t) return 'never';
-        var m = Math.round((Date.now() - t) / 60000);
-        return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago';
-      };
-    rows.push({ label: 'Manage from your phone', sub: 'upload photos, configure Immich', fn: openWallPair });
+    var w = wp || { uploads: 0, total: 0, limits: { uploads: 100 }, bytes: 0 },
+      old = w.legacyImmich;
+    rows.push({ label: 'Manage from your phone', sub: 'upload photos', fn: openWallPair });
     rows.push({ sep: true });
     rows.push({ label: 'Local uploads', sub: w.uploads + ' photos', fn: openWallPair });
-    rows.push({
-      label: 'Immich',
-      sub: !im.configured
-        ? 'not connected \u00B7 set up from your phone'
-        : im.state === 'syncing'
-          ? 'syncing\u2026 ' + (im.done || 0) + ' new'
-          : im.photos + ' photos \u00B7 synced ' + ago(im.lastSync) + (im.error ? ' \u00B7 ' + im.error : ''),
-      fn: openWallPair,
+    /* photo sources are add-ons (Immich, Unsplash, ...): one row each, with its own settings page on the phone */
+    (w.sources || []).forEach(function (s) {
+      rows.push({
+        label: s.label,
+        sub: (s.error || s.summary || s.photos + ' photos') + (s.live ? ' \u00B7 a new photo now and then' : ''),
+        fn: s.settings
+          ? function () {
+              openSourcePair(s.id, s.label);
+            }
+          : null,
+      });
     });
+    /* a TV that used Immich before it became an add-on keeps that until the add-on is installed */
+    if (old)
+      rows.push({
+        label: 'Immich is an add-on now',
+        sub: 'install it in Add-ons to keep your Immich photos and settings',
+        fn: function () {
+          /* the Add-ons tab of the main list */
+          while (view !== 'main' && idxStack.length) pop();
+          for (var i = 0; i < TABS.length; i++) if (TABS[i].id === 'addons') setTab(i);
+        },
+      });
     rows.push({
       label: 'Total',
       sub: w.total + ' photos \u00B7 ' + Math.round(w.bytes / 1048576) + ' of 150 MB',
       fn: null,
     });
     rows.push({ sep: true });
-    rows.push({
-      label: 'Sync now',
-      sub: im.configured ? (im.state === 'syncing' ? 'syncing\u2026' : 'Immich: new and changed photos') : 'connect Immich first',
-      dim: !im.configured || im.state === 'syncing',
-      fn: function () {
-        if (im.configured && im.state !== 'syncing') wallCall('/api/wallpapers/sync', {}, 'Syncing with Immich\u2026');
-      },
-    });
     rows.push({
       label: 'Picture size',
       sub: w.size === 'hd' ? 'Full HD (1920 px)' : '4K (3840 px)',
@@ -850,14 +1232,14 @@ function build() {
         if (w.uploads) push('confirm-wp-uploads');
       },
     });
-    rows.push({
-      label: 'Disconnect Immich',
-      sub: im.configured ? '' : 'not connected',
-      dim: !im.configured,
-      fn: function () {
-        if (im.configured) push('confirm-wp-immich');
-      },
-    });
+    if (old)
+      rows.push({
+        label: 'Remove old Immich data',
+        sub: old.photos + ' photos and the saved key',
+        fn: function () {
+          push('confirm-wp-immich');
+        },
+      });
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
     return;
@@ -866,13 +1248,15 @@ function build() {
     var upl = view === 'confirm-wp-uploads';
     rows.push({ label: 'Cancel', fn: pop });
     rows.push({
-      label: upl ? 'Yes, remove all uploads' : 'Yes, disconnect Immich',
-      sub: upl ? 'the uploaded photos are deleted from the TV' : 'the key is forgotten and its photos are deleted from the TV',
+      label: upl ? 'Yes, remove all uploads' : 'Yes, remove the old Immich data',
+      sub: upl
+        ? 'the uploaded photos are deleted from the TV'
+        : 'the saved key is forgotten and the old Immich photos are deleted from the TV',
       fn: function () {
         wallCall(
           upl ? '/api/wallpapers/remove-uploads' : '/api/wallpapers/disconnect',
           {},
-          upl ? 'Uploads removed' : 'Immich disconnected'
+          upl ? 'Uploads removed' : 'Old Immich data removed'
         );
       },
     });
@@ -911,102 +1295,285 @@ function build() {
             : 'Cannot check'
           : 'Up to date';
   };
-  // updates, then the settings, then support; the destructive row last
-  rows.push({
-    label: 'Launcher ' + fe.version,
-    sub: uptxt(fe.updateTo),
-    dim: busy,
-    fn: fe.updateTo
-      ? function () {
-          run('/api/manager/update-frontend', { version: fe.updateTo });
-        }
-      : null,
-  });
-  rows.push({
-    label: 'Service ' + sv.version,
-    sub: uptxt(sv.updateTo),
-    dim: busy,
-    fn: sv.updateTo
-      ? function () {
-          run('/api/manager/update-service', { version: sv.updateTo });
-        }
-      : null,
-  });
-  rows.push({
-    label: 'Check for updates',
-    dim: busy,
-    fn: function () {
-      banner('Checking…', 'work');
-      api('/api/manager/check', {}).then(refreshDone, refreshDone);
-    },
-  });
-  rows.push({
-    label: 'Update channel',
-    sub: st.channel ? 'Dev builds' : 'Stable releases',
-    dim: busy,
-    fn: openChannel,
-  });
-  if (fe.previous)
+  // the tabs: what each holds is in TABS (core.js); Left and Right turn to the next, the list below is that tab's options
+  var tb = TABS[tab] ? TABS[tab].id : 'updates';
+  if (tb === 'updates') {
     rows.push({
-      label: 'Go back to launcher ' + fe.previous,
+      label: 'Launcher ' + fe.version,
+      sub: uptxt(fe.updateTo),
+      dim: busy,
+      fn: fe.updateTo
+        ? function () {
+            run('/api/manager/update-frontend', { version: fe.updateTo });
+          }
+        : null,
+    });
+    rows.push({
+      label: 'Service ' + sv.version,
+      sub: uptxt(sv.updateTo),
+      dim: busy,
+      fn: sv.updateTo
+        ? function () {
+            run('/api/manager/update-service', { version: sv.updateTo });
+          }
+        : null,
+    });
+    rows.push({
+      label: 'Check for updates',
       dim: busy,
       fn: function () {
-        run('/api/manager/rollback-frontend', {});
+        banner('Checking…', 'work');
+        api('/api/manager/check', {}).then(refreshDone, refreshDone);
       },
     });
+    rows.push({
+      label: 'Update channel',
+      sub: st.channel ? 'Dev builds' : 'Stable releases',
+      dim: busy,
+      fn: openChannel,
+    });
+    if (fe.previous)
+      rows.push({
+        label: 'Go back to launcher ' + fe.previous,
+        dim: busy,
+        fn: function () {
+          run('/api/manager/rollback-frontend', {});
+        },
+      });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'CleanYourTV as Home',
+      sub: onoff(st.home && st.home.enabled),
+      fn: function () {
+        push('home');
+      },
+    });
+    rows.push({
+      label: 'Input key',
+      sub: st.inputhook && st.inputhook.hook && !st.inputhook.hook.attached ? 'not available' : onoff(st.options.inputKey),
+      fn: function () {
+        push('inputkey');
+      },
+    });
+    rows.push({ label: 'Key remapping', sub: 'a button opens an app or input', fn: openRemap });
+    rows.push({ sep: true });
+    rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
+  } else if (tb === 'features') {
+    rows.push({ label: 'Live TV', sub: onoff(st.options.liveTv !== false), fn: openLiveTv });
+    rows.push({
+      label: 'Wallpapers',
+      sub: st.wallpapers ? st.wallpapers.total + ' photos' : '',
+      fn: openWallpapers,
+    });
+    if (st.icons)
+      rows.push({
+        label: 'App icons',
+        sub: 'your own picture for an app',
+        fn: function () {
+          openIconPair('');
+        },
+      });
+    rows.push({ label: 'Cards', sub: 'small widgets on Home', fn: openCards });
+    rows.push({
+      label: 'Android box',
+      sub: ab && ab.configured ? ab.settings.host : ab ? 'off' : '',
+      fn: openAndroidBox,
+    });
+    rows.push({ label: 'Home Assistant', sub: st.voice && st.voice.ha ? 'set up' : 'not set up', fn: openHa });
+    rows.push({
+      label: 'Voice',
+      sub: st.voice ? (st.voice.installed ? onoff(st.voice.enabled) : 'not installed') : '',
+      fn: function () {
+        api('/api/voice/status').then(
+          function (v) {
+            vo = v;
+            push('voice');
+            if ((v.job && v.job.state === 'working') || v.listening) voiceRefresh();
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+    rows.push({
+      label: 'Network notifications',
+      sub: onoff(st.notifyApi && st.notifyApi.enabled),
+      fn: function () {
+        api('/api/manager/notify-api').then(
+          function (n) {
+            napi = n;
+            push('notifyapi');
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+  } else if (tb === 'addons') {
+    addonRows();
+  } else if (tb === 'debloat') {
+    debloatRows();
+  } else {
+    rows.push({
+      label: 'Language',
+      sub: (function () {
+        var n = 'Automatic';
+        languages().forEach(function (x) {
+          if (x.code === st.lang) n = x.name;
+        });
+        return n;
+      })(),
+      fn: function () {
+        push('language');
+      },
+    });
+    rows.push({ label: 'Experimental', sub: 'compressed memory, volume bar', fn: zramLoad });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Reset Home customisation',
+      fn: function () {
+        push('confirm-reset');
+      },
+    });
+    rows.push({
+      label: 'Uninstall',
+      fn: function () {
+        push('confirm-uninstall');
+      },
+    });
+  }
+}
+
+/* an entry of a service older than the repositories has no `official`: everything it lists is the project's */
+function isOfficial(e) {
+  return e.official !== false;
+}
+/* the warning before code from another repository is installed or a repository is added, with what each add-on may do */
+function trustAbout(items) {
+  var out = [
+    tr('The code of an add-on runs as root on the TV and can read and change anything on it and on your network.'),
+    tr('The checksum only shows that a file is the one the repository published. It does not show that its author is trustworthy.'),
+    tr('Only continue for people and projects you trust. The CleanYourTV project has not reviewed these add-ons.'),
+    tr('Every repository is contacted whenever the add-ons list or a picture is opened, so its operator sees the TV’s address.'),
+  ];
+  (items || []).forEach(function (x) {
+    var can = (x.can || []).map(function (c) {
+      return tr(c);
+    });
+    out.push(x.name + ' ' + x.version + ' (' + x.repo + ') ' + tr('may') + ': ' + can.join(', ') + '.');
+  });
+  return out.join('\n\n');
+}
+function addonRows() {
+  if (ad.paused)
+    rows.push({
+      label: 'Add-ons are paused',
+      sub: 'the file DISABLE-ADDONS is present; remove it and restart',
+      dim: true,
+      fn: function () {},
+    });
+  ad.installed.forEach(function (a) {
+    rows.push({
+      label: a.name,
+      pv: a.preview ? a.id : '',
+      about: a.about || a.description,
+      sub:
+        (a.status === 'running' ? 'on' : a.status === 'off' ? 'off' : a.status === 'failed' ? 'failed' : a.status) +
+        (a.version ? ' \u00B7 ' + a.version : '') +
+        (a.bundled ? ' \u00B7 ships with CleanYourTV' : ''),
+      fn: function () {
+        ad.sel = a.id;
+        push('addon');
+      },
+    });
+  });
+  var offer = ad.catalog.filter(function (e) {
+    return !e.installed || e.update;
+  });
+  if (offer.length) rows.push({ sep: true });
+  offer.forEach(function (e) {
+    rows.push({
+      label: e.name,
+      pv: e.preview ? e.id : '',
+      pvu: e.preview && !isOfficial(e) ? '/api/addons/preview/' + e.id + '?repo=' + e.repo : '',
+      about: e.about || e.description,
+      sub: (e.update ? 'Update to ' : 'Install \u00B7 ') + e.version + (isOfficial(e) ? '' : ' \u00B7 from ' + e.repo),
+      fn: function () {
+        if (isOfficial(e)) return addonDo('/api/addons/install', { id: e.id, repo: e.repo }, e.name + ' installed');
+        ad.pend = { id: e.id, repo: e.repo, name: e.name, items: [e] };
+        push('confirm-addon');
+      },
+    });
+  });
+  if (
+    ad.reposOk &&
+    ad.catalog.some(function (e) {
+      return e.update;
+    })
+  )
+    rows.push({
+      label: 'Update all add-ons',
+      sub: 'each from the repository it was installed from',
+      fn: function () {
+        var other = ad.catalog.filter(function (e) {
+          return e.update && !isOfficial(e);
+        });
+        if (!other.length) return addonDo('/api/addons/update', {}, 'Add-ons updated');
+        ad.pend = { all: true, items: other };
+        push('confirm-addon');
+      },
+    });
+  if (ad.reposOk) {
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Repositories',
+      sub: ad.repos.length + (ad.repos.length === 1 ? ' source of add-ons' : ' sources of add-ons') + ' \u00B7 add your own',
+      fn: function () {
+        push('addonrepos');
+      },
+    });
+  }
+  if (bookPages().length) {
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Page strip position',
+      sub: stripPosLabel(ad.book.position) + ' \u00B7 the theme sets its look and the default place',
+      fn: function () {
+        var i = STRIP_POS.indexOf(ad.book.position || '');
+        bookSet({ position: STRIP_POS[(i + 1) % STRIP_POS.length] }, 'Saved');
+      },
+    });
+    rows.push({
+      label: 'Page strip on Home',
+      sub: onoff(ad.book.strip !== false) + ' \u00B7 shows which button turns to which page',
+      fn: function () {
+        bookSet({ strip: ad.book.strip === false }, 'Saved');
+      },
+    });
+  }
+  if (ad.error) rows.push({ label: 'The catalog could not be read', sub: ad.error, dim: true, fn: function () {} });
+}
+
+function debloatRows() {
+  DEBLOAT.forEach(function (g) {
+    rows.push({
+      label: g.label,
+      sub: onoff(debloatOn(g.id)) + ' \u00B7 ' + g.what,
+      fn: function () {
+        debloatToggle(g.id);
+      },
+    });
+  });
   rows.push({ sep: true });
-  rows.push({
-    label: 'CleanYourTV as Home',
-    sub: onoff(st.home && st.home.enabled),
-    fn: function () {
-      push('home');
-    },
-  });
-  rows.push({ label: 'Live TV', sub: onoff(st.options.liveTv !== false), fn: openLiveTv });
-  rows.push({
-    label: 'Wallpapers',
-    sub: st.wallpapers ? st.wallpapers.total + ' photos' : '',
-    fn: openWallpapers,
-  });
-  rows.push({ label: 'Cards', sub: 'small widgets on Home', fn: openCards });
-  rows.push({
-    label: 'Input key',
-    sub: st.inputhook && st.inputhook.hook && !st.inputhook.hook.attached ? 'not available' : onoff(st.options.inputKey),
-    fn: function () {
-      push('inputkey');
-    },
+  var anyOff = DEBLOAT.some(function (g) {
+    return !debloatOn(g.id);
   });
   rows.push({
-    label: 'Debloat',
-    sub: (function () {
-      var n = DEBLOAT.filter(function (g) {
-        return debloatOn(g.id);
-      }).length;
-      return n === DEBLOAT.length ? onoff(true) : n ? n + ' of ' + DEBLOAT.length + ' on' : onoff(false);
-    })(),
+    label: anyOff ? 'Switch all on' : 'Switch all off',
     fn: function () {
-      push('debloat');
-    },
-  });
-  rows.push({
-    label: 'More',
-    sub: 'Home Assistant, voice, language, network notifications',
-    fn: function () {
-      push('more');
-    },
-  });
-  rows.push({ sep: true });
-  rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
-  rows.push({
-    label: 'Reset Home customisation',
-    fn: function () {
-      push('confirm-reset');
-    },
-  });
-  rows.push({
-    label: 'Uninstall',
-    fn: function () {
-      push('confirm-uninstall');
+      opt(anyOff ? { debloat: true, debloatOff: [] } : { debloat: false, debloatOff: [] });
     },
   });
 }
@@ -1018,6 +1585,162 @@ var DEBLOAT = [
   { id: 'logs', label: 'Telemetry logs', what: 'remotelogger, service-logger' },
   { id: 'suggestions', label: 'Suggestions and nudges', what: 'contentminer, nudge, sportsalarm' },
 ];
+/* Experimental: preloaded apps (helper/preload.js). The TV's policy per app: off, or how much of it is started (mode), and how often (type). */
+var preSet = null,
+  preApp = '';
+var PRELOAD_NAMES = {
+  'youtube.leanback.v4': 'YouTube',
+  netflix: 'Netflix',
+  amazon: 'Prime Video',
+  'com.webos.app.browser': 'Web Browser',
+  'com.webos.app.home': 'Home',
+  'com.webos.app.fullhome': 'Home (full)',
+  'com.webos.app.livetv': 'Live TV',
+  'com.webos.app.livemenu': 'Live menu',
+  'com.webos.app.voice': 'Voice',
+  'com.webos.app.hdmi1': 'HDMI 1',
+  'com.webos.app.hdmi2': 'HDMI 2',
+  'com.webos.app.hdmi3': 'HDMI 3',
+  'com.webos.app.hdmi4': 'HDMI 4',
+  'google.assistant': 'Google Assistant',
+  airplay: 'AirPlay',
+};
+function preloadName(id) {
+  return PRELOAD_NAMES[id] || id;
+}
+function preloadApp(id) {
+  var l = (preSet && preSet.apps) || [];
+  for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i];
+  return null;
+}
+/* the state of an app: "off", or its mode */
+function preloadState(a) {
+  return a.enabled ? a.mode : 'off';
+}
+function preloadFixed(a) {
+  return !a.allowed ? 'LG does not preload it on this TV' : a.managed ? 'LG manages it' : '';
+}
+function preloadLoad(stay) {
+  api('/api/preload').then(
+    function (r) {
+      preSet = r;
+      if (stay === true) {
+        build();
+        draw();
+      } else push('preload');
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function preloadSet(id, change) {
+  var body = { id: id };
+  for (var k in change) body[k] = change[k];
+  api('/api/preload', body, 20000).then(
+    function (r) {
+      preSet = r;
+      if (r.error) banner(r.error, 'err');
+      build();
+      draw();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+/* Experimental: compressed memory (zram, helper/zram.js). The service answers with what the TV has now. */
+var zr = null,
+  zrSize = 512,
+  tm = null; /* the weekly trim (helper/fstrim.js) */
+function zramLoad(stay) {
+  api('/api/zram').then(
+    function (r) {
+      zr = r;
+      zrSize = r.size || r.setting || zrSize;
+      api('/api/trim').then(
+        function (t) {
+          tm = t;
+          if (stay === true) {
+            build();
+            draw();
+          } else push('experimental');
+        },
+        function () {
+          tm = null;
+          if (stay === true) {
+            build();
+            draw();
+          } else push('experimental');
+        }
+      );
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+/* "last 2 Nov, 470 MB" or "not run yet" */
+function trimLast(t) {
+  var l = t && t.last;
+  if (!l) return 'not run yet';
+  var mb = 0;
+  (l.mounts || []).forEach(function (m) {
+    mb += m.bytes || 0;
+  });
+  return 'last ' + new Date(l.at).toLocaleDateString() + ', ' + Math.round(mb / 1048576) + ' MB' + (l.ok ? '' : ' (failed)');
+}
+function trimSet(on) {
+  api('/api/trim', { on: on }).then(
+    function (r) {
+      if (r.error) return banner(r.error, 'err');
+      tm = r;
+      banner(on ? 'Weekly trim on: the first one runs a few minutes after the next start of the service' : 'Weekly trim off', 'ok');
+      build();
+      draw();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function trimNow() {
+  banner('Trimming\u2026', 'work');
+  api('/api/trim', { now: true }, 200000).then(
+    function (r) {
+      if (r.error) return banner(r.error, 'err');
+      tm = r;
+      var mb = 0;
+      ((r.result && r.result.mounts) || []).forEach(function (m) {
+        mb += m.bytes || 0;
+      });
+      banner(
+        r.result && r.result.ok ? 'Trimmed ' + Math.round(mb / 1048576) + ' MB' : 'The trim failed on a partition: see Share log',
+        r.result && r.result.ok ? 'ok' : 'err'
+      );
+      build();
+      draw();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function zramSet(size) {
+  banner('Applying\u2026', 'work');
+  api('/api/zram', { size: size }, 130000).then(
+    function (r) {
+      zr = r;
+      zrSize = r.size || r.setting || zrSize;
+      banner(r.error || '', r.error ? 'err' : '');
+      build();
+      draw();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
 function debloatOn(id) {
   var o = st.options || {};
   return o.debloat !== false && (o.debloatOff || []).indexOf(id) < 0;
@@ -1044,4 +1767,12 @@ function debloatToggle(id) {
       return g !== id;
     }),
   });
+}
+
+function volumeSub(theme) {
+  if (theme === 'system') return tr('System default (LG webOS)');
+  if (theme === 'capsule') return tr('Capsule');
+  if (theme === 'dial') return tr('Dial');
+  if (theme === 'pill') return tr('Pill');
+  return tr('System default (LG webOS)');
 }

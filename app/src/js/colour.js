@@ -189,7 +189,85 @@ function analyse(img) {
       if (n) edge = [Math.round(R / n), Math.round(G / n), Math.round(B / n)];
       else k = 'logo';
     }
-    return { k: k, lm: lm, box: [x0 / N, y0 / N, (x1 + 1) / N, (y1 + 1) / N], edge: edge, top: strip(y0, y0 + 1), bot: strip(y1 - 1, y1) };
+    // the picture's own frame: a border of another colour around a calm inside (a card in a light frame). Measured along the middle half
+    // of each side, from the edge inwards; only a border on all four sides counts, so a logo close to one side is not taken for one.
+    // The tile then takes the colour inside the frame and the frame is cut off (fit), so no edge of the picture shows on the tile.
+    var fr = 0,
+      rr = 0;
+    if (k === 'pad') {
+      var deep = Math.max(3, Math.round(Math.min(bw, bh) * 0.14));
+      var side = function (sd, dep) {
+        var R2 = 0,
+          G2 = 0,
+          B2 = 0,
+          n2 = 0,
+          a0 = sd < 2 ? x0 + bw / 4 : y0 + bh / 4,
+          a1 = sd < 2 ? x1 - bw / 4 : y1 - bh / 4;
+        for (var t = Math.round(a0); t <= Math.round(a1); t++) {
+          var px = sd === 0 || sd === 1 ? t : sd === 2 ? x0 + dep : x1 - dep,
+            py = sd === 0 ? y0 + dep : sd === 1 ? y1 - dep : t,
+            o = (py * N + px) * 4;
+          if (d[o + 3] >= 230) {
+            R2 += d[o];
+            G2 += d[o + 1];
+            B2 += d[o + 2];
+            n2++;
+          }
+        }
+        return n2 ? [R2 / n2, G2 / n2, B2 / n2] : null;
+      };
+      var inside = [],
+        depth = deep;
+      for (var sd = 0; sd < 4 && depth > 0; sd++) {
+        var inn = side(sd, deep),
+          dsd = 0;
+        if (!inn) {
+          depth = 0;
+          break;
+        }
+        inside.push(inn);
+        for (var dep = 0; dep < deep; dep++) {
+          var c2 = side(sd, dep);
+          if (c2 && Math.abs(c2[0] - inn[0]) + Math.abs(c2[1] - inn[1]) + Math.abs(c2[2] - inn[2]) > 40) dsd = dep + 1;
+        }
+        depth = Math.min(depth, dsd);
+      }
+      if (depth > 0 && inside.length === 4) {
+        var mean = [0, 1, 2].map(function (q2) {
+          return (inside[0][q2] + inside[1][q2] + inside[2][q2] + inside[3][q2]) / 4;
+        });
+        // the inside must be one colour on all four sides (a card), not four different parts of a picture
+        if (
+          inside.every(function (v) {
+            return Math.abs(v[0] - mean[0]) + Math.abs(v[1] - mean[1]) + Math.abs(v[2] - mean[2]) < 30;
+          })
+        ) {
+          fr = depth / N;
+          edge = mean.map(Math.round);
+          // the inside's rounded corner: from the frame's inner corner along the diagonal until the inside's colour (a rounded corner
+          // of radius r leaves about 0.29 r of the diagonal outside it), so the cut follows it and no bit of the frame stays in a corner
+          for (var g2 = 0; g2 < deep * 2; g2++) {
+            var o2 = ((y0 + depth + g2) * N + (x0 + depth + g2)) * 4;
+            if (Math.abs(d[o2] - mean[0]) + Math.abs(d[o2 + 1] - mean[1]) + Math.abs(d[o2 + 2] - mean[2]) <= 40) break;
+          }
+          rr = Math.min(g2 / 0.29, Math.min(bw, bh) / 4) / N;
+        }
+      }
+    }
+    var out = {
+      k: k,
+      lm: lm,
+      box: [x0 / N, y0 / N, (x1 + 1) / N, (y1 + 1) / N],
+      edge: edge,
+      top: strip(y0, y0 + 1),
+      bot: strip(y1 - 1, y1),
+    };
+    if (fr) {
+      out.fr = fr;
+      out.fround = rr;
+      out.top = out.bot = edge;
+    }
+    return out;
   } catch (e) {
     return null;
   }
@@ -258,11 +336,17 @@ function iconColor(img, id) {
       col.gt = an.top;
       col.gb = an.bot;
     }
+    if (an.fr) {
+      col.fr = an.fr;
+      col.fround = an.fround || 0;
+    }
   }
   if (tainted) col.t = 1;
   return col;
 }
-/* a picture with a transparent margin fills a grid tile (cropped to its visible part); in the wide dock tiles it keeps its size on a tile of its own colour */
+/* a picture with a transparent margin fills a grid tile from top to bottom (its visible part, at its own proportions: a square icon is not
+   stretched to the wider tile), on a tile of the picture's own edge colour, or its top-to-bottom gradient; a frame of the picture's own is
+   cut off. In the wide dock tiles it keeps its size on a tile of its own colour. */
 function fit(d, dock) {
   var i = d._i,
     c = d._col;
@@ -270,6 +354,19 @@ function fit(d, dock) {
   i.removeAttribute('style');
   d.classList.remove('fill');
   d.style.background = '';
+  /* a picture of your own shown as Full tile (the App icons add-on): it covers the tile, its middle kept, in the dock and the grid alike */
+  if (d._it) {
+    d.classList.add('fill');
+    var st = i.style;
+    st.position = 'absolute';
+    st.left = '0';
+    st.top = '0';
+    st.width = '100%';
+    st.height = '100%';
+    st.maxWidth = 'none';
+    st.objectFit = 'cover';
+    return;
+  }
   if (!c || c.k !== 'pad' || !c.box) return;
   var bx = c.box,
     bw = bx[2] - bx[0],
@@ -287,10 +384,28 @@ function fit(d, dock) {
   d.classList.add('fill');
   s.position = 'absolute';
   s.maxWidth = 'none';
-  s.width = 100 / bw + '%';
+  s.width = 'auto';
   s.height = 100 / bh + '%';
-  s.left = (-bx[0] / bw) * 100 + '%';
   s.top = (-bx[1] / bh) * 100 + '%';
+  s.left = '50%';
+  s.transform = 'translateX(' + (-(bx[0] + bx[2]) / 2) * 100 + '%)';
+  if (c.fr) {
+    var f = c.fr * 100;
+    s.webkitClipPath = s.clipPath =
+      'inset(' +
+      (bx[1] * 100 + f) +
+      '% ' +
+      ((1 - bx[2]) * 100 + f) +
+      '% ' +
+      ((1 - bx[3]) * 100 + f) +
+      '% ' +
+      (bx[0] * 100 + f) +
+      '% round ' +
+      ((c.fround || 0) * 100 + 1) +
+      '%)';
+  }
+  if (c.gt && c.gb && Math.abs(c.gt[0] - c.gb[0]) + Math.abs(c.gt[1] - c.gb[1]) + Math.abs(c.gt[2] - c.gb[2]) > 40)
+    d.style.background = 'linear-gradient(rgb(' + c.gt.join(',') + '),rgb(' + c.gb.join(',') + '))';
 }
 function paint(d, col) {
   d.style.setProperty('--c', col.c.join(','));

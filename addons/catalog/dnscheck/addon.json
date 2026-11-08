@@ -1,0 +1,18 @@
+{
+  "id": "dnscheck",
+  "name": "DNS check",
+  "version": "1.0.0",
+  "kind": "service",
+  "description": "Shows which ad and tracking hosts your network blocks, as the TV itself sees them.",
+  "about": "Checks which ad and tracking hosts your network blocks, as the TV itself sees them: ad servers of LG and others, with Blocked, Reachable or No answer for each. Useful after changing your router or DNS blocker. OK checks again.",
+  "entry": {
+    "service": "service.js",
+    "page": "index.html"
+  },
+  "permissions": [],
+  "tile": {
+    "label": "DNS",
+    "icon": "globe",
+    "placement": "page"
+  }
+}

@@ -2,6 +2,8 @@ document.addEventListener('keydown', function (e) {
   var k = e.keyCode;
   if (k === 38) next(-1);
   else if (k === 40) next(1);
+  else if (k === 37) setTab(tab - 1);
+  else if (k === 39) setTab(tab + 1);
   else if (k === 13) act();
   else if (k === 461 || k === 27 || k === 8 || k === 10009) {
     if (view === 'share') closeShare();
@@ -18,6 +20,11 @@ document.addEventListener('keydown', function (e) {
 document.addEventListener('click', function (e) {
   if (e.target.closest && e.target.closest('#shareclose')) {
     closeShare();
+    return;
+  }
+  var tb = e.target.closest && e.target.closest('.tab');
+  if (tb) {
+    setTab(+tb.getAttribute('data-t'));
     return;
   }
   var r = e.target.closest && e.target.closest('.row');
@@ -38,14 +45,18 @@ document.addEventListener('wheel', function (e) {
   if (e.deltaY > 0) next(1);
   else if (e.deltaY < 0) next(-1);
 }); /* the Magic Remote wheel */
-/* opened with {"open":"wallpapers"}, {"open":"cards"} or {"open":"ha"} (the launcher's Customise menu): straight to that screen */
+/* opened with {"open":"wallpapers"}, {"open":"cards"}, {"open":"addons"} or {"open":"ha"} (the launcher's Customise menu), or {"open":"icons", "app": id}
+   (a tile's Change icon): straight to that screen */
 var cardsFromHome = false;
 function wantView() {
   var p = {};
   try {
     p = JSON.parse(window.webOSSystem.launchParams || '{}');
   } catch (e) {}
+  if (p && p.open === 'remaplearned') rmResume();
   if (p && p.open === 'wallpapers') openWallpapers();
+  if (p && p.open === 'icons') openIconPair(String(p.app || ''));
+  if (p && p.open === 'addons') wantTab = 2;
   /* the launcher's Customise > Home Assistant > Connection: the Home Assistant screen with its phone page */
   if (p && p.open === 'ha')
     api('/api/voice/status').then(
@@ -56,13 +67,29 @@ function wantView() {
       },
       function () {}
     );
+  if (p && p.open === 'volumebar') push('volumebar');
   if (p && p.open === 'cards') {
     cardsFromHome = true;
     openCards();
   }
+  /* the launcher's Customise > Weather > More on your phone: the QR code of the cards page at once, Back returns to the cards */
+  if (p && p.open === 'cardspair') {
+    cardsFromHome = true;
+    api('/api/cards/status', {}).then(
+      function (r) {
+        cs = r;
+        push('cards');
+        openCardsPair();
+      },
+      function () {
+        banner('The service did not answer', 'err');
+      }
+    );
+  }
 }
 document.addEventListener('webOSRelaunch', function () {
   view = 'main';
+  tab = 0;
   idx = 0;
   idxStack = [];
   listY = 0;

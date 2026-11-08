@@ -51,6 +51,7 @@ const TYPES = [
   {
     type: 'greeting',
     name: 'Greeting',
+    about: 'Good morning, good afternoon or good evening by the time of day, with a name and a second line: the date or the weather.',
     fields: [
       { key: 'name', kind: 'text', label: 'Name (optional)' },
       {
@@ -68,6 +69,7 @@ const TYPES = [
   {
     type: 'weather',
     name: 'Weather',
+    about: 'The weather now at a place you choose on your phone, with the next days if you like.',
     fields: [
       { key: 'place', kind: 'place', label: 'Place' },
       {
@@ -93,6 +95,7 @@ const TYPES = [
   {
     type: 'ha-entity',
     name: 'Home Assistant entity',
+    about: 'One Home Assistant entity with an icon and its state. OK switches a light, a switch or a scene.',
     ha: true,
     fields: [
       { key: 'entity', kind: 'entity', label: 'Entity' },
@@ -102,15 +105,26 @@ const TYPES = [
   {
     type: 'ha-entities',
     name: 'Home Assistant entities',
+    about: 'Several Home Assistant entities in a list under a title, each with its state.',
     ha: true,
     fields: [
       { key: 'title', kind: 'text', label: 'Title (optional)' },
       { key: 'entities', kind: 'entities', label: 'Entities, one per line' },
+      {
+        key: 'background',
+        kind: 'choice',
+        label: 'Card background',
+        choices: [
+          ['', 'Theme default'],
+          ['dark', 'Dark background'],
+        ],
+      },
     ],
   },
   {
     type: 'ha-weather',
     name: 'Home Assistant weather',
+    about: 'The weather from a Home Assistant weather entity, with the temperature outside and the forecast.',
     ha: true,
     fields: [
       { key: 'entity', kind: 'entity', label: 'Weather entity', only: 'weather' },
@@ -130,6 +144,7 @@ const TYPES = [
   {
     type: 'ha-camera',
     name: 'Home Assistant camera',
+    about: 'A Home Assistant camera: a new picture every 10, 30 or 60 seconds.',
     ha: true,
     fields: [
       { key: 'entity', kind: 'entity', label: 'Camera', only: 'camera' },
@@ -148,6 +163,7 @@ const TYPES = [
   {
     type: 'template',
     name: 'Text',
+    about: 'Your own text, with the greeting, time, date and weather filled in as they change.',
     fields: [
       { key: 'text', kind: 'long', label: 'Text' },
       {
@@ -164,28 +180,76 @@ const TYPES = [
   },
 ];
 // the usual slot ids, named as in the launcher
-const SLOT_NAMES = { greeting: 'Above the clock', 'clock-side': 'Beside the clock', side: 'Right column', row: 'Above the dock' };
+const SLOT_NAMES = {
+  greeting: 'Above the clock',
+  'under-clock': 'Under the clock',
+  'clock-side': 'Beside the clock',
+  side: 'Right column',
+  row: 'Above the dock',
+};
 const PAIR_PORT = 8792, // after the Wallpapers page (8791)
   PAIR_MS = 10 * 60 * 1000;
+
+// what an add-on says about places is data for the launcher's list: text without control characters or angle brackets, coordinates in range
+function cleanPlaces(list) {
+  const text = (v, n) =>
+    typeof v === 'string'
+      ? Array.from(v)
+          .filter(ch => ch.charCodeAt(0) > 31 && ch.charCodeAt(0) !== 127 && ch !== '<' && ch !== '>')
+          .join('')
+          .trim()
+          .slice(0, n)
+      : '';
+  const out = [];
+  for (const p of Array.isArray(list) ? list : []) {
+    if (out.length >= 10) break;
+    if (!p || typeof p !== 'object') continue;
+    const lat = p.lat,
+      lon = p.lon,
+      name = text(p.name, 40);
+    if (!name || typeof lat !== 'number' || typeof lon !== 'number' || !isFinite(lat) || !isFinite(lon)) continue;
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
+    out.push({ name, area: text(p.area, 80), lat: Math.round(lat * 100) / 100, lon: Math.round(lon * 100) / 100 });
+  }
+  return out;
+}
 
 function create(ctx) {
   const config = ctx.config,
     weather = require('./weather').create({ path: require('./paths').WEATHER }),
-    ha = require('./hacards').create({ config });
+    ha = require('./hacards').create({ config }),
+    packs = require('./cardcatalog').create(ctx);
   const slots = () => {
     const th = ctx.feature('theme'),
       r = th && th.resolved();
     return (r && r.slots) || [];
   };
+  // the downloaded cards as card types (x-<id>), their options as the fields of the form on the phone page
+  /** @returns {any[]} */
+  function packTypes() {
+    const have = packs.all();
+    return Object.keys(have).map(id => ({
+      type: 'x-' + id,
+      name: have[id].name,
+      pack: have[id],
+      fields: have[id].options.map(o =>
+        Object.assign({ key: o.key, kind: o.kind, label: o.label, default: o.default }, o.choices ? { choices: o.choices } : {})
+      ),
+    }));
+  }
   function state(lang) {
     const T = x => i18n.tr(lang, x);
     return {
-      slots: slots().map(sl => ({ id: sl.id, name: T(SLOT_NAMES[sl.id] || sl.id), card: sl.card })),
+      slots: slots().map(sl => ({ id: sl.id, name: T(sl.name || SLOT_NAMES[sl.id] || sl.id), card: sl.card })),
       cards: config.get().cards || {},
       ha: ha.ready(),
-      types: TYPES.map(ty => ({
+      types: /** @type {any[]} */ (TYPES).concat(packTypes()).map(ty => ({
         type: ty.type,
         name: T(ty.name),
+        about: ty.about ? T(ty.about) : ty.pack ? ty.pack.about || ty.pack.description : '',
+        preview: ty.pack ? ty.pack.id : ty.type,
+        drawer: ty.pack && ty.pack.drawer ? { label: T(ty.pack.drawer.label) } : null,
+        settings: ty.pack && ty.pack.settings ? { title: T(ty.pack.settings.title) } : null,
         fields: ty.fields.map(f => Object.assign({}, f, { label: T(f.label), choices: f.choices && f.choices.map(c => [c[0], T(c[1])]) })),
       })),
     };
@@ -193,7 +257,8 @@ function create(ctx) {
   // the manager's Cards screen: a card type for one slot ('none' leaves it empty); the options stay when the same type is chosen again
   function setType(slot, type) {
     if (!slots().some(sl => sl.id === slot)) return { error: 'this theme has no such place' };
-    if (type !== 'none' && !TYPES.some(ty => ty.type === type)) return { error: 'unknown card type' };
+    if (type !== 'none' && !(/** @type {any[]} */ (TYPES).concat(packTypes()).some(ty => ty.type === type)))
+      return { error: 'unknown card type' };
     config.update('cards (manager)', conf => {
       const c = Object.assign({}, conf.cards || {}),
         old = c[slot] || {};
@@ -201,6 +266,49 @@ function create(ctx) {
       conf.cards = c;
     });
     return { ok: true };
+  }
+  // an option value from the launcher's settings panel of a card, checked against what the card declares: {value} or {error}
+  function checkOption(f, v) {
+    if (f.kind === 'choice') return f.choices.some(c => c[0] === v) ? { value: v } : { error: 'not a choice of this card' };
+    if (typeof v !== 'string') return { error: 'not a text' };
+    const t = Array.from(v)
+      .filter(ch => ch.charCodeAt(0) > 31 && ch.charCodeAt(0) !== 127 && ch !== '<' && ch !== '>')
+      .join('')
+      .trim()
+      .slice(0, f.kind === 'place' ? 40 : 200);
+    return { value: t };
+  }
+  // the launcher's settings panel of a card: {type, set} -> every place that holds a card of this downloaded or add-on type gets those options
+  // (the city with its coordinates, the unit, the size). Only options the card declares count, and a city has both coordinates or none.
+  function setOptions(type, set) {
+    const ty = packTypes().filter(x => x.type === type)[0];
+    if (!ty) return { error: 'unknown card type' };
+    // only a card of an add-on that declares settings has a panel; a downloaded card or one without settings is not changed from here
+    if (!ty.pack || !ty.pack.addon || !ty.pack.settings) return { error: 'this card has no settings' };
+    if (!set || typeof set !== 'object' || Array.isArray(set)) return { error: 'no options' };
+    const patch = {};
+    for (const f of ty.fields) {
+      if (!(f.key in set)) continue;
+      const r = checkOption(f, set[f.key]);
+      if (r.error) return { error: r.error };
+      patch[f.key] = r.value;
+      if (f.kind === 'place') {
+        const lat = set.lat,
+          lon = set.lon;
+        if (typeof lat === 'number' && typeof lon === 'number' && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+          patch.lat = Math.round(lat * 100) / 100;
+          patch.lon = Math.round(lon * 100) / 100;
+        } else return { error: 'a city needs its coordinates' };
+      }
+    }
+    const have = Object.keys(config.get().cards || {}).filter(id => (config.get().cards[id] || {}).type === type);
+    if (!have.length) return { error: 'this card is not on Home' };
+    const next = Object.assign({}, config.get().cards);
+    config.update('cards (launcher)', conf => {
+      for (const id of have) next[id] = Object.assign({}, next[id], patch);
+      conf.cards = next;
+    });
+    return { ok: true, cards: next };
   }
   function save(cards) {
     const c = sanitize(cards) || {};
@@ -279,8 +387,73 @@ function create(ctx) {
     json({ error: 'not found' }, 404);
   }
 
+  // ---- cards of add-ons (addon.json "cards"): the launcher asks the add-on for the card's data and sends it the card's actions ----
+  const FEED_MAX = 128 * 1024; // a cover as a data: address fits; anything larger is refused
+  // the add-on behind the card in a slot: {opt} (the card's options as the add-on gets them: defaults filled in, a place with its
+  // coordinates) with the card and the add-on's service; {error} when the slot holds no such card
+  function addonCard(slot) {
+    const c = (config.get().cards || {})[slot];
+    const e =
+      c &&
+      typeof c.type === 'string' &&
+      /^x-/.test(c.type) &&
+      ctx
+        .feature('addons')
+        .cardsOf()
+        .filter(x => 'x-' + x.card.id === c.type)[0];
+    if (!e || !e.mod || !e.mod.cards) return { error: 'no such card' };
+    const opt = {};
+    for (const q of e.card.options) {
+      const v = c[q.key];
+      opt[q.key] = v !== undefined && v !== '' ? v : q.kind === 'choice' && !q.default ? q.choices[0][0] : q.default;
+      if (q.kind === 'place') {
+        opt.lat = c.lat;
+        opt.lon = c.lon;
+      }
+    }
+    return { e, opt };
+  }
+  // a call into the add-on that always ends: its answer, {error}, or {error} after 15 seconds
+  /** @param {() => any} fn */
+  function inAddon(fn) {
+    return new Promise(resolve => {
+      const t = setTimeout(() => resolve({ error: 'the add-on did not answer' }), 15000);
+      Promise.resolve()
+        .then(fn)
+        .then(
+          r => {
+            clearTimeout(t);
+            resolve(r && typeof r === 'object' && !Array.isArray(r) ? r : {});
+          },
+          err => {
+            clearTimeout(t);
+            resolve({ error: String((err && err.message) || err).slice(0, 160) });
+          }
+        );
+    });
+  }
+  async function addonFeed(slot) {
+    const a = addonCard(String(slot || ''));
+    if (a.error) return a;
+    if (typeof a.e.mod.cards.feed !== 'function') return {};
+    const r = await inAddon(() => a.e.mod.cards.feed(a.e.card.id, a.opt));
+    return JSON.stringify(r).length > FEED_MAX ? { error: 'the answer is too large' } : r;
+  }
+  async function addonAction(slot, name, arg) {
+    const a = addonCard(String(slot || ''));
+    if (a.error) return a;
+    if (!a.e.card.actions.some(x => x.name === name) || typeof a.e.mod.cards.action !== 'function') return { error: 'no such action' };
+    // the actions of the drawer and of the settings belong to the launcher (it opens the sheet or the panel), never to the add-on
+    if ((a.e.card.drawer && a.e.card.drawer.action === name) || (a.e.card.settings && a.e.card.settings.action === name))
+      return { error: 'no such action' };
+    const v = typeof arg === 'string' ? arg.slice(0, 100) : typeof arg === 'number' && isFinite(arg) ? arg : '';
+    return inAddon(() => a.e.mod.cards.action(a.e.card.id, a.opt, name, v));
+  }
+
   async function handle(req, res, u, body) {
     // a Home Assistant camera's picture for the camera card (GET, so the launcher can use it as an image)
+    if (u.indexOf('/card/') === 0) return packs.serve(req, res, u);
+    if (await packs.handle(req, res, u, body)) return;
     const cam = /^\/api\/cards\/ha\/camera\/(camera\.[\w]{1,120})$/.exec(u);
     if (cam) {
       const img = await ha.camera(cam[1]);
@@ -293,7 +466,28 @@ function create(ctx) {
     if (u === '/api/cards/pair') return web.json(res, b.stop ? (stopPair(), {}) : await startPair());
     // the manager's Cards screen: the theme's places with their cards, and a card type picked for one of them
     if (u === '/api/cards/status') return web.json(res, state(i18n.lang(req, config.get().lang)));
+    // a card of an add-on: {slot} -> its data; {slot, name, arg} -> an action of one of its buttons
+    if (u === '/api/cards/feed' || u === '/api/cards/action') i18n.screen(b.lang);
+    if (u === '/api/cards/feed') return web.json(res, await addonFeed(b.slot));
+    if (u === '/api/cards/action') return web.json(res, await addonAction(b.slot, String(b.name || ''), b.arg));
     if (u === '/api/cards/set') return web.json(res, setType(String(b.slot || ''), String(b.type || '')));
+    // the launcher's settings panel of a card: {type, set: {place, lat, lon, unit, size}} -> those options on every place with that card
+    if (u === '/api/cards/options') return web.json(res, setOptions(String(b.type || ''), b.set));
+    // a city search for a card (the settings panel): {type, q} -> {places: [{name, area, lat, lon}]}, answered by the service of the card's
+    // add-on through its optional hook cards.places(q, lang) -> {places: [...]}
+    if (u === '/api/cards/places') {
+      const e = ctx
+          .feature('addons')
+          .cardsOf()
+          .filter(x => 'x-' + x.card.id === String(b.type || ''))[0],
+        q = String(b.q || '')
+          .trim()
+          .slice(0, 60);
+      if (!e || !e.mod || !e.mod.cards || typeof e.mod.cards.places !== 'function' || q.length < 2) return web.json(res, { places: [] });
+      const lang = i18n.lang(req, config.get().lang),
+        r = await inAddon(() => e.mod.cards.places(q, lang));
+      return web.json(res, r.error ? { error: 'City search is not available now.', places: [] } : { places: cleanPlaces(r.places) });
+    }
     // the weather card: {lat, lon, unit} -> the weather there (Open-Meteo, at most every 30 minutes)
     if (u === '/api/cards/weather') return web.json(res, await weather.get(b.lat, b.lon, b.unit));
     // Home Assistant cards: {ids} -> their states (kept 20 s); {id} -> switched (lights, switches, fans, scenes, scripts)
@@ -306,7 +500,8 @@ function create(ctx) {
     if (u === '/api/cards/ha/entities') return web.json(res, Object.assign({ ha: ha.ready() }, await ha.pick(b.domains)));
     web.notFound(res);
   }
-  return { name: 'cards', prefix: '/api/cards/', handle, stop: stopPair };
+  // the files of a page card are under /card/<id>/ (cardcatalog.js)
+  return { name: 'cards', prefix: '/api/cards/', match: packs.match, handle, stop: stopPair, packs: () => packs.all() };
 }
 
 // the phone page: a form per slot (the card type, then its options), and all cards as JSON. Plain script for iOS Safari and Android
@@ -330,7 +525,7 @@ function draw(){var box=$('slots');box.innerHTML='';$('sum').textContent=S.slots
 function fields(f,c){f.innerHTML='';var ty=typeOf(c.type);if(!ty)return;ty.fields.forEach(function(fd){var l=el('label',{},fd.label),i;
   if(fd.kind==='choice'){i=el('select',{'data-k':fd.key});fd.choices.forEach(function(ch){i.appendChild(el('option',{value:ch[0]},ch[1]))})}
   else if(fd.kind==='long'){i=el('textarea',{'data-k':fd.key,rows:4})}else if(fd.kind==='place'){f.appendChild(l);place(f,c);return}else if(fd.kind==='entities'){i=el('textarea',{'data-k':fd.key,rows:5,list:'ents',autocapitalize:'off',spellcheck:'false'})}else if(fd.kind==='entity'){i=el('input',{'data-k':fd.key,type:'text',list:fd.only==='camera'?'cams':fd.only==='weather'?'wxs':fd.only==='sensor'?'sens':'ents',autocomplete:'off',autocapitalize:'off'})}else i=el('input',{'data-k':fd.key,type:'text',autocomplete:'off'});
-  i.value=c[fd.key]===undefined?'':String(c[fd.key]);f.appendChild(l);f.appendChild(i)});
+  if(fd.default)i.setAttribute('placeholder',fd.default);i.value=c[fd.key]===undefined?'':String(c[fd.key]);f.appendChild(l);f.appendChild(i)});
  if(ty.ha&&!S.ha)f.insertBefore(el('p',{'class':'m e'},t('Home Assistant is not set up yet: set its address and token in the manager app, More > Home Assistant.')),f.firstChild);
  if(c.type==='template')f.appendChild(el('p',{'class':'h'},t('Use {{greeting}}, {{time}}, {{date}} and {{weekday}} for what changes, and {{weather.temp}} and {{weather.text}} when a weather card is on Home; **bold**, *italic* and a line starting with # for a heading.')))}
 /* a place for the weather: searched by name (Open-Meteo, through the TV), its coordinates kept in two hidden fields */

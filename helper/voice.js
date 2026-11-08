@@ -15,6 +15,7 @@ const nc = require('./netcompat'),
 const answers = require('./answers'),
   { toServer, askLlm, askHa, haTest, haAgents, models, haBase, haReady, llmCfg, haCfg, LLM_DEFAULTS, HA_DEFAULTS, HA_ROUTES } = answers;
 const P = require('./paths'),
+  luna = require('./luna'),
   exec = require('./exec'),
   fetch = require('./fetch'),
   web = require('./web'),
@@ -72,6 +73,24 @@ const setJob = (state, message) => {
 };
 const cfg = () => Object.assign({}, DEFAULTS, ctx.config.get().voice || {});
 const installed = () => fs.existsSync(V + '/installed') && fs.existsSync(V + '/cytv-asr');
+
+// The recogniser is a 64-bit ARM program (voice/build.sh), so it needs a 64-bit kernel: the programs of the TV can be 32-bit (they are on
+// the G2), but a TV whose kernel is 32-bit ARM (uname -m: armv7l, as on the 43UP7550PTZ, issue 175) cannot start it at all: the shell
+// then reads the 64-bit loader as a script and reports "syntax error: unexpected word". It is asked once, before anything is downloaded.
+// A kernel that says armv8l or aarch64 is 64-bit (a 32-bit program on a 64-bit kernel is told armv8l); other machines (a computer
+// running the tests) are not judged. CYTV_KERNEL_ARCH stands in for uname in the tests.
+let kernel = process.env.CYTV_KERNEL_ARCH || '';
+function kernelArch() {
+  if (kernel) return Promise.resolve(kernel);
+  return exec.run('uname', ['-m'], { timeout: 5000 }).then(r => (kernel = r.ok ? r.out.trim() : ''));
+}
+const kernel32 = k => /^arm(v[1-7]\w*)?$/.test(k || '');
+const unsupported = () =>
+  kernel32(kernel)
+    ? 'Voice needs a TV with a 64-bit kernel. The kernel of this TV is 32-bit ARM (' +
+      kernel +
+      '), so the speech recogniser cannot run on it.'
+    : '';
 const dirSize = d => {
   let n = 0;
   try {
@@ -177,13 +196,20 @@ function install() {
     return;
   }
   setJob('working', 'Starting');
-  doInstall().then(
-    () => setJob('done', 'Voice is installed'),
-    e => {
-      rmrf(V);
-      setJob('error', 'Install failed: ' + e.message);
-    }
-  );
+  // the kernel is asked first: nothing is downloaded for a TV that cannot run the recogniser
+  kernelArch()
+    .catch(() => '')
+    .then(() => {
+      if (unsupported()) throw new Error(unsupported());
+      return doInstall();
+    })
+    .then(
+      () => setJob('done', 'Voice is installed'),
+      e => {
+        rmrf(V);
+        setJob('error', unsupported() ? e.message : 'Install failed: ' + e.message);
+      }
+    );
 }
 function uninstall() {
   if (job.state === 'working') return;
@@ -244,7 +270,7 @@ function capture() {
     const stream = cp.spawn(
       'luna-send',
       ['-i', '-f', 'luna://com.webos.service.voiceinput/startStreaming', '{"deviceType":"remote","keyType":"thinQtv","subscribe":true}'],
-      { env: ENV, stdio: 'ignore' }
+      { env: ENV, stdio: [luna.keepStdinOpen() ? 'pipe' : 'ignore', 'ignore', 'ignore'] }
     );
     const chunks = [];
     let buf = Buffer.alloc(0),
@@ -647,6 +673,7 @@ const status = () => {
   const c = cfg();
   return {
     installed: installed(),
+    unsupported: unsupported(),
     bytes: installed() || job.state === 'working' ? dirSize(V) : 0,
     enabled: !!c.enabled,
     url: c.url,
@@ -671,6 +698,7 @@ function create(c) {
   answers.init(cfg);
   // the voice key of LG's own remote handling follows our setting (syncLg); checked now and then
   const start = () => {
+    kernelArch().catch(() => {}); // for the status: the manager says at once that this TV cannot run voice
     setInterval(syncLg, 20000);
     setTimeout(syncLg, 5000);
   };

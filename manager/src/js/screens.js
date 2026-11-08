@@ -48,6 +48,124 @@ function openNotifyQr() {
     }
   );
 }
+/* Add-ons (helper/addons.js): the ones on the TV and the project's catalog */
+function loadAddons() {
+  Promise.all([
+    api('/api/addons'),
+    api('/api/addons/catalog'),
+    api('/api/addons/repos').catch(function () {
+      return null; /* a service older than the repositories */
+    }),
+  ]).then(
+    function (r) {
+      ad.installed = (r[0] && r[0].addons) || [];
+      ad.catalog = (r[1] && r[1].addons) || [];
+      ad.error = (r[1] && r[1].error) || '';
+      ad.reposOk = !!(r[2] && Array.isArray(r[2].repos));
+      ad.repos = ad.reposOk ? r[2].repos : [];
+      ad.paused = !!(r[0] && r[0].paused);
+      ad.book = (r[0] && r[0].book) || ad.book;
+      if (view === 'addon' && !addonSel()) pop();
+      if (view === 'addonrepo' && !repoSel()) pop();
+      build();
+      if (idx >= rows.length) idx = Math.max(0, rows.length - 1);
+      draw();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function repoSel() {
+  for (var i = 0; i < ad.repos.length; i++) if (ad.repos[i].name === ad.repoSel) return ad.repos[i];
+  return null;
+}
+/* Add-ons > Repositories > Add from your phone: the address is typed on the phone (a page on port 8800) */
+/* first the warning, with Cancel as the default; its deliberate button opens the page for the phone */
+function openRepoDialog() {
+  ad.pend = {};
+  push('confirm-repo');
+}
+function openRepoPair() {
+  pairScreen('addonpair', 'repos', 'Add a repository', '/api/addons/repos/phone');
+}
+function addonSel() {
+  for (var i = 0; i < ad.installed.length; i++) if (ad.installed[i].id === ad.sel) return ad.installed[i];
+  return null;
+}
+function addonDo(path, body, done, after) {
+  banner('Working\u2026', 'work');
+  api(path, body).then(
+    function (r) {
+      if (r.error) {
+        /* refused, or a stop that failed: the add-on may still be running, so show the real status and do not go on as if it had worked */
+        banner(r.error, 'err');
+        loadAddons();
+        return;
+      }
+      banner(r.restartNeeded ? done + ' \u00B7 restart the TV to apply it' : done, 'ok');
+      loadAddons();
+      if (after && !r.restartNeeded) after();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+/* the book: which add-ons are pages of the launcher, in which order, and whether the strip at the bottom of Home shows */
+/* where the page strip can be put by the user ('' leaves it to the theme); the order is the order of the row when it is chosen again */
+var STRIP_POS = ['', 'bottom-center', 'bottom-left', 'bottom-right', 'top-left', 'top-center', 'top-right'];
+function stripPosLabel(p) {
+  return p ? p.replace('-', ' ') : 'theme default';
+}
+function bookPages() {
+  return ad.installed
+    .filter(function (a) {
+      return a.bookable;
+    })
+    .sort(function (a, b) {
+      return a.order - b.order;
+    });
+}
+function bookSet(body, done) {
+  banner('Working\u2026', 'work');
+  api('/api/addons/book', body).then(
+    function (r) {
+      if (r.error) return banner(r.error, 'err');
+      banner(done, 'ok');
+      loadAddons();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function bookMove(id, d) {
+  var all = bookPages(),
+    ids = all
+      .filter(function (a) {
+        return a.inBook;
+      })
+      .map(function (a) {
+        return a.id;
+      }),
+    i = ids.indexOf(id),
+    j = i + d;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  ids.splice(j, 0, ids.splice(i, 1)[0]);
+  /* the pages that are left out keep their place after the others */
+  all.forEach(function (a) {
+    if (ids.indexOf(a.id) < 0) ids.push(a.id);
+  });
+  bookSet({ order: ids }, 'Page moved');
+}
+function bookShow(id, on) {
+  var hidden = ad.book.hidden.filter(function (h) {
+    return h !== id;
+  });
+  if (!on) hidden.push(id);
+  bookSet({ hidden: hidden }, on ? 'Page shown' : 'Page hidden');
+}
 function openLiveTv() {
   api('/api/live/status').then(
     function (r) {
@@ -60,7 +178,7 @@ function openLiveTv() {
     }
   );
 }
-/* Wallpapers: photos uploaded from a phone and synced from Immich (helper/wallpapers.js); the launcher's Customise switches them on */
+/* Wallpapers: photos uploaded from a phone and the photo sources of add-ons (helper/wallpapers.js); the launcher's Customise switches them on */
 function openWallpapers() {
   api('/api/wallpapers/status').then(
     function (r) {
@@ -70,7 +188,6 @@ function openWallpapers() {
         build();
         draw();
       }
-      if (r.immich && r.immich.state === 'syncing') setTimeout(wallRefresh, 3000);
     },
     function () {
       banner('The service did not answer', 'err');
@@ -90,7 +207,6 @@ function wallCall(path, b, msg) {
         build();
         draw();
       }
-      if (r.immich && r.immich.state === 'syncing') setTimeout(wallRefresh, 3000);
     },
     function () {
       banner('The service did not answer', 'err');
@@ -105,7 +221,7 @@ function openWallPair() {
   $('qrbox').style.visibility = 'hidden';
   $('share').querySelector('h2').textContent = tr('Wallpapers');
   $('share').querySelector('ol').innerHTML = tr(
-    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Upload photos</b> or <b>Configure Immich</b>.</li>'
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose the photos to upload.</li>'
   );
   $('sharemsg').textContent = tr('Preparing\u2026');
   api('/api/wallpapers/pair', {}).then(
@@ -119,7 +235,93 @@ function openWallPair() {
       $('qrbox').style.visibility = 'visible';
       $('shareurl').textContent = tr(r.url + '   code ' + r.code);
       $('sharemsg').textContent = tr(
-        'The page stays open while you use it, at most an hour. It is not encrypted: your photos and the Immich key travel over your Wi-Fi.'
+        'The page stays open while you use it, at most an hour. It is not encrypted: your photos travel over your Wi-Fi.'
+      );
+    },
+    function () {
+      $('sharemsg').textContent = tr('The service did not answer.');
+    }
+  );
+}
+/* a photo source (an add-on that provides wallpapers: Immich, Unsplash, ...) has its own settings page on the phone, and so has any
+   add-on whose service offers one (Add-ons > the add-on > Set up from your phone) */
+var wallSrc = '',
+  pairPath = '';
+function openSourcePair(id, label) {
+  pairScreen('wallsrc', id, label, '/api/wallpapers/source/' + id + '/settings');
+}
+function openAddonPair(id, label) {
+  pairScreen('addonpair', id, label, '/api/addons/' + id + '/settings');
+}
+function pairScreen(mode, id, label, path) {
+  wallSrc = id;
+  pairPath = path;
+  shareMode = mode;
+  push('share');
+  $('share').style.display = 'block';
+  $('shareurl').textContent = '';
+  $('qrbox').style.visibility = 'hidden';
+  $('share').querySelector('h2').textContent = label;
+  $('share').querySelector('ol').innerHTML = tr(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li>'
+  );
+  $('sharemsg').textContent = tr('Preparing\u2026');
+  api(path, {}).then(
+    function (r) {
+      if (view !== 'share' || shareMode !== mode) return;
+      if (r.error) {
+        $('sharemsg').textContent = tr(r.error);
+        return;
+      }
+      drawQr(r.qr);
+      $('qrbox').style.visibility = 'visible';
+      $('shareurl').textContent = tr(r.url + '   code ' + r.code);
+      $('sharemsg').textContent = tr('The page stays open while you use it. It is not encrypted: what you type travels over your Wi-Fi.');
+    },
+    function () {
+      $('sharemsg').textContent = tr('The service did not answer.');
+    }
+  );
+}
+/* More > App icons, or a tile's Change icon on Home ({open: 'icons', app}): the phone page of the App icons add-on, the app first */
+function openIconPair(app) {
+  shareMode = 'icons';
+  push('share');
+  $('share').style.display = 'block';
+  $('shareurl').textContent = '';
+  $('qrbox').style.visibility = 'hidden';
+  $('share').querySelector('h2').textContent = tr('App icons');
+  $('share').querySelector('ol').innerHTML = tr(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Choose <b>Change</b> next to an app, then a picture, <b>Full tile</b> or <b>Icon</b>.</li>'
+  );
+  $('sharemsg').textContent = tr('Preparing…');
+  /* scale: this screen's pixels per CSS pixel (2 on a 4K TV, as on Home), so the sizes shown are the panel's own pixels */
+  api('/api/icons/pair', { app: app, scale: window.devicePixelRatio || 1 }).then(
+    function (r) {
+      if (view !== 'share' || shareMode !== 'icons') return;
+      if (r.error) {
+        $('sharemsg').textContent = tr(r.error);
+        return;
+      }
+      drawQr(r.qr);
+      $('qrbox').style.visibility = 'visible';
+      $('shareurl').textContent = tr(r.url + '   code ' + r.code);
+      /* the sizes that fit the theme's tiles: two more steps of the list, which has room for them below the others */
+      var z = r.sizes;
+      if (z) {
+        var ol = $('share').querySelector('ol'),
+          li = document.createElement('li');
+        li.textContent = tr('Best size for Full tile: %s pixels. Edges that don’t fit are trimmed, keeping the middle.').replace(
+          '%s',
+          z.tile.w + ' × ' + z.tile.h
+        );
+        ol.appendChild(li);
+        li = document.createElement('li');
+        li.textContent = tr('Best size for Icon: %s pixels. Ideally with a transparent background.').replace('%s', z.icon + ' × ' + z.icon);
+        ol.appendChild(li);
+      }
+      $('sharemsg').textContent = tr(
+        'The page stays open while you use it, at most an hour. It is not encrypted: the pictures travel over your Wi-Fi.'
       );
     },
     function () {
@@ -145,6 +347,43 @@ function openHa() {
 /* Cards: a card for each place of the theme (/api/cards/status, /api/cards/set); also opened from the launcher's Customise > Cards */
 var cs = null,
   cardSlot = null;
+/* Cards > Get more cards: the catalog of downloadable cards (helper/cardcatalog.js), with a picture and a text each */
+var cardCat = { cards: [], error: '', sel: '' };
+function openCardCatalog() {
+  api('/api/cards/catalog').then(
+    function (r) {
+      cardCat.cards = (r && r.cards) || [];
+      cardCat.error = (r && r.error) || '';
+      if (view !== 'cardcat' && view !== 'cardone') push('cardcat');
+      else {
+        build();
+        if (idx >= rows.length) idx = Math.max(0, rows.length - 1);
+        draw();
+      }
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function cardSel() {
+  for (var i = 0; i < cardCat.cards.length; i++) if (cardCat.cards[i].id === cardCat.sel) return cardCat.cards[i];
+  return null;
+}
+function cardDo(path, id, done) {
+  banner('Working…', 'work');
+  api(path, { id: id }, 60000).then(
+    function (r) {
+      if (r.error) return banner(r.error, 'err');
+      banner(done, 'ok');
+      if (view === 'cardone') pop();
+      openCardCatalog();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
 function openCards() {
   api('/api/cards/status', {}).then(
     function (r) {
@@ -185,6 +424,131 @@ function setCardType(ty) {
     },
     function () {
       banner('The service did not answer', 'err');
+    }
+  );
+}
+/* Android box: apps that open on an Android box (NVIDIA Shield, ...) over ADB instead of on the TV (helper/androidbox.js) */
+function openAndroidBox() {
+  api('/api/androidbox').then(
+    function (r) {
+      ab = r;
+      if (view !== 'androidbox') push('androidbox');
+      else {
+        build();
+        draw();
+      }
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+/* Apps on the box: the TV's apps, each opening on the box or on the TV (OK switches); the usual Android package is filled in where it is known */
+function openAbApps() {
+  api('/api/androidbox/apps').then(
+    function (r) {
+      abl = r.apps || [];
+      if (view !== 'abapps') push('abapps');
+      else {
+        build();
+        draw();
+      }
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function abToggle(a) {
+  api('/api/androidbox/app', { id: a.id, on: !a.on }).then(
+    function (r) {
+      if (r.error) {
+        banner(r.error, 'err');
+        return;
+      }
+      ab = r;
+      banner('');
+      openAbApps();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function abRefresh() {
+  if (view === 'androidbox') openAndroidBox();
+}
+function abTest() {
+  banner('Connecting\u2026 accept the question on the box if it asks', 'work');
+  api('/api/androidbox/test', {}, 50000).then(
+    function (r) {
+      if (r.ok) banner('Connected: ' + (r.model || 'Android box'), 'ok');
+      else banner(r.error || 'The box did not answer', 'err');
+      abRefresh();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function abOff() {
+  api('/api/androidbox', { host: '' }).then(
+    function (r) {
+      ab = r;
+      banner('Apps open on the TV again', 'ok');
+      build();
+      draw();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+function abWatch(base, n) {
+  if (view !== 'share' || shareMode !== 'abox') return;
+  setTimeout(function () {
+    if (view !== 'share' || shareMode !== 'abox') return;
+    api('/api/androidbox').then(
+      function (r) {
+        ab = r;
+        if (r.savedAt > base) {
+          $('sharemsg').textContent = tr('Saved. Press Back, then choose Test the connection.');
+          base = r.savedAt;
+        }
+        abWatch(base, n + 1);
+      },
+      function () {
+        abWatch(base, n + 1);
+      }
+    );
+  }, 2000);
+}
+function openAbPair() {
+  shareMode = 'abox';
+  push('share');
+  $('share').style.display = 'block';
+  $('shareurl').textContent = '';
+  $('qrbox').style.visibility = 'hidden';
+  $('share').querySelector('h2').textContent = tr('Android box');
+  $('share').querySelector('ol').innerHTML = tr(
+    '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Fill in the address of the box and its HDMI input, then tap <b>Save</b>.</li>'
+  );
+  $('sharemsg').textContent = tr('Preparing\u2026');
+  api('/api/androidbox/pair', {}).then(
+    function (r) {
+      if (view !== 'share' || shareMode !== 'abox') return;
+      if (r.error) {
+        $('sharemsg').textContent = tr(r.error);
+        return;
+      }
+      drawQr(r.qr);
+      $('qrbox').style.visibility = 'visible';
+      $('shareurl').textContent = tr(r.url + '   code ' + r.code);
+      $('sharemsg').textContent = tr('The page stays open for ten minutes. It is not encrypted: what you type travels over your Wi-Fi.');
+      abWatch((ab && ab.savedAt) || 0, 0);
+    },
+    function () {
+      $('sharemsg').textContent = tr('The service did not answer.');
     }
   );
 }

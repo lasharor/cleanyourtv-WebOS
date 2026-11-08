@@ -25,8 +25,20 @@ async function fetchImage(url) {
 const launch = params => luna('luna://com.webos.applicationManager/launch', { id: 'com.cleanyourtv.notify', params });
 
 async function show(b, internal) {
-  // the voice function's own look; not available to network senders
-  const kind = internal && /^(listening|thinking|answer)$/.test(b.kind) ? b.kind : '';
+  // internal looks: voice (listening|thinking|answer) and volume; not available to network senders
+  const kind = internal && /^(listening|thinking|answer|volume)$/.test(b.kind) ? b.kind : '';
+  if (kind === 'volume') {
+    return launch({
+      kind: 'volume',
+      volume: typeof b.volume === 'number' ? b.volume : 0,
+      max: typeof b.max === 'number' && b.max > 0 ? b.max : 100,
+      mute: !!b.mute,
+      output: String(b.output || 'tv_speaker'),
+      theme: String(b.theme || 'pill'),
+      seq: typeof b.seq === 'number' ? b.seq : 0,
+      seconds: Math.max(1, Math.min(10, +b.seconds || 2)),
+    });
+  }
   const p = {
     title: String(b.title || '').slice(0, 120),
     text: String(b.text || '').slice(0, kind ? 1500 : 400),

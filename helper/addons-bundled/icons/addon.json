@@ -1,0 +1,13 @@
+{
+  "id": "icons",
+  "name": "App icons",
+  "version": "1.0.0",
+  "kind": "service",
+  "description": "A picture of your own for an app, chosen on a phone, shown on Home and in the Inputs list instead of the app's own icon.",
+  "about": "Your own picture for an app, chosen on a phone. Hold OK on an app and choose Change icon, scan the code, pick a picture and see it in a dock tile and a grid tile before you send it. Shows on Home and in the Inputs list; Reset gives the app its own icon back.",
+  "entry": {
+    "service": "service.js"
+  },
+  "permissions": [],
+  "routes": ["/api/icons"]
+}

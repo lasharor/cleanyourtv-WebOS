@@ -1,11 +1,116 @@
 // The pages that run on the TV (launcher, manager, picker, notification card): nothing newer than Chromium 68 (webOS 5), and fixes that
 // must not come back.
 const fs = require('fs'),
-  path = require('path');
+  path = require('path'),
+  vm = require('vm');
 const { root, ok, run } = require('./lib');
 
 run(async () => {
-  const pages = ['app', 'manager/app', 'picker/app', 'notify/app'].map(d => path.join(root, d, 'index.html'));
+  const cardsSource = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'cards.js'), 'utf8');
+  const mdiScripts = [];
+  let mdiRedraws = 0;
+  const mdiContext = {
+    window: {},
+    document: {
+      createElement: tag => ({ tag }),
+      head: { appendChild: script => mdiScripts.push(script) },
+    },
+    tickCards: () => mdiRedraws++,
+    lineSvg: () => 'domain icon',
+  };
+  vm.runInNewContext(cardsSource.slice(cardsSource.indexOf('var HA_ICON'), cardsSource.indexOf("/* an entity's state")), mdiContext);
+  const homePage = fs.readFileSync(path.join(root, 'app', 'index.html'), 'utf8');
+  ok(!/<script[^>]+src=["']mdi-glyphs\.js/.test(homePage), 'the launcher does not load the MDI map at startup');
+  mdiContext.haGlyph();
+  ok(!mdiScripts.length, 'an entity without an icon does not request the MDI map');
+  const pending = mdiContext.haGlyph('mdi:cat');
+  mdiContext.haGlyph('mdi:water');
+  ok(
+    mdiScripts.length === 1 && mdiScripts[0].tag === 'script' && mdiScripts[0].src === 'mdi-glyphs.js',
+    'concurrent icon lookups request the bundled map only once'
+  );
+  ok(mdiContext.haIcon('sensor', pending) === 'domain icon', 'the domain icon is shown while the map is loading');
+  mdiContext.window.HA_MDI = { 'mdi:cat': 123 };
+  mdiScripts[0].onload();
+  ok(
+    mdiRedraws === 1 && mdiContext.haIcon('sensor', mdiContext.haGlyph('mdi:cat')).indexOf('&#123;') >= 0,
+    'loading the map redraws cards and makes the glyph available'
+  );
+  ok(mdiContext.haIcon('sensor', mdiContext.haGlyph('mdi:unknown')) === 'domain icon', 'unknown glyphs keep the domain icon');
+  const stackContext = { document: { documentElement: { dir: 'ltr' } } };
+  vm.createContext(stackContext);
+  vm.runInContext(
+    cardsSource.slice(cardsSource.indexOf('function fitCardStacks'), cardsSource.indexOf('/* the clock tick: cards')),
+    stackContext
+  );
+  const stackSlots = [150, 375, 600].map((top, index) => ({ id: 's' + index, stack: 'side', t: top + 'px', h: '209px' }));
+  const stackCards = [392, 114, 114].map((height, index) => ({
+    _slot: 's' + index,
+    _stack: 'side',
+    _card: { type: 'ha-entities' },
+    offsetHeight: height,
+    style: {},
+    getAttribute: () => 'right',
+  }));
+  stackContext.fitCardStacks(stackCards, stackSlots);
+  ok(
+    stackCards.map(card => card.style.top).join(',') === '150px,558px,688px' && stackCards.every(card => card.style.transform === ''),
+    'a tall card above two short cards keeps its size when the whole stack fits'
+  );
+  // webOS 26: after a wake the launcher is shown without the focus and asks the service for the remote (POST /api/refocus), twice at most
+  {
+    const inputSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'input.js'), 'utf8');
+    const fn = inputSrc.slice(inputSrc.indexOf('var wakeTries'), inputSrc.indexOf("document.addEventListener('webOSRelaunch'"));
+    const wake = async (focusAfter, hidden) => {
+      const asked = [];
+      let focus = false;
+      const timers = [];
+      const sb = {
+        document: { hidden: !!hidden, hasFocus: () => focus },
+        setTimeout: f => timers.push(f),
+        logLine: () => {},
+        api: p => {
+          asked.push(p);
+          if (asked.length >= focusAfter) focus = true;
+          return Promise.resolve({ done: true });
+        },
+      };
+      vm.runInNewContext(fn + ';checkWakeFocus(true);', sb);
+      for (let i = 0; i < 10 && timers.length; i++) {
+        timers.shift()();
+        await new Promise(r => setImmediate(r));
+      }
+      return asked;
+    };
+    let asked = await wake(1);
+    ok(asked.length === 1 && asked[0] === '/api/refocus', 'a launcher shown without the focus after a wake asks for the remote once');
+    asked = await wake(99);
+    ok(asked.length === 2, 'and once more when that did not help, never more');
+    const focused = [];
+    vm.runInNewContext(fn + ';checkWakeFocus(true);', {
+      document: { hidden: false, hasFocus: () => true },
+      setTimeout: f => f(),
+      logLine: () => {},
+      api: p => (focused.push(p), Promise.resolve({ done: true })),
+    });
+    ok(!focused.length, 'a launcher that has the focus asks nothing');
+    asked = await wake(1, true);
+    ok(asked.length === 0, 'nor one that is hidden');
+  }
+  const pages = ['app', 'manager/app', 'picker/app', 'notify/app', 'helper/addons-bundled/iptv/page', 'addons/catalog/tuner/page'].map(d =>
+    path.join(root, d, 'index.html')
+  );
+  // the cards that bring a page of their own run on the TV too
+  fs.readdirSync(path.join(root, 'cards', 'catalog')).forEach(id => {
+    ['card.html', id + '.js'].forEach(f => {
+      const file = path.join(root, 'cards', 'catalog', id, f);
+      if (fs.existsSync(file)) pages.push(file);
+    });
+  });
+  // the pages of the cards of add-ons (the weather drawer) are held to the same rules
+  ['drawer.html', 'drawer.js', 'drawer.css'].forEach(f =>
+    pages.push(path.join(root, 'addons', 'catalog', 'weather', 'cards', 'forecast', f))
+  );
   const rules = [
     [/\?\?|\?\.[A-Za-z_\[(]/, 'optional chaining or ??'],
     [/\|\|=|&&=/, 'logical assignment'],
@@ -104,9 +209,100 @@ run(async () => {
     'a long input name stays inside its card in the Inputs picker, on two lines'
   );
   // the favourite star and the menus' right-hand text both had the class st: the star's width squeezed the menu text into a column
-  const launcher = fs.readFileSync(path.join(root, 'app', 'index.html'), 'utf8');
+  // the Live TV page is a page of its own now (the iptv add-on); the star styles are in it
+  const launcher =
+    fs.readFileSync(path.join(root, 'app', 'index.html'), 'utf8') +
+    fs.readFileSync(path.join(root, 'helper', 'addons-bundled', 'iptv', 'page', 'index.html'), 'utf8');
   ok(
     !/(^|\n)\s*\.st\s*\{/.test(launcher) && /svg\.st\s*\{\s*width:\s*26px/.test(launcher),
     "the favourite star is styled as svg.st, so the menu's .st text keeps its natural width"
   );
+  // the manager's build() declares variables with var, which shadow a global of the same name in the whole function: a card catalog called cc
+  // was undefined in build() because the channel screen has a local cc, and Get more cards did nothing
+  const mdir = path.join(root, 'manager', 'src', 'js');
+  const msrc = fs.readdirSync(mdir).map(n => [n, fs.readFileSync(path.join(mdir, n), 'utf8')]);
+  const menu = msrc.filter(x => x[0] === 'menu.js')[0][1];
+  const from = menu.indexOf('function build() {'),
+    to = menu.indexOf("/* the debloat's four groups");
+  const locals = {};
+  menu.slice(from, to).replace(/\bvar\s+([^;]*?);/g, (m, list) => {
+    list.replace(/(?:^|,)\s*([A-Za-z_$][\w$]*)\s*(?=\s*(?:=|,|$))/g, (m2, n) => (locals[n] = 1));
+    return m;
+  });
+  const globals = {};
+  msrc.forEach(x => {
+    const text = x[0] === 'menu.js' ? menu.slice(0, from) + menu.slice(to) : x[1];
+    text.replace(/^(?:var|function)\s+([A-Za-z_$][\w$]*)/gm, (m, n) => (globals[n] = 1));
+    text.replace(/^var\s+[^;]*;/gm, m => m.replace(/(?:^var|,)\s*([A-Za-z_$][\w$]*)\s*(?=\s*[=,;])/g, (m2, n) => (globals[n] = 1)));
+  });
+  const shadow = Object.keys(locals).filter(n => globals[n]);
+  ok(!shadow.length, "no variable of the manager's build() has the name of a global of the manager: " + shadow.join(', '));
+  // issue 109: webOS 25 froze a live stream without a 'waiting' event, so nothing reloaded it. A watchdog on the picture time does, is stopped with the
+  // video, starts afresh with every variant, and the one reload of a stall is given back after half a minute of playing
+  const live = fs.readFileSync(path.join(root, 'helper', 'addons-bundled', 'iptv', 'src', 'js', 'live.js'), 'utf8');
+  ok(
+    /progressT = setInterval\(watchProgress, 1000\)/.test(live) &&
+      /function watchProgress\(\) \{\s*if \(!started \|\| pend \|\| !video \|\| video\.paused \|\| video\.ended/.test(live) &&
+      /Date\.now\(\) - lastProgressAt >= STALL_MS/.test(live) &&
+      /clearInterval\(progressT\)/.test(live) &&
+      /started = false;\s*lastTime = -1;\s*lastProgressAt = 0;/.test(live) &&
+      /healthyT = setTimeout\(function \(\) \{\s*reloads = 0;\s*\}, 30000\)/.test(live),
+    'Live TV reloads a stream whose picture time stops without a waiting event (issue 109)'
+  );
+  // the text of an add-on on the Add-ons tab was cut off at the bottom of the screen (Weather forecast): it sits in a box of six lines and, when
+  // longer, drifts up by itself (the remote cannot scroll it), with a fade at the cut edge; only transform animates
+  const lst = msrc.filter(x => x[0] === 'list.js')[0][1];
+  const mcss = fs.readFileSync(path.join(root, 'manager', 'src', 'css', 'manager.css'), 'utf8');
+  ok(
+    /box\.className = 'abt'/.test(lst) &&
+      /aboutScroll\(box, txt\)/.test(lst) &&
+      /clearTimeout\(abTimer\)/.test(lst) &&
+      /'transform ' \+/.test(lst) &&
+      /#info \.abt \{\s*max-height: 270px;\s*overflow: hidden;/.test(mcss) &&
+      /#info \.abt\.ov \{\s*-webkit-mask-image/.test(mcss),
+    "an add-on's long text on the Add-ons tab stays in its box and scrolls by itself"
+  );
+  // Experimental > Preloaded apps: the State row steps only through the modes this TV uses (PR 149)
+  const mm = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'menu.js'), 'utf8');
+  ok(
+    /var states = \['off'\]\.concat\(\s*preSet\.modes\.filter\(function \(m\) \{\s*return seen\[m\];/.test(mm),
+    'the preload State row offers only the modes the TV itself uses'
+  );
+  // a card of an add-on: its declared drawer and settings actions are the launcher's (the sheet and the settings panel)
+  const rd = f => fs.readFileSync(path.join(root, ...f.split('/')), 'utf8');
+  const wcards = rd('app/src/js/cards.js'),
+    winput = rd('app/src/js/input.js'),
+    wmgr = rd('manager/src/js/input.js');
+  ok(
+    /function cardBtnRoute/.test(wcards) && /csSettings\(/.test(wcards) && /csOpen\(el\)/.test(wcards) && /CS\.on/.test(winput),
+    'the declared settings and drawer actions of a card open the generic panel and sheet (cardBtnRoute)'
+  );
+  ok(
+    !fs.existsSync(path.join(root, 'app', 'src', 'js', 'wxdrawer.js')) &&
+      !/x-forecast|wxdrawer|\bwxd\b|\bWXD\b|wxq|wxMenu|wxSet/i.test(
+        ['js/cards.js', 'js/menus.js', 'js/input.js', 'js/cardsheet.js', 'js/cardsettings.js', 'css/cardsheet.css']
+          .map(p => rd('app/src/' + p))
+          .concat([rd('helper/cards.js'), rd('helper/apps.js')])
+          .join('\n')
+      ),
+    'the launcher has no code of the weather add-on (no wxdrawer, no x-forecast, no wx names)'
+  );
+  ok(
+    /p\.open === 'cardspair'/.test(wmgr) && /openCardsPair\(\)/.test(wmgr),
+    "the manager opens the cards' phone page (QR code) at once when asked"
+  );
+  // the card sheet host: wired into the launcher, generic (no word of any one card)
+  const cshtml = rd('app/src/index.html'),
+    csjs = rd('app/src/js/cardsheet.js'),
+    cscss = rd('app/src/css/cardsheet.css');
+  ok(
+    /@include js\/cardsheet\.js/.test(cshtml) && /@include css\/cardsheet\.css/.test(cshtml) && /<div id="cs"><\/div>/.test(cshtml),
+    'the launcher includes the card sheet (script, style and its element)'
+  );
+  ok(
+    /CS\.on/.test(winput) && /csKey\(k, e\)/.test(winput) && /csClose\(\)/.test(winput),
+    'the keys go to the card sheet while it is open, and a relaunch closes it'
+  );
+  ok(!/weather|wx|forecast/i.test(csjs) && !/weather|wx|forecast/i.test(cscss), 'the card sheet names no card (it is generic)');
+  ok(/e\.source !== CS\.frame\.contentWindow/.test(csjs), 'the card sheet listens only to its own frame');
 });

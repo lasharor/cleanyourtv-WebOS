@@ -91,7 +91,7 @@ function kStep(n) {
     );
   if (n === 'guide')
     return kShow(
-      'The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens the Live TV channel guide instead of LG\u2019s guide. Clear it to get LG\u2019s guide back.',
+      'The Guide key.\nChoose Start, then press the Guide button on your remote. It then opens the TV guide (LG tuner) when that add-on is on, else the Live TV channel guide, instead of LG\u2019s guide. It does nothing until one of them is on. Clear it to get LG\u2019s guide back.',
       [
         {
           label: 'Start',

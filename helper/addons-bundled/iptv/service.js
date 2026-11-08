@@ -4,12 +4,12 @@ const http = require('http'),
   https = require('https'),
   fs = require('fs'),
   crypto = require('crypto');
-const nc = require('./netcompat'),
+const nc = require('../../netcompat'),
   { URL, URLSearchParams } = nc;
-const P = require('./paths'),
-  fetch = require('./fetch'),
-  web = require('./web'),
-  i18n = require('./i18n');
+const P = require('../../paths'),
+  fetch = require('../../fetch'),
+  web = require('../../web'),
+  i18n = require('../../i18n');
 const DIR = P.LIVE;
 const SETTINGS = DIR + '/settings.json',
   PLAYLIST = DIR + '/playlist.json',
@@ -704,7 +704,7 @@ function start() {
   setInterval(() => refresh(false), 6 * 3600 * 1000).unref();
 }
 
-// ctx is not needed: this part keeps its own state
-const create = (/** @type {any} */ _ctx) => ({ name: 'live', prefix: '/api/live/', handle, start });
+// the add-on's ctx is not needed: this part keeps its own state (it was a part of the service before add-ons, and still answers /api/live/)
+const create = (/** @type {any} */ _ctx) => ({ handle, start });
 
 module.exports = { create, handle, parseM3U, parseEpg, probe, derivedEpgUrl, nameKey };

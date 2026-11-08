@@ -10,7 +10,28 @@ run(async () => {
     .readdirSync(helper)
     .filter(f => /\.js$/.test(f))
     .map(f => path.join(helper, f))
-    .concat(path.join(root, 'scripts', 'jtool.js'));
+    .concat(path.join(root, 'scripts', 'jtool.js'))
+    // add-ons run in the service too: the bundled ones and the catalog's service files must run on Node 8 as well
+    .concat(
+      ['helper/addons-bundled/iptv/service.js']
+        .concat(
+          fs
+            .readdirSync(path.join(root, 'addons', 'catalog'))
+            .filter(d => fs.existsSync(path.join(root, 'addons', 'catalog', d, 'service.js')))
+            // every .js file of a service add-on runs in the service (service.js and the files it requires)
+            .reduce(
+              (all, d) =>
+                all.concat(
+                  fs
+                    .readdirSync(path.join(root, 'addons', 'catalog', d))
+                    .filter(f => /\.js$/.test(f))
+                    .map(f => 'addons/catalog/' + d + '/' + f)
+                ),
+              []
+            )
+        )
+        .map(f => path.join(root, f))
+    );
   for (const f of files) {
     const r = cp.spawnSync(process.execPath, ['--check', f], { encoding: 'utf8' });
     ok(r.status === 0, 'syntax ' + path.relative(root, f) + (r.status ? '\n' + r.stderr : ''));

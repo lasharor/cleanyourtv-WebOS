@@ -1,6 +1,6 @@
 // The launcher's app list (apps.js): the first answer is waited for, later ones come from memory while the list is asked again.
 // Inputs pinned to Home are listed with the apps.
-const { ok, call, req, memoryConfig, run } = require('./lib');
+const { ok, call, req, memoryConfig, run, sleep } = require('./lib');
 
 run(async () => {
   let asked = 0,
@@ -69,10 +69,19 @@ run(async () => {
   });
   await call(apps, '/api/config', 'POST', { dock: ['a.one'], sort: 'alpha' });
   ok(config.get().pinnedInputs.length === 2, "saving the launcher's settings keeps the pinned inputs");
+  await call(apps, '/api/config', 'POST', { dock: ['a.one'], sort: 'custom', order: ['a.two', 'a.one'] });
+  ok(
+    config.get().sort === 'custom' && JSON.stringify(config.get().order) === JSON.stringify(['a.two', 'a.one']),
+    'custom sort and order are saved in config'
+  );
   await call(apps, '/api/config', 'POST', { dock: ['a.one'], runDots: true });
   const on = config.get().runDots === true;
   await call(apps, '/api/config', 'POST', { dock: ['a.one'], runDots: 'yes' });
   ok(on && config.get().runDots === undefined, 'the green dot on open apps is off by default and saved only when switched on');
+  await call(apps, '/api/config', 'POST', { dock: ['a.one'], shelfShow: false });
+  const sfOff = config.get().shelfShow === false;
+  await call(apps, '/api/config', 'POST', { dock: ['a.one'] });
+  ok(sfOff && config.get().shelfShow === undefined, 'Show app name is on by default and saved only when hidden');
   await call(apps, '/api/config', 'POST', {
     dock: ['a.one'],
     cards: { greeting: { type: 'greeting', name: 'Sam' }, 'x y': { type: 'a' } },
@@ -221,6 +230,11 @@ run(async () => {
             removable: true,
           },
           { id: 'com.dev.app', title: 'Dev App', folderPath: '/media/developer/apps/usr/palm/applications/com.dev.app' },
+          {
+            id: 'org.webosbrew.hbchannel',
+            title: 'Homebrew Channel',
+            folderPath: '/media/developer/apps/usr/palm/applications/org.webosbrew.hbchannel',
+          },
         ],
       };
     }
@@ -234,8 +248,8 @@ run(async () => {
   const apps2 = req('apps').create({ config: config2, luna: luna2, version: '1.6.0', feature: () => null });
   const list2 = await call(apps2, '/api/apps');
   ok(
-    list2.j.apps.length === 2 && list2.j.apps[0].removable === true && list2.j.apps[1].removable === true,
-    'store and dev apps are marked removable'
+    list2.j.apps.length === 3 && list2.j.apps[0].removable === true && list2.j.apps[1].removable === true && !list2.j.apps[2].removable,
+    'store and dev apps are marked removable, the Homebrew Channel is not'
   );
 
   r = await call(apps2, '/api/apps/uninstall', 'POST', { id: 'com.store.app' });
@@ -303,6 +317,113 @@ run(async () => {
     fs.existsSync = exists;
     ex.execFile = execFile;
   }
-  for (const bad of ['..', '.hidden', '../x'])
+  for (const bad of ['..', '.hidden', '../x', 'org.webosbrew.hbchannel', 'org.webosbrew.safeupdate', 'org.webosbrew.appupdateblocker'])
     ok((await call(apps, '/api/apps/uninstall', 'POST', { id: bad })).j.error === 'refused', 'the id ' + bad + ' is refused');
+
+  // audio volume status and polling
+  r = await call(apps, '/api/audio/volume');
+  ok(
+    r.j && typeof r.j.volume === 'number' && typeof r.j.seq === 'number' && typeof r.j.theme === 'string',
+    'the launcher can query audio volume and theme'
+  );
+
+  // an app set up to open on an Android box (androidbox.js) goes there instead of opening on the TV
+  const sent = [],
+    opened = [];
+  const spy = async (uri, payload) => {
+    sent.push(uri.split('/').pop() + ' ' + payload.id);
+    return { returnValue: true };
+  };
+  const box = { handles: id => id === 'plex', open: async id => (opened.push(id), { returnValue: true, androidBox: 'starting' }) };
+  const withBox = req('apps').create({
+    config: memoryConfig({ androidBox: { host: '192.168.1.50', port: 5555 }, dock: [] }),
+    luna: spy,
+    version: '1.6.0',
+    feature: n => (n === 'addons' ? { module: id => (id === 'androidbox' ? box : null) } : null),
+  });
+  r = await call(withBox, '/api/launch', 'POST', { id: 'plex' });
+  ok(r.j.androidBox === 'starting' && opened[0] === 'plex' && sent.length === 0, 'an app set up for the box is not launched on the TV');
+  r = await call(withBox, '/api/launch', 'POST', { id: 'netflix' });
+  ok(r.j.returnValue === true && sent[0] === 'launch netflix' && opened.length === 1, 'any other app still opens on the TV');
+  r = await call(withBox, '/api/apps');
+  ok(r.j.config.androidBox === undefined, "the launcher is not given the box's address");
+
+  // a new app shows up by itself: the stamp of the list changes when the list does, and the app manager's change notifications
+  // (luna-send -i listApps {subscribe}) make the service ask for the list again. A stand-in for luna-send's subscription.
+  const { EventEmitter } = require('events');
+  let list = [{ id: 'a.one', title: 'One', folderPath: '/x' }],
+    listAsked = 0,
+    sub = null;
+  const wLuna = async uri => {
+    if (/listApps/.test(uri)) {
+      listAsked++;
+      return { returnValue: true, apps: list.slice() };
+    }
+    return { returnValue: true };
+  };
+  const wSpawn = (cmd, args) => {
+    const p = new EventEmitter();
+    p.stdout = new EventEmitter();
+    p.kill = () => p.emit('close');
+    p.args = [cmd].concat(args);
+    if (/listApps/.test(args.join(' '))) sub = p; // the volume watch (audio.js) is started with the same spawn
+    return p;
+  };
+  const watched = req('apps').create({ config: memoryConfig({}), luna: wLuna, spawn: wSpawn, version: '1.6.0', feature: () => null });
+  r = await call(watched, '/api/apps');
+  const s1 = r.j.stamp;
+  r = await call(watched, '/api/apps/stamp');
+  ok(typeof s1 === 'number' && r.j.stamp === s1, 'the list of apps comes with a stamp, and the stamp alone can be asked');
+  watched.start();
+  for (let i = 0; i < 50 && !sub; i++) await sleep(20);
+  ok(
+    !!sub && sub.args.join(' ') === 'luna-send -i luna://com.webos.applicationManager/listApps {"subscribe":true}',
+    "the service follows the app manager's changes"
+  );
+  sub.stdout.emit('data', Buffer.from('{"subscribed":true,"apps":[]}\n'));
+  await sleep(700);
+  ok(listAsked === 1, "the subscription's first answer (the list itself) asks nothing more");
+  list = list.concat({
+    id: 'org.webosbrew.new',
+    title: 'New',
+    folderPath: '/media/developer/apps/usr/palm/applications/org.webosbrew.new',
+  });
+  sub.stdout.emit('data', Buffer.from('{"change":"added"}\n{"change":"updated"}\n'));
+  await sleep(700);
+  r = await call(watched, '/api/apps/stamp');
+  let wr = await call(watched, '/api/apps');
+  ok(
+    listAsked === 2 && r.j.stamp === s1 + 1 && wr.j.apps.some(a => a.id === 'org.webosbrew.new'),
+    'an app installed from the Homebrew Channel: the list is asked again once, the stamp changes and the app is listed'
+  );
+  r = await call(watched, '/api/apps/stamp');
+  ok(r.j.stamp === s1 + 1 && listAsked === 2, 'no change, the same stamp; while the notifications arrive a fresh list is not asked again');
+  watched.stop();
+
+  // without the notifications (an older app manager) the stamp check asks for a list older than 15 seconds itself
+  const realNow = Date.now;
+  let shift = 0;
+  Date.now = () => realNow() + shift;
+  const plain = req('apps').create({ config: memoryConfig({}), luna: wLuna, version: '1.6.0', feature: () => null });
+  await call(plain, '/api/apps/stamp');
+  const before = listAsked;
+  list = list.concat({ id: 'b.two', title: 'Two', folderPath: '/x' });
+  shift = 16000;
+  r = await call(plain, '/api/apps/stamp');
+  wr = await call(plain, '/api/apps');
+  ok(listAsked === before + 1 && wr.j.apps.some(a => a.id === 'b.two'), 'without notifications the stamp check asks for an old list again');
+  // removed from Home, then installed again later (the same app from the Homebrew Channel): hidden for a minute, then listed again
+  r = await call(plain, '/api/apps/uninstall', 'POST', { id: 'org.webosbrew.new' });
+  shift += 6000;
+  wr = await call(plain, '/api/apps');
+  wr = await call(plain, '/api/apps');
+  const goneNow = !wr.j.apps.some(a => a.id === 'org.webosbrew.new');
+  shift += 61000;
+  await call(plain, '/api/apps');
+  wr = await call(plain, '/api/apps');
+  Date.now = realNow;
+  ok(
+    r.j.returnValue === true && goneNow && wr.j.apps.some(a => a.id === 'org.webosbrew.new'),
+    'an app removed from Home stays off while the app manager still lists it, and comes back when it is installed again later'
+  );
 });

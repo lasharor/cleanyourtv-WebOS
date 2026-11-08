@@ -16,6 +16,7 @@ run(async () => {
     for (const k of Object.keys(o)) {
       const key = pre ? pre + '.' + k : k;
       if (key === 'slots') continue; // a list, checked by themeschema.slots
+      if (key === 'scenes') continue; // custom scenes array, checked by themeschema.customScenes
       if (o[k] && typeof o[k] === 'object') walk(o[k], key);
       else if (!known.has(key) && ['name', 'author', 'description', 'extends'].indexOf(key) < 0) unknownKeys.push(key);
     }
@@ -160,6 +161,14 @@ run(async () => {
     'slotted'
   );
   const rs = themeMod.resolve(slotted).slots;
+  const horizon = JSON.parse(fs.readFileSync(path.join(tdir, 'horizon', 'theme.json'), 'utf8'));
+  const rightColumn = themeMod.resolve(themeMod.normalize(horizon, 'horizon')).slots.filter(slot => slot.stack === 'right-column');
+  ok(
+    rightColumn.map(slot => slot.id).join(',') === 'side,side-middle,side-bottom' &&
+      rightColumn.every(slot => slot.name && slot.w === '520px') &&
+      rightColumn.map(slot => slot.t).join(',') === '150px,375px,600px',
+    'Horizon keeps the existing right slot and adds two named positions in its stack'
+  );
   ok(
     rs.length === 3 &&
       rs[0].l === '102px' &&
@@ -181,6 +190,66 @@ run(async () => {
       !('slots' in themeMod.resolve(themeMod.normalize({ slots: [] }, 'none2', slotted.v))) &&
       !('slots' in plain),
     'a theme that extends one with slots keeps them, "slots": [] removes them, and a theme without slots has no slots key'
+  );
+  // custom scenes: a theme brings its own landscape images; files are validated on disk, bad entries are dropped
+  const sceneDir = path.join(tmp, 'scene-theme');
+  fs.mkdirSync(sceneDir, { recursive: true });
+  const appDir = path.join(root, 'app');
+  fs.writeFileSync(path.join(sceneDir, 'theme.json'), JSON.stringify({ name: 'S', effects: { scenes: 'custom' } }));
+  fs.copyFileSync(path.join(appDir, 'scene-night.jpg'), path.join(sceneDir, 'night.jpg'));
+  fs.copyFileSync(path.join(appDir, 'scene-night-glass.jpg'), path.join(sceneDir, 'night-glass.jpg'));
+  fs.copyFileSync(path.join(appDir, 'scene-night-fg.webp'), path.join(sceneDir, 'night-fg.webp'));
+  const sceneRaw = JSON.parse(fs.readFileSync(path.join(sceneDir, 'theme.json'), 'utf8'));
+  sceneRaw.scenes = [
+    {
+      id: 'night',
+      image: 'night.jpg',
+      glass: 'night-glass.jpg',
+      front: 'night-fg.webp',
+      clock: { top: 200, size: 380 },
+      date: { top: 120 },
+      water: 0,
+      darkSky: true,
+    },
+    { id: '../bad', image: 'evil.jpg', glass: 'night-glass.jpg' }, // bad id
+    { id: 'dup', image: '../../etc/passwd', glass: 'night-glass.jpg' }, // bad filename
+    { id: 'missing', image: 'missing.jpg', glass: 'night-glass.jpg' }, // file not on disk
+    { id: 'night' }, // duplicate id (after the valid one above)
+  ];
+  const sceneTheme = themeMod.normalize(sceneRaw, 'scene-theme', null, sceneDir);
+  const rs2 = themeMod.resolve(sceneTheme);
+  ok(
+    sceneTheme.v['effects.scenes'] === 'custom' &&
+      sceneTheme.v.customScenes &&
+      sceneTheme.v.customScenes.length === 1 &&
+      sceneTheme.v.customScenes[0].id === 'night' &&
+      sceneTheme.v.customScenes[0].image === 'night.jpg' &&
+      sceneTheme.v.customScenes[0].glass === 'night-glass.jpg' &&
+      sceneTheme.v.customScenes[0].front === 'night-fg.webp' &&
+      sceneTheme.v.customScenes[0].clock &&
+      sceneTheme.v.customScenes[0].clock.top === 200 &&
+      sceneTheme.v.customScenes[0].date &&
+      sceneTheme.v.customScenes[0].date.top === 120 &&
+      sceneTheme.v.customScenes[0].darkSky === true,
+    'custom scenes: valid scene is accepted, bad id/filename/missing file/duplicate are dropped; darkSky is preserved'
+  );
+  ok(
+    rs2.scenes &&
+      rs2.scenes.set === 'custom' &&
+      rs2.scenes.id === 'scene-theme' &&
+      rs2.scenes.lib &&
+      rs2.scenes.lib.length === 1 &&
+      rs2.scenes.lib[0].id === 'night',
+    'custom scenes: resolved output has scenes.lib and scenes.id'
+  );
+  const noSceneRaw = { name: 'NS', effects: { scenes: 'custom' } }; // custom but no scenes array
+  const noSceneTheme = themeMod.normalize(noSceneRaw, 'noscene', null, sceneDir);
+  ok(noSceneTheme.v['effects.scenes'] === 'off', 'effects.scenes "custom" without a valid scenes array falls back to off');
+  // on the TV the launcher is a file:// page: a path alone does not reach the service, so the scene pictures need API in front,
+  // like the theme's font and wallpaper (theme.js)
+  ok(
+    /customBase = wantCustom \? API \+ '\/api\/theme\/scene\/'/.test(fs.readFileSync(path.join(root, 'app/src/js/scenes.js'), 'utf8')),
+    "custom scenes: the launcher asks the service's address for the pictures, not a path of the page"
   );
   const cardsShape = req('cards');
   const cs = cardsShape.sanitize({
@@ -294,8 +363,9 @@ run(async () => {
       bl.dockN === 6 &&
       bl.vars['--dock-t'] !== 'auto' &&
       bl.vars['--dock-b'] === 'auto' &&
-      bl.vars['--tile-w'] === '193px',
-    'a dock at the bottom with the push layout resolves to a scrolling grid below it, centred'
+      bl.vars['--tile-w'] === '193px' &&
+      bl.dockBottom === true,
+    'a dock at the bottom with the push layout resolves to a scrolling grid below it, centred; dockBottom is set'
   );
   r = await tcall('wallpaper/bloom/bloom.jpg', null, 'GET');
   ok(r.code === 200, 'a downloaded wallpaper is served');
@@ -381,6 +451,59 @@ run(async () => {
     'GitHub unreachable: a theme that was never downloaded says it could not be downloaded'
   );
   gh.server.close();
+
+  // the page strip (addons.js in the launcher): a theme sets its look and place; the reply carries `strip` only for a theme that changes it
+  {
+    const ts = req('themeschema');
+    const res = raw => ts.resolve(ts.normalize(raw, 'x', null));
+    ok(
+      res({ name: 'Plain' }).strip === undefined,
+      'a theme without strip settings has no strip in its reply (the replies of the other themes stay as they were)'
+    );
+    const sd = res({
+      name: 'S',
+      strip: { style: 'dots', labels: 'current', colors: 'numbers', anchor: 'top', align: 'right', x: 400, y: 60, size: 1.2 },
+    }).strip;
+    ok(
+      sd &&
+        sd.style === 'dots' &&
+        sd.labels === 'current' &&
+        sd.colors === 'numbers' &&
+        sd.anchor === 'top' &&
+        sd.align === 'right' &&
+        sd.x === 400 &&
+        sd.y === 60 &&
+        sd.size === 1.2,
+      'a theme can set the strip style, names, colours, edge, side, distances and size'
+    );
+    const sc = res({ name: 'S', strip: { style: 'ribbon', labels: 'x', colors: 7, anchor: 'middle', show: 'yes' } }).strip;
+    ok(sc === undefined, 'wrong values are ignored, and a theme that only has those is the default one');
+    const sc2 = res({ name: 'S', strip: { size: 9, x: -5, y: 5000, show: false } }).strip;
+    ok(
+      sc2 && sc2.size === 1.6 && sc2.x === 0 && sc2.y === 900 && sc2.show === false,
+      'sizes and distances are clamped to their range, and the strip can be hidden'
+    );
+    ok(res({ name: 'S', extends: 'x', strip: { show: true } }).strip === undefined, 'writing a default down is not a change');
+    const bl = ts.resolve(
+      ts.normalize(JSON.parse(fs.readFileSync(path.join(tdir, 'bloom', 'theme.json'), 'utf8')), 'bloom', null, path.join(tdir, 'bloom'))
+    );
+    ok(
+      bl.strip && bl.strip.y === 14 && bl.strip.size === 0.92 && bl.strip.style === 'pills',
+      'Bloom sets the strip lower and a little smaller, to sit under its glass dock'
+    );
+    const ls = ts.resolve(
+      ts.normalize(
+        JSON.parse(fs.readFileSync(path.join(tdir, 'lockscreen', 'theme.json'), 'utf8')),
+        'lockscreen',
+        null,
+        path.join(tdir, 'lockscreen')
+      )
+    );
+    const uc = (ls.slots || []).filter(sl => sl.id === 'under-clock')[0];
+    ok(uc && uc.t === '262px' && uc.keep === true, 'Lock Screen has a place for a card under the clock');
+    const cl = ts.resolve(ts.normalize(JSON.parse(fs.readFileSync(path.join(tdir, 'classic', 'theme.json'), 'utf8')), 'classic', null));
+    ok(cl.strip === undefined, 'Classic writes down the default look, so it adds nothing to its reply');
+  }
 
   // the documentation table is generated from the schema; the service ships no themes
   const gen = require(path.join(root, 'tools', 'theme-docs.js')),

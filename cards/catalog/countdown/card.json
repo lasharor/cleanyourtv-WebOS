@@ -1,0 +1,23 @@
+{
+  "id": "countdown",
+  "name": "Countdown",
+  "version": "1.0.0",
+  "description": "The days left until a date you choose.",
+  "about": "A heading and the number of days to go until a date: a holiday, a birthday, a trip. Fill in the title and the date (YYYY-MM-DD) on the phone page; the number changes by itself each day. Before the date it counts down, after it the card says how long ago it was.",
+  "size": "medium",
+  "options": [
+    {
+      "key": "title",
+      "kind": "text",
+      "label": "What are you counting down to?",
+      "default": "Holiday"
+    },
+    {
+      "key": "date",
+      "kind": "text",
+      "label": "Date (YYYY-MM-DD)",
+      "default": "2026-12-24"
+    }
+  ],
+  "template": "# {{opt.title}}\n**{{opt.date|days}}** days to go\n{{opt.date}}"
+}
