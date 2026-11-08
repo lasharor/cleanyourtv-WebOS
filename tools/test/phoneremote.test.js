@@ -279,14 +279,14 @@ run(async () => {
         m.scope === '/' &&
         m.name === 'Phone remote' &&
         m.short_name === 'TV remote' &&
-        m.icons.some(i => i.sizes === '512x512' && i.src === '/icon-512.png'),
+        m.icons.some(i => i.sizes === '512x512' && /^\/icon-512\.png\?v=[0-9a-f]{8}$/.test(i.src)),
       'the manifest is served without a token: a standalone app whose start is the phone page, with a 512 px icon'
     );
     const mc = JSON.parse((await get(port, '/manifest.webmanifest?code=' + code)).text);
     ok(mc.start_url === '/?code=' + code && mc.id === '/', 'a manifest asked for with a code starts the app with that code (same app id)');
     const bad = JSON.parse((await get(port, '/manifest.webmanifest?code=12x456')).text);
     ok(bad.start_url === '/', 'a code that is not six digits does not get into start_url');
-    for (const u of ['/apple-touch-icon.png', '/apple-touch-icon-precomposed.png', '/icon-180.png', '/icon-512.png']) {
+    for (const u of ['/apple-touch-icon.png', '/apple-touch-icon-precomposed.png', '/icon-180.png', '/icon-512.png?v=abc']) {
       const r = await new Promise((resolve, reject) =>
         http
           .get({ host: '127.0.0.1', port, path: u }, res => {
@@ -309,7 +309,9 @@ run(async () => {
     ok(
       /<link rel=manifest href="\/manifest\.webmanifest">/.test(page.text) &&
         withCode.text.indexOf('<link rel=manifest href="/manifest.webmanifest?code=' + code + '">') > 0 &&
-        /<link rel=apple-touch-icon href=\/apple-touch-icon\.png>/.test(page.text) &&
+        page.text.indexOf(
+          '<link rel=apple-touch-icon href="/apple-touch-icon.png?v=' + require('../../addons/catalog/phoneremote/page').ICON_V + '">'
+        ) > 0 &&
         /<meta name=apple-mobile-web-app-capable content=yes>/.test(page.text) &&
         /apple-mobile-web-app-status-bar-style content=black-translucent/.test(page.text) &&
         /viewport-fit=cover/.test(page.text),
@@ -1417,11 +1419,12 @@ run(async () => {
   );
   ok(
     /navigator\.vibrate\(8\);return\}\}catch\(e\)\{\}haptic\(\)\}/.test(pg) &&
-      /function haptic\(\)\{if\(!IOS\)return;/.test(pg) &&
+      /function haptic\(\)\{if\(IOS\)hapDue=true\}/.test(pg) &&
+      /if\(IOS\)document\.addEventListener\('touchend',function\(\)\{if\(hapDue\)\{hapDue=false;tickNow\(\)\}\},true\);/.test(pg) &&
       /<input type=checkbox switch tabindex=-1>/.test(pg) &&
       /a\.tagName==='TEXTAREA'\|\|\(a\.tagName==='INPUT'&&a\.type!=='checkbox'\)\)&&a\.offsetWidth\)return;/.test(pg) &&
       /hap\.click\(\);if\(document\.activeElement===hap\.firstChild\)hap\.firstChild\.blur\(\)/.test(pg),
-    'an iPhone (no navigator.vibrate) gets its tick from a hidden switch, never while text is being typed'
+    'an iPhone (no navigator.vibrate) gets its tick from a hidden switch when the finger lifts (Safari counts a touch then), never while text is being typed'
   );
   // a backslash in the page's script is an escape of the template it is written in: \d must reach the phone as \d
   ok(

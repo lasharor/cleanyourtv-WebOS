@@ -6,6 +6,16 @@
 // status line under the TV name for every message. Spacing is by sibling margins (no flex gap: Chromium 68), and the page is always left to right.
 // the texts are translated with the service's i18n, which the add-on gets as ctx.util.i18n (a catalog add-on cannot require it); `esc`
 // is helper/web.js's, kept here because the add-on gets only its ctx
+// The Home Screen icon's address carries a short hash of the icon (?v=): iOS keeps an icon it fetched once, so a changed icon needs a new
+// address to be fetched again. service.js serves the icons whatever comes after the ?.
+const ICON_V = (() => {
+  try {
+    const f = require('path').join(__dirname, 'pwa', 'icon-180.png');
+    return require('crypto').createHash('sha1').update(require('fs').readFileSync(f)).digest('hex').slice(0, 8);
+  } catch (_) {
+    return '1';
+  }
+})();
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 const PHONE_JS = `document.documentElement.dir='ltr'; /* the remote is laid out like a real one in every language: the arrows must not swap sides */
@@ -215,10 +225,14 @@ $('xpw').onclick=function(){power(false)};$('pws').onclick=function(e){if(e.targ
    old attempt, which some phones honour and most do not */
 function buzz(){try{if(window.CYTV_APP&&window.CYTV_APP.buzz){window.CYTV_APP.buzz();return}}catch(e){}try{if(navigator.vibrate){navigator.vibrate(8);return}}catch(e){}haptic()}
 /* An iPhone has no navigator.vibrate, but a switch (<input type=checkbox switch>, Safari 17.4 and newer) ticks when it is toggled, also when
-   a script clicks its label. A hidden one is clicked for each key. Not while text is being typed (a text field on screen has the focus): the
-   click must not take the focus from the box. The click focuses the switch itself, so it gives the focus back at once. */
-var hap=null;
-function haptic(){if(!IOS)return;try{var a=document.activeElement;if(a&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&a.type!=='checkbox'))&&a.offsetWidth)return;
+   a script clicks its label. A hidden one is clicked for each key. Safari counts such a click only while the person is acting, and a touch
+   counts when the finger lifts (touchend), not when it lands: the keys answer on touchstart, so the tick waits for the touchend that follows.
+   Not while text is being typed (a text field on screen has the focus): the click must not take the focus from the box. The click focuses
+   the switch itself, so it gives the focus back at once. */
+var hap=null,hapDue=false;
+function haptic(){if(IOS)hapDue=true}
+if(IOS)document.addEventListener('touchend',function(){if(hapDue){hapDue=false;tickNow()}},true);
+function tickNow(){try{var a=document.activeElement;if(a&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&a.type!=='checkbox'))&&a.offsetWidth)return;
  if(!hap){hap=document.createElement('label');hap.setAttribute('aria-hidden','true');hap.style.cssText='position:fixed;left:-100px;top:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none';
   hap.innerHTML='<input type=checkbox switch tabindex=-1>';document.body.appendChild(hap)}
  hap.click();if(document.activeElement===hap.firstChild)hap.firstChild.blur()}catch(e){}}
@@ -700,7 +714,7 @@ function phonePage(i18n, lang, preCode, hint) {
     '<div></div>';
   return (
     `<!doctype html><html lang=${lang}><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name=referrer content=no-referrer>
-<link rel=manifest href="/manifest.webmanifest${pre ? '?code=' + pre : ''}"><link rel=apple-touch-icon href=/apple-touch-icon.png>
+<link rel=manifest href="/manifest.webmanifest${pre ? '?code=' + pre : ''}"><link rel=apple-touch-icon href="/apple-touch-icon.png?v=${ICON_V}">
 <meta name=apple-mobile-web-app-capable content=yes><meta name=mobile-web-app-capable content=yes><meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
 <meta name=apple-mobile-web-app-title content="${T('TV remote')}"><meta name=theme-color content=#101116>
 <meta http-equiv=cache-control content=no-store>
@@ -784,10 +798,10 @@ function manifest(i18n, lang, code) {
     background_color: '#101116',
     theme_color: '#101116',
     icons: [
-      { src: '/icon-180.png', sizes: '180x180', type: 'image/png' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { src: '/icon-180.png?v=' + ICON_V, sizes: '180x180', type: 'image/png' },
+      { src: '/icon-512.png?v=' + ICON_V, sizes: '512x512', type: 'image/png' },
     ],
   });
 }
 
-module.exports = { phonePage, PHONE_JS, manifest };
+module.exports = { phonePage, PHONE_JS, manifest, ICON_V };
