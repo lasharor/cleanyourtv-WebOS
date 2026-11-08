@@ -5,6 +5,7 @@
 - **Card dimming is a setting.** Home cards dim after three minutes without a key to protect an OLED. **Features > Dim inactive cards** now turns that off or sets 3, 5 or 10 minutes; the pixel shift stays. By @ramzeka (#176).
 - **Add-on repositories show where an add-on came from.** `cytv-addons installed` says which repository each add-on was installed from, the columns of `repos` and `list` no longer run into each other when a name is long, and the catalog marks an add-on as installed only on the row of its own repository. By @larsoss (#196).
 - **The Add-ons screen and the phone remote can be translated.** The manager's rows ("Switch off", "Page of the book", "Install · 1.0.0" and others) never reached the translation files, so no language could translate them; they do now, and so does the phone remote's first step. Dutch is complete again. By @larsoss (#198).
+- **The phone remote on an iPhone, as an app.** iPhones cannot install the Android app, so the phone page can now live on the Home Screen as an app: full screen, its own icon, no address bar. In Safari the pairing screen says to add it to the Home Screen first (a Home Screen app has its own storage, apart from Safari's) and the code from the QR code goes along, so the app opens with it filled in. Keys tick on iOS 18 and newer. Phone remote 1.1.0. By @larsoss.
 
 ## Fixes
 
@@ -13,7 +14,7 @@
 
 ## What to know
 
-The Home key on a page was tried on a 65UR91006LB (webOS 25) with the default code, the voice fix on the same model, the card dimming setting on a 55NANO866NA (webOS 5.6) and the page strip click on a 65UP77006LB (webOS 6.5). The detection of a hook that gets no buttons (issue 185) has **not** been tried on a real TV yet: its author is waiting for the reporter of the issue to confirm it. The Home key binds LG's input service while a page shows, so it needs the Input key hook, which is on by default. Please say what you see in an issue.
+The Home key on a page was tried on a 65UR91006LB (webOS 25) with the default code, the voice fix on the same model, the card dimming setting on a 55NANO866NA (webOS 5.6) and the page strip click on a 65UP77006LB (webOS 6.5). The detection of a hook that gets no buttons (issue 185) has **not** been tried on a real TV yet: its author is waiting for the reporter of the issue to confirm it. The Home key binds LG's input service while a page shows, so it needs the Input key hook, which is on by default. The phone remote as an iPhone app was checked in a desktop browser that imitates an iPhone, **not** on a real iPhone yet. Please say what you see in an issue.
 
 ## Thanks
 

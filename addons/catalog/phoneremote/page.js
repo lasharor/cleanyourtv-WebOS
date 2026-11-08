@@ -79,9 +79,23 @@ function autoPair(){
   var m=/[?&]code=(\\d{6})/.exec(location.search||'');
   if(!m)return;
   if(tok||ready){tidy();return}
-  window.cytvPair(m[1]);tidy() /* the code is in the box now: it does not stay in the address */
+  /* the Home Screen app opens its start address, code and all, every time: a code it has filled in once is not filled in again */
+  if(homeApp()){var used='';try{used=localStorage.getItem(UK)||''}catch(e){}if(used===m[1]){$('code').value='';cells();tidy();return}try{localStorage.setItem(UK,m[1])}catch(e){}}
+  /* in Safari on an iPhone the card at the top says what to do first: the code goes into the box without moving the focus (and the page) to the name */
+  if(IOSWEB){$('code').value=m[1];cells();return}
+  window.cytvPair(m[1]);
+  /* the code is in the box now: it does not stay in the address. In Safari on an iPhone it does, until this page pairs: Add to Home Screen
+     takes the address with it (or the manifest's start_url, which carries the same code), and the app pairs with it */
+  tidy()
 }
-function show(id){$('pairbox').className=id==='pairbox'?'':'hide';$('remote').className=id==='remote'?'':'hide';$('tabbar').className=id==='remote'?'':'hide';if(id==='pairbox')setTimeout(function(){$('code').focus();cells()},50)}
+/* iPhone and iPad: there is no app to install, but this page can live on the Home Screen as an app (the TV serves the manifest and the
+   icons). Such an app keeps its own storage, apart from Safari's, so a phone paired in Safari is not paired in the app: in Safari the
+   pairing screen says to add the page to the Home Screen first. A wrapper app (window.CYTV_APP) is never told so. */
+var UK='cytv-code-used';
+function ios(){var k=kind();return k==='iPhone'||k==='iPad'}
+function homeApp(){try{if(navigator.standalone)return true;return !!(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)}catch(e){return false}}
+var IOS=ios(),IOSWEB=IOS&&!homeApp()&&!window.CYTV_APP;
+function show(id){$('pairbox').className=id==='pairbox'?'':'hide';$('remote').className=id==='remote'?'':'hide';$('tabbar').className=id==='remote'?'':'hide';if(id==='pairbox'&&!IOSWEB)setTimeout(function(){$('code').focus();cells()},50)} /* in Safari on an iPhone the card at the top is read first */
 function status(c,s){var off=c==='off';if(off)pwrState=''; /* the status line under the TV name says it, nothing covers the keys */
  stBase=['st '+c,c==='ok'?t('Connected'):(s||(off?t('Off'):''))];
  /* the keys are never greyed out: they look the same whether the TV is on or off, and the header says which it is */
@@ -196,7 +210,15 @@ $('xpw').onclick=function(){power(false)};$('pws').onclick=function(e){if(e.targ
 /* buttons: a press at once, held down repeats (arrows, volume, channel) */
 /* the app answers a key press with a short tick (window.CYTV_APP.buzz): a WebView has no navigator.vibrate, so a browser only gets the
    old attempt, which some phones honour and most do not */
-function buzz(){try{if(window.CYTV_APP&&window.CYTV_APP.buzz){window.CYTV_APP.buzz();return}}catch(e){}try{if(navigator.vibrate)navigator.vibrate(8)}catch(e){}}
+function buzz(){try{if(window.CYTV_APP&&window.CYTV_APP.buzz){window.CYTV_APP.buzz();return}}catch(e){}try{if(navigator.vibrate){navigator.vibrate(8);return}}catch(e){}haptic()}
+/* An iPhone has no navigator.vibrate, but a switch (<input type=checkbox switch>, Safari 17.4 and newer) ticks when it is toggled, also when
+   a script clicks its label. A hidden one is clicked for each key. Not while text is being typed (a text field on screen has the focus): the
+   click must not take the focus from the box. The click focuses the switch itself, so it gives the focus back at once. */
+var hap=null;
+function haptic(){if(!IOS)return;try{var a=document.activeElement;if(a&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&a.type!=='checkbox'))&&a.offsetWidth)return;
+ if(!hap){hap=document.createElement('label');hap.setAttribute('aria-hidden','true');hap.style.cssText='position:fixed;left:-100px;top:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none';
+  hap.innerHTML='<input type=checkbox switch tabindex=-1>';document.body.appendChild(hap)}
+ hap.click();if(document.activeElement===hap.firstChild)hap.firstChild.blur()}catch(e){}}
 function bind(el){var k=el.getAttribute('data-k'),rep=el.getAttribute('data-r'),t1=0,t2=0;
  function go(){send({t:'key',k:k});buzz()}
  function down(e){if(e.type==='touchstart')lastTouch=Date.now();else if(Date.now()-lastTouch<700)return;e.preventDefault();go();el.className+=' on';
@@ -479,6 +501,7 @@ function cells(){var c=$('code'),v=c.value=c.value.replace(/\\D/g,''),k=document
 ['input','focus','blur'].forEach(function(ev){$('code').addEventListener(ev,cells)});
 $('go').onclick=pair;$('code').onkeydown=function(e){if(e.keyCode===13)pair()};
 /* in the app the pairing screen is the second step (the app's first screen found the TV): the label says so and the steps are not repeated; in a browser it is the first screen and keeps them */
+if(IOSWEB){$('ioscard').className='ioscard';$('iostip').className='';try{var fa=document.activeElement;if(fa&&fa.blur)fa.blur();setTimeout(function(){window.scrollTo(0,0)},60)}catch(e){}} /* the code box's autofocus must not scroll the card away */
 if(window.CYTV_APP){var eb=$('eb'),ps=$('psub');eb.textContent=eb.getAttribute('data-app');ps.textContent=ps.getAttribute('data-app');$('steps').className='hide'}
 $('pname').value=guess();cells();try{var tn=localStorage.getItem('cytv-tvname');if(tn)$('tvname').textContent=tn}catch(e){}tok=stored();try{mac=localStorage.getItem(MK)||''}catch(e){}tab('kb');if(tok){show('remote');connect()}else show('pairbox');mark();autoPair();
 `;
@@ -498,6 +521,9 @@ button{display:flex;align-items:center;justify-content:center;font-weight:700;fo
 #remote{display:flex;flex-direction:column;height:100vh}
 #remote{height:var(--appH, 100vh)}
 .head{flex:none;display:flex;align-items:center;padding:20px 20px 8px}
+/* On the Home Screen of an iPhone the page runs full screen (viewport-fit=cover, a see-through status bar): the top bar, the tab bar and the
+   sheets keep clear of the status bar and the home indicator. Where max() is unknown the plain value before it stays. */
+.head{padding-top:max(20px,calc(env(safe-area-inset-top,0px) + 8px))}
 .head>*+*{margin-left:12px}
 #kb,#tp,#ap,#lv{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:12px}
 /* the Remote and the Touchpad sit in the middle of the space between the top bar and the tab bar; when they do not fit the panel scrolls (auto margins never cut the top off) */
@@ -526,7 +552,7 @@ button{display:flex;align-items:center;justify-content:center;font-weight:700;fo
 .qr{display:flex;margin:12px 20px 0}.qr button{flex:1;height:44px;border-radius:22px;font-size:13px}.qr button+button{margin-left:8px}.qr .ic{width:20px;height:20px}
 /* a row of the screen's column, the same height as the 64px the script takes off: no fixed positioning to be swallowed by a phone's
    address bar, nothing can end up outside the visible area */
-.tabbar{flex:none;display:flex;border-top:1px solid #2e3140;background:#13141a;padding:0 12px 4px}
+.tabbar{flex:none;display:flex;border-top:1px solid #2e3140;background:#13141a;padding:0 12px 4px}.tabbar{padding-bottom:max(4px,env(safe-area-inset-bottom,0px))}
 .tab{flex:1;height:60px;border:0;border-radius:0;background:transparent;flex-direction:column;font-size:12px;font-weight:600;color:#a3a8b8}.tab .ic{margin:0 0 4px}.tab.on{background:transparent;color:#ff8a5b}
 .pad{position:relative;margin:18px auto 0;width:calc(100% - 40px);max-width:390px;height:calc(100vh - 380px);min-height:300px;max-height:432px;border-radius:28px;border:1px solid #2e3140;background:radial-gradient(circle at 50% 38%,#1c1f2a 0%,#14161d 62%,#111319 100%);overflow:hidden;touch-action:none;transition:border-color .12s,box-shadow .12s}
 .pad:before{content:'';position:absolute;left:0;right:0;top:0;bottom:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1.5px);background-size:22px 22px;background-position:11px 11px;pointer-events:none}
@@ -571,7 +597,7 @@ textarea:focus{border:1.5px solid #ff8a5b;box-shadow:0 0 0 4px rgba(255,138,91,.
 .kbrow{display:flex;margin-top:12px}.kbrow>*+*{margin-left:8px}.kbrow button{height:56px;border-radius:18px}.kbrow .ghostb{flex:none;background:transparent;border:1px solid #2e3140;color:#a3a8b8;font-weight:700;font-size:14px}.kbrow #clrtxt{width:88px}.kbrow #deltxt{width:64px}.kbrow .pri{flex:1}.kbrow .pri span{margin-right:8px}
 /* every drawer: the same dark sheet at the bottom of the screen, the same handle, the same title row and close button */
 #ins,#scrim,#pws,#kbs,#ths{position:fixed;left:0;right:0;top:0;bottom:0;z-index:6;display:flex;align-items:flex-end;justify-content:center;background:rgba(8,9,12,.66)}
-.drawer{width:100%;max-width:430px;margin:0 auto;background:#1a1c23;border-top:1px solid #2e3140;border-radius:22px 22px 0 0;padding:10px 20px 26px;max-height:82vh;overflow-y:auto;transition:transform .18s ease}
+.drawer{width:100%;max-width:430px;margin:0 auto;background:#1a1c23;border-top:1px solid #2e3140;border-radius:22px 22px 0 0;padding:10px 20px 26px;max-height:82vh;overflow-y:auto;transition:transform .18s ease}.drawer{padding-bottom:max(26px,calc(env(safe-area-inset-bottom,0px) + 12px))}
 .drawer .grab{width:40px;height:5px;border-radius:3px;background:#3a3e50;margin:0 auto 14px}
 .drawer .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .drawer .top b{font-size:18px}
@@ -590,7 +616,9 @@ textarea:focus{border:1.5px solid #ff8a5b;box-shadow:0 0 0 4px rgba(255,138,91,.
 
 .num{display:grid;grid-template-columns:repeat(3,1fr);margin:-5px}.num>*{margin:5px}.num button{height:64px;border-radius:18px;font-size:24px}.num .tx2{font-size:15px}
 .col{display:flex;margin-top:9px}.col>*+*{margin-left:10px}.col button{flex:1;height:44px;border:0;border-radius:14px}.cr{background:#e5484d}.cg{background:#30a46c}.cy{background:#f5c451}.cb{background:#3e63dd}
-#pairbox{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;padding:72px 20px 24px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}#pairbox>*{position:relative}
+#pairbox{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;padding:72px 20px 24px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}#pairbox{padding-top:max(72px,calc(env(safe-area-inset-top,0px) + 32px))}
+.ioscard{margin:0 0 24px;padding:16px;border-radius:20px;background:#1d1714;border:1px solid #5a3b2c;font-size:15px;line-height:1.5;color:#dde0ea}.ioscard b{display:block;color:#ffb08f}
+.ioscard ol{margin:10px 0 0;padding-left:22px}.ioscard li+li{margin-top:6px}.ioscard p{margin:10px 0 0;font-size:14px}#pairbox>*{position:relative}
 #pairbox .glow{position:absolute;left:-100px;top:-140px;width:320px;height:320px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,138,91,.14),transparent)}
 #pairbox .eyebrow{font-size:13px;font-weight:600;letter-spacing:.02em;color:#7b8092;margin:0 0 8px;min-height:20px}
 #pairbox h1{font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.02em;margin:0 0 8px}#pairbox .sub{font-size:16px;line-height:1.5;color:#a3a8b8;margin:0 0 24px}
@@ -668,11 +696,17 @@ function phonePage(i18n, lang, preCode, hint) {
     key('0', '0', '0') +
     '<div></div>';
   return (
-    `<!doctype html><html lang=${lang}><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name=referrer content=no-referrer>
+    `<!doctype html><html lang=${lang}><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name=referrer content=no-referrer>
+<link rel=manifest href="/manifest.webmanifest${pre ? '?code=' + pre : ''}"><link rel=apple-touch-icon href=/apple-touch-icon.png>
+<meta name=apple-mobile-web-app-capable content=yes><meta name=mobile-web-app-capable content=yes><meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<meta name=apple-mobile-web-app-title content="${T('TV remote')}"><meta name=theme-color content=#101116>
 <meta http-equiv=cache-control content=no-store>
 <meta http-equiv=pragma content=no-cache><title>${T('Phone remote')}</title>
 <style>${STYLE}</style>
 <div id=pairbox class=hide><div class=glow></div><p class=eyebrow id=eb data-app="${T('Step 2 of 2')}">&nbsp;</p><h1>${T('Enter the code')}</h1><p class=sub id=psub data-app="${T('The 6-digit code is on the TV screen.')}">${T('Use this device as a remote for your TV. You only do this once.')}</p>
+<div id=ioscard class="ioscard hide"><b>${T('On an iPhone or iPad, put the remote on the Home Screen first')}</b>
+<ol><li>${T('In Safari, tap Share (in iOS 26 it is in the ••• menu).')}</li><li>${T('Choose Add to Home Screen, keep Open as Web App on, and tap Add.')}</li><li>${T('Open TV remote from the Home Screen and pair it there with the code from the TV.')}</li></ol>
+<p>${T('The Home Screen app keeps its own login: a device paired here in Safari has to pair again in the app.')}</p></div>
 <div class=steps id=steps><div><i>1</i><span>${T('On the TV, open the Phone remote page and choose')} <b>${T('Pair a phone')}</b>. ${T('It shows a QR code and a 6-digit code.')}</span></div><div><i>2</i><span>${T('Type the 6-digit code below.')}</span></div></div>
 <label for=code>${T('Code from the TV')}</label><div class=cellwrap><div class=cells>${cellHtml}</div><input id=code inputmode=numeric maxlength=6 autocomplete=one-time-code autofocus value="${pre}"></div>
 <label for=pname>${T('Name of this device')}</label><input id=pname maxlength=30>
@@ -702,7 +736,7 @@ ${key('MENU', ic('menu'), T('Menu'), 'cn tl')}<button id=bnum class="cn tr" aria
 <div class=txbox><textarea id=txt rows=3 autocomplete=off autocapitalize=off autocorrect=off spellcheck=false enterkeyhint=send placeholder="${T('Type here')}" aria-label="${T('Text for the TV')}"></textarea></div>
 <div class=kbrow><button id=clrtxt class=ghostb>${T('Clear')}</button><button id=deltxt class=ghostb aria-label="${T('Delete')}">${ic('del')}</button><button id=entertxt class=pri><span>${T('Enter')}</span>${ic('enter')}</button></div></div></div>
 <div id=ths class=hide><div id=thsheet class=drawer role=dialog aria-label="${T('This remote')}"><div class=grab></div><div class=top><b id=thname></b><button id=xth aria-label="${T('Close')}">${ic('close')}</button></div>
-<p>${T('This phone is paired with the TV.')}</p>
+<p>${T('This phone is paired with the TV.')}</p><p id=iostip class=hide>${T('Tip: in Safari, Share > Add to Home Screen turns this remote into an app. It pairs once more in the app.')}</p>
 <dl class=kv><div><dt>${T('Paired as')}</dt><dd id=kvas></dd></div><div><dt>${T('Paired on')}</dt><dd id=kvon></dd></div><div><dt>${T('TV address')}</dt><dd id=kvad></dd></div></dl>
 <button id=lgo class=outb>${T('Log out of this TV')}</button></div></div>
 <div id=pnote role=status aria-live=polite></div>
@@ -729,4 +763,28 @@ ${key('MENU', ic('menu'), T('Menu'), 'cn tl')}<button id=bnum class="cn tr" aria
   );
 }
 
-module.exports = { phonePage, PHONE_JS };
+// The manifest that makes the phone page an app on the Home Screen (service.js serves it at /manifest.webmanifest). The page links it with
+// the pairing code it was opened with, if any, and the code goes into start_url: on an iPhone the app keeps its own storage, apart from
+// Safari's, so it must pair by itself, and this way it opens with the code from the TV's QR code filled in.
+function manifest(i18n, lang, code) {
+  const pre = /^[0-9]{6}$/.test(String(code || '')) ? String(code) : '';
+  return JSON.stringify({
+    id: '/',
+    name: i18n.tr(lang, 'Phone remote'),
+    short_name: i18n.tr(lang, 'TV remote'),
+    lang,
+    dir: 'ltr',
+    start_url: pre ? '/?code=' + pre : '/',
+    scope: '/',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#101116',
+    theme_color: '#101116',
+    icons: [
+      { src: '/icon-180.png', sizes: '180x180', type: 'image/png' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+  });
+}
+
+module.exports = { phonePage, PHONE_JS, manifest };

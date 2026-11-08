@@ -79,7 +79,7 @@
     {
       "id": "phoneremote",
       "name": "Phone remote",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "description": "A phone on your Wi-Fi as the TV's remote: buttons, a touchpad, the keyboard, the apps and Live TV.",
       "about": "A phone on the same Wi-Fi becomes the TV's remote control. It pairs once with a 6-digit code the TV shows, then its browser page reconnects by itself: the remote's buttons, a touchpad that moves the TV's pointer, a keyboard that types into the field open on the TV, the TV's apps and the channels of your Live TV playlist, and a power button. Each phone can be blocked or removed, and a phone that is not used for a while is removed by itself. The phone remote is off until you switch it on in Add-ons; its page (Add-ons > Phone remote, and a page of the book on Home) pairs a phone and lists the paired ones.",
       "preview": "preview.jpg",
@@ -96,12 +96,15 @@
         "luna://com.webos.service.tv.systemproperty/getSystemInfo"
       ],
       "files": {
-        "addon.json": "4e5f3eab4b00b15608f4c0b05dd3bd8161748cc1844052a1ed038bd6e60806c9",
+        "addon.json": "1a3725c0a60881f5a623ee3ad59f4c53dfeabc25a0fe51eba3bd720f3b469bbe",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "440ed9aa4e4c5ad9f5dab07f90a3290ec44d03ade6f1a826263ab1f829e0b746",
-        "page.js": "985cedb9ca9b6038eff61f4ac45f0db1a803b0ee6b0adcf99430c9b0dec926ee",
+        "page/index.html": "b597235eea7a7c4fb0f36c3c749f0592742e2d56fef556c46bd64c2e4547c3ce",
+        "page.js": "2ae891c4a2333b63b7d3f4f9dc21bf0c7cef9f40c09ec69f336813be78ebecb6",
+        "pwa/icon-180.png": "04d7a2a617f633fd79dde0a872798a8238c8982669fb93468a67f430a78bdbef",
+        "pwa/icon-512.png": "9440fb5f8d5a5959ba97b46af4dcf503afa37dc33753bf312002e278a99a2676",
+        "pwa/icon.svg": "3bfb414c5f285a38d434755474314a1db07267fda79eae79adf70911b7ab9632",
         "remotekeys.js": "2f65affbb6a6ff057947d81a553ee3d2063d293edaed4cdcb4a0019b380ea8d3",
-        "service.js": "b78115301ab56e0c4244279b420ff4ab76da4686fc33fb49332c96a0d4a83c3e",
+        "service.js": "43ce92a408a7aca9de7170567a7c98c8e074cd33ed6cda42df0f09c807cb18fc",
         "src/css/page.css": "63830f9abe5d49fbf15a55e3e3c8dd957d0e0d7ce957cf514d22f25e5f8a2f97",
         "src/html/body.html": "992ae98d98f7d1b984c99003f0b9ab60036571d4eabe6fdcd7e7eb7ae4c9720f",
         "src/index.html": "0b5bf4e17fbb9d9af05d28a881851b3b9a95d8aa37c6269261cccd8f64367cba",
@@ -190,7 +193,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "e82ae83da3a14b481ed1ebc6f2c81c6221a9ce92a492a44fe27112f30c192f69",
+        "page/index.html": "31893bcd286c9e3b8a299b02140512742db03fdbb4ab55fded2cb4359fe50575",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"

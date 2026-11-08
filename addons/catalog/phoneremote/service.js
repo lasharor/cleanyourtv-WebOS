@@ -12,7 +12,8 @@
 // The settings are this add-on's settings in config.json (addons.phoneremote.settings): {expireDays, phones: [{id, name, hash, created,
 // seen, blocked}]}. A phone's token is "<id>.<secret>": the phone keeps it, the TV keeps only the SHA-256 of the secret, and it is never
 // logged.
-// The LAN listener (port 8799) runs only while a phone is paired or the pairing window is open. It serves the phone page, accepts a
+// The LAN listener (port 8799) runs only while a phone is paired or the pairing window is open. It serves the phone page (with the
+// manifest and icons that let an iPhone keep it on the Home Screen as an app: /manifest.webmanifest, /apple-touch-icon.png), accepts a
 // pairing (the code, five tries a minute per address, the window closes after eight wrong ones) and the WebSocket at /ws, where the first
 // message must be {t:'hello', token}. The keys themselves are remotekeys.js. The listener's own failure is separate from a request that
 // failed: GET reports it as listenError (a port that cannot be bound, say 8799 busy), so the TV page can tell the two apart.
@@ -36,6 +37,26 @@ const notFound = res => {
   res.writeHead(404);
   res.end();
 };
+// The Home Screen icons (pwa/, drawn from pwa/icon.svg). iOS asks for /apple-touch-icon.png (and the -precomposed name) by itself, even
+// without the <link> in the page; the manifest names the large one. Read from disk on each request: they are small and rarely asked for.
+const ICONS = {
+  '/apple-touch-icon.png': 'icon-180.png',
+  '/apple-touch-icon-precomposed.png': 'icon-180.png',
+  '/icon-180.png': 'icon-180.png',
+  '/icon-512.png': 'icon-512.png',
+};
+function icon(res, file) {
+  fs.readFile(path.join(__dirname, 'pwa', file), (err, buf) => {
+    if (err) return notFound(res);
+    res.writeHead(200, {
+      'content-type': 'image/png',
+      'content-length': buf.length,
+      'cache-control': 'max-age=86400',
+      'x-content-type-options': 'nosniff',
+    });
+    res.end(buf);
+  });
+}
 function readBody(req, max) {
   const limit = max || 1 << 20;
   return new Promise(resolve => {
@@ -242,6 +263,15 @@ function create(ctx, opts) {
         opts && opts.reverse
       );
     }
+    // The phone page as an app on the Home Screen (iPhone and iPad first: they cannot install the Android app): the manifest and its
+    // icons. Nothing in them is secret, so no token. A code in the manifest's address goes into start_url, so an iPhone that scanned the
+    // TV's QR code in Safari and then chose Add to Home Screen opens the app with the code already filled in (the app keeps its own
+    // storage, apart from Safari's, so it has to pair by itself).
+    if (req.method === 'GET' && u === '/manifest.webmanifest') {
+      const c = /(?:^|&)code=([0-9]{6})(?:&|$)/.exec(String(req.url.split('?')[1] || ''));
+      return send(200, page.manifest(i18n, lang(req), c ? c[1] : ''), 'application/manifest+json; charset=utf-8');
+    }
+    if (req.method === 'GET' && ICONS[u]) return icon(res, ICONS[u]);
     // The apps on the TV, for the phone's Apps tab: the launcher's API listens on loopback only, so the phone's page asks this server,
     // which passes the question on. Both need the phone's own token, so nobody else on the network can list or open the TV's apps.
     if (
