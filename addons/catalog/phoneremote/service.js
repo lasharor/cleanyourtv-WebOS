@@ -423,7 +423,7 @@ function create(ctx, opts) {
     return v;
   }
 
-  function login(c, token) {
+  function login(c, token, keep) {
     const m = TOKEN.exec(String(token || ''));
     const p = m && find(m[1]);
     const good = !!p && same(sha(m[2]).toString('hex'), p.hash);
@@ -439,8 +439,9 @@ function create(ctx, opts) {
       return c.conn.close(4403);
     }
     c.id = p.id;
-    // a phone that was already paired scanned the QR code: it is connected again, so the pairing window has nothing left to do
-    if (pair && pair.scanned && pair.scanned.addr === c.addr) {
+    // a phone that was already paired scanned the QR code: it is connected again, so the pairing window has nothing left to do. Unless the
+    // page says keep: Safari on an iPhone, paired, scanning the code to put the remote on the Home Screen, whose app pairs by itself
+    if (pair && pair.scanned && pair.scanned.addr === c.addr && !keep) {
       scanned = { name: p.name, at: Date.now() };
       console.log('phoneremote: phone ' + p.id + ' scanned the code while paired; pairing closed');
       closePair();
@@ -803,7 +804,7 @@ function create(ctx, opts) {
       return;
     }
     if (!m || typeof m !== 'object') return;
-    if (!c.id) return m.t === 'hello' ? login(c, m.token) : c.conn.close(4401); // nothing but hello before a phone has shown its token
+    if (!c.id) return m.t === 'hello' ? login(c, m.token, m.keep === true) : c.conn.close(4401); // nothing but hello before a phone has shown its token
     // the phone may have been revoked or blocked since it connected
     const p = find(c.id);
     if (!p || p.blocked) {

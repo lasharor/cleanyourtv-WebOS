@@ -984,6 +984,23 @@ run(async () => {
       'a phone that was already paired scanned it and connected: the window closes and the state says which phone it was'
     );
     pp.c.terminate();
+    // Safari on an iPhone, paired, scans the code to add the remote to the Home Screen: its hello says keep, the window stays open, and the
+    // Home Screen app (the same address) pairs with the same code
+    s = await call(sc.pr, '/api/phoneremote/pair', 'POST', {});
+    const kc = s.j.pairing.code;
+    await get(sc.port, '/?code=' + kc);
+    const kp = await phone(sc.port, undefined);
+    kp.c.send(JSON.stringify({ t: 'hello', token: sc.token, keep: true }));
+    await sleep(100);
+    s = await call(sc.pr, '/api/phoneremote');
+    ok(
+      kp.msgs[0] && kp.msgs[0].t === 'ready' && s.j.pairing && s.j.pairing.code === kc && s.j.pairing.scanned > 0,
+      'a paired page that says keep connects and leaves the scanned window open'
+    );
+    const ka = await post(sc.port, '/api/pair', { code: kc, name: 'home screen app' });
+    ok(ka.code === 200 && ka.j.token, 'and the Home Screen app pairs with that same code');
+    kp.c.terminate();
+    s = await call(sc.pr, '/api/phoneremote/pair', 'POST', { stop: true });
     // a new phone scans, then finishes pairing on the phone: the window stays open for it, and its own connection does not close it
     s = await call(sc.pr, '/api/phoneremote/pair', 'POST', {});
     await get(sc.port, '/?code=' + s.j.pairing.code);
@@ -1392,6 +1409,11 @@ run(async () => {
       /<div id=ioscard class="ioscard hide">/.test(pg) &&
       /<p id=iostip class=hide>/.test(pg),
     'in Safari on an iPhone the pairing screen says to put the remote on the Home Screen first (hidden elsewhere), and This remote has the tip'
+  );
+  ok(
+    /if\(tok&&IOSWEB\)\{HAND=true;/.test(pg) &&
+      /JSON\.stringify\(HAND\?\{t:'hello',token:tok,keep:true\}:\{t:'hello',token:tok\}\)/.test(pg),
+    'Safari on an iPhone, already paired, opened with a code: its hello says keep, so the Home Screen app can still pair with the code'
   );
   ok(
     /navigator\.vibrate\(8\);return\}\}catch\(e\)\{\}haptic\(\)\}/.test(pg) &&

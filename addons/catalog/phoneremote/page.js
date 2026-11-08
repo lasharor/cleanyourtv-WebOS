@@ -78,6 +78,9 @@ function tidy(){try{history.replaceState(null,'','/')}catch(e){}}
 function autoPair(){
   var m=/[?&]code=(\\d{6})/.exec(location.search||'');
   if(!m)return;
+  /* Safari on an iPhone that is paired already and scans the code: the person is most likely adding the remote to the Home Screen, whose
+     app has to pair by itself with this very code. The page tells the TV to keep the pairing window open (keep in hello), and says so */
+  if(tok&&IOSWEB){HAND=true;setTimeout(function(){say(t('To use the remote as an app: Share > Add to Home Screen now. The app pairs with this code.'),'',9000)},800)}
   if(tok||ready){tidy();return}
   /* the Home Screen app opens its start address, code and all, every time: a code it has filled in once is not filled in again */
   if(homeApp()){var used='';try{used=localStorage.getItem(UK)||''}catch(e){}if(used===m[1]){$('code').value='';cells();tidy();return}try{localStorage.setItem(UK,m[1])}catch(e){}}
@@ -91,7 +94,7 @@ function autoPair(){
 /* iPhone and iPad: there is no app to install, but this page can live on the Home Screen as an app (the TV serves the manifest and the
    icons). Such an app keeps its own storage, apart from Safari's, so a phone paired in Safari is not paired in the app: in Safari the
    pairing screen says to add the page to the Home Screen first. A wrapper app (window.CYTV_APP) is never told so. */
-var UK='cytv-code-used';
+var UK='cytv-code-used',HAND=false;
 function ios(){var k=kind();return k==='iPhone'||k==='iPad'}
 function homeApp(){try{if(navigator.standalone)return true;return !!(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)}catch(e){return false}}
 var IOS=ios(),IOSWEB=IOS&&!homeApp()&&!window.CYTV_APP;
@@ -132,7 +135,7 @@ function retry(ms){clearTimeout(timer);timer=setTimeout(connect,ms||delay);delay
 function connect(){if(!tok||(ws&&ws.readyState<2))return;clearTimeout(timer);status('w',t('Connecting…'));
  var w;try{w=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws')}catch(e){retry();return}
  ws=w;lastRx=Date.now();upFail=0;
- w.onopen=function(){w.send(JSON.stringify({t:'hello',token:tok}))};
+ w.onopen=function(){w.send(JSON.stringify(HAND?{t:'hello',token:tok,keep:true}:{t:'hello',token:tok}))};
  w.onmessage=function(e){lastRx=Date.now();var m;try{m=JSON.parse(e.data)}catch(x){return}
   if(m.t==='ready'){ready=true;tvDown=false;blocked=false;delay=1000;status('ok',t('Connected'));$('who').title=m.name||'';if(m.tv){$('tvname').textContent=m.tv;try{localStorage.setItem('cytv-tvname',m.tv)}catch(e){}}try{if(window.CYTV_APP&&CYTV_APP.setName)CYTV_APP.setName(m.tv||'')}catch(e){}me={name:m.name||'',seen:m.seen||0,created:m.created||0};mac=m.mac||'';wol=m.wol;offAt=0;ask();appsIn=false;liveIn=false;loadLive();
    if(mac){try{localStorage.setItem(MK,mac)}catch(e){};try{if(window.CYTV_APP&&window.CYTV_APP.setMac)window.CYTV_APP.setMac(mac)}catch(e){}}}
