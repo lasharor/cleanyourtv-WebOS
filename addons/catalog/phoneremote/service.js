@@ -37,7 +37,7 @@ const notFound = res => {
   res.writeHead(404);
   res.end();
 };
-// The Home Screen icons (pwa/, drawn from pwa/icon.svg). iOS asks for /apple-touch-icon.png (and the -precomposed name) by itself, even
+// The Home Screen icons (pwa/): CleanYourTV's own icon, the one the package uses, rendered from assets/icon.svg. iOS asks for /apple-touch-icon.png (and the -precomposed name) by itself, even
 // without the <link> in the page; the manifest names the large one. Read from disk on each request: they are small and rarely asked for.
 const ICONS = {
   '/apple-touch-icon.png': 'icon-180.png',
