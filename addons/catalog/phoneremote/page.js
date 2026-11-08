@@ -236,9 +236,19 @@ function tickNow(){try{var a=document.activeElement;if(a&&(a.tagName==='TEXTAREA
  if(!hap){hap=document.createElement('label');hap.setAttribute('aria-hidden','true');hap.style.cssText='position:fixed;left:-100px;top:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none';
   hap.innerHTML='<input type=checkbox switch tabindex=-1>';document.body.appendChild(hap)}
  hap.click();if(document.activeElement===hap.firstChild)hap.firstChild.blur()}catch(e){}}
-function bind(el){var k=el.getAttribute('data-k'),rep=el.getAttribute('data-r'),t1=0,t2=0;
- function go(){send({t:'key',k:k});buzz()}
- function down(e){if(e.type==='touchstart')lastTouch=Date.now();else if(Date.now()-lastTouch<700)return;e.preventDefault();go();el.className+=' on';
+/* Since iOS 26.5 Safari ticks only when the finger itself toggles a switch: a click from script (haptic() above) stays silent. So on an
+   iPhone each key carries a see-through label for one hidden switch, the finger's tap lands on the label, and the label passes the tap to the
+   switch. For that the tap must become a click, so on an iPhone a key does not cancel its touchstart; the mouse events Safari sends after the
+   touch are ignored as before (lastTouch). The switch gives the focus back at once, so typing is not interrupted. */
+var hsw=null;
+function overlay(el){try{if(!hsw){hsw=document.createElement('input');hsw.type='checkbox';hsw.setAttribute('switch','');hsw.id='hsw';hsw.tabIndex=-1;hsw.setAttribute('aria-hidden','true');
+  hsw.style.cssText='position:fixed;left:-100px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';hsw.addEventListener('focus',function(){hsw.blur()});document.body.appendChild(hsw)}
+ if(window.getComputedStyle(el).position==='static')el.style.position='relative';
+ var l=document.createElement('label');l.htmlFor='hsw';l.className='hapov';l.setAttribute('aria-hidden','true');el.appendChild(l)}catch(e){}}
+function bind(el){var k=el.getAttribute('data-k'),rep=el.getAttribute('data-r'),t1=0,t2=0,ov=IOS&&!window.CYTV_APP;
+ if(ov)overlay(el);
+ function go(){send({t:'key',k:k});if(!ov)buzz()}
+ function down(e){if(e.type==='touchstart')lastTouch=Date.now();else if(Date.now()-lastTouch<700)return;if(!(ov&&e.type==='touchstart'))e.preventDefault();go();el.className+=' on';
   if(rep){t1=setTimeout(function(){t2=setInterval(go,110)},380)}}
  function up(){clearTimeout(t1);clearInterval(t2);el.className=el.className.replace(' on','')}
  el.addEventListener('touchstart',down,{passive:false});el.addEventListener('mousedown',down);
@@ -634,6 +644,7 @@ textarea:focus{border:1.5px solid #ff8a5b;box-shadow:0 0 0 4px rgba(255,138,91,.
 .num{display:grid;grid-template-columns:repeat(3,1fr);margin:-5px}.num>*{margin:5px}.num button{height:64px;border-radius:18px;font-size:24px}.num .tx2{font-size:15px}
 .col{display:flex;margin-top:9px}.col>*+*{margin-left:10px}.col button{flex:1;height:44px;border:0;border-radius:14px}.cr{background:#e5484d}.cg{background:#30a46c}.cy{background:#f5c451}.cb{background:#3e63dd}
 #pairbox{position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;padding:72px 20px 24px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}#pairbox{padding-top:max(72px,calc(env(safe-area-inset-top,0px) + 32px))}
+.hapov{position:absolute;z-index:2;top:0;left:0;right:0;bottom:0;border-radius:inherit;-webkit-touch-callout:none;cursor:pointer}
 .ioscard{margin:0 0 24px;padding:16px;border-radius:20px;background:#1d1714;border:1px solid #5a3b2c;font-size:15px;line-height:1.5;color:#dde0ea}.ioscard b{display:block;color:#ffb08f}
 .ioscard ol{margin:10px 0 0;padding-left:22px}.ioscard li+li{margin-top:6px}.ioscard p{margin:10px 0 0;font-size:14px}#pairbox>*{position:relative}
 #pairbox .glow{position:absolute;left:-100px;top:-140px;width:320px;height:320px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,138,91,.14),transparent)}

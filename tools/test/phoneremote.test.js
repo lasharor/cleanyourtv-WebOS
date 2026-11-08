@@ -1350,9 +1350,9 @@ run(async () => {
   );
   ok(
     /function buzz\(\)\{try\{if\(window\.CYTV_APP&&window\.CYTV_APP\.buzz\)/.test(pg) &&
-      /function go\(\)\{send\(\{t:'key',k:k\}\);buzz\(\)\}/.test(pg) &&
+      /function go\(\)\{send\(\{t:'key',k:k\}\);if\(!ov\)buzz\(\)\}/.test(pg) &&
       /else step\('ENTER'\);buzz\(\)/.test(pg),
-    'a key press and a touchpad tap ask the app for a short vibration (the pad does not buzz on every swipe step)'
+    "a key press and a touchpad tap ask the app for a short vibration (the pad does not buzz on every swipe step; on an iPhone the key's own switch ticks instead)"
   );
   ok(
     /bridge\(\$\('pad'\)\);bridge\(\$\('sbar'\)\)/.test(pg) &&
@@ -1425,6 +1425,17 @@ run(async () => {
       /a\.tagName==='TEXTAREA'\|\|\(a\.tagName==='INPUT'&&a\.type!=='checkbox'\)\)&&a\.offsetWidth\)return;/.test(pg) &&
       /hap\.click\(\);if\(document\.activeElement===hap\.firstChild\)hap\.firstChild\.blur\(\)/.test(pg),
     'an iPhone (no navigator.vibrate) gets its tick from a hidden switch when the finger lifts (Safari counts a touch then), never while text is being typed'
+  );
+  ok(
+    /function bind\(el\)\{var k=el\.getAttribute\('data-k'\),rep=el\.getAttribute\('data-r'\),t1=0,t2=0,ov=IOS&&!window\.CYTV_APP;/.test(
+      pg
+    ) &&
+      /if\(ov\)overlay\(el\);/.test(pg) &&
+      /function go\(\)\{send\(\{t:'key',k:k\}\);if\(!ov\)buzz\(\)\}/.test(pg) &&
+      /if\(!\(ov&&e\.type==='touchstart'\)\)e\.preventDefault\(\);/.test(pg) &&
+      /l\.htmlFor='hsw';l\.className='hapov'/.test(pg) &&
+      /hsw\.addEventListener\('focus',function\(\)\{hsw\.blur\(\)\}\)/.test(pg),
+    'iOS 26.5 and newer: each key carries a label for one hidden switch, so the finger itself toggles it (no tick from script); the key lets its tap become a click there'
   );
   // a backslash in the page's script is an escape of the template it is written in: \d must reach the phone as \d
   ok(
