@@ -14,7 +14,7 @@
 
 ## What to know
 
-The Home key on a page was tried on a 65UR91006LB (webOS 25) with the default code, the voice fix on the same model, the card dimming setting on a 55NANO866NA (webOS 5.6) and the page strip click on a 65UP77006LB (webOS 6.5). The detection of a hook that gets no buttons (issue 185) has **not** been tried on a real TV yet: its author is waiting for the reporter of the issue to confirm it. The Home key binds LG's input service while a page shows, so it needs the Input key hook, which is on by default. The phone remote as an iPhone app was checked in a desktop browser that imitates an iPhone, **not** on a real iPhone yet. Please say what you see in an issue.
+The Home key on a page was tried on a 65UR91006LB (webOS 25) with the default code, the voice fix on the same model, the card dimming setting on a 55NANO866NA (webOS 5.6) and the page strip click on a 65UP77006LB (webOS 6.5). The detection of a hook that gets no buttons (issue 185) has **not** been tried on a real TV yet: its author is waiting for the reporter of the issue to confirm it. The Home key binds LG's input service while a page shows, so it needs the Input key hook, which is on by default. The phone remote as an iPhone app was tried on an iPhone (iOS 26) with a 65UP77006LB (webOS 6.5): adding it to the Home Screen, pairing in the app, the keys and their tick; not yet on an iPad or on iOS 17 and older. Please say what you see in an issue.
 
 ## Thanks
 
