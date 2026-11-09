@@ -1,4 +1,26 @@
 /* ---------- input: tap OK to open, hold OK for options ---------- */
+
+/* ---------- the screen saver only opens itself over an idle launcher ---------- */
+/* helper/screensaver.js opens the screen saver page after two quiet minutes on Home, to cover the times tvpowerd does not fire. It
+   cannot see the remote, so the launcher reports its keys; without a word from the launcher the service never opens the page by
+   itself (LG's Home in front, or a launcher from before this), which is why a TV being used with its remote is never covered.
+   One request per five seconds at most: a held direction key sends nothing extra. */
+var seenT = 0;
+function seenActivity() {
+  var now = Date.now();
+  if (now - seenT < 5000) return;
+  seenT = now;
+  try {
+    var x = new XMLHttpRequest();
+    x.open('POST', API + '/api/screensaver/active', true);
+    x.send('{}');
+  } catch (e) {}
+}
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden) seenActivity();
+});
+seenActivity();
+
 var lastMove = 0,
   snapT = 0,
   downT = 0,
@@ -80,6 +102,7 @@ document.addEventListener('cursorStateChange', function (ev) {
   pointerShow(ev.detail && ev.detail.visibility);
 });
 document.addEventListener('mousemove', function (ev) {
+  seenActivity(); /* the pointer of the remote: the TV is being used */
   if (stack.length || LIVE.on || PAGER.on || CS.on) return;
   if (cursorEvents ? !pointerShown : Date.now() - lastKey < 1500) return;
   if (!pointerMoved(ev.clientX, ev.clientY)) return;
@@ -90,6 +113,7 @@ document.addEventListener('mousemove', function (ev) {
 
 document.addEventListener('keydown', function (e) {
   var k = e.keyCode;
+  seenActivity();
   /* a right-to-left layout: Left moves to what is on the left, which is the next tile in the row (Live TV keeps left-to-right) */
   if (rtl() && !LIVE.on && (k === 37 || k === 39)) k = 76 - k;
   /* 1536 and 1537: webOS's keys for the pointer showing and hiding, not a button of the remote */

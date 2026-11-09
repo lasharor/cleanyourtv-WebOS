@@ -43,6 +43,12 @@ uninstall. Optional features contact other services only when you switch them on
       setup tries the first way once and writes `home-method` itself, so the next boots use it too; only when that fails as well is
       everything rolled back. TVs where the stand-in works are not touched.
 
+   When switched on in the manager (off by default: the file `SCREENSAVER-ON`), LG's **screen saver** is replaced as well: in the
+   first way, `10-cleanyourtv-home` has `20-cleanyourtv-screensaver` mount the page's folder over
+   `/usr/palm/applications/com.webos.app.screensaver` just before its app manager restart, so one restart reads both. The app id stays
+   LG's, so the TV starts the page when it would have started its own screen saver. TVs taken over the second way, and TVs whose screen
+   saver is a native program, keep LG's screen saver in this version. See [Screen saver](screensaver.md).
+
    Whenever the app manager is restarted on a TV with LG's native Home or on webOS before 7 (the first way, or the setup registering
    our extra apps), the services that talk to it (`eim`, `webapp-mgr`, `preload-manager`, `memorymanager`, those the TV has) are
    restarted after it (`after-sam.sh`). Without that, apps stopped opening, an HDMI input lost its picture and HDMI-CEC control
@@ -78,4 +84,5 @@ These are switched on in the manager app, **Experimental**, and put back by swit
 ## What the uninstall removes
 
 The apps, the boot scripts, the `cytv-addons` command, the Input-key and voice-key binds, the debloat changes, a switched-off LG volume bar (put back) and the folder
-`/media/developer/cleanyourtv` (with `--keep-config`, the settings and usage history stay). The TV then restarts with LG's Home.
+`/media/developer/cleanyourtv` (with `--keep-config`, the settings and usage history stay). The mounts that replace LG's Home and LG's
+screen saver are removed too, so the TV then restarts with both as LG shipped them.

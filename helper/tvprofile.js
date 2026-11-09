@@ -26,6 +26,9 @@
 //                  to read it (flutter and web Home). 'standin' where LG's Home is the native program: a small script is mounted over
 //                  that program and asks webapp-mgr to open the launcher as com.webos.app.home, so LG's Home manifest stays and the
 //                  app manager is not restarted (issues 14, 23 and 24). scripts/home-standin.sh is the script.
+//   saverTakeover  the same for LG's screen saver (scripts/20-cleanyourtv-screensaver): 'mount' (the page's folder over the app, read
+//                  by the app manager restart of the Home takeover) where LG's screen saver is a Flutter, QML or web app; 'none'
+//                  where it is a native program, which this version does not replace (no way for that was tried on a TV yet).
 //   criu           the kernel runs with CRIU (criu_enabled on its command line): webOS restores some apps from a checkpoint instead of
 //                  starting their program. LG's native Home is then never started from the program the stand-in replaces, so the stand-in
 //                  does not run (55UR78006LK, issue 72; OLED55BX3LB, issue 84). Not used to choose the way: other TVs with CRIU may run the
@@ -69,6 +72,7 @@ function decide(facts, compat) {
     sdk: f.sdk || '',
     sdkMajor: major,
     home: homeKind,
+    saver: String(f.saver || ''),
     node: f.node || process.version,
     pickerMode: major === 10 ? 'overlay' : 'ondemand',
     notifyWindow: major >= 10 ? 'topui' : 'overlay',
@@ -88,6 +92,7 @@ function decide(facts, compat) {
     criu: /(^|\s)criu_enabled(\s|=|$)/.test(String(f.cmdline || '')),
     homeTakeover: /^com\.webos\.app\.home native$/.test(homeKind) ? 'standin' : 'mount',
     wakeRefocus: major >= 11,
+    saverTakeover: /^com\.webos\.app\.screensaver native$/.test(String(f.saver || '')) ? 'none' : 'mount',
   };
 }
 const readJson = (file, d) => {
@@ -126,12 +131,15 @@ function create(ctx) {
     if (r.returnValue === false) return profile;
     const backup = P.D + '/backup/home-appinfo.orig.json';
     const home = homeKindOf(fs.existsSync(backup) ? backup : P.HOME_APP + '/appinfo.json');
+    const saverBackup = P.D + '/backup/screensaver-appinfo.orig.json';
+    const saver = homeKindOf(fs.existsSync(saverBackup) ? saverBackup : P.SCREENSAVER_APP + '/appinfo.json');
     profile = decide(
       {
         model: r.modelName,
         firmware: r.firmwareVersion,
         sdk: r.sdkVersion,
         home,
+        saver,
         node: process.version,
         cmdline: readText(P.PROC + '/cmdline'),
       },
@@ -157,7 +165,14 @@ if (require.main === module) {
   const compat = [];
   for (let i = a.indexOf('--compat') + 1; i > 0 && i < a.length && a[i].indexOf('--') !== 0; i++) compat.push(a[i]);
   const p = decide(
-    { model: val('--model'), firmware: val('--firmware'), sdk: val('--sdk'), home: val('--home'), cmdline: val('--cmdline') },
+    {
+      model: val('--model'),
+      firmware: val('--firmware'),
+      sdk: val('--sdk'),
+      home: val('--home'),
+      saver: val('--saver'),
+      cmdline: val('--cmdline'),
+    },
     compatEntries(compat)
   );
   if (a[0] === 'show') console.log(JSON.stringify(p, null, 1));
@@ -166,7 +181,7 @@ if (require.main === module) {
     console.error(
       'usage: node tvprofile.js get <' +
         Object.keys(p).join('|') +
-        '> | show  [--sdk v] [--firmware v] [--home kind] [--cmdline text] [--compat files]'
+        '> | show  [--sdk v] [--firmware v] [--home kind] [--saver kind] [--cmdline text] [--compat files]'
     );
     process.exit(2);
   }

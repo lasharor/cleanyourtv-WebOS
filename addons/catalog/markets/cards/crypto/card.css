@@ -1,0 +1,275 @@
+/* The Stocks and Crypto cards, as in the design (the "Markets Cards for CleanYourTV" artifact): like the weather card, only the glass is
+   drawn, as big as its content (card.js tells the launcher where it is, for the focus ring). Sizes are in px of the TV's 1920x1080 canvas.
+   No flex gap (Chromium before 84): sibling margins. */
+html {
+  font-size: 16px;
+}
+body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  font-family: sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+body.wait #gl {
+  display: none;
+}
+#gl {
+  box-sizing: border-box;
+  background: rgba(14, 20, 32, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  border-radius: 32px;
+  position: relative;
+}
+html[dir="rtl"] #gl {
+  direction: rtl;
+}
+html[dir="rtl"] body {
+  justify-content: flex-start;
+}
+.s2 {
+  color: rgba(255, 255, 255, 0.72);
+}
+.s3 {
+  color: rgba(255, 255, 255, 0.6);
+}
+.up {
+  color: #4ade9a;
+}
+.dn {
+  color: #ff7a6e;
+}
+.fl {
+  color: rgba(255, 255, 255, 0.7);
+}
+.ln {
+  display: block;
+  flex: none;
+}
+.pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.1);
+}
+.pill.on {
+  color: #4ade9a;
+}
+.pill.off {
+  color: #f0b54a;
+}
+
+/* strip: one line, 44px high */
+#gl.strip {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  border-radius: 999px;
+  padding: 0 22px;
+  font-size: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 1100px;
+}
+.strip .track {
+  display: inline-flex;
+  align-items: center;
+}
+.strip .tk {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 26px;
+}
+.strip .tk:last-child {
+  margin-right: 0;
+}
+/* the ticker: as wide as the place, the list twice, moved left by one list; the edges fade */
+#gl.strip.scroll {
+  width: 100%;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+}
+.strip.scroll .track {
+  direction: ltr;
+  animation-name: cytv-tick;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+.strip.scroll .tk:last-child {
+  margin-right: 26px;
+}
+@keyframes cytv-tick {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.strip .sym {
+  font-weight: 600;
+  margin-right: 10px;
+}
+.strip .px {
+  margin-right: 10px;
+}
+html[dir="rtl"] .strip .tk {
+  margin-right: 0;
+  margin-left: 26px;
+}
+html[dir="rtl"] .strip .tk:last-child {
+  margin-left: 0;
+}
+html[dir="rtl"] .strip .sym,
+html[dir="rtl"] .strip .px {
+  margin-right: 0;
+  margin-left: 10px;
+}
+
+/* compact: cells side by side, 112px high */
+#gl.cmp {
+  display: inline-flex;
+  align-items: center;
+  height: 112px;
+  max-height: 100%;
+  padding: 0 26px;
+}
+.cmp .cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 170px;
+  margin-right: 22px;
+}
+.cmp .cell:last-child {
+  margin-right: 0;
+}
+html[dir="rtl"] .cmp .cell {
+  margin-right: 0;
+  margin-left: 22px;
+}
+html[dir="rtl"] .cmp .cell:last-child {
+  margin-left: 0;
+}
+.cmp .row1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 20px;
+}
+.cmp .row1 b {
+  font-weight: 600;
+  font-size: 22px;
+}
+.cmp .px {
+  font-size: 30px;
+  font-weight: 300;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.cmp .ln {
+  margin-top: 2px;
+}
+
+/* panel: 560 wide, a header and a row per symbol */
+#gl.pnl {
+  width: 560px;
+  max-width: 100%;
+  padding: 20px 30px 18px;
+}
+.pnl .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 21px;
+  margin-bottom: 8px;
+}
+.pnl .top .t {
+  font-weight: 600;
+}
+.pnl .row {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  font-size: 23px;
+}
+.pnl .row + .row {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.pnl .nm {
+  flex: 1;
+  min-width: 0;
+}
+.pnl .nm b {
+  font-weight: 600;
+}
+.pnl .nm small {
+  display: block;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+}
+.pnl .ln {
+  margin: 0 18px;
+}
+.pnl .pr {
+  width: 130px;
+  text-align: right;
+  white-space: nowrap;
+}
+.pnl .ch {
+  width: 96px;
+  text-align: right;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pnl.narrow .pr {
+  width: 110px;
+}
+.pnl.narrow .ch {
+  width: 90px;
+}
+.pnl .more {
+  font-size: 18px;
+  margin-top: 6px;
+}
+html[dir="rtl"] .pnl .pr,
+html[dir="rtl"] .pnl .ch {
+  text-align: left;
+}
+
+/* no symbols, or no answer */
+#gl.msg {
+  padding: 18px 30px;
+  text-align: center;
+}
+.msg .m1 {
+  font-size: 26px;
+  font-weight: 500;
+}
+.msg .m2 {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 2px;
+}
+body.strip #gl.msg {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  border-radius: 999px;
+  padding: 0 22px;
+  font-size: 24px;
+}
+body.strip .msg .m1 {
+  font-size: 24px;
+  font-weight: 400;
+}

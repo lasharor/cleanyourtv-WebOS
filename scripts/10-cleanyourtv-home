@@ -76,6 +76,8 @@ if [ "$method" = standin ]; then
   ) </dev/null >/dev/null 2>&1 &
 else
   echo "$(up) home: mounting the launcher over LG's Home, restarting sam" >> $LOG
+  # the screen saver, when switched on in the manager (off by default): its folder too, so this one restart reads both
+  [ -e $L/SCREENSAVER-ON ] && sh $L/20-cleanyourtv-screensaver prepare </dev/null
   mount --bind $L/home-overlay $H && { (sleep 3; pkill -9 -f /usr/palm/applications/airplay/LunaExecutable) </dev/null >/dev/null 2>&1 & systemctl restart sam; }
   echo "$(up) home: sam restarted" >> $LOG
   # After the sam restart nothing is in the foreground (black screen). Once sam is back, start Home again

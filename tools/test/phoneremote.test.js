@@ -143,10 +143,50 @@ run(async () => {
       { id: 'com.example.tv', title: 'Example' },
     ],
   };
+  const voice = {
+    installed: true,
+    listening: false,
+    last: null,
+    asked: [],
+    listens: 0,
+    answer: 'Turned off Kitchen lights.',
+    askMs: 0,
+    llm: { enabled: true, hasKey: true },
+  };
   const stub = http.createServer((req, res) => {
     let d = '';
     req.on('data', c => (d += c));
     req.on('end', () => {
+      const vj = o => res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(o));
+      if (req.url === '/api/voice/status')
+        return vj({
+          installed: voice.installed,
+          unsupported: false,
+          listening: voice.listening,
+          last: voice.last,
+          url: '',
+          llm: voice.llm,
+          ha: { configured: false },
+        });
+      if (req.url === '/api/voice/ask' && req.method === 'POST') {
+        const b = JSON.parse(d || '{}');
+        voice.asked.push(b.text);
+        return setTimeout(() => vj({ text: b.text, answer: voice.answer, via: 'ha', error: '' }), voice.askMs);
+      }
+      if (req.url === '/api/voice/listen' && req.method === 'POST') {
+        if (!voice.installed) return vj({ started: false, error: 'voice is not installed' });
+        voice.listens++;
+        voice.listening = true;
+        voice.last = { at: Date.now(), state: 'listening' };
+        setTimeout(() => (voice.last = { at: Date.now(), state: 'recognising' }), 80);
+        setTimeout(() => (voice.last = { at: Date.now(), state: 'heard', text: 'what is on tonight' }), 160);
+        setTimeout(() => {
+          voice.last.answer = 'The match starts at nine.';
+          voice.last.via = 'ai';
+          voice.listening = false;
+        }, 240);
+        return vj({ started: true });
+      }
       if (req.url === '/api/apps')
         return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ apps: launcher.apps }));
       if (req.url === '/api/inputs')
@@ -185,7 +225,8 @@ run(async () => {
   launcher.logo = api + '/logo.png';
   const rev = { name: '' }; // what the stand-in router answers for the phone's address
   const reverse = (a, cb) => cb(rev.name ? null : new Error('ENOTFOUND'), rev.name ? [rev.name] : []);
-  const make = () => PR.create(addonCtx(settings), { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna, reverse, liveWaitMs: 40 });
+  const make = () =>
+    PR.create(addonCtx(settings), { port: 0, host: '127.0.0.1', keys, api, luna: fakeLuna, reverse, liveWaitMs: 40, voiceTick: 25 });
   let pr = make();
   pr.start();
   let r = await call(pr, '/api/phoneremote');
@@ -438,6 +479,83 @@ run(async () => {
     typeof p.msgs[0].mac === 'string' && 'wol' in p.msgs[0],
     'the ready message carries the TV address for Wake-on-LAN (empty when the TV has none)'
   );
+  // ---- the mic: what the TV can do, a question from the phone, and the TV listening on its remote ----
+  p.c.send(JSON.stringify({ t: 'vstat' }));
+  for (let i = 0; i < 20 && !p.msgs.filter(m => m.t === 'vstat').length; i++) await sleep(50);
+  const vs = p.msgs.filter(m => m.t === 'vstat')[0];
+  ok(
+    vs && vs.ok && vs.installed && vs.answers && !vs.unsupported,
+    'the phone asks what voice can do on the TV: installed, and something answers (the AI chat)'
+  );
+  p.c.send(JSON.stringify({ t: 'ask', text: '  turn off the kitchen lights  ', n: 61 }));
+  for (let i = 0; i < 20 && !p.msgs.filter(m => m.t === 'answer').length; i++) await sleep(50);
+  const va = p.msgs.filter(m => m.t === 'answer')[0];
+  ok(
+    va &&
+      va.text === 'turn off the kitchen lights' &&
+      va.answer === 'Turned off Kitchen lights.' &&
+      va.via === 'ha' &&
+      va.error === '' &&
+      voice.asked[0] === 'turn off the kitchen lights',
+    "a question typed or dictated on the phone goes to the TV's voice assistant, trimmed, and its answer comes back with who gave it"
+  );
+  p.c.send(JSON.stringify({ t: 'ask', text: '   ' }));
+  for (let i = 0; i < 20 && p.msgs.filter(m => m.t === 'answer').length < 2; i++) await sleep(50);
+  ok(
+    p.msgs.filter(m => m.t === 'answer')[1].error === 'empty' && voice.asked.length === 1,
+    'an empty question is answered at once and never reaches the TV'
+  );
+  p.c.send(JSON.stringify({ t: 'listen' }));
+  for (let i = 0; i < 40 && !p.msgs.filter(m => m.t === 'vlive' && (m.state === 'done' || m.state === 'error')).length; i++)
+    await sleep(50);
+  const steps = p.msgs.filter(m => m.t === 'vlive');
+  const done = steps[steps.length - 1];
+  ok(
+    voice.listens === 1 &&
+      steps[0].state === 'listening' &&
+      steps.some(m => m.state === 'recognising') &&
+      steps.some(m => m.state === 'thinking' && m.text === 'what is on tonight') &&
+      done.state === 'done' &&
+      done.text === 'what is on tonight' &&
+      done.answer === 'The match starts at nine.' &&
+      done.via === 'ai',
+    'the TV listens on its remote and the phone is told each step: listening, recognising, thinking with the words, then the answer'
+  );
+  voice.installed = false;
+  p.c.send(JSON.stringify({ t: 'listen' }));
+  for (let i = 0; i < 20 && p.msgs.filter(m => m.t === 'vlive' && m.state === 'error').length < 1; i++) await sleep(50);
+  const verr = p.msgs.filter(m => m.t === 'vlive' && m.state === 'error')[0];
+  ok(
+    verr && verr.e === 'voice is not installed' && voice.listens === 1,
+    'without voice on the TV the phone is told why, and nothing listens'
+  );
+  voice.installed = true;
+  // the AI chat switched on without a key answers nothing: the mic stays off (a server address or Home Assistant would count)
+  voice.llm = { enabled: true, hasKey: false, server: 'http://x' };
+  p.c.send(JSON.stringify({ t: 'vstat' }));
+  for (let i = 0; i < 20 && p.msgs.filter(m => m.t === 'vstat').length < 2; i++) await sleep(50);
+  ok(p.msgs.filter(m => m.t === 'vstat')[1].answers === false, 'the AI chat on without a key does not count as something that answers');
+  voice.llm = { enabled: true, hasKey: true };
+  // a phone that leaves before its answer comes: the late answer is dropped quietly, the service goes on
+  let unhandled = 0;
+  const onUnhandled = () => unhandled++;
+  process.on('unhandledRejection', onUnhandled);
+  const p2 = await phone(port, token);
+  for (let i = 0; i < 20 && !p2.msgs.filter(m => m.t === 'ready').length; i++) await sleep(50);
+  voice.askMs = 150;
+  p2.c.send(JSON.stringify({ t: 'ask', text: 'are you there' }));
+  await sleep(40);
+  p2.c.close();
+  await sleep(300);
+  voice.askMs = 0;
+  process.removeListener('unhandledRejection', onUnhandled);
+  p.c.send(JSON.stringify({ t: 'ping' }));
+  for (let i = 0; i < 20 && !p.msgs.filter(m => m.t === 'pong').length; i++) await sleep(50);
+  ok(
+    unhandled === 0 && voice.asked.indexOf('are you there') >= 0 && p.msgs.filter(m => m.t === 'pong').length > 0,
+    'an answer for a phone that left meanwhile is dropped without an error, and the other phones go on'
+  );
+
   p.c.send(JSON.stringify({ t: 'key', k: 'HOME', n: 7 }));
   p.c.send(JSON.stringify({ t: 'key', k: 'POWEROFF', n: 8 }));
   p.c.send(JSON.stringify({ t: 'move', dx: 3, dy: -2 }));
@@ -1005,8 +1123,19 @@ run(async () => {
     'the page keeps a socket, reconnects on wake and keeps its token'
   );
   ok(
-    (pg.match(/class=drawer/g) || []).length === 5 && /\.drawer\{/.test(pg) && /\.drawer \.top button\{/.test(pg),
-    'the inputs, the numbers, the keyboard, the power and the "This remote" drawer are one and the same: one panel, one handle, one title row, one close button'
+    (pg.match(/class=drawer/g) || []).length === 6 && /\.drawer\{/.test(pg) && /\.drawer \.top button\{/.test(pg),
+    'the inputs, the numbers, the keyboard, the power, the "This remote" and the voice drawer are one and the same: one panel, one handle, one title row, one close button'
+  );
+  ok(
+    (pg.match(/class=qmic /g) || []).length === 2 &&
+      /class=qin [^]*?class=qmic [^]*?class=qkb /.test(pg) &&
+      /var VK='cytv-voice'/.test(pg) &&
+      /if\(pick\|\|!vpref\.remember\|\|!vpref\.src\)return vpick\(\)/.test(pg),
+    'the mic sits between Inputs and Keyboard on the Remote and the Touchpad; a tap uses the place kept on the phone (cytv-voice), and with none kept it asks'
+  );
+  ok(
+    /id=kvvoice/.test(pg) && /id=kvshow/.test(pg) && /id=kvwarn/.test(pg),
+    'This remote has the Voice and Show answers here rows, and says when the TV cannot listen on its remote'
   );
   ok(
     /pullDown\('insheet','xins'\)/.test(pg) &&
