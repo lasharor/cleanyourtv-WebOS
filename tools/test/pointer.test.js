@@ -241,14 +241,15 @@ run(async () => {
       },
       getBoundingClientRect: () => ({ left: 100, top: 50 }),
     },
-    dockEl = {},
-    gridEl = {},
+    dockEl = { offsetLeft: 0, offsetTop: 0 },
+    gridEl = { offsetLeft: 0, offsetTop: 0 },
     focused = {
       parentNode: gridEl,
       offsetWidth: 405,
       offsetHeight: 210,
+      offsetLeft: 128,
+      offsetTop: 259,
       style: { getPropertyValue: name => (name === '--c' ? '18,132,224' : '') },
-      getBoundingClientRect: () => ({ left: 218, top: 304, width: 425.25, height: 220.5 }),
     },
     moon = {
       document: {
@@ -261,7 +262,13 @@ run(async () => {
           },
         }),
       },
-      window: { getComputedStyle: () => ({ borderRadius: '34px' }) },
+      window: {
+        getComputedStyle: () => ({
+          borderRadius: '34px',
+          getPropertyValue: name =>
+            name === '--grid-fs' ? '1.05' : name === '--dock-fs' ? '1.06' : name === '--dock-lift' ? '-14px' : '0',
+        }),
+      },
       $(id) {
         if (id === 'scroll') return scroll;
         if (id === 'dock') return dockEl;
@@ -276,13 +283,22 @@ run(async () => {
   ok(
     made.length === 1 &&
       made[0].id === 'tile-focus' &&
-      made[0].style.width === '425px' &&
-      made[0].style.height === '221px' &&
-      made[0].style.borderRadius === '36px' &&
+      made[0].style.width === '433px' &&
+      made[0].style.height === '229px' &&
+      made[0].style.borderRadius === '40px' &&
       made[0].style['--focus-c'] === '18,132,224' &&
-      made[0].style.transform === 'translate(118px,254px)' &&
+      made[0].style.transform === 'translate(114px,250px)' &&
       made[0].style.opacity === '1',
     "Moon fits one glass frame to the app's rendered box and uses the icon's colour"
+  );
+  focused.parentNode = dockEl;
+  moon.moonTileFocus(focused);
+  ok(
+    made[0].style.width === '437px' &&
+      made[0].style.height === '231px' &&
+      made[0].style.borderRadius === '40px' &&
+      made[0].style.transform === 'translate(112px,235px)',
+    'the Moon dock frame uses the final lift and scale even while the tile is still animating'
   );
   moon.document.body.getAttribute = () => 'classic';
   moon.moonTileFocus(focused);

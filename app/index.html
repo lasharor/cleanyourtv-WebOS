@@ -3084,19 +3084,23 @@ function moonTileFocus(e) {
     frame.style.opacity = '0';
     return;
   }
-  var sr = sc.getBoundingClientRect(),
-    er = e.getBoundingClientRect(),
-    ew = er.width || er.right - er.left,
-    eh = er.height || er.bottom - er.top,
-    scale = e.offsetWidth ? ew / e.offsetWidth : 1,
-    radius = parseFloat(window.getComputedStyle(e).borderRadius) || 0,
-    pad = 0;
+  var cs = window.getComputedStyle(e),
+    scale = parseFloat(cs.getPropertyValue(parent === dock ? '--dock-fs' : '--grid-fs')) || 1,
+    baseW = e.offsetWidth,
+    baseH = e.offsetHeight,
+    ew = baseW * scale,
+    eh = baseH * scale,
+    lift = parent === dock ? parseFloat(cs.getPropertyValue('--dock-lift')) || 0 : 0,
+    x = (parent.offsetLeft || 0) + e.offsetLeft - (ew - baseW) / 2,
+    y = (parent.offsetTop || 0) + e.offsetTop + lift - (eh - baseH) / 2,
+    radius = parseFloat(cs.borderRadius) || 0,
+    pad = 4;
   frame.style.width = Math.round(ew + pad * 2) + 'px';
   frame.style.height = Math.round(eh + pad * 2) + 'px';
   frame.style.borderRadius = Math.round(radius * scale + pad) + 'px';
   frame.style.setProperty('--focus-c', e.style.getPropertyValue('--c') || '241,182,111');
   frame.style.opacity = '1';
-  frame.style.transform = 'translate(' + Math.round(er.left - sr.left - pad) + 'px,' + Math.round(er.top - sr.top - pad) + 'px)';
+  frame.style.transform = 'translate(' + Math.round(x - pad) + 'px,' + Math.round(y - pad) + 'px)';
 }
 function mapCol(from, to, col) {
   return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;
