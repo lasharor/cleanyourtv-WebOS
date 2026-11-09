@@ -276,11 +276,11 @@ run(async () => {
   ok(
     made.length === 1 &&
       made[0].id === 'tile-focus' &&
-      made[0].style.width === '457px' &&
-      made[0].style.height === '253px' &&
-      made[0].style.borderRadius === '52px' &&
+      made[0].style.width === '425px' &&
+      made[0].style.height === '221px' &&
+      made[0].style.borderRadius === '36px' &&
       made[0].style['--focus-c'] === '18,132,224' &&
-      made[0].style.transform === 'translate(102px,238px)' &&
+      made[0].style.transform === 'translate(118px,254px)' &&
       made[0].style.opacity === '1',
     "Moon fits one glass frame to the app's rendered box and uses the icon's colour"
   );

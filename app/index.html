@@ -3090,7 +3090,7 @@ function moonTileFocus(e) {
     eh = er.height || er.bottom - er.top,
     scale = e.offsetWidth ? ew / e.offsetWidth : 1,
     radius = parseFloat(window.getComputedStyle(e).borderRadius) || 0,
-    pad = 16;
+    pad = 0;
   frame.style.width = Math.round(ew + pad * 2) + 'px';
   frame.style.height = Math.round(eh + pad * 2) + 'px';
   frame.style.borderRadius = Math.round(radius * scale + pad) + 'px';
