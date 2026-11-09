@@ -197,6 +197,13 @@ const CALLS = [
   ['icon', 'GET', '/icon/netflix'],
   ['icon of an app without the file', 'GET', '/icon/youtube.leanback.v4'],
   ['icon of an unknown app', 'GET', '/icon/nope'],
+  ['screen saver status', 'GET', '/api/screensaver'],
+  ['screen saver photos', 'GET', '/api/screensaver/photos?cc=NL'],
+  ['screen saver: a couch scene, no launcher files in the test folder', 'GET', '/api/screensaver/scene/fog'],
+  ['screen saver: not a couch scene', 'GET', '/api/screensaver/scene/beach'],
+  ['screen saver: a live source that is not installed', 'GET', '/api/screensaver/live/unsplash'],
+  ['screen saver: the launcher reports a key', 'POST', '/api/screensaver/active'],
+  ['screen saver: dismiss', 'POST', '/api/screensaver/dismiss'],
   ['log line', 'GET', '/api/log?m=contract%20test'],
   ['unknown route', 'GET', '/nope'],
 ];
@@ -297,6 +304,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       'preload',
       'fstrim',
       'addons',
+      'screensaver',
     ];
     const okTv = tv.sdk === '10.2.2' && tv.pickerMode === 'overlay' && tv.notifyWindow === 'topui';
     const okSv = JSON.stringify(sv.features) === JSON.stringify(want) && !Object.keys(sv.failed).length;

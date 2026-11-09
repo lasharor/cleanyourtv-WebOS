@@ -78,8 +78,9 @@ run(async () => {
   ok(
     svc.some(n => /\/helper\/helper\.js$/.test(n)) &&
       svc.some(n => /\/helper\/tvprofile\.js$/.test(n)) &&
-      svc.some(n => /\/bootstrap\.sh$/.test(n)),
-    'the package holds the service and the setup'
+      svc.some(n => /\/bootstrap\.sh$/.test(n)) &&
+      svc.some(n => /\/screensaver\/app\/index\.html$/.test(n)),
+    'the package holds the service, the setup and the screen saver page'
   );
   ok(
     !data.some(n => /payload\/app\/src\//.test(n)),

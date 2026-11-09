@@ -21,6 +21,7 @@ nav = [
     { "The launcher" = "launcher.md" },
     { "Themes" = "themes.md" },
     { "Wallpapers" = "wallpapers.md" },
+    { "Screen saver" = "screensaver.md" },
     { "Live TV" = "live-tv.md" },
     { "Android box" = "android-box.md" },
     { "Phone remote" = "phone-remote.md" },

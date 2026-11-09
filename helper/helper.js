@@ -70,6 +70,7 @@ load('zram', () => require('./zram').create(ctx));
 load('preload', () => require('./preload').create(ctx));
 load('fstrim', () => require('./fstrim').create(ctx));
 load('addons', () => require('./addons').create(ctx));
+load('screensaver', () => require('./screensaver').create(ctx));
 
 require('./server')
   .create({ features: () => loaded })
