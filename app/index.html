@@ -563,12 +563,17 @@ body {
   z-index: 8;
   display: block;
   box-sizing: border-box;
-  border: 4px solid rgba(255, 247, 232, 0.9);
-  background: linear-gradient(125deg, rgba(255, 255, 255, 0.16), rgba(255, 239, 218, 0.055) 45%, rgba(255, 255, 255, 0.015) 68%);
+  border: 4px solid rgba(var(--focus-c, 241, 182, 111), 0.94);
+  background: linear-gradient(
+    125deg,
+    rgba(var(--focus-c, 241, 182, 111), 0.2),
+    rgba(var(--focus-c, 241, 182, 111), 0.065) 45%,
+    rgba(255, 255, 255, 0.015) 68%
+  );
   box-shadow:
     0 26px 44px rgba(0, 0, 0, 0.58),
-    0 0 18px rgba(241, 182, 111, 0.52),
-    inset 0 0 12px rgba(255, 247, 232, 0.2);
+    0 0 20px rgba(var(--focus-c, 241, 182, 111), 0.7),
+    inset 0 0 12px rgba(var(--focus-c, 241, 182, 111), 0.24);
   opacity: 0;
   pointer-events: none;
   transition:
@@ -3080,12 +3085,17 @@ function moonTileFocus(e) {
     return;
   }
   var sr = sc.getBoundingClientRect(),
-    er = e.getBoundingClientRect();
-  frame.style.width = e.offsetWidth + 16 + 'px';
-  frame.style.height = e.offsetHeight + 16 + 'px';
-  frame.style.borderRadius = parseInt(window.getComputedStyle(e).borderRadius, 10) + 8 + 'px';
+    er = e.getBoundingClientRect(),
+    ew = er.width || er.right - er.left,
+    eh = er.height || er.bottom - er.top,
+    scale = e.offsetWidth ? ew / e.offsetWidth : 1,
+    radius = parseFloat(window.getComputedStyle(e).borderRadius) || 0;
+  frame.style.width = Math.round(ew + 16) + 'px';
+  frame.style.height = Math.round(eh + 16) + 'px';
+  frame.style.borderRadius = Math.round(radius * scale + 8) + 'px';
+  frame.style.setProperty('--focus-c', e.style.getPropertyValue('--c') || '241,182,111');
   frame.style.opacity = '1';
-  frame.style.transform = 'translate(' + (er.left - sr.left - 8) + 'px,' + (er.top - sr.top - 8) + 'px)';
+  frame.style.transform = 'translate(' + Math.round(er.left - sr.left - 8) + 'px,' + Math.round(er.top - sr.top - 8) + 'px)';
 }
 function mapCol(from, to, col) {
   return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;

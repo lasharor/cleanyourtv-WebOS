@@ -212,12 +212,17 @@ function moonTileFocus(e) {
     return;
   }
   var sr = sc.getBoundingClientRect(),
-    er = e.getBoundingClientRect();
-  frame.style.width = e.offsetWidth + 16 + 'px';
-  frame.style.height = e.offsetHeight + 16 + 'px';
-  frame.style.borderRadius = parseInt(window.getComputedStyle(e).borderRadius, 10) + 8 + 'px';
+    er = e.getBoundingClientRect(),
+    ew = er.width || er.right - er.left,
+    eh = er.height || er.bottom - er.top,
+    scale = e.offsetWidth ? ew / e.offsetWidth : 1,
+    radius = parseFloat(window.getComputedStyle(e).borderRadius) || 0;
+  frame.style.width = Math.round(ew + 16) + 'px';
+  frame.style.height = Math.round(eh + 16) + 'px';
+  frame.style.borderRadius = Math.round(radius * scale + 8) + 'px';
+  frame.style.setProperty('--focus-c', e.style.getPropertyValue('--c') || '241,182,111');
   frame.style.opacity = '1';
-  frame.style.transform = 'translate(' + (er.left - sr.left - 8) + 'px,' + (er.top - sr.top - 8) + 'px)';
+  frame.style.transform = 'translate(' + Math.round(er.left - sr.left - 8) + 'px,' + Math.round(er.top - sr.top - 8) + 'px)';
 }
 function mapCol(from, to, col) {
   return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;

@@ -247,12 +247,19 @@ run(async () => {
       parentNode: gridEl,
       offsetWidth: 405,
       offsetHeight: 210,
-      getBoundingClientRect: () => ({ left: 220, top: 310 }),
+      style: { getPropertyValue: name => (name === '--c' ? '18,132,224' : '') },
+      getBoundingClientRect: () => ({ left: 218, top: 304, width: 425.25, height: 220.5 }),
     },
     moon = {
       document: {
         body: { getAttribute: () => 'moon' },
-        createElement: () => ({ style: {} }),
+        createElement: () => ({
+          style: {
+            setProperty(name, value) {
+              this[name] = value;
+            },
+          },
+        }),
       },
       window: { getComputedStyle: () => ({ borderRadius: '34px' }) },
       $(id) {
@@ -269,12 +276,13 @@ run(async () => {
   ok(
     made.length === 1 &&
       made[0].id === 'tile-focus' &&
-      made[0].style.width === '421px' &&
-      made[0].style.height === '226px' &&
-      made[0].style.borderRadius === '42px' &&
-      made[0].style.transform === 'translate(112px,252px)' &&
+      made[0].style.width === '441px' &&
+      made[0].style.height === '237px' &&
+      made[0].style.borderRadius === '44px' &&
+      made[0].style['--focus-c'] === '18,132,224' &&
+      made[0].style.transform === 'translate(110px,246px)' &&
       made[0].style.opacity === '1',
-    'Moon creates one glass frame around the focused app at its rendered position'
+    "Moon fits one glass frame to the app's rendered box and uses the icon's colour"
   );
   moon.document.body.getAttribute = () => 'classic';
   moon.moonTileFocus(focused);
