@@ -398,6 +398,23 @@ run(async () => {
       }
     }
     const vfn = new Function('return ' + src.slice(at, end))();
+    // the guide opens on the tab the channel was chosen from, not on the channel's category
+    const gat = src.indexOf('function guideTab(');
+    const gfn = new Function('return ' + src.slice(gat, src.indexOf('\n  }\n', gat) + 4))();
+    const gs = ['News', 'Sport'],
+      ch = { cats: ['Sport'] },
+      all = () => true;
+    ok(
+      gfn('0', gs, ch, all) === 0 && gfn('g:News', gs, ch, all) === 3 && gfn('2', gs, ch, all) === 2,
+      'Live TV guide: a channel chosen from All channels (or another tab) opens the guide on that tab again'
+    );
+    ok(
+      gfn('', gs, ch, all) === 4 &&
+        gfn('1', gs, ch, g => g !== 1) === 4 &&
+        gfn('g:Gone', gs, ch, all) === 4 &&
+        gfn('', gs, { cats: [] }, all) === 0,
+      "Live TV guide: with no remembered tab, or one that no longer holds the channel, it opens on the channel's category"
+    );
     const tsv = vfn('http://h/live/u/p/12.ts');
     ok(
       tsv.length === 3 &&
