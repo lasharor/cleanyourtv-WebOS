@@ -44,11 +44,13 @@ function options(e) {
 
 /* A push or overlay grid starts outside the visible Home layout. The pointer cannot hover a tile there, so crossing the empty edge below
    the dock opens the first row, just like Down. Once the grid is open, crossing a row edge moves between rows and back to the dock. */
+var pointerEdgeFocus = false;
 function pointerRowMove(ev, dy) {
   if (!(TH.push || TH.overlay) || !rows[r] || !rows[r][c]) return false;
   if (r === 1 && dy > 0 && rows[2] && rows[2].length) {
     var dockBox = $('dock').getBoundingClientRect();
     if (ev.clientY > dockBox.bottom + 8) {
+      pointerEdgeFocus = true;
       setFocus(2, mapCol(rows[1].length, rows[2].length, c));
       return true;
     }
@@ -56,6 +58,7 @@ function pointerRowMove(ev, dy) {
   if (r >= 2 && dy > 0 && r < rows.length - 1 && rows[r + 1] && rows[r + 1].length) {
     var rowBox = rows[r][c].getBoundingClientRect();
     if (ev.clientY > rowBox.bottom + 8) {
+      pointerEdgeFocus = true;
       setFocus(r + 1, mapCol(rows[r].length, rows[r + 1].length, c));
       return true;
     }
@@ -64,6 +67,7 @@ function pointerRowMove(ev, dy) {
     var currentBox = rows[r][c].getBoundingClientRect(),
       up = r === 2 ? 1 : r - 1;
     if (ev.clientY < currentBox.top - 8 && rows[up] && rows[up].length) {
+      pointerEdgeFocus = true;
       setFocus(up, mapCol(rows[r].length, rows[up].length, c));
       return true;
     }
@@ -115,9 +119,28 @@ document.addEventListener('mousemove', function (ev) {
   if (!pointerMoved(ev.clientX, ev.clientY)) return;
   var el = ev.target.closest ? ev.target.closest('.tile,.pill,.card-btn') : null,
     p = el && posOf(el);
-  if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
-  else if (!p) pointerRowMove(ev, dy);
+  if (p) {
+    pointerEdgeFocus = false;
+    if (!(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
+  } else pointerRowMove(ev, dy);
 });
+
+/* The Magic Remote's wheel click is a mouse click while the pointer is visible. After an edge crossing, the pointer itself is still in
+   the empty edge rather than over the focused tile, so let that one blank click open the tile selected by the crossing. */
+function pointerEdgeClick(ev) {
+  if (!pointerEdgeFocus || stack.length || LIVE.on || PAGER.on || CS.on || moving) return false;
+  var el = ev.target.closest ? ev.target.closest('.tile,.pill,.card-btn') : null;
+  if (el) {
+    pointerEdgeFocus = false;
+    return false;
+  }
+  if (!rows[r] || !rows[r][c]) return false;
+  pointerEdgeFocus = false;
+  act(rows[r][c]);
+  ev.preventDefault();
+  return true;
+}
+document.addEventListener('click', pointerEdgeClick);
 
 document.addEventListener('keydown', function (e) {
   var k = e.keyCode;

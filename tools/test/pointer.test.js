@@ -170,6 +170,7 @@ run(async () => {
       ],
       r: 1,
       c: 2,
+      pointerEdgeFocus: false,
       $(id) {
         return id === 'dock' ? box(500, 710) : null;
       },
@@ -199,5 +200,35 @@ run(async () => {
   ok(
     edge.pointerRowMove({ clientY: 730 }, -30) === true && JSON.stringify(pcalls[3]) === '[1,3]',
     'pointer up above the first app row returns to the dock'
+  );
+
+  // ---- clicking after an edge crossing: the cursor is still in empty space, but the Magic Remote click opens the focused tile ----
+  const opened = [],
+    click = {
+      pointerEdgeFocus: true,
+      stack: [],
+      LIVE: { on: false },
+      PAGER: { on: false },
+      CS: { on: false },
+      moving: false,
+      rows: [[0], ['dock'], ['app']],
+      r: 2,
+      c: 0,
+      act: el => opened.push(el),
+    };
+  vm.createContext(click);
+  vm.runInContext(source(inp, 'pointerEdgeClick'), click, { filename: 'pointerEdgeClick' });
+  let prevented = false;
+  ok(
+    click.pointerEdgeClick({ target: {}, preventDefault: () => (prevented = true) }) === true &&
+      opened.join() === 'app' &&
+      prevented &&
+      click.pointerEdgeFocus === false,
+    'a blank Magic Remote click after crossing an edge opens the focused app once'
+  );
+  click.pointerEdgeFocus = true;
+  ok(
+    click.pointerEdgeClick({ target: { closest: () => 'tile' }, preventDefault() {} }) === false && opened.length === 1,
+    'a click that lands on a real tile is left to that tile'
   );
 });
