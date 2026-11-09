@@ -99,7 +99,7 @@ function build() {
       haOk = !!ha.configured,
       HR = { 'ha-first': 'Home Assistant first, then the AI', 'ha-only': 'Home Assistant only', 'ai-only': 'The AI only' };
     if (!v.installed && v.unsupported) {
-      /* a 32-bit kernel cannot start the 64-bit recogniser: nothing is offered to download */
+      /* an ARM core older than ARMv7 can run neither recogniser: nothing is offered to download (ARMv7 gets the 32-bit one) */
       rows.push({
         label: 'Voice is not available on this TV',
         sub: 'its kernel is 32-bit',

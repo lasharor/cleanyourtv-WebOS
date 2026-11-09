@@ -17,8 +17,9 @@ traffic on your network.
 ## Voice
 
 Optional and off by default. Installing it downloads files over HTTPS from PyPI, Ubuntu's archive and Moonshine's
-model server; each file is checked against a SHA-256 value written in the code, and a mismatch stops the install. The
-recogniser is a 64-bit program started by the root service with its own copy of the C library; it reads audio from a
+model server (on a TV with a 32-bit ARM kernel: PyPI, Ubuntu's archive and Hugging Face, at a fixed revision); each file
+is checked against a SHA-256 value written in the code, and a mismatch stops the install. The recogniser is a 64-bit
+program (a 32-bit hard-float one on a 32-bit ARM kernel) started by the root service with its own copy of the C library; it reads audio from a
 pipe and prints text. Audio from the remote's microphone is held in memory only while recognising. Only the recognised
 text is sent, and only to the address you set (plain `http://` is possible: the token is then visible on your network)
 and, if you switch on AI chat, to the AI providers you set, in their order until one answers: `openrouter.ai` over HTTPS with

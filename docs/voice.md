@@ -11,12 +11,23 @@ It is **off and not installed by default**. Nothing described here runs until yo
 **Voice** in the manager app downloads about 80 MB into `/media/developer/cleanyourtv/voice`. The checksums are pinned in the
 code; **Remove voice** deletes everything again.
 
+On a TV with a **64-bit kernel** (most TVs, the G2 among them):
+
 | Part | From |
 |---|---|
 | Speech engine `libmoonshine.so` and ONNX Runtime | the `moonshine-voice` 0.1.5 package on PyPI (MIT) |
 | 64-bit C library | `ubuntu-base` 22.04.5 for arm64 (this TV has a 32-bit userland on a 64-bit kernel, so the 64-bit recogniser brings its own) |
 | Model `tiny-streaming-en` (34 million parameters, int8) | download.moonshine.ai (MIT) |
 | `cytv-asr`, a small program that feeds audio to the engine | this repository (`voice/asr.c`, built with `voice/build.sh`) |
+
+On a TV with a **32-bit ARM kernel** (`uname -m` says `armv7l`, as on the 43UP7550PTZ, issue 175), about 80 MB as well:
+
+| Part | From |
+|---|---|
+| Speech engine `libsherpa-onnx-c-api.so` and ONNX Runtime (9 MB) | the `sherpa-onnx-core` 2.0.1 package for armv7l on PyPI (Apache-2.0) |
+| 32-bit hard-float C library (26 MB) | `ubuntu-base` 22.04.5 for armhf (the TV's own 32-bit programs are soft-float, so the recogniser brings its own) |
+| Model Moonshine tiny English, quantized (43 MB) | sherpa-onnx's copy on Hugging Face, at a fixed revision (MIT) |
+| `cytv-asr32`, the same small program for this engine | this repository (`voice/asr32.c`, built with `voice/build.sh`) |
 
 ## Using it
 
@@ -161,10 +172,13 @@ asked before it, with their reason. Add `"card":false` to skip the screen.
 | Language | English. Moonshine also publishes German, Spanish, Arabic, Japanese, Mandarin, Tagalog and Vietnamese models and larger English ones (small 123 M, medium 245 M parameters). |
 | Audio | 16 kHz mono from the microphone stream of LG's `voiceinput` service, read from the socket its reply names (`/var/voiceinput/voiceinput_remote1.soc` on the 65UR91, `/tmp/voiceinput_remote1.soc` when the reply names none). Held in memory while recognising, then discarded; not written to disk or sent anywhere. |
 
-**Which TVs.** Voice needs a TV with a **64-bit kernel**. A TV whose kernel is 32-bit ARM (`uname -m` says `armv7l`, as on the 43UP7550PTZ, issue 175) cannot run the recogniser at all: the manager says so and downloads nothing.
+**Which TVs.** A TV with a **64-bit kernel** gets the 64-bit recogniser. A TV whose kernel is 32-bit ARM (`uname -m` says `armv7l`,
+as on the 43UP7550PTZ, issue 175) cannot start a 64-bit program at all, so it gets the 32-bit recogniser instead: the same Moonshine
+tiny English model, run by sherpa-onnx. Only an ARM core older than ARMv7 can run neither: the manager says so and downloads nothing.
 
-The TV's programs are 32-bit ARM on a 64-bit kernel and the recogniser is a 64-bit program, so `cytv-asr` runs through the 64-bit
-loader and libraries that the download places in the same folder. Nothing in the system folders is changed.
+The TV's programs are 32-bit ARM and soft-float. Neither recogniser can use the TV's own C library: `cytv-asr` is 64-bit and
+`cytv-asr32` is hard-float. Each runs through the loader and libraries that the download places in the same folder. Nothing in the
+system folders is changed.
 
 Only text goes further: to your server, to the AI providers you set, or nowhere. LG's own assistant is a separate path
 with its own cloud recognition; **Switch off LG's voice assistant** pauses it while voice is on.
