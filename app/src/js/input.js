@@ -42,6 +42,35 @@ function options(e) {
   else if (e._o && !e._o.fixed) barMenu(e._o);
 }
 
+/* A push or overlay grid starts outside the visible Home layout. The pointer cannot hover a tile there, so crossing the empty edge below
+   the dock opens the first row, just like Down. Once the grid is open, crossing a row edge moves between rows and back to the dock. */
+function pointerRowMove(ev, dy) {
+  if (!(TH.push || TH.overlay) || !rows[r] || !rows[r][c]) return false;
+  if (r === 1 && dy > 0 && rows[2] && rows[2].length) {
+    var dockBox = $('dock').getBoundingClientRect();
+    if (ev.clientY > dockBox.bottom + 8) {
+      setFocus(2, mapCol(rows[1].length, rows[2].length, c));
+      return true;
+    }
+  }
+  if (r >= 2 && dy > 0 && r < rows.length - 1 && rows[r + 1] && rows[r + 1].length) {
+    var rowBox = rows[r][c].getBoundingClientRect();
+    if (ev.clientY > rowBox.bottom + 8) {
+      setFocus(r + 1, mapCol(rows[r].length, rows[r + 1].length, c));
+      return true;
+    }
+  }
+  if (r >= 2 && dy < 0) {
+    var currentBox = rows[r][c].getBoundingClientRect(),
+      up = r === 2 ? 1 : r - 1;
+    if (ev.clientY < currentBox.top - 8 && rows[up] && rows[up].length) {
+      setFocus(up, mapCol(rows[r].length, rows[up].length, c));
+      return true;
+    }
+  }
+  return false;
+}
+
 /* Pointer focus follows real pointer movement only: a tile sliding under a still cursor, a cursor jitter when
    the remote is picked up, or a pointer move right after a button press must not steal the focus. The first move after a button press
    needs 24 px; after that every move of 4 px or more counts, so a cursor that comes to rest over a tile always focuses it (before, a
@@ -82,10 +111,12 @@ document.addEventListener('cursorStateChange', function (ev) {
 document.addEventListener('mousemove', function (ev) {
   if (stack.length || LIVE.on || PAGER.on || CS.on) return;
   if (cursorEvents ? !pointerShown : Date.now() - lastKey < 1500) return;
+  var dy = lastMX < 0 ? 0 : ev.clientY - lastMY;
   if (!pointerMoved(ev.clientX, ev.clientY)) return;
   var el = ev.target.closest ? ev.target.closest('.tile,.pill,.card-btn') : null,
     p = el && posOf(el);
   if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
+  else if (!p) pointerRowMove(ev, dy);
 });
 
 document.addEventListener('keydown', function (e) {

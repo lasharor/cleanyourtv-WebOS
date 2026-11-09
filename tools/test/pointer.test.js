@@ -156,4 +156,48 @@ run(async () => {
   wh.cursorEvents = false;
   wh.pointerShown = false;
   ok(wh.wheelHome(1) === true, 'a TV without pointer events: every notch moves, as before');
+
+  // ---- crossing the empty vertical edge with the Magic Remote ----
+  const pcalls = [],
+    box = (top, bottom) => ({ getBoundingClientRect: () => ({ top, bottom }) }),
+    edge = {
+      TH: { push: {} },
+      rows: [
+        [box(0, 50)],
+        [box(500, 710), box(500, 710), box(500, 710), box(500, 710)],
+        [box(760, 970), box(760, 970)],
+        [box(1020, 1230), box(1020, 1230), box(1020, 1230)],
+      ],
+      r: 1,
+      c: 2,
+      $(id) {
+        return id === 'dock' ? box(500, 710) : null;
+      },
+      mapCol(from, to, col) {
+        return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;
+      },
+      setFocus(nr, nc) {
+        pcalls.push([nr, nc]);
+        edge.r = nr;
+        edge.c = nc;
+      },
+    };
+  vm.createContext(edge);
+  vm.runInContext(source(inp, 'pointerRowMove'), edge, { filename: 'pointerRowMove' });
+  ok(
+    edge.pointerRowMove({ clientY: 730 }, 30) === true && JSON.stringify(pcalls[0]) === '[2,1]',
+    'pointer down past the dock opens the first app row'
+  );
+  ok(
+    edge.pointerRowMove({ clientY: 990 }, 30) === true && JSON.stringify(pcalls[1]) === '[3,2]',
+    'pointer down past an app row advances to the next row'
+  );
+  ok(
+    edge.pointerRowMove({ clientY: 990 }, -30) === true && JSON.stringify(pcalls[2]) === '[2,1]',
+    'pointer up above a lower app row returns to the previous app row'
+  );
+  ok(
+    edge.pointerRowMove({ clientY: 730 }, -30) === true && JSON.stringify(pcalls[3]) === '[1,3]',
+    'pointer up above the first app row returns to the dock'
+  );
 });
