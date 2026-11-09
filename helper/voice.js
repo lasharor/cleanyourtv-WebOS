@@ -596,6 +596,7 @@ async function listen() {
         return show({ kind: 'answer', title: 'Voice', text: 'I did not hear anything', seconds: 3 });
       }
       show({ kind: 'thinking', title: 'Recognising', seconds: 60 });
+      last = { at: Date.now(), state: 'recognising' }; // the phone remote's mic follows these steps
       const t0 = Date.now(),
         text = await transcribe(pcm),
         ms = Date.now() - t0;
@@ -605,7 +606,7 @@ async function listen() {
       }
       last = { at: Date.now(), state: 'heard', text, ms };
       const r = await respond(text, true);
-      Object.assign(last, { sent: !!r.sent, answer: r.answer, error: r.error });
+      Object.assign(last, { sent: !!r.sent, answer: r.answer, via: r.via || '', error: r.error });
     } catch (e) {
       last = { at: Date.now(), state: 'error', error: e.message };
       show({ kind: 'answer', title: 'Voice', text: e.message, seconds: 8 });
