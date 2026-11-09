@@ -162,8 +162,9 @@ asked before it, with their reason. Add `"card":false` to skip the screen.
 ### Letting the AI act on the TV
 
 **Let the voice assistant act on the TV** (manager app, **Features > AI agents (MCP)**; the voice setup page; or `{"llm":{"agent":true}}`) lets the model use tools: open apps, switch inputs, show
-a card, turn the TV off after you say yes, and the tools of add-ons you approved. It is off by default. How it works, the yes, and
-the MCP endpoint other programs can use: [Tools for the assistant](agent.md).
+a card, turn the TV off after you say yes, and the tools of add-ons you approved. It is off by default. The tools go to OpenRouter,
+in its place among the AI providers; a server of yours only answers. How it works, the yes, and the MCP endpoint other programs
+can use: [Tools for the assistant](agent.md).
 
 ## The speech model
 

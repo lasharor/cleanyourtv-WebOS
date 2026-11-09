@@ -1298,19 +1298,20 @@ function build() {
       va = (vo && vo.llm) || {},
       ags = mn.agents || [],
       VOICE_D =
-        'The voice assistant may open apps, switch inputs, show a card and use the tools of the add-ons you approved in Add-ons > Agent tools (MCP). Turning the TV off asks first: say yes within 30 seconds. A model that cannot use tools only answers.';
-    /* the voice assistant uses the same tools as the network: the switch for it lives here */
+        'The voice assistant may open apps, switch inputs, show a card and use the tools of the add-ons you approved in Add-ons > Agent tools (MCP). Turning the TV off asks first: say yes within 30 seconds. The tools go to OpenRouter, in its place among the AI providers; a server of yours only answers, and so does a model that cannot use tools.';
+    /* the voice assistant uses the same tools as the network: the switch for it lives here. hasKey: OpenRouter is an AI provider with
+       its key, the one provider that gets the tools */
     rows.push({
       label: 'Let the voice assistant act on the TV',
-      sub: !va.hasKey ? 'Off · set up the AI chat first' : onoff(!!va.agent),
+      sub: !va.hasKey ? 'Off · add OpenRouter first' : onoff(!!va.agent),
       dim: !va.hasKey,
       info: {
         t: 'Voice assistant acts on the TV',
-        d: !va.hasKey ? 'Needs the AI chat: Features > Voice > Set up from your phone. ' + VOICE_D : VOICE_D,
+        d: !va.hasKey ? 'Needs OpenRouter as an AI provider: Features > Voice > Set up from your phone. ' + VOICE_D : VOICE_D,
       },
       fn: function () {
         if (!va.hasKey) {
-          banner('Set up the AI chat first: Features > Voice > Set up from your phone', 'err');
+          banner('Add OpenRouter as an AI provider first: Features > Voice > Set up from your phone', 'err');
           return;
         }
         api('/api/voice/set', { llm: { agent: !va.agent } }).then(

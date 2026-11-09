@@ -69,14 +69,14 @@ run(async () => {
 
   // ---- switched off: today's request, no tools ----
   script = [{ content: 'Hello.' }];
-  ok((await A.askLlm('hi')) === 'Hello.' && sent[0].tools === undefined, 'with the switch off no tools are sent');
+  ok((await A.askLlm('hi')).answer === 'Hello.' && sent[0].tools === undefined, 'with the switch off no tools are sent');
 
   // ---- the loop ----
   llm = Object.assign({}, llm, { agent: true });
   reset();
   script = [{ content: null, tool_calls: [tc('switch_input', { input: 'HDMI_1' })] }, { content: 'Switched to HDMI 1.' }];
   const seen = [];
-  let a = await A.askLlm('switch to hdmi 1', { onTool: n => seen.push(n) });
+  let a = (await A.askLlm('switch to hdmi 1', { onTool: n => seen.push(n) })).answer;
   ok(a === 'Switched to HDMI 1.', 'the final answer comes after the tool ran: ' + a);
   ok(
     sent[0].tools.length === 3 && sent[0].tool_choice === 'auto' && sent[0].tools[0].function.name === 'switch_input',
@@ -100,7 +100,7 @@ run(async () => {
 
   reset();
   script = [{ content: null, tool_calls: [tc('format_disk', {})] }, { content: 'I cannot.' }];
-  a = await A.askLlm('format');
+  a = (await A.askLlm('format')).answer;
   ok(
     a === 'I cannot.' && calls.length === 0 && /no tool named/.test(sent[1].messages.filter(m => m.role === 'tool')[0].content),
     'an unknown tool is answered with an error for the model'
@@ -116,12 +116,12 @@ run(async () => {
 
   reset();
   script = [{ status: 404, error: 'No endpoints found that support tool use' }, { content: 'Plain answer.' }];
-  a = await A.askLlm('switch to hdmi 2');
+  a = (await A.askLlm('switch to hdmi 2')).answer;
   ok(a === 'Plain answer.' && sent.length === 2 && sent[1].tools === undefined, 'a model without tools falls back to a plain question');
 
   reset();
   script = [{ content: '<tool_call>{"name":"x"}</tool_call>' }, { content: 'Plain again.' }];
-  a = await A.askLlm('hello');
+  a = (await A.askLlm('hello')).answer;
   ok(a === 'Plain again.' && sent[1].tools === undefined, 'a tool call written as text falls back too');
 
   reset();
@@ -137,7 +137,7 @@ run(async () => {
   // ---- confirm ----
   reset();
   script = [{ content: null, tool_calls: [tc('power_off', {})] }];
-  a = await A.askLlm('turn off the tv');
+  a = (await A.askLlm('turn off the tv')).answer;
   ok(/Say yes within 30 seconds/.test(a) && calls.length === 0, 'a destructive tool is not run: the TV asks first: ' + a);
   ok(A.pendingConfirm() && A.pendingConfirm().name === 'power_off', 'the call waits for the answer');
   ok((await A.confirmPending('no thanks')) === 'Okay, I did not do that.' && calls.length === 0, '"no" drops it');
@@ -146,6 +146,42 @@ run(async () => {
   await A.askLlm('turn off the tv');
   ok((await A.confirmPending('Yes please')) === 'Done.', '"yes" runs it');
   ok(calls.length === 1 && calls[0].name === 'power_off' && calls[0].opts.confirmed === true, 'with confirmed: true, without the model');
+
+  // ---- with the AI providers (#208): only OpenRouter gets the tools, and a tool that ran is not done again by the next one ----
+  const srv = { id: 'p1', type: 'server', base: ai.url, model: 'srv' },
+    orp = { id: 'p2', type: 'openrouter', key: 'k', model: 'm' };
+  llm = { enabled: true, agent: true, providers: [srv, orp] };
+  reset();
+  script = [{ content: 'From the server.' }];
+  let r2 = await A.askLlm('hi');
+  ok(
+    r2.answer === 'From the server.' && r2.via === 'p1' && sent.length === 1 && sent[0].model === 'srv' && sent[0].tools === undefined,
+    'a server of yours gets no tools'
+  );
+  llm = { enabled: true, agent: true, providers: [orp, srv] };
+  reset();
+  script = [
+    { content: null, tool_calls: [tc('switch_input', { input: 'HDMI_1' })] },
+    { status: 500, error: 'overloaded' },
+  ];
+  let e2 = null;
+  try {
+    await A.askLlm('switch to hdmi 1');
+  } catch (e) {
+    e2 = e;
+  }
+  ok(
+    e2 && calls.length === 1 && sent.length === 2 && sent.every(x => x.model === 'm'),
+    'after a tool ran, a failure is not handed to the next provider: the tool runs once'
+  );
+  reset();
+  script = [{ status: 500, error: 'overloaded' }, { content: 'The server answers.' }];
+  r2 = await A.askLlm('switch to hdmi 1');
+  ok(
+    r2.via === 'p1' && r2.answer === 'The server answers.' && !!sent[0].tools && sent[1].tools === undefined && calls.length === 0,
+    'before any tool ran, the next provider answers, without tools'
+  );
+  llm = { enabled: true, key: 'k', model: 'm', agent: true };
 
   // ---- the service's own tools ----
   const launched = [];
