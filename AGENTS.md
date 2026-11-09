@@ -50,8 +50,8 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 - Root SSH works with a key (`ssh root@<tv-ip>`). `luna-send` must have stdin redirected: `luna-send -n 1 -w 5000 -f <uri> '<json>' </dev/null`.
 - The service listens on `127.0.0.1:8765` (use `curl` on the TV). Other ports: 8766 Live TV pairing, 8767 network notifications (opt-in),
   8768+ share log, 8769 voice setup, 8791 wallpapers, 8792 cards, 8793 Android box, 8794 app icons, 8795 Immich, 8796 Unsplash,
-  8797 Spotify, 8798 Jellyfin, 8799 phone remote (a catalog add-on). All of these are short-lived or off by default; 8799 is open only while
-  that add-on is on and a phone is paired or its pairing window is open.
+  8797 Spotify, 8798 Jellyfin, 8799 phone remote (a catalog add-on), 8800 add-on repositories, 8801 Stocks and crypto. All of these are
+  short-lived or off by default; 8799 is open only while that add-on is on and a phone is paired or its pairing window is open.
 - Going back to LG's Home: manager app > CleanYourTV as Home off, or `sh /media/developer/cleanyourtv/undo-home.sh`. If a boot crashes,
   the Homebrew Channel's failsafe mode skips the boot scripts.
 - A TV in **deep** standby answers nothing over TCP. With Quick Start+ (the default) the system stays partly up while the screen is off, and

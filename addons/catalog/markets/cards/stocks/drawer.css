@@ -1,0 +1,619 @@
+/* The markets drawer (drawer.js): the page is the whole panel of the sheet, 760x1080 px of the launcher's canvas (the launcher clips its
+   corners and draws the focus ring over the buttons). Two views: the list and one symbol. 48px gutters, nothing smaller than 20px.
+   Only opacity and transform animate; no flex gap, no inset (Chromium 68). Right-to-left rules at the end. */
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  position: relative;
+  background: linear-gradient(180deg, #161d29, #0f141d);
+  color: #fff;
+  font-family: sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+#mood {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 360px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+#mood.up {
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(61, 220, 145, 0.12), rgba(61, 220, 145, 0));
+}
+#mood.dn {
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(255, 107, 94, 0.12), rgba(255, 107, 94, 0));
+}
+#app {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  padding: 36px 48px 0;
+}
+.ltr {
+  direction: ltr;
+}
+.ic {
+  width: 1em;
+  height: 1em;
+  display: block;
+  flex: none;
+}
+.ln {
+  display: block;
+  flex: none;
+}
+.up {
+  color: #3ddc91;
+}
+.dn {
+  color: #ff6b5e;
+}
+.fl {
+  color: #aab3c0;
+}
+.amber {
+  color: #f0b54a;
+}
+body.off .num {
+  opacity: 0.6;
+}
+.close {
+  position: absolute;
+  right: 48px;
+  top: 40px;
+  height: 56px;
+  padding: 0 24px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  font-size: 22px;
+  font-weight: 500;
+}
+.close .ic {
+  font-size: 22px;
+  margin-right: 10px;
+}
+h1 {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+/* ---------- the list ---------- */
+.lh {
+  height: 104px;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 17px;
+  font-size: 20px;
+  font-weight: 600;
+  background: rgba(170, 179, 192, 0.16);
+  color: #aab3c0;
+}
+.pill.live {
+  background: rgba(61, 220, 145, 0.16);
+  color: #3ddc91;
+}
+.pill.amber {
+  background: rgba(240, 181, 74, 0.16);
+  color: #f0b54a;
+}
+.pill i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 9px;
+  display: inline-block;
+}
+.pill.live i {
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+.lst {
+  position: absolute;
+  left: 48px;
+  right: 48px;
+  top: 156px;
+  height: 800px;
+  overflow: hidden;
+}
+/* the rows fade out at the bottom of the list (a plain overlay: a mask costs too much on the old GPUs) */
+.fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 876px;
+  height: 80px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(15, 20, 29, 0), #0f141d);
+}
+.row {
+  display: flex;
+  align-items: center;
+  height: 96px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  border-radius: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.row.foc {
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom-color: transparent;
+}
+.row .nm {
+  width: 196px;
+  min-width: 0;
+  flex: none;
+}
+.row .nm b {
+  display: block;
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 700;
+}
+.row .nm span {
+  display: block;
+  font-size: 22px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row .ln {
+  margin: 0 12px;
+}
+.row .pr {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  font-size: 28px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.chg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 122px;
+  height: 44px;
+  margin-left: 12px;
+  border-radius: 12px;
+  font-size: 24px;
+  font-weight: 700;
+}
+.chg.up {
+  background: rgba(61, 220, 145, 0.18);
+}
+.chg.dn {
+  background: rgba(255, 107, 94, 0.18);
+}
+.chg.fl {
+  background: rgba(170, 179, 192, 0.16);
+}
+.row.miss {
+  opacity: 0.55;
+}
+.foot {
+  position: absolute;
+  left: 48px;
+  right: 48px;
+  bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+.foot.amber {
+  color: #f0b54a;
+}
+.empty {
+  position: absolute;
+  left: 48px;
+  right: 48px;
+  top: 330px;
+  text-align: center;
+}
+.empty .gl {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 26px;
+  box-sizing: border-box;
+  border-radius: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
+  color: rgba(255, 255, 255, 0.55);
+}
+.empty b {
+  display: block;
+  font-size: 32px;
+  font-weight: 600;
+}
+.empty span {
+  display: block;
+  font-size: 24px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 10px;
+}
+
+/* ---------- one symbol ---------- */
+/* back to the list: the same pill as Close, at the other side */
+.bk {
+  display: inline-flex;
+  align-items: center;
+  height: 56px;
+  margin-top: 4px;
+  padding: 0 24px 0 20px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 22px;
+  font-weight: 500;
+}
+.sv {
+  margin-top: 14px;
+}
+.t1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pager {
+  display: flex;
+  align-items: center;
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+/* the previous and next symbol: small pills, buttons for a click or the pointer */
+.pager .pg {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 500;
+}
+.pager b {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 500;
+  margin: 0 14px;
+}
+.sv h1 {
+  margin-top: 0;
+}
+.sv .sub {
+  font-size: 24px;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 520px;
+}
+.pb {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 14px;
+  height: 96px;
+}
+.pb .big {
+  font-size: 88px;
+  line-height: 0.95;
+  font-weight: 600;
+  letter-spacing: -1.5px;
+  white-space: nowrap;
+}
+.pb .cp {
+  height: 52px;
+  padding: 0 18px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  margin-left: 16px;
+  white-space: nowrap;
+}
+.pb .cp.up {
+  background: rgba(61, 220, 145, 0.2);
+}
+.pb .cp.dn {
+  background: rgba(255, 107, 94, 0.2);
+}
+.asof {
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  height: 32px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 15px;
+  font-size: 20px;
+  font-weight: 600;
+  margin-left: 14px;
+  background: rgba(240, 181, 74, 0.18);
+  color: #f0b54a;
+}
+.rg {
+  display: flex;
+  margin-top: 22px;
+}
+.rg div {
+  position: relative;
+  width: 118px;
+  height: 60px;
+  border-radius: 30px;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.rg div.on {
+  background: #fff;
+  color: #0f141d;
+}
+.rg div.dis {
+  opacity: 0.4;
+}
+.rg div i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: #0f141d;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+.rg div.load i {
+  animation: load 2s ease-out forwards;
+}
+@keyframes load {
+  to {
+    transform: scaleX(0.9);
+  }
+}
+.rc {
+  font-size: 22px;
+  font-weight: 500;
+  margin-top: 12px;
+  height: 30px;
+}
+.ch {
+  position: relative;
+  margin-top: 10px;
+  height: 240px;
+}
+.ch svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transition: opacity 0.2s;
+}
+.ch.loading svg,
+.ch.loading .tag,
+.ch.loading .hl,
+.ch.loading .ref {
+  opacity: 0.35;
+}
+.tag {
+  position: absolute;
+  right: 0;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 22px;
+  line-height: 38px;
+  font-weight: 700;
+  color: #0f141d;
+  transform: translateY(-50%);
+}
+.tag.up {
+  background: #3ddc91;
+}
+.tag.dn {
+  background: #ff6b5e;
+}
+.ref {
+  position: absolute;
+  left: 0;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 20px;
+  line-height: 30px;
+  color: rgba(255, 255, 255, 0.72);
+  transform: translateY(-50%);
+}
+.hl {
+  position: absolute;
+  font-size: 20px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+}
+.xa {
+  display: flex;
+  justify-content: space-between;
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 6px;
+  padding-right: 110px;
+}
+.st {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.st div {
+  width: 50%;
+  height: 76px;
+  box-sizing: border-box;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 10px;
+}
+.st div:nth-child(odd) {
+  padding-right: 16px;
+}
+/* the label (the value in b may hold a coloured span of its own) */
+.st div > span {
+  display: block;
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+}
+.st b {
+  display: block;
+  font-size: 28px;
+  font-weight: 500;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st b small {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 500;
+  margin-left: 8px;
+}
+.bars {
+  display: flex;
+  margin-top: 16px;
+}
+.bar {
+  width: 50%;
+  box-sizing: border-box;
+}
+.bar + .bar {
+  padding-left: 24px;
+}
+.bars .bar:first-child {
+  padding-right: 0;
+}
+.bar .bh {
+  display: flex;
+  justify-content: space-between;
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+}
+.bar .bt {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.18);
+  margin-top: 10px;
+}
+.bar .bt i {
+  position: absolute;
+  top: -7px;
+  width: 4px;
+  height: 20px;
+  border-radius: 2px;
+  background: #fff;
+  margin-left: -2px;
+}
+.bar .bn {
+  display: flex;
+  justify-content: space-between;
+  font-size: 22px;
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.72);
+}
+.src {
+  position: absolute;
+  left: 48px;
+  right: 48px;
+  bottom: 24px;
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* right-to-left: Close and the margins move to the other side; numbers, lines and bars keep their left-to-right order */
+[dir="rtl"] .close {
+  right: auto;
+  left: 48px;
+}
+[dir="rtl"] .close .ic {
+  margin-right: 0;
+  margin-left: 10px;
+}
+[dir="rtl"] .row .pr {
+  text-align: left;
+}
+[dir="rtl"] .chg {
+  margin-left: 0;
+  margin-right: 12px;
+}
+[dir="rtl"] .pb .cp {
+  margin-left: 0;
+  margin-right: 16px;
+}
+[dir="rtl"] .chip {
+  margin-left: 0;
+  margin-right: 14px;
+}
+[dir="rtl"] .rg div {
+  margin-right: 0;
+  margin-left: 12px;
+}
+[dir="rtl"] .st div:nth-child(odd) {
+  padding-right: 0;
+  padding-left: 16px;
+}
+[dir="rtl"] .bar + .bar {
+  padding-left: 0;
+  padding-right: 24px;
+}
+[dir="rtl"] .xa {
+  padding-right: 0;
+  padding-left: 110px;
+}
