@@ -6,8 +6,7 @@
 const VERSION = '1.6.21';
 const fs = require('fs');
 const P = require('./paths'),
-  diag = require('./diag'),
-  exec = require('./exec');
+  diag = require('./diag');
 diag.start();
 // A promise that fails without a handler ends the process on Node 15 and newer (webOS 22 and later ship Node 16): log it and keep the
 // service running; the launcher depends on it.
@@ -42,46 +41,10 @@ function load(name, make) {
 // the service itself: its version, the TV profile and which parts are running
 const core = {
   name: 'core',
-  paths: ['/api/version', '/api/tv', '/api/service', '/api/debug/capture'],
+  paths: ['/api/version', '/api/tv', '/api/service'],
   handle(req, res, u) {
     if (u === '/api/version') return web.json(res, { version: VERSION });
     if (u === '/api/tv') return web.json(res, ctx.profile.get());
-    if (u === '/api/debug/capture') {
-      if (req.method !== 'POST') return web.notFound(res);
-      const out = '/tmp/cytv-home-capture.png';
-      const payload = JSON.stringify({ path: out, method: 'DISPLAY', format: 'PNG', width: 1920, height: 1080 });
-      try {
-        fs.unlinkSync(out);
-      } catch (_) {}
-      return exec.execFile(
-        '/usr/bin/luna-send',
-        ['-n', '1', '-f', 'luna://com.webos.service.capture/executeOneShot', payload],
-        { timeout: 15000 },
-        (error, stdout, stderr) => {
-          let attempts = 0;
-          const reply = () => {
-            let image;
-            try {
-              image = fs.readFileSync(out);
-            } catch (_) {}
-            // LG returns from executeOneShot before the writer has always appended PNG's IEND chunk.
-            if (image && image.length >= 12 && image.slice(-8, -4).toString() === 'IEND') {
-              try {
-                fs.unlinkSync(out);
-              } catch (_) {}
-              res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' });
-              return res.end(image);
-            }
-            if (++attempts < 30) return setTimeout(reply, 100);
-            try {
-              fs.unlinkSync(out);
-            } catch (_) {}
-            web.json(res, { ok: false, stdout, stderr, error: (error && error.message) || 'capture did not finish' }, 500);
-          };
-          reply();
-        }
-      );
-    }
     web.json(res, { version: VERSION, node: process.version, features: loaded.map(f => f.name), failed });
   },
 };
