@@ -435,6 +435,10 @@
     "voice": ""
    },
    "lang": "",
+   "mcp": {
+    "agent": false,
+    "lan": false
+   },
    "notifyApi": {
     "enabled": false,
     "port": 8767
@@ -525,6 +529,10 @@
     "voice": ""
    },
    "lang": "",
+   "mcp": {
+    "agent": false,
+    "lan": false
+   },
    "notifyApi": {
     "enabled": false,
     "port": 8767
@@ -633,6 +641,10 @@
     "voice": ""
    },
    "lang": "",
+   "mcp": {
+    "agent": false,
+    "lan": false
+   },
    "notifyApi": {
     "enabled": false,
     "port": 8767
@@ -827,6 +839,7 @@
    "lgPaused": false,
    "listening": false,
    "llm": {
+    "agent": false,
     "enabled": false,
     "hasKey": false,
     "lastVia": "",

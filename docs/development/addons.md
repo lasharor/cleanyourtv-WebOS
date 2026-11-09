@@ -191,6 +191,20 @@ scenes) and draws them as custom scenes: no cut-out, the clock in front of the p
 from `GET /api/scenes/photo/<add-on>/<id>/<image|glass>`, so the launcher needs no network for them; an add-on that downloads them keeps
 them on the TV. Without such an add-on the list is empty and nothing changes.
 
+### Tools for the assistant
+
+An add-on with `"provides": ["tools"]` gives the voice assistant and the service's MCP endpoint (`/api/mcp`) tools of its own. Its
+`create()` returns `tools`:
+
+| Member | What it does |
+|---|---|
+| `list()` | The tools (or a promise of them), in MCP form: `[{name, description, inputSchema, annotations?, onScreen?}]`. `name`: a letter, then letters, digits, `_` or `-`; `annotations: {destructiveHint: true}` for a tool that turns something off or deletes something; `onScreen`: `true` for a tool that changes what is on screen, or the list of its `action` values that do (`["open_on_tv"]`): the service closes LG's screen saver before them. `onScreen` is not sent to clients. `group` (a short name) and `labels` (`{action: few words}`) name the add-on's group and its actions on the manager's Tools screen; neither is sent to clients. |
+| `call(name, args, opts)` | Runs one and answers `{content: [{type: "text", text}], isError}`. The arguments were checked against `inputSchema`, and keys it does not declare were dropped (unless it says `additionalProperties: true`). A destructive tool is called only with `opts.confirmed: true`, after the person said yes on the TV. |
+
+The tools go with the add-on: switched off, they are gone. A name the service or an earlier add-on already uses gets the add-on's id
+in front (`<id>__<name>`); at most 40 tools in all reach the model, so give an add-on one tool with an `action` rather than one tool per action. The **Agent tools (MCP)** catalog add-on is such a provider for the
+tools that apps and add-ons sign in a `tools.json` ([Tools for the assistant](../agent.md)).
+
 ### A phone page of the add-on
 
 A service that has a `settings(o)` function (the same contract as a photo source's: it opens a short-lived page on the LAN and answers `{url, code, qr, seconds}`, or closes it
@@ -335,6 +349,7 @@ you left it. Any app can open a page with `luna://com.webos.applicationManager/l
 
 | Add-on | What it is |
 |---|---|
+| `agent` | **Agent tools (MCP)**: gives the voice assistant and `/api/mcp` the tools that installed apps and add-ons sign in a `tools.json` (an app to launch, an add-on's own endpoint, an address), once you approve each on its phone page (port 8799). It provides `tools`; nothing app-specific is in it. The permission `luna` is for `applicationManager/launch` only. See [Tools for the assistant](../agent.md). |
 | `bigclock` | A full-screen clock (a page add-on, the smallest example). |
 | `dnscheck` | Asks the TV's own resolver for the hosts the debloat blocks and shows each as Blocked or Reachable (issue 92). A host that does not exist, or resolves to 0.0.0.0, 127.x or ::, counts as blocked; a control host (example.com) tells whether DNS works at all, and when it does not, no host is called blocked. Add your own hosts with `curl -X POST localhost:8765/api/addons/dnscheck/hosts -d '{"hosts":["ads.example.net"]}'` on the TV. |
 | `sysinfo` | Memory, swap, load and uptime of the TV, live, from `/proc`. |

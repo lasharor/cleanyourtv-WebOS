@@ -2,9 +2,13 @@ document.addEventListener('keydown', function (e) {
   var k = e.keyCode;
   if (k === 38) next(-1);
   else if (k === 40) next(1);
-  else if (k === 37) setTab(tab - 1);
-  else if (k === 39) setTab(tab + 1);
-  else if (k === 13) act();
+  else if (k === 37) {
+    if (rows[idx] && rows[idx].left) rows[idx].left();
+    else setTab(tab - 1);
+  } else if (k === 39) {
+    if (rows[idx] && rows[idx].right) rows[idx].right();
+    else setTab(tab + 1);
+  } else if (k === 13) act();
   else if ((k === 33 || k === 34) && view === 'providers') provKey(k === 33 ? -1 : 1); /* Channel up / down (PageUp / PageDown on webOS) */
   else if (k === 461 || k === 27 || k === 8 || k === 10009) {
     if (view === 'share') closeShare();
@@ -29,7 +33,7 @@ document.addEventListener('click', function (e) {
     return;
   }
   var r = e.target.closest && e.target.closest('.row');
-  if (r) {
+  if (r && !(rows[+r.getAttribute('data-i')] || {}).nofocus) {
     idx = +r.getAttribute('data-i');
     draw();
     act();
@@ -37,7 +41,7 @@ document.addEventListener('click', function (e) {
 });
 document.addEventListener('mousemove', function (e) {
   var r = e.target.closest && e.target.closest('.row');
-  if (r && +r.getAttribute('data-i') !== idx) {
+  if (r && +r.getAttribute('data-i') !== idx && !(rows[+r.getAttribute('data-i')] || {}).nofocus) {
     idx = +r.getAttribute('data-i');
     draw();
   }

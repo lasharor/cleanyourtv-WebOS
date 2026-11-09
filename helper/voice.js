@@ -512,8 +512,19 @@ async function respond(text, card) {
     return out;
   }
   if (useHa || useAi) await say({ kind: 'thinking', title: 'Thinking', question: text, text: '', seconds: 90 });
-  let haText = '';
-  if (useHa) {
+  let haText = '',
+    confirmed = false;
+  // the assistant asked "say yes to go ahead" (a tool that turns something off): these words answer it, not a new question
+  if (useAi && answers.pendingConfirm()) {
+    confirmed = true;
+    try {
+      out.answer = await answers.confirmPending(text);
+      out.via = 'ai';
+    } catch (e) {
+      out.error = e.message;
+    }
+  }
+  if (useHa && !confirmed) {
     try {
       const r = await askHa(text);
       haText = r.text;
@@ -526,10 +537,13 @@ async function respond(text, card) {
     }
   }
   let aiFailed = false;
-  if (!out.answer && useAi) {
+  if (!out.answer && useAi && !confirmed) {
     try {
       // the cards do not say which provider answers or is asked; the reply does (provider, tried)
-      const r = await askLlm(text);
+      const r = await askLlm(text, {
+        // a tool runs: the card says which
+        onTool: name => say({ kind: 'thinking', title: 'Working on it', question: text, text: 'Using ' + name, seconds: 90 }),
+      });
       out.answer = r.answer;
       out.via = 'ai';
       out.provider = r.via;
@@ -562,10 +576,10 @@ async function respond(text, card) {
       Object.assign(
         {
           kind: 'answer',
-          title: out.via === 'ha' ? 'Home Assistant' : 'Answer',
+          title: out.via === 'ha' ? 'Home Assistant' : out.via === 'ai' && answers.pendingConfirm() ? 'Confirm' : 'Answer',
           question: text,
           text: out.answer || '',
-          seconds: readSeconds(out.answer),
+          seconds: out.via === 'ai' && answers.pendingConfirm() ? 30 : readSeconds(out.answer),
         },
         out.card && out.card.image ? { image: out.card.image } : {},
         out.card && out.card.seconds ? { seconds: out.card.seconds } : {}
@@ -666,6 +680,7 @@ function applyLlm(cur, b) {
   const pendingModel = list.some(p => p.type === 'openrouter') ? '' : raw.model || ''; // a model set before the OpenRouter key
   if (typeof b.enabled === 'boolean') raw.enabled = b.enabled;
   if (typeof b.system === 'string') raw.system = b.system.slice(0, 1000);
+  if (typeof b.agent === 'boolean') raw.agent = b.agent; // OpenRouter may use the tools of the service and approved add-ons
   const saved = {};
   list.forEach(p => (saved[p.id] = p));
   const newId = taken => {
@@ -933,6 +948,7 @@ function pairPage(msg, done, token, lang, only) {
     'This address is already in the list',
     'OpenRouter needs a key',
     'Choose a model',
+    'can act',
     'Saved. You can close this page.',
     'No AI provider yet: add OpenRouter or a server of your own.',
     'no connection to the TV',
@@ -943,6 +959,7 @@ function pairPage(msg, done, token, lang, only) {
 <div class=add><button type=button id=addor>+ ${T('OpenRouter')}</button><button type=button id=addsrv>+ ${T('Your own server')}</button></div>
 <label class=c><input type=checkbox id=enabled ${l.enabled ? 'checked' : ''}> ${T('Answer with the AI')}</label>
 <label>${T('Instructions for the AI')} <small>${T('(empty: short plain answers)')}</small></label><textarea id=system rows=3>${esc(l.system)}</textarea>
+<label class=c><input type=checkbox id=agent ${l.agent ? 'checked' : ''}> ${T('Let the AI act on the TV (open apps, switch inputs, approved add-on tools)')} <small>${T('needs a model marked can act')}</small></label>
 <label>${T('Which answers first')}${
     haReady(ha)
       ? ''
@@ -981,7 +998,7 @@ c.appendChild(field(p,tx('API key'),kh,el('input',{type:'password',autocomplete:
 if(p.hasKey&&!p.clearKey&&srv)c.appendChild(el('a',{href:'#',style:'font-size:14px;color:#aaa',text:tx('Remove the saved key'),onclick:function(e){e.preventDefault();p.clearKey=true;draw()}}));
 var dl='m'+i,mi=el('input',{list:dl,value:p.model,autocomplete:'off',class:p.err.model?'bad':'',oninput:function(e){p.model=e.target.value.trim()}});
 var mh=p.loading?tx('Reading models…'):srv?tx('read from your server'):'';
-c.appendChild(field(p,tx('Model'),mh,mi,'model'));c.appendChild(el('datalist',{id:dl},(p.models||[]).map(function(m){return el('option',{value:m.id,text:m.price!=null?m.name+' \\u00B7 $'+m.price+'/M':m.name})})));
+c.appendChild(field(p,tx('Model'),mh,mi,'model'));c.appendChild(el('datalist',{id:dl},(p.models||[]).map(function(m){return el('option',{value:m.id,text:(m.price!=null?m.name+' \\u00B7 $'+m.price+'/M':m.name)+(m.tools?' \\u00B7 '+tx('can act'):'')})})));
 if(p.mErr)c.appendChild(el('p',{class:'e',text:tx('Could not read the model list: %s. Type the model name.',p.mErr)}));
 var w=el('select',{onchange:function(e){p.waitS=+e.target.value}},D.waits.map(function(s){return el('option',{value:s,text:tx('%d s',s)})}));w.value=String(p.waitS);
 c.appendChild(field(p,tx('Wait for an answer'),'',w,''));
@@ -994,7 +1011,7 @@ function draw(){var box=document.getElementById('cards');list.forEach(function(q
 function add(type){var p={id:'',type:type,name:'',base:'',model:type==='openrouter'?'openrouter/auto':'',waitS:type==='openrouter'?30:25,off:false,hasKey:false,key:'',clearKey:false,models:null,mErr:'',res:null,err:{},ask:false};list.push(p);draw();if(type==='openrouter')loadModels(p);var cs=document.querySelectorAll('.card');var last=cs[cs.length-1];last.scrollIntoView({behavior:'smooth',block:'center'});var f=last.querySelector('input');if(f)f.focus()}
 document.getElementById('addor').onclick=function(){add('openrouter')};document.getElementById('addsrv').onclick=function(){add('server')};
 document.getElementById('save').onclick=function(){var ok=true;list.forEach(function(p){if(!check(p))ok=false});draw();var er=document.getElementById('err');er.textContent='';if(!ok){var b=document.querySelector('.bad');if(b)b.scrollIntoView({block:'center'});return}
-var body={llm:{enabled:document.getElementById('enabled').checked,system:document.getElementById('system').value,providers:list.map(function(p){var o={type:p.type,name:p.name,model:p.model,waitS:p.waitS,off:p.off};if(p.id)o.id=p.id;if(p.type==='server')o.base=p.base;if(p.key)o.key=p.key;if(p.clearKey&&!p.key)o.clearKey=true;return o})},ha:{route:document.getElementById('haroute').value},url:document.getElementById('url').value};
+var body={llm:{enabled:document.getElementById('enabled').checked,system:document.getElementById('system').value,agent:document.getElementById('agent').checked,providers:list.map(function(p){var o={type:p.type,name:p.name,model:p.model,waitS:p.waitS,off:p.off};if(p.id)o.id=p.id;if(p.type==='server')o.base=p.base;if(p.key)o.key=p.key;if(p.clearKey&&!p.key)o.clearKey=true;return o})},ha:{route:document.getElementById('haroute').value},url:document.getElementById('url').value};
 var tk=document.getElementById('token').value;if(tk)body.token=tk;
 post('save-json',body).then(function(r){if(r.error){er.textContent=r.error;return}document.getElementById('main').innerHTML='<p class=m></p>';document.querySelector('#main .m').textContent=tx('Saved. You can close this page.')},function(){er.textContent=tx('no connection to the TV')})};
 draw();list.forEach(function(p){if(p.type==='openrouter'||p.base)loadModels(p)})})();</script>`;
@@ -1123,7 +1140,18 @@ const status = () => {
 
 function create(c) {
   ctx = c;
-  answers.init(cfg);
+  // the tools the assistant may use (llm.agent): the ones the service's MCP endpoint serves (toolhub.js, /api/mcp)
+  answers.init(cfg, {
+    tools: () => {
+      const hub = ctx.feature && ctx.feature('mcp');
+      return hub && hub.providers ? hub.providers() : [];
+    },
+    // the same list with the tool settings applied (manager: AI agents (MCP) > Tools), so a tool that is off is not offered by voice
+    merged: () => {
+      const hub = ctx.feature && ctx.feature('mcp');
+      return hub && hub.merged ? hub.merged() : null;
+    },
+  });
   // the voice key of LG's own remote handling follows our setting (syncLg); checked now and then
   const start = () => {
     kernelArch().catch(() => {}); // for the status: the manager says at once that this TV cannot run voice
