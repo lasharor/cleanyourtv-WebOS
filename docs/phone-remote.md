@@ -34,8 +34,8 @@ It is an add-on from the catalog, not part of the package: the phone remote open
 the TV, so you install it on purpose. In the manager app, **Add-ons**, find **Phone remote**, install it and switch it **On**. Nothing
 listens on the network until then, and switching it off again closes the port.
 
-1. Open the add-on's page: in the manager, **Add-ons > Phone remote**, turn on **Page of the book** (or press 2 on Home afterwards): the
-   page has **Pair a phone**, the paired phones, and **Remove unused phones**.
+1. Open the add-on's page: in the manager, **Add-ons > Phone remote**, choose **Open page** (or turn on **Page of the book** and press 2
+   on Home afterwards; **Open page** works with the page out of the book too): the page has **Pair a phone**, the paired phones, and **Remove unused phones**.
 2. Choose **Pair a phone**. The TV shows a QR code, the address (`http://<tv address>:8799`) and a 6-digit code.
 3. On the phone (same Wi-Fi) scan the code, or type the address. The code it shows is in the address the QR carries, so scanning it
    pairs by itself; typed in, the same code is entered on the page. The code works once

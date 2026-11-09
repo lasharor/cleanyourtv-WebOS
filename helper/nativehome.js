@@ -4,6 +4,16 @@ const P = require('./paths');
 const HOME = 'com.webos.app.home';
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// The launcher on its stand-in Home (scripts/home-standin.sh, webOS 5 to 23) takes its launch parameters from this file, not from the
+// launch: remap.js and /api/launch (apps.js) write it before they launch Home with parameters; the key scripts do the same in shell.
+function homeParams(params) {
+  if (!fs.existsSync(P.STANDIN)) return;
+  try {
+    const up = fs.readFileSync(P.PROC + '/uptime', 'utf8').split(' ')[0];
+    fs.writeFileSync(P.HOME_PARAMS, up + ' ' + JSON.stringify(params));
+  } catch (_) {}
+}
+
 function same(a, b) {
   try {
     const x = fs.statSync(a),
@@ -153,7 +163,7 @@ async function stop(exe, io) {
   return { stopped: Object.keys(owned).length };
 }
 
-module.exports = { same, ownedMount, target, processes, roots, tree, validate, stop };
+module.exports = { homeParams, same, ownedMount, target, processes, roots, tree, validate, stop };
 if (require.main === module) {
   Promise.resolve()
     .then(() => {

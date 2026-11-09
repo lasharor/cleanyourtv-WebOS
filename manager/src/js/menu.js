@@ -533,6 +533,15 @@ function build() {
       sub: (a1.description || '') + (a1.error ? ' \u00B7 ' + a1.error : ''),
       fn: function () {},
     });
+    if (a1.bookable && a1.enabled && a1.status === 'running')
+      rows.push({
+        label: 'Open page',
+        sub: a1.inBook ? 'shows it now · Back returns to Home' : 'not in the book · shows it now · Back returns to Home',
+        fn: function () {
+          /* the service launches Home with {page, t} and tells the launcher at once (helper/book.js), also for a page out of the book */
+          api('/api/book/open', { id: a1.id }).catch(function () {});
+        },
+      });
     if (a1.bookable) {
       var bp = bookPages().filter(function (p) {
           return p.inBook;
