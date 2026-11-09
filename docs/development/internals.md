@@ -20,11 +20,12 @@
 | `paths.js` | Every place on the TV the service reads or writes; the tests move them with environment variables. |
 | `config.js` | The settings in `config.json`. `config.update(source, fn)` reads, changes and writes in one step, so two parts never overwrite each other's settings; every change of an option, a learned key or the Input-key mode is logged with its source (`config: options.inputKey true -> false (manager)`), which shows up in Share log. |
 | `tvprofile.js` | Everything that differs between TVs: the Input key's default mode, the notification window type, whether the firmware is in `compat.json`, whether LG's Home is a supported kind, how Home is taken over (`homeTakeover`) and which services are restarted after the app manager (`afterSam`), and whether the launcher may ask for the remote back after a wake (`wakeRefocus`, webOS 26: `POST /api/refocus` starts the picker with `{"focusonly":true}` for a moment, `picker.makeRefocus`). The service saves it in `tv.json` (`GET /api/tv`); the setup script asks the same rules (`node tvprofile.js get notifyWindow --sdk 10.2.2`). |
-| `exec.js`, `luna.js`, `fetch.js` | The one way to start a program (time limits without Node's own `timeout` option, which can abort Node 8), to call `luna-send`, and to download (redirects, gzip, size and time limits, dropped connections). |
+| `exec.js`, `luna.js`, `fetch.js` | The one way to start a program (time limits without Node's own `timeout` option, which can abort Node 8; a child that Node 8 aborts right after forking it, before the program runs, is started again, up to three times), to call `luna-send`, and to download (redirects, gzip, size and time limits, dropped connections). |
 | `server.js`, `web.js` | The HTTP server with the origin rules, and small reply helpers. |
 | `apps.js`, `running.js` | The app list, icons, usage, launching and the launcher's own settings; the running apps to close (Back on Home). |
+| `screensaver.js` | The page that replaces LG's screen saver: its photos from the wallpaper library, opening it over an idle launcher, and closing it. |
 | `inputkey.js`, `inputhook.js`, `picker.js` | The Input key: the hook in LG's input processes, the key binds, the Inputs picker. |
-| `book.js` | The launcher's book: which page shows (`POST /api/book/page`, the launcher reports it), so the Home key (learned in the manager, else 773) is bound in LG's input service only while one shows (`inputhook.js`, `scripts/bookhome.sh`); see [Add-ons](addons.md#pages-home-is-page-1-of-a-book). |
+| `book.js` | The launcher's book: opening a page (`POST /api/book/open`, the launcher waits on `GET /api/book/open`), which page shows (`POST /api/book/page`, the launcher reports it), so the Home key (learned in the manager, else 773) is bound in LG's input service only while one shows (`inputhook.js`, `scripts/bookhome.sh`); see [Add-ons](addons.md#pages-home-is-page-1-of-a-book). |
 | `manager.js`, `updates.js`, `debloat.js` | The manager's API, updates from GitHub releases with rollback, switching the debloat. |
 | `notify.js`, `notifyapi.js` | One feature each. |
 | `addons.js`, `addons-bundled/` | Add-ons: loads the folders that have an `addon.json` (those that ship in `addons-bundled/`, Live TV among them, and those installed from the catalog), isolates the ones that fail, serves their pages and installs from the catalog (`docs/development/addons.md`). |
@@ -73,6 +74,22 @@ card are small and stay single files.
       foreground; when the TV started on an input or another app, it waits until Home is first asked for (the stand-in leaves
       `/tmp/cleanyourtv-home-asked`; a preload does not count) or the app manager reports Home in the foreground without it (a stand-in
       that does not run), so a broken stand-in still brings LG's Home back. `home-method` holding `mount` forces the first way.
+      The way and LG's Home program are kept in `home-takeover` (`standin /usr/bin/com.webos.app.home`). At the next boot, when that
+      file is newer than LG's Home as it came, `tvprofile.js` and `home-method` and the launcher is staged as it is (no file in `app/`
+      newer than `home-overlay.staged`, which `stage-home.sh` touches, so after an update of the launcher the slow way stages it first), the stand-in is mounted
+      as the first step, before the service and the five Node.js starts of the steps above, so the Home key opens LG's Home for a
+      shorter time after a boot (issue 125); the rest follows as before. `stage-home.sh` copies only the launcher files that
+      changed, so a boot does not write the launcher (with the photos of the seasons, several MB) again while the TV is still busy. The boot log says `known from an earlier boot` then, and its
+      first line `boot script started` shows when the Homebrew Channel ran the script.
+      LG's app manager restarts when the TV goes to standby (the remote's power key with Quick Start on). The new one does not know
+      the stand-in as Home, while `webapp-mgr` still has the launcher open as `com.webos.app.home`, so it takes that for Home and
+      nothing comes to the front at power on or on the Home key (a black screen with only the pointer). The stand-in sees its
+      registration end with `com.webos.applicationManager is not running`, waits until the app manager answers again, has
+      `webapp-mgr` close the launcher and ends, so the new app manager starts the stand-in afresh the next time Home is launched.
+      The stand-in also follows the power state, as LG's own Home program does for its setting Home Auto Launch (General > Home
+      Settings, `homeAutoLaunch`): the boot manager only starts the last input when the TV comes back from standby. When the state
+      turns `Active` after `Active Standby` or `Suspend`, the setting is on and an input (or nothing) is in front, the stand-in launches
+      Home; an app the TV was turned on with stays in front.
       `bootstrap.sh verify` does the same once: when the launcher does not come up after a stand-in setup (a TV with CRIU never runs
       the stand-in, issues 72 and 84; `criu` in `tvprofile.js` records it but does not decide), it writes `home-method` `mount`, runs the boot
       script again and checks again; the rollback removes the file only if the setup wrote it.
@@ -81,10 +98,40 @@ card are small and stay single files.
    `bootstrap.sh` runs), notes that in `/tmp/cleanyourtv-boot.log` and adds the log of the run that ended to
    `/tmp/cleanyourtv-helper.crash.log` (the last 400 lines; Share log includes it). A service that stops again at once is started less
    often (after 10, 20 ... up to 120 seconds). If the service stays unreachable for about a minute while our launcher is Home, it
-   restores LG's Home until the next reboot. An update stops the watchdog and the boot script starts the one from the new files; it
-   ends by itself when CleanYourTV is uninstalled (`helper.js` gone).
+   restores LG's Home until the next reboot. On the stand-in way it also checks the screen: when the TV is on (power state `Active`)
+   and no app is in front for two checks in a row, it ends the stand-in, has `webapp-mgr` close the launcher and the app manager
+   launch Home; when the screen is still empty after two such tries, it restores LG's Home until the next reboot. When the app
+   manager lists Home as running while no stand-in runs (a restart of the app manager can end the stand-in too, and then the Home
+   key does nothing), it closes the launcher after two checks, and opens Home again if Home was in front. An update stops the watchdog and the boot script starts the one from the new files; it
+   ends by itself when CleanYourTV is uninstalled (`helper.js` gone). It also keeps a **black box**: every 30 seconds one line in
+   `blackbox.log` in the service folder (on the TV's storage, so it survives a reset) with the free memory and swap, the load, the
+   app in front and the busiest processes, below 64 KB. At the start of a boot the box of the boot before becomes `blackbox.last.log`,
+   headed by the reason the TV gave for this start (`tvpower/power/getPowerOnReason`, `cpuAbnormal` after a reset), so what happened
+   just before an unexpected reset can be read afterwards (issue 112). Share log includes both.
 
 Nothing is written under `/usr`: the mount disappears at reboot. `DISABLE` in `/media/developer/cleanyourtv` makes the script skip it.
+
+## How the screen saver is replaced
+
+`20-cleanyourtv-screensaver` does the same for the app the TV starts when it is idle, `com.webos.app.screensaver` ([Screen saver](../screensaver.md)),
+only while the manager's switch has written `SCREENSAVER-ON` (off by default):
+
+- `stage-screensaver.sh` builds `$D/screensaver-overlay`: the page from `screensaver/app` and an `appinfo.json` derived from the stock
+  screen saver (`backup/screensaver-appinfo.orig.json`), type `web` while it keeps the stock `defaultWindowType` (`screenSaver`, the only
+  one `tvpowerd` counts; `jtool.js saver`). It compares the page *and* the generated manifest before it copies anything, so an update
+  that changes the derived manifest is staged as well.
+- `10-cleanyourtv-home` calls it, with `prepare`, only in its folder-mount way and only while `SCREENSAVER-ON` is there, right before
+  its own `systemctl restart sam`: one restart reads both folders. `20-` never restarts the app manager itself and is not a boot script
+  of its own (no link in `init.d`); run any other way it does nothing.
+- `tvprofile.js` `saverTakeover`: `mount` where LG's screen saver is a Flutter, QML or web app; `none` where it is a native program,
+  which this version does not replace. `screensaver.js` `supported()` adds the Home side: the Home takeover has to be the folder mount
+  (or `home-method` holding `mount`), since the Home stand-in does no app manager restart. The manager shows "not available on this TV
+  yet" elsewhere.
+- `helper/screensaver.js` serves the page its photos and closes it: on `POST /api/screensaver/dismiss`, and by itself when the TV is
+  `Active` again without "Screen Saver" in `processing` while the page is still listed, after the page's first minute and at two
+  readings in a row (a page left behind would keep the remote). It also opens the page over an idle
+  launcher when `tvpowerd` did not, and the launcher tells it about every key (`POST /api/screensaver/active`): "Home in front" alone
+  is not "idle".
 
 ## Updates and rollback
 

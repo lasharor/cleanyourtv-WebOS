@@ -9,10 +9,17 @@
 //   /revoke     POST {id} or {all:true}: forgets phones, their token stops working at once
 //   /access     POST {id, allow}: blocks a phone without forgetting it (it keeps its token), or allows it again
 //   /key        POST {key}: presses one remote button as a phone would (to try the key adapter from the TV: curl)
+// The mic button on the phone goes to the service's voice API (helper/voice.js) over loopback, on the phone's own connection:
+//   {t:'vstat'}       -> {t:'vstat', ok, installed, unsupported, answers, listening}: what the TV can do (ok false: no voice API)
+//   {t:'ask', text}   -> {t:'answer', text, answer, via, error}: the text typed or dictated on the phone, as /api/voice/ask
+//   {t:'listen'}      -> {t:'vlive', state, ...}: the TV listens on the remote's microphone (/api/voice/listen); state follows the
+//                        TV (listening, recognising, thinking with the text) and ends with done {text, answer, via, error} or error {e}
+//   {t:'vstop'}       -> nothing: the phone no longer wants the vlive steps (the TV finishes on its own)
 // The settings are this add-on's settings in config.json (addons.phoneremote.settings): {expireDays, phones: [{id, name, hash, created,
 // seen, blocked}]}. A phone's token is "<id>.<secret>": the phone keeps it, the TV keeps only the SHA-256 of the secret, and it is never
 // logged.
-// The LAN listener (port 8799) runs only while a phone is paired or the pairing window is open. It serves the phone page, accepts a
+// The LAN listener (port 8799) runs only while a phone is paired or the pairing window is open. It serves the phone page (with the
+// manifest and icons that let an iPhone keep it on the Home Screen as an app: /manifest.webmanifest, /apple-touch-icon.png), accepts a
 // pairing (the code, five tries a minute per address, the window closes after eight wrong ones) and the WebSocket at /ws, where the first
 // message must be {t:'hello', token}. The keys themselves are remotekeys.js. The listener's own failure is separate from a request that
 // failed: GET reports it as listenError (a port that cannot be bound, say 8799 busy), so the TV page can tell the two apart.
@@ -36,6 +43,26 @@ const notFound = res => {
   res.writeHead(404);
   res.end();
 };
+// The Home Screen icons (pwa/): CleanYourTV's own icon, the one the package uses, rendered from assets/icon.svg. iOS asks for /apple-touch-icon.png (and the -precomposed name) by itself, even
+// without the <link> in the page; the manifest names the large one. Read from disk on each request: they are small and rarely asked for.
+const ICONS = {
+  '/apple-touch-icon.png': 'icon-180.png',
+  '/apple-touch-icon-precomposed.png': 'icon-180.png',
+  '/icon-180.png': 'icon-180.png',
+  '/icon-512.png': 'icon-512.png',
+};
+function icon(res, file) {
+  fs.readFile(path.join(__dirname, 'pwa', file), (err, buf) => {
+    if (err) return notFound(res);
+    res.writeHead(200, {
+      'content-type': 'image/png',
+      'content-length': buf.length,
+      'cache-control': 'max-age=86400',
+      'x-content-type-options': 'nosniff',
+    });
+    res.end(buf);
+  });
+}
 function readBody(req, max) {
   const limit = max || 1 << 20;
   return new Promise(resolve => {
@@ -242,6 +269,15 @@ function create(ctx, opts) {
         opts && opts.reverse
       );
     }
+    // The phone page as an app on the Home Screen (iPhone and iPad first: they cannot install the Android app): the manifest and its
+    // icons. Nothing in them is secret, so no token. A code in the manifest's address goes into start_url, so an iPhone that scanned the
+    // TV's QR code in Safari and then chose Add to Home Screen opens the app with the code already filled in (the app keeps its own
+    // storage, apart from Safari's, so it has to pair by itself).
+    if (req.method === 'GET' && u === '/manifest.webmanifest') {
+      const c = /(?:^|&)code=([0-9]{6})(?:&|$)/.exec(String(req.url.split('?')[1] || ''));
+      return send(200, page.manifest(i18n, lang(req), c ? c[1] : ''), 'application/manifest+json; charset=utf-8');
+    }
+    if (req.method === 'GET' && ICONS[u]) return icon(res, ICONS[u]);
     // The apps on the TV, for the phone's Apps tab: the launcher's API listens on loopback only, so the phone's page asks this server,
     // which passes the question on. Both need the phone's own token, so nobody else on the network can list or open the TV's apps.
     if (
@@ -332,6 +368,7 @@ function create(ctx, opts) {
     conn.on('close', () => {
       clearTimeout(hello);
       clients.delete(c);
+      stopWatch(c);
       c.chain = null; // nothing keeps the connection alive: queued actions finish on their own and are not acked
       if (c.id) touchSeen(c.id);
     });
@@ -393,7 +430,7 @@ function create(ctx, opts) {
     return v;
   }
 
-  function login(c, token) {
+  function login(c, token, keep) {
     const m = TOKEN.exec(String(token || ''));
     const p = m && find(m[1]);
     const good = !!p && same(sha(m[2]).toString('hex'), p.hash);
@@ -409,8 +446,9 @@ function create(ctx, opts) {
       return c.conn.close(4403);
     }
     c.id = p.id;
-    // a phone that was already paired scanned the QR code: it is connected again, so the pairing window has nothing left to do
-    if (pair && pair.scanned && pair.scanned.addr === c.addr) {
+    // a phone that was already paired scanned the QR code: it is connected again, so the pairing window has nothing left to do. Unless the
+    // page says keep: Safari on an iPhone, paired, scanning the code to put the remote on the Home Screen, whose app pairs by itself
+    if (pair && pair.scanned && pair.scanned.addr === c.addr && !keep) {
       scanned = { name: p.name, at: Date.now() };
       console.log('phoneremote: phone ' + p.id + ' scanned the code while paired; pairing closed');
       closePair();
@@ -533,7 +571,7 @@ function create(ctx, opts) {
     return !!(p && !p.blocked && same(sha(x[2]).toString('hex'), p.hash)); // the same check the WebSocket's hello does
   }
 
-  function apiRequest(method, path, body) {
+  function apiRequest(method, path, body, ms) {
     return new Promise(resolve => {
       let done = false;
       const settle = v => {
@@ -561,7 +599,7 @@ function create(ctx, opts) {
         });
         r.on('error', () => settle({}));
         r.on('timeout', () => settle({}));
-        r.setTimeout(o.apiTimeout || 5000, () => r.destroy());
+        r.setTimeout(ms || o.apiTimeout || 5000, () => r.destroy());
         r.end(payload);
       } catch (_) {
         settle({});
@@ -734,6 +772,115 @@ function create(ctx, opts) {
     }
   }
 
+  // ---- voice: the mic button on the phone ----
+  // An answer can take a while (a language model, Home Assistant, then a language model again): the ask waits longer than a key.
+  const ASK_MS = o.askTimeout || 45000,
+    VOICE_TICK_MS = o.voiceTick || 600,
+    VOICE_MAX_MS = 90000; // the TV records 15 s at most; recognising and answering fit well inside this
+  async function voiceState() {
+    const s = await apiRequest('GET', '/api/voice/status');
+    if (typeof s.installed !== 'boolean') return { ok: false }; // a service without voice, or one that did not answer
+    const l = s.llm || {},
+      h = s.ha || {};
+    return {
+      ok: true,
+      installed: s.installed,
+      unsupported: !!s.unsupported,
+      answers: !!((l.enabled && l.hasKey) || s.url || h.configured), // something on the TV answers what is asked
+      listening: !!s.listening,
+    };
+  }
+  // an answer can come long after the question (45 s, a listen 90 s): the phone may be gone by then, and a send on a socket that
+  // closed meanwhile must not throw out of the handler, which nobody awaits
+  const tell = (c, o) => {
+    if (c.conn.closed) return;
+    try {
+      c.conn.send(JSON.stringify(o));
+    } catch (_) {}
+  };
+  async function voiceAsk(c, m) {
+    const text = String(m.text || '')
+      .trim()
+      .slice(0, 1000);
+    if (!text) return tell(c, { t: 'answer', text: '', answer: '', via: '', error: 'empty' });
+    if (c.asking) return tell(c, { t: 'answer', text, answer: '', via: '', error: 'busy' });
+    c.asking = true;
+    const r = await apiRequest('POST', '/api/voice/ask', { text }, ASK_MS);
+    c.asking = false;
+    console.log('phoneremote: ask from ' + c.id + (r.error ? ' failed' : ' answered via ' + (r.via || '-')));
+    tell(c, {
+      t: 'answer',
+      text,
+      answer: String(r.answer || ''),
+      via: String(r.via || ''),
+      error: r.error ? String(r.error) : r.text === undefined ? 'no answer' : '',
+    });
+  }
+  function stopWatch(c) {
+    clearInterval(c.vtimer);
+    c.vtimer = null;
+  }
+  // the TV listens on the remote's microphone; the phone is told each step the TV goes through until it is done
+  async function voiceListen(c) {
+    stopWatch(c);
+    const t0 = Date.now();
+    const r = await apiRequest('POST', '/api/voice/listen');
+    if (!r.started) return tell(c, { t: 'vlive', state: 'error', e: String(r.error || 'no answer') });
+    console.log('phoneremote: listen from ' + c.id);
+    tell(c, { t: 'vlive', state: 'listening' });
+    let sent = 'listening',
+      busy = false,
+      misses = 0;
+    c.vtimer = setInterval(async () => {
+      if (busy) return;
+      busy = true;
+      const s = await apiRequest('GET', '/api/voice/status');
+      busy = false;
+      if (!c.vtimer) return;
+      const l = s.last || {},
+        // the record is this listen's when it is not older than its start: the voice service has one listener at a time and answers
+        // a second listen with "already listening", so no other listen can write a newer record while this one runs
+        mine = (l.at || 0) >= t0 - 1000;
+      if (typeof s.listening !== 'boolean') {
+        if (++misses >= 5) {
+          stopWatch(c);
+          tell(c, { t: 'vlive', state: 'error', e: 'no answer' });
+        }
+        return;
+      }
+      misses = 0;
+      if (!s.listening && mine) {
+        stopWatch(c);
+        if (l.state === 'heard')
+          return tell(c, {
+            t: 'vlive',
+            state: 'done',
+            text: String(l.text || ''),
+            answer: String(l.answer || ''),
+            via: String(l.via || ''),
+            error: String(l.error || ''),
+          });
+        return tell(c, { t: 'vlive', state: 'error', e: String(l.state === 'error' ? l.error || 'error' : l.state || 'error') });
+      }
+      if (Date.now() - t0 > VOICE_MAX_MS) {
+        stopWatch(c);
+        return tell(c, { t: 'vlive', state: 'error', e: 'timed out' });
+      }
+      const now = l.state === 'heard' ? 'thinking' : l.state === 'recognising' ? 'recognising' : 'listening';
+      if (mine && now !== sent) {
+        sent = now;
+        tell(c, now === 'thinking' ? { t: 'vlive', state: now, text: String(l.text || '') } : { t: 'vlive', state: now });
+      }
+    }, VOICE_TICK_MS);
+    if (c.vtimer.unref) c.vtimer.unref();
+  }
+  const VOICE = {
+    vstat: async c => tell(c, Object.assign({ t: 'vstat' }, await voiceState())),
+    ask: voiceAsk,
+    listen: voiceListen,
+    vstop: async c => stopWatch(c), // the phone closed the voice screen or changed where it listens: no more steps (the TV finishes)
+  };
+
   // text, delete and enter must reach the TV in the order they were typed, but each one is its own luna process: they run one after
   // another per connection. Everything else (a held arrow key, the touchpad) stays concurrent and never waits behind them.
   const ORDERED = { text: 1, del: 1, enter: 1 };
@@ -773,7 +920,7 @@ function create(ctx, opts) {
       return;
     }
     if (!m || typeof m !== 'object') return;
-    if (!c.id) return m.t === 'hello' ? login(c, m.token) : c.conn.close(4401); // nothing but hello before a phone has shown its token
+    if (!c.id) return m.t === 'hello' ? login(c, m.token, m.keep === true) : c.conn.close(4401); // nothing but hello before a phone has shown its token
     // the phone may have been revoked or blocked since it connected
     const p = find(c.id);
     if (!p || p.blocked) {
@@ -797,6 +944,11 @@ function create(ctx, opts) {
       return c.conn.close(1000);
     }
     if (m.t === 'power') return c.conn.send(JSON.stringify({ t: 'power', state: await powerState() }));
+    if (VOICE[m.t]) {
+      if (c.tokens < 1) return c.conn.send(JSON.stringify({ t: 'err', n: m.n, e: 'slow down' }));
+      c.tokens--;
+      return Promise.resolve(VOICE[m.t](c, m)).catch(() => {}); // a voice step that fails ends quietly: the phone times out on its own
+    }
     const act = ACTIONS[m.t];
     if (!act) return;
     if (c.tokens < 1) return c.conn.send(JSON.stringify({ t: 'err', n: m.n, e: 'slow down' }));

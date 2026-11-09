@@ -48,6 +48,7 @@ async function show(b, internal) {
   if (kind) {
     p.kind = kind;
     p.question = String(b.question || '').slice(0, 300);
+    p.foot = String(b.foot || '').slice(0, 300); // a quiet last line: which AI provider answered, or where to look
   }
   if (b.image) {
     try {

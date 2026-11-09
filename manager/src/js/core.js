@@ -8,6 +8,11 @@ var kFlow = 'input',
   API = 'http://127.0.0.1:8765',
   SVC = '/media/developer/apps/usr/palm/services/com.cleanyourtv.manager.service';
 var napi = null,
+  mnet = null /* MCP on the network (/api/mcp/lan) */,
+  mtools = null /* the tool settings (/api/mcp/tools) */,
+  mtOpen = {} /* the groups open on the Tools screen */,
+  mcpSel = null /* the agent on the Manage screen */,
+  mcpAsk = null /* the confirm on screen: {title, about, yes, body, done, back} */,
   ad = {
     installed: [],
     catalog: [],
@@ -95,14 +100,21 @@ function launch(id, params) {
 function onoff(v) {
   return v ? 'On' : 'Off';
 }
+var bannerAt = 0; // when the banner was last set: one left from an earlier action is cleared when the screen changes
 function banner(text, cls) {
   var b = $('banner');
+  bannerAt = Date.now();
   b.textContent = tr(text || '');
   b.className = cls || '';
   b.style.display = text ? '' : 'none';
 }
 
+// a banner set by the action that changes the screen stays (a result such as "Model: …"); an older one belongs to the screen left
+function staleBanner() {
+  if (Date.now() - bannerAt > 1000) banner('');
+}
 function push(v) {
+  staleBanner();
   idxStack.push([view, idx]);
   view = v;
   idx = 0;
@@ -110,9 +122,83 @@ function push(v) {
   draw();
 } // into a screen; pop returns to the row we left
 function pop() {
+  staleBanner();
   var p = idxStack.pop() || ['main', 0];
   view = p[0];
   idx = p[1];
   build();
   draw();
+}
+/* "5 min ago", "3 h ago", "2 days ago": when an agent was last used */
+function mcpAgo(t) {
+  var m = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (m < 1) return 'just now';
+  if (m < 60) return m + ' min ago';
+  if (m < 48 * 60) return Math.round(m / 60) + ' h ago';
+  return Math.round(m / 1440) + ' days ago';
+}
+/* a span of time in days: "1 day", "2 weeks", "1 month" */
+function mcpDays(ms) {
+  var d = Math.max(1, Math.round(ms / 864e5));
+  if (d === 30) return '1 month';
+  if (d % 7 === 0) return d / 7 + (d === 7 ? ' week' : ' weeks');
+  return d + (d === 1 ? ' day' : ' days');
+}
+/* the MCP screens follow changes made elsewhere while they are on screen (a device that pairs, logs out, is removed by the hourly sweep):
+   every three seconds, and only while one of them is displayed and the app is visible, the state is read again and the screen is
+   redrawn when it changed; the focused row stays where it was. Leaving those screens stops the timer. */
+var mcpLiveTimer = 0,
+  mcpLiveViews = ['mcpnet', 'mcpdevices', 'mcpagent', 'mcptools'];
+function mcpLiveStop() {
+  if (mcpLiveTimer) clearInterval(mcpLiveTimer);
+  mcpLiveTimer = 0;
+}
+function mcpLive() {
+  if (mcpLiveTimer) return;
+  mcpLiveTimer = setInterval(function () {
+    if (mcpLiveViews.indexOf(view) < 0) return mcpLiveStop();
+    if (document.hidden) return; /* behind another app: nothing to show */
+    /* the Tools screen: a new tool that appears (an add-on updated, a source approved) shows with its New badge */
+    if (view === 'mcptools') {
+      api('/api/mcp/tools').then(
+        function (t) {
+          if (view !== 'mcptools' || document.hidden || !t || t.error || JSON.stringify(t) === JSON.stringify(mtools)) return;
+          var was = rows[idx] && rows[idx].label;
+          mtools = t;
+          build();
+          mtRefocus(was);
+          draw();
+        },
+        function () {}
+      );
+      return;
+    }
+    api('/api/mcp/lan').then(
+      function (n) {
+        if (mcpLiveViews.indexOf(view) < 0 || document.hidden || !n || n.error) return;
+        var key = function (x) {
+          return JSON.stringify([
+            x && x.lan,
+            x && x.listening,
+            x && x.error,
+            x && x.expireDays,
+            ((x && x.agents) || []).map(function (a) {
+              return [a.id, a.name, a.blocked, a.active, Math.floor((Date.now() - a.seen) / 60000)];
+            }),
+          ]);
+        };
+        if (key(n) === key(mnet)) return;
+        var was = rows[idx] && rows[idx].label;
+        mnet = n;
+        build();
+        /* keep the focus on the same row when it is still there, else on the nearest one */
+        var i = -1;
+        for (var k = 0; k < rows.length; k++) if (rows[k].label === was && !rows[k].sep) i = k;
+        idx = i >= 0 ? i : Math.min(idx, rows.length - 1);
+        while (idx > 0 && rows[idx] && rows[idx].sep) idx--;
+        draw();
+      },
+      function () {}
+    );
+  }, 3000);
 }

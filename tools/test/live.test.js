@@ -329,6 +329,57 @@ run(async () => {
       st2.epg === 4,
       "an empty guide address on an Xtream playlist uses the provider's xmltv.php (" + st2.epg + ', error "' + st2.error + '")'
     );
+    // ---- the tool (wave 2): Live TV for the voice assistant and AI agents ----
+    {
+      const T = lv.create({}).tools;
+      const tc = async args => {
+        const r = await T.call('iptv', args);
+        return {
+          err: r.isError,
+          text: r.content[0].text,
+          v: (() => {
+            try {
+              return JSON.parse(r.content[0].text);
+            } catch (_) {
+              return null;
+            }
+          })(),
+        };
+      };
+      ok(T.list().length === 1 && T.list()[0].name === 'iptv', 'one tool, iptv');
+      let r = await tc({ action: 'status' });
+      ok(!r.err && r.v.configured === true && r.v.channels === 4 && r.v.guide === true, 'status: set up, 4 channels, a guide');
+      r = await tc({ action: 'find_channel', query: 'polsat' });
+      ok(!r.err && r.v.length === 1 && r.v[0].name === 'Polsat' && typeof r.v[0].number === 'number', 'find_channel by name');
+      r = await tc({ action: 'find_channel', query: String(r.v[0].number) });
+      ok(r.v.length === 1 && r.v[0].name === 'Polsat', 'find_channel by number');
+      r = await tc({ action: 'whats_on', channel: 'TVN' });
+      ok(!r.err && r.v.now && r.v.now.title === 'Uwaga' && /^\d\d:\d\d$/.test(r.v.now.from), 'whats_on: the programme now, with its times');
+      r = await tc({ action: 'schedule', channel: 'TVN' });
+      ok(!r.err && Array.isArray(r.v.programmes) && r.v.programmes[0].title === 'Uwaga', 'schedule: the next programmes');
+      r = await tc({ action: 'whats_on', channel: 'No guide for this' });
+      ok(!r.err && /no guide/.test(r.v.guide), 'a channel without guide data says so');
+      r = await tc({ action: 'set_favourite', channel: 'Polsat', on: true });
+      ok(!r.err && r.v.favourite === true, 'set_favourite adds');
+      r = await tc({ action: 'favourites' });
+      ok(r.v.length === 1 && r.v[0].name === 'Polsat', 'favourites lists it');
+      await tc({ action: 'set_favourite', channel: 'Polsat', on: false });
+      ok((await tc({ action: 'favourites' })).v.length === 0, 'and set_favourite removes it');
+      r = await tc({ action: 'set_favourite', channel: 'Polsat' });
+      ok(r.err, 'set_favourite needs on');
+      r = await tc({ action: 'check_stream', channel: 'Polsat' });
+      ok(!r.err && r.v.works === false && r.v.answer === 'unreachable', 'check_stream: a stream that does not answer');
+      r = await tc({ action: 'whats_on', channel: 'Nope TV' });
+      ok(r.err && /no channel/.test(r.text), 'an unknown channel says so');
+      let all = '';
+      for (const a of ['status', 'favourites']) all += (await tc({ action: a })).text;
+      for (const q of ['p', 'tvn', '1']) all += (await tc({ action: 'find_channel', query: q })).text;
+      for (const a of ['whats_on', 'schedule', 'check_stream']) all += (await tc({ action: a, channel: 'Polsat' })).text;
+      ok(
+        all.indexOf('127.0.0.1') < 0 && all.indexOf('password') < 0 && all.indexOf('http') < 0,
+        'no answer holds a stream or playlist address'
+      );
+    }
     await lcall('/api/live/reset', 'POST');
     gzs.close();
   }

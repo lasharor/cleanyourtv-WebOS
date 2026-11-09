@@ -136,6 +136,35 @@ run(async () => {
   // ---- the actions: the card has none of its own (the launcher opens the drawer and the settings) ----
   ok((await w.cards.action('forecast', opt, 'hours')).error === 'no such action', 'the service has no actions to run');
 
+  // ---- the tool (wave 2): the drawer's forecast for the voice assistant and AI agents ----
+  {
+    const tv = r => JSON.parse(r.content[0].text);
+    ok(w.tools.list().length === 1 && w.tools.list()[0].name === 'weather', 'one tool, weather');
+    let r = await w.tools.call('weather', { action: 'forecast', place: 'Paris' });
+    const f = tv(r);
+    ok(
+      !r.isError &&
+        /Paris/.test(f.place) &&
+        f.now.temp === '14°C' &&
+        f.now.sky === 'cloudy' &&
+        f.now.feels === '12°C' &&
+        f.now.humidity === '71%' &&
+        f.now.wind === '19 km/h' &&
+        f.now.sunrise === '2026-11-03T06:41',
+      'forecast: now with feels like, humidity, wind, sunrise: ' + JSON.stringify(f.now)
+    );
+    ok(
+      f.hours.length === 6 && f.hours[0].sky === 'rain' && f.days.length === 3 && f.days[1].max === '16°C',
+      'six hours and three days by default'
+    );
+    r = await w.tools.call('weather', { action: 'forecast', place: 'Paris', days: 7, unit: 'f' });
+    ok(tv(r).days.length === 7 && /°F$/.test(tv(r).now.temp) && / mph$/.test(tv(r).now.wind), 'seven days in Fahrenheit, the wind in mph');
+    r = await w.tools.call('weather', { action: 'find_place', place: 'Paris' });
+    ok(!r.isError && tv(r)[0].name === 'Paris' && /France/.test(tv(r)[0].area), 'find_place');
+    r = await w.tools.call('weather', { action: 'forecast', place: 'x' });
+    ok(r.isError, 'a place is needed');
+  }
+
   // ---- the city search of the launcher's settings panel ----
   const pl = await w.cards.places('Par', 'en');
   ok(
@@ -179,8 +208,8 @@ run(async () => {
   const man = JSON.parse(fs.readFileSync(path.join(addonDir, 'addon.json'), 'utf8'));
   const chk = addons.check(man, '1.6.18');
   ok(
-    chk.manifest && chk.manifest.provides.join() === 'cards' && chk.manifest.permissions.join() === 'net.fetch',
-    'the manifest is accepted and asks for the network only'
+    chk.manifest && chk.manifest.provides.join() === 'cards,tools' && chk.manifest.permissions.join() === 'net.fetch',
+    'the manifest is accepted (a card and a tool) and asks for the network only'
   );
   ok(
     addons.check(man, '1.6.17').error && /1\.6\.18/.test(addons.check(man, '1.6.17').error),

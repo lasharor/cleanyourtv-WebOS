@@ -54,34 +54,104 @@ function draw() {
       : '<div class="row' +
         (i === idx ? ' f' : '') +
         (r.dim ? ' dim' : '') +
+        (r.cls ? ' ' + r.cls : '') +
         '" data-i="' +
         i +
-        '"><span class="lb"></span>' +
+        '">' +
+        (r.check !== undefined ? '<span class="ck' + (r.check ? ' on' : '') + '"></span>' : '') +
+        (r.chev ? '<span class="chev ' + r.chev + '"></span>' : '') +
+        (r.state ? '<span class="dot ' + r.state + '"></span>' : '') +
+        (r.dot
+          ? '<i style="display:inline-block;flex:0 0 auto;width:16px;height:16px;border-radius:8px;margin-right:16px;background:' +
+            r.dot +
+            '"></i><span class="lb" style="margin-left:0;margin-right:0"></span>'
+          : '<span class="lb"></span>') +
+        (r.badge ? '<span class="bdg"></span>' : '') +
+        (r.tag ? '<span class="tg"></span>' : '') +
         (r.sub ? '<span class="st"></span>' : '') +
+        (r.sw ? '<span class="sw ' + r.sw + '"></span>' : '') +
+        (r.lock ? '<span class="lock"></span>' : '') +
         '</div>';
   });
   $('list').innerHTML = h;
+  $('list').className = view === 'mcptools' || view === 'mcpnewtools' ? 'gaps' : '';
   scrollList();
   var el = $('list').children;
   rows.forEach(function (r, i) {
     if (r.sep) return;
-    el[i].querySelector('.lb').textContent = tr(r.label);
+    el[i].querySelector('.lb').textContent = r.raw ? r.label : tr(r.label);
     if (r.sub) el[i].querySelector('.st').textContent = tr(r.sub);
+    if (r.badge) el[i].querySelector('.bdg').textContent = tr(r.badge);
+    if (r.tag) el[i].querySelector('.tg').textContent = tr(r.tag);
   });
+  var mf = $('mfoot');
+  mf.style.display = view === 'mcptools' ? '' : 'none';
+  if (view === 'mcptools') mf.innerHTML = '<b></b> <span></span>';
+  if (view === 'mcptools' && mtools) {
+    mf.firstChild.textContent = mtools.on + ' ' + tr('of') + ' ' + mtools.all;
+    mf.lastChild.textContent = tr('tools on \u00B7 applies to the voice assistant and network agents');
+  }
   var inf = infoFor(rows[idx]),
     ie = $('info');
   ie.textContent = '';
   $('head').className = '';
   drawAbout(rows[idx], ie);
   $('sub').style.wordBreak = '';
+  /* the AI providers screens name what they show in the heading */
+  var hd = view === 'providers' ? 'AI providers' : view === 'provider' ? (llmFind(pvId) || {}).name || '' : '';
+  $('head').querySelector('h1').textContent = hd ? tr(hd) : 'CleanYourTV';
+  if (view === 'providers' || view === 'provider') {
+    var pp = llmFind(pvId);
+    $('sub').textContent = tr(
+      view === 'providers'
+        ? 'Asked from the top. If one does not answer, the next one is asked.'
+        : pp && pp.type === 'server'
+          ? 'Your own server · ' + llmHost(pp.base)
+          : 'OpenRouter'
+    );
+    if (inf) {
+      var b4 = document.createElement('b');
+      b4.textContent = tr(inf.t);
+      ie.appendChild(b4);
+      ie.appendChild(document.createTextNode(tr(inf.d)));
+    }
+    return;
+  }
   if (view === 'notifyhow' || view === 'voicehow') {
     $('sub').textContent = tr(kText);
     $('sub').style.whiteSpace = 'pre-line';
     $('sub').style.wordBreak = 'break-all';
     return;
   }
-  if (view === 'notifyapi') {
-    $('sub').textContent = tr('Network notifications');
+  if (
+    view === 'notifyapi' ||
+    view === 'mcpnet' ||
+    view === 'mcpdevices' ||
+    view === 'mcpagent' ||
+    view === 'mcpexpire' ||
+    view === 'mcpconfirm' ||
+    view === 'mcptools' ||
+    view === 'mcpnewtools'
+  ) {
+    $('sub').textContent = tr(
+      {
+        notifyapi: 'Network notifications',
+        mcpnet: 'AI agents (MCP)',
+        mcpdevices: 'Connected devices',
+        mcpagent: 'Manage the device',
+        mcpexpire: 'Remove unused devices',
+        mcpconfirm: (mcpAsk && mcpAsk.title) || 'Are you sure?',
+        mcptools: 'AI agents (MCP) \u203A Tools',
+        mcpnewtools: 'AI agents (MCP) \u203A Tools \u203A New tools',
+      }[view]
+    );
+    /* the focused row explained on the left, as on the other screens */
+    if (inf) {
+      var bn = document.createElement('b');
+      bn.textContent = inf.raw ? inf.t : tr(inf.t);
+      ie.appendChild(bn);
+      richText(ie, tr(inf.d));
+    }
     return;
   }
   if (view === 'models') {
@@ -265,12 +335,32 @@ function drawTabs() {
     d.className = 'tab' + (i === tab ? ' on' : '');
   });
 }
+/* the side text: **words** in bold, a blank line between paragraphs (the Tools screen) */
+function richText(el, s) {
+  String(s)
+    .split('\n\n')
+    .forEach(function (para, n) {
+      var p = n ? document.createElement('div') : el;
+      if (n) {
+        p.className = 'para';
+        el.appendChild(p);
+      }
+      para.split('**').forEach(function (part, k) {
+        if (!part) return;
+        if (k % 2) {
+          var s2 = document.createElement('strong');
+          s2.textContent = part;
+          p.appendChild(s2);
+        } else p.appendChild(document.createTextNode(part));
+      });
+    });
+}
 function next(dir) {
   var n = rows.length,
     i = idx;
   do {
     i = (i + dir + n) % n;
-  } while (rows[i].sep);
+  } while (rows[i].sep || rows[i].nofocus);
   idx = i;
   draw();
 }

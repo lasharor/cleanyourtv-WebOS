@@ -13,7 +13,6 @@
 // input's app id, com.webos.app.hdmiN), live (Live TV in the launcher), home (the Home screen), picker (the Inputs list), none (the press is taken and nothing happens).
 // Nothing under /usr, /etc or the firmware changes: the binds live in the hook's keybinds.json and the buttons in config.json. The binds
 // only work while the hook is in LG's input service, so a reboot without the boot scripts gives every key back to LG.
-const fs = require('fs');
 const P = require('./paths'),
   web = require('./web'),
   exec = require('./exec'),
@@ -87,14 +86,8 @@ function create(ctx) {
     if (ik && ik.ensure) ik.ensure();
   };
 
-  // the launcher on its stand-in Home (scripts/home-standin.sh) takes its parameters from this file
-  function homeParams(params) {
-    if (!fs.existsSync(P.STANDIN)) return;
-    try {
-      const up = fs.readFileSync(P.PROC + '/uptime', 'utf8').split(' ')[0];
-      fs.writeFileSync(P.HOME_PARAMS, up + ' ' + JSON.stringify(params));
-    } catch (_) {}
-  }
+  // the launcher on its stand-in Home (scripts/home-standin.sh) takes its parameters from a file
+  const homeParams = require('./nativehome').homeParams;
   async function launch(id, params) {
     // an app set up to open on an Android box switches the input instead; the box is a bundled add-on, as /api/launch (apps.js) reaches it
     const addons = feature('addons'),
@@ -268,6 +261,10 @@ function create(ctx) {
     paths: ['/api/remap', '/api/remap/learn', '/api/remap/learn-state', '/api/remap/fire'],
     handle,
     start,
+    // the remapped buttons with their names, and whether remapping is on, for the remote_buttons tool
+    buttons: () => ({ on: enabled(), keys: shown() }),
+    // the same moves a remapped button makes, for the navigate tool: home, live_tv (the launcher's Live TV) or input_list
+    go: to => run({ type: to === 'live_tv' ? 'live' : to === 'home' ? 'home' : 'inputs' }),
     // for the tests
     table,
     fire,

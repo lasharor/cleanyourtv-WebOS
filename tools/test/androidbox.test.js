@@ -154,6 +154,10 @@ run(async () => {
     t.j.ok === true && t.j.model === 'SHIELD Android TV' && box.seen.commands.pop() === 'getprop ro.product.model',
     'the test asks the box for its model'
   );
+  // the tool (wave 2) runs the same test
+  const tv = x => JSON.parse(x.content[0].text);
+  let tr = await f.tools.call('androidbox', { action: 'test' });
+  ok(!tr.isError && tv(tr).connected === true && tv(tr).model === 'SHIELD Android TV', 'the tool: test reads the model');
   box.close();
 
   // ---- a request that is not valid is refused and changes nothing ----
@@ -217,6 +221,29 @@ run(async () => {
   const g = mod.create({ config: memoryConfig({}), luna, feature: () => null });
   r = await call(g, '/api/androidbox/app', 'POST', { id: 'plex', on: true });
   ok(r.code === 400, 'without a box set up nothing can be chosen');
+
+  // ---- the tool (wave 2): the same, for the voice assistant and AI agents ----
+  ok(f.tools.list().length === 1 && f.tools.list()[0].name === 'androidbox', 'one tool, androidbox');
+  tr = await f.tools.call('androidbox', { action: 'status' });
+  ok(
+    !tr.isError && tv(tr).configured === true && tv(tr).apps === 1 && !('path' in tv(tr)) && JSON.stringify(tv(tr)).indexOf('adb') < 0,
+    'status: set up, one app, no key path'
+  );
+  tr = await f.tools.call('androidbox', { action: 'list_apps' });
+  ok(
+    tv(tr).length === 1 && tv(tr)[0].id === 'plex' && tv(tr)[0].package === 'com.plexapp.android',
+    'list_apps: the apps that open on the box'
+  );
+  tr = await f.tools.call('androidbox', { action: 'set_app', id: 'netflix', on: true });
+  ok(!tr.isError && f.handles('netflix'), 'set_app moves an app to the box');
+  tr = await f.tools.call('androidbox', { action: 'set_app', id: 'netflix', on: false });
+  ok(!tr.isError && !f.handles('netflix') && f.handles('plex'), 'and back to the TV; the others stay');
+  tr = await f.tools.call('androidbox', { action: 'set_app', id: 'netflix' });
+  ok(tr.isError && !f.handles('netflix'), 'set_app needs on');
+  tr = await f.tools.call('androidbox', { action: 'set_app', id: 'mytv.player', on: true });
+  ok(tr.isError && /phone/.test(tr.content[0].text), 'an app without a known package says to give it from the phone');
+  ok(tv(await g.tools.call('androidbox', { action: 'status' })).configured === false, 'status without a box says it is not set up');
+  ok((await g.tools.call('androidbox', { action: 'list_apps' })).isError, 'and the other actions say so too');
 
   // ---- the phone page ----
   const phone = (method, p, code, body) =>

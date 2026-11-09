@@ -30,8 +30,10 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 | Remote key remapping (a button opens an app, input, Live TV, Home) | `helper/remap.js`, `helper/keynames.js` (the name of a button), `scripts/remapkey.sh`, the binds in `helper/inputhook.js`, `manager/src/js/remap.js`, `docs/key-remap.md` |
 | Phone remote (pairing, tokens, WebSocket, keys into the TV) | the catalog add-on phoneremote: `addons/catalog/phoneremote/service.js`, `ws.js` (RFC 6455 server and client for Node 8), `remotekeys.js` (the key adapter: pointer socket, ime, audio), `page.js` (phone page), `src/` (the add-on's own page on the TV: pairing and the paired phones, built into `page/index.html`), `docs/phone-remote.md` |
 | Turning the TV on from the phone (Wake-on-LAN), and the hook for an app that wraps the phone page | the `window.CYTV_APP` hook and the on/off button in `addons/catalog/phoneremote/page.js`; `ready.mac` and `ready.wol` in `addons/catalog/phoneremote/service.js`; the shared QR code an add-on page draws with is `third-party/qrcode-generator` (served as `/addon/qrcode.js`); no app is part of this repository |
+| The screen saver (our page over LG's) | `scripts/20-cleanyourtv-screensaver` (called by `10-cleanyourtv-home`, off by default), `scripts/stage-screensaver.sh`, `helper/screensaver.js`, `screensaver/app/`, `docs/screensaver.md` |
+| Tools for AI agents (MCP): the voice assistant's tools, the network endpoint, pairing, the agent add-on | `helper/coretools.js` (the TV's own tools), `helper/toolhub.js` (the list, `/api/mcp`, the network port), `helper/devices.js` (paired agents), `addons/catalog/agent/` (signed tools of apps and add-ons: `tools.js`), `docs/agent.md`, `docs/security.md` |
 | Picture notifications | `notify/app/`, `helper/notify.js`, `helper/notifyapi.js` |
-| Voice (Moonshine, OpenRouter, Home Assistant) | `helper/voice.js` (microphone, recogniser), `helper/answers.js` (Assist, OpenRouter, your server), `voice/` |
+| Voice (Moonshine, AI providers with fallback, Home Assistant) | `helper/voice.js` (microphone, recogniser, settings, the phone setup page), `helper/answers.js` (Assist, the AI providers in order: OpenRouter and self-hosted servers, your server), `voice/`; the manager screens in `manager/src/js/screens.js` (AI providers) |
 | Themes | `helper/themeschema.js` (the schema), `helper/theme.js` (downloads), `themes/` (read from GitHub), `docs/themes.md` |
 | Wallpapers | `helper/wallpapers.js` (uploads, phone page, the photo sources add-ons provide), `app/src/js/wall.js` (rotation on Home), `docs/wallpapers.md`; Immich is the catalog add-on `addons/catalog/immich` |
 | The report people attach to issues | `helper/sharelog.js` (`node sharelog.js --print` prints it) |
@@ -49,8 +51,8 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 - Root SSH works with a key (`ssh root@<tv-ip>`). `luna-send` must have stdin redirected: `luna-send -n 1 -w 5000 -f <uri> '<json>' </dev/null`.
 - The service listens on `127.0.0.1:8765` (use `curl` on the TV). Other ports: 8766 Live TV pairing, 8767 network notifications (opt-in),
   8768+ share log, 8769 voice setup, 8791 wallpapers, 8792 cards, 8793 Android box, 8794 app icons, 8795 Immich, 8796 Unsplash,
-  8797 Spotify, 8798 Jellyfin, 8799 phone remote (a catalog add-on). All of these are short-lived or off by default; 8799 is open only while
-  that add-on is on and a phone is paired or its pairing window is open.
+  8797 Spotify, 8798 Jellyfin, 8799 phone remote (a catalog add-on), 8800 add-on repositories, 8801 Stocks and crypto. All of these are
+  short-lived or off by default; 8799 is open only while that add-on is on and a phone is paired or its pairing window is open.
 - Going back to LG's Home: manager app > CleanYourTV as Home off, or `sh /media/developer/cleanyourtv/undo-home.sh`. If a boot crashes,
   the Homebrew Channel's failsafe mode skips the boot scripts.
 - A TV in **deep** standby answers nothing over TCP. With Quick Start+ (the default) the system stays partly up while the screen is off, and
@@ -82,6 +84,13 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 7. **Do not release, tag, force-push or change repository settings.** The maintainer does that. Work on a branch and open the pull request
    against `dev`; once merged, every push to `dev` publishes the dev build (the pre-release `dev`), which people can install from the
    manager app (Update channel > Dev builds). A release goes out from `dev` once a day, unless the file `RELEASE-HOLD` is in the repository root (`tools/release.sh` then releases nothing; delete the file to release again). If `RELEASE-NOTES.md` is in the repository root, `tools/release.sh` uses it as the release notes (sections, credits, pictures from `docs/screenshots/`) instead of the commit subjects and removes it in the release commit: write it as the changes come in.
+
+8. **Tools for AI agents (MCP) are an attack surface.** A tool is what a model, or whoever reaches the network port, can do on the TV with no one
+   watching. A new tool must be needed, read-only where it can be, and take no shell command, file path or service API path from the model.
+   Anything that turns the TV off, deletes, changes a setting or calls out must be marked `confirm` (`destructiveHint`): it then runs only from the
+   voice assistant, after a plain "yes" on the TV, never from the network. A tool that calls an address must refuse the TV itself, also a name
+   that resolves to it; a tool of an add-on reaches only that add-on. Keep the keys and the pairing secrets out of logs and answers. A change needs
+   tests in `tools/test/` (`agent`, `coretools`, `voiceagent`, `devices`) and the pages `docs/agent.md` and `docs/security.md`.
 
 ## Commands
 
@@ -117,3 +126,6 @@ sh tools/perf-tv.sh <tv-ip>        # read-only timings from a TV: launcher, Inpu
 - A per-TV rule written in a module or a script drifts from the others: put it in `helper/tvprofile.js`.
 - Edit the pages in `app/src`, `manager/src` and `helper/addons-bundled/iptv/src`, then `node tools/build-pages.js`; the built files are what the TV loads.
 - Themes are data; a theme must never contain CSS or script. The schema in `helper/themeschema.js` is the only source of what a theme can set.
+- A package built on Windows: `os.path.relpath` gives `\` in archive names and a CRLF checkout gives `shift\r: not found` on the TV
+  (both broke the screen saver install). `ipk/build.py` writes `/` and normalises shell scripts to LF, and refuses a backslash.
+- `cp` without `-r` skips `screensaver/app` ("omitting directory"): `bootstrap.sh` copies that payload with `cp -r`.

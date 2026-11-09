@@ -14,6 +14,29 @@ STANDIN=/tmp/cleanyourtv-home-standin   # holds the path of LG's Home program wh
 LOG=/tmp/cleanyourtv-boot.log
 up() { cut -d' ' -f1 /proc/uptime; }
 replaced() { grep -q " $H " /proc/mounts || { [ -f $STANDIN ] && grep -q " $(cat $STANDIN) " /proc/mounts; }; }
+echo "$(up) home: boot script started${1:+ ($1)}" >> $LOG
+TAKEOVER=$L/home-takeover   # "<method> <LG's Home program>", worked out at an earlier boot (below)
+# Fast start on the native Home (issue 125): until the stand-in is mounted, the Home key opens LG's Home, and the steps before the
+# mount start Node.js five times (tvprofile.js, jtool.js, stage-home.sh), which takes seconds while the TV is still booting. When
+# an earlier boot worked out the way and nothing it depends on changed since (LG's Home as it came, tvprofile.js, home-method) and
+# the launcher is staged as it is (no launcher file newer than home-overlay.staged: after an update the slow way stages it first), the
+# stand-in is mounted first, before the service starts; the rest follows as before.
+FAST=""
+if [ ! -e $L/DISABLE ] && [ -f $TAKEOVER ] && [ -f $L/wam-launch.json ] && [ -f $L/home-overlay/index.html ] && [ -f $L/home-overlay.staged ] && ! replaced \
+  && [ $TAKEOVER -nt $L/backup/home-appinfo.orig.json ] && [ $TAKEOVER -nt $L/tvprofile.js ] \
+  && { [ ! -f $L/home-method ] || [ $TAKEOVER -nt $L/home-method ]; } \
+  && [ -z "$(find $L/app -newer $L/home-overlay.staged 2>/dev/null | head -n 1)" ]; then
+  read -r method EXE < $TAKEOVER
+  if [ "$method" = standin ] && [ -n "$EXE" ] && [ -f "$EXE" ]; then
+    chmod 755 $L/home-standin.sh
+    if mount --bind $L/home-standin.sh "$EXE"; then
+      echo "$EXE" > $STANDIN
+      for p in $(pgrep -f "^$EXE"); do kill "$p" 2>/dev/null; done
+      FAST=1
+      echo "$(up) home: LG's Home is the program $EXE (known from an earlier boot); the stand-in is mounted over it first" >> $LOG
+    fi
+  fi
+fi
 pgrep -f cleanyourtv/helper.js >/dev/null || (nohup node $L/helper.js >/tmp/cleanyourtv-helper.log 2>&1 </dev/null &)
 # The watchdog (watchdog.sh, one per boot) starts the service again when it has stopped, also while LG's Home is selected (DISABLE) and
 # after an update (the replaced-Home case below leaves this script early), and if our Home stays unreachable for 60 s it falls back to
@@ -21,26 +44,32 @@ pgrep -f cleanyourtv/helper.js >/dev/null || (nohup node $L/helper.js >/tmp/clea
 pgrep -f "[c]leanyourtv/watchdog.sh" >/dev/null || (sh $L/watchdog.sh </dev/null >/dev/null 2>&1 &)
 [ -e $L/DISABLE ] && exit 0   # LG's Home is selected: only the service runs (manager, Input key picker)
 sh $L/stage-home.sh
-if replaced; then
+if [ -z "$FAST" ] && replaced; then
   # already replaced (an update): the served files were refreshed in place; reload Home unless asked not to ($1 = keep)
   [ "$1" = keep ] && exit 0
   sh $L/reload-home.sh
   exit 0
 fi
 
-method=$(node $L/tvprofile.js get homeTakeover --home "$(node $L/jtool.js kind $L/backup/home-appinfo.orig.json 2>/dev/null)" 2>/dev/null)
-[ "$(cat $L/home-method 2>/dev/null)" = mount ] && method=mount
-EXE=""
-[ "$method" = standin ] && EXE=$(node $L/jtool.js exe $L/backup/home-appinfo.orig.json 2>/dev/null)
-[ "$method" = standin ] && [ -z "$EXE" ] && { echo "$(up) home: LG's Home program not found; using the mount and a sam restart" >> $LOG; method=mount; }
+[ -n "$FAST" ] || method=$(node $L/tvprofile.js get homeTakeover --home "$(node $L/jtool.js kind $L/backup/home-appinfo.orig.json 2>/dev/null)" 2>/dev/null)
+if [ -z "$FAST" ]; then
+  [ "$(cat $L/home-method 2>/dev/null)" = mount ] && method=mount
+  EXE=""
+  [ "$method" = standin ] && EXE=$(node $L/jtool.js exe $L/backup/home-appinfo.orig.json 2>/dev/null)
+  [ "$method" = standin ] && [ -z "$EXE" ] && { echo "$(up) home: LG's Home program not found; using the mount and a sam restart" >> $LOG; method=mount; }
+  # for the fast start of the next boot
+  [ -n "$method" ] && echo "$method $EXE" > $TAKEOVER
+fi
 
 if [ "$method" = standin ]; then
-  echo "$(up) home: LG's Home is the program $EXE; mounting the stand-in over it (sam is not restarted)" >> $LOG
-  chmod 755 $L/home-standin.sh
-  mount --bind $L/home-standin.sh "$EXE" || { echo "$(up) home: the mount over $EXE failed" >> $LOG; exit 1; }
-  echo "$EXE" > $STANDIN
-  # LG's Home that runs now is its own program: stop it once, sam starts the stand-in for Home from now on
-  for p in $(pgrep -f "^$EXE"); do kill "$p" 2>/dev/null; done
+  if [ -z "$FAST" ]; then
+    echo "$(up) home: LG's Home is the program $EXE; mounting the stand-in over it (sam is not restarted)" >> $LOG
+    chmod 755 $L/home-standin.sh
+    mount --bind $L/home-standin.sh "$EXE" || { echo "$(up) home: the mount over $EXE failed" >> $LOG; rm -f $TAKEOVER; exit 1; }
+    echo "$EXE" > $STANDIN
+    # LG's Home that runs now is its own program: stop it once, sam starts the stand-in for Home from now on
+    for p in $(pgrep -f "^$EXE"); do kill "$p" 2>/dev/null; done
+  fi
   (
     sleep 3
     fg=$(luna_send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' | grep '"appId"')
@@ -76,6 +105,8 @@ if [ "$method" = standin ]; then
   ) </dev/null >/dev/null 2>&1 &
 else
   echo "$(up) home: mounting the launcher over LG's Home, restarting sam" >> $LOG
+  # the screen saver, when switched on in the manager (off by default): its folder too, so this one restart reads both
+  [ -e $L/SCREENSAVER-ON ] && sh $L/20-cleanyourtv-screensaver prepare </dev/null
   mount --bind $L/home-overlay $H && { (sleep 3; pkill -9 -f /usr/palm/applications/airplay/LunaExecutable) </dev/null >/dev/null 2>&1 & systemctl restart sam; }
   echo "$(up) home: sam restarted" >> $LOG
   # After the sam restart nothing is in the foreground (black screen). Once sam is back, start Home again

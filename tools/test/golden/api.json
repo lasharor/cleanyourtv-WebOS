@@ -435,6 +435,10 @@
     "voice": ""
    },
    "lang": "",
+   "mcp": {
+    "agent": false,
+    "lan": false
+   },
    "notifyApi": {
     "enabled": false,
     "port": 8767
@@ -459,6 +463,11 @@
     "version": "99.1.0"
    },
    "repo": "lasharor/cleanyourtv-WebOS",
+   "saver": {
+    "enabled": false,
+    "replaced": false,
+    "supported": true
+   },
    "service": {
     "build": "",
     "updateTo": "99.1.0",
@@ -520,6 +529,10 @@
     "voice": ""
    },
    "lang": "",
+   "mcp": {
+    "agent": false,
+    "lan": false
+   },
    "notifyApi": {
     "enabled": false,
     "port": 8767
@@ -544,6 +557,11 @@
     "version": "99.1.0"
    },
    "repo": "lasharor/cleanyourtv-WebOS",
+   "saver": {
+    "enabled": false,
+    "replaced": false,
+    "supported": true
+   },
    "service": {
     "build": "",
     "updateTo": "99.1.0",
@@ -623,6 +641,10 @@
     "voice": ""
    },
    "lang": "",
+   "mcp": {
+    "agent": false,
+    "lan": false
+   },
    "notifyApi": {
     "enabled": false,
     "port": 8767
@@ -647,6 +669,11 @@
     "version": "99.1.0"
    },
    "repo": "lasharor/cleanyourtv-WebOS",
+   "saver": {
+    "enabled": false,
+    "replaced": false,
+    "supported": true
+   },
    "service": {
     "build": "",
     "updateTo": "99.1.0",
@@ -812,9 +839,13 @@
    "lgPaused": false,
    "listening": false,
    "llm": {
+    "agent": false,
     "enabled": false,
     "hasKey": false,
-    "model": "openrouter/auto"
+    "lastVia": "",
+    "model": "openrouter/auto",
+    "providers": [],
+    "system": ""
    },
    "pairedAt": 0,
    "pairing": false,
@@ -845,6 +876,64 @@
   "cors": "null",
   "status": 404,
   "type": ""
+ },
+ "screen saver status": {
+  "body": {
+   "every": 25,
+   "photos": 0,
+   "replaced": false,
+   "running": false
+  },
+  "cors": "null",
+  "status": 200,
+  "type": "application/json"
+ },
+ "screen saver photos": {
+  "body": {
+   "credits": {},
+   "every": 25,
+   "from": "",
+   "photos": []
+  },
+  "cors": "null",
+  "status": 200,
+  "type": "application/json"
+ },
+ "screen saver: a couch scene, no launcher files in the test folder": {
+  "body": "",
+  "cors": "null",
+  "status": 404,
+  "type": ""
+ },
+ "screen saver: not a couch scene": {
+  "body": "",
+  "cors": "null",
+  "status": 404,
+  "type": ""
+ },
+ "screen saver: a live source that is not installed": {
+  "body": {
+   "error": "not a live source"
+  },
+  "cors": "null",
+  "status": 200,
+  "type": "application/json"
+ },
+ "screen saver: the launcher reports a key": {
+  "body": {
+   "returnValue": true
+  },
+  "cors": "null",
+  "status": 200,
+  "type": "application/json"
+ },
+ "screen saver: dismiss": {
+  "body": {
+   "returnValue": true
+  },
+  "cors": "null",
+  "status": 200,
+  "type": "application/json"
  },
  "log line": {
   "body": {},

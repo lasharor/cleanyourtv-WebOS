@@ -1,0 +1,282 @@
+<!doctype html>
+<!-- CleanYourTV screen saver: replaces LG's screen saver app (docs/screensaver.md). Photos come from the wallpaper library through
+     the service (GET /api/screensaver/photos; the pictures from /api/wallpapers/photo/..., a live source's current photo from
+     /api/wallpapers/live/<add-on>, as on Home), with the clock and date in
+     the corner. Written for the TV's Chromium 68 and up: ES5 style, only opacity changes, nothing else animates.
+     The first key, click or touch closes the page and the app that was on screen comes back. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CleanYourTV</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #000;
+        overflow: hidden;
+      }
+      body {
+        font-family: 'LG Smart UI', 'Helvetica Neue', Arial, sans-serif;
+        color: #fff;
+        cursor: none;
+      }
+      #p0,
+      #p1 {
+        position: fixed;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        background-repeat: no-repeat;
+        background-position: 50% 50%;
+        background-size: cover;
+        opacity: 0;
+        transition: opacity 1.4s linear;
+      }
+      #p0.on,
+      #p1.on {
+        opacity: 1;
+      }
+      #scrim {
+        position: fixed;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(120% 90% at 50% 45%, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.42) 100%);
+      }
+      #clock {
+        position: fixed;
+        right: 4.6vw;
+        bottom: 4.2vh;
+        text-align: right;
+        text-shadow: 0 1px 18px rgba(0, 0, 0, 0.55);
+      }
+      #time {
+        font-size: 4.6vw;
+        font-weight: 200;
+        letter-spacing: 0.01em;
+        line-height: 1.05;
+      }
+      /* the photographer's line, styled as Home's (#wpc in app/src/css/home.css) so it stays readable on a bright photo; in the left
+         corner, as the clock has the right one */
+      #credit {
+        position: fixed;
+        left: 40px;
+        bottom: 24px;
+        max-width: 900px;
+        padding: 6px 14px;
+        border-radius: 16px;
+        background: rgba(0, 0, 0, 0.45);
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 18px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: none;
+      }
+      #date {
+        margin-top: 0.5em;
+        font-size: 1.35vw;
+        font-weight: 300;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="p0"></div>
+    <div id="p1"></div>
+    <div id="scrim"></div>
+    <div id="credit"></div>
+    <div id="clock">
+      <div id="time"></div>
+      <div id="date"></div>
+    </div>
+    <script>
+      var API = 'http://127.0.0.1:8765';
+      var list = [],
+        order = [],
+        pos = 0,
+        every = 25,
+        side = 0,
+        timer = 0,
+        started = false,
+        closing = false,
+        upAt = Date.now();
+      function el(id) {
+        return document.getElementById(id);
+      }
+
+      /* the way out. It is defined first, so that a failure further down still leaves the remote working.
+   The window receives a keydown of its own as it is opened (webOS delivers one with the launch), so for the first two
+   seconds a key is not a way out: without that the page closed itself 0.3 s after the launch and was never seen. */
+      function dismiss() {
+        if (Date.now() - upAt < 2000) return;
+        if (closing) return;
+        closing = true;
+        try {
+          var x = new XMLHttpRequest();
+          x.open('POST', API + '/api/screensaver/dismiss', true);
+          x.send('{}');
+        } catch (e) {}
+        /* the service closes the page as well; these are the page's own ways out where one of them works */
+        setTimeout(function () {
+          try {
+            window.close();
+          } catch (e) {}
+          try {
+            webOSSystem.hide();
+          } catch (e) {}
+        }, 400);
+      }
+      document.addEventListener('keydown', dismiss, true);
+      document.addEventListener('mousedown', dismiss, true);
+      document.addEventListener('touchstart', dismiss, true);
+
+      function get(url) {
+        return new Promise(function (resolve) {
+          var x = new XMLHttpRequest();
+          x.open('GET', url, true);
+          x.onload = function () {
+            try {
+              resolve(JSON.parse(x.responseText));
+            } catch (e) {
+              resolve({});
+            }
+          };
+          x.onerror = x.ontimeout = function () {
+            resolve({});
+          };
+          x.send();
+        });
+      }
+
+      function shuffle(a) {
+        for (var i = a.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1)),
+            t = a[i];
+          a[i] = a[j];
+          a[j] = t;
+        }
+        return a;
+      }
+
+      /* where a photo of the library comes from, as on Home (app/src/js/wall.js): a file the service hands out (an upload u/<id>, a
+   source add-on's photo s/<add-on>/<id>), or a live source (l/<add-on>, Unsplash) that the service asks for its current photo:
+   {url, credit}, an address on the source's own server */
+      function photoRequest(id) {
+        /* a path on the service: a scene or the theme's wallpaper, which Home has instead of the library (helper/screensaver.js) */
+        if (id.charAt(0) === '/') return { photo: API + id };
+        /* the photo Home has now from that source; /api/wallpapers/live/ would hand out the next one and Home would skip it */
+        if (id.slice(0, 2) === 'l/') return { live: API + '/api/screensaver/live/' + id.slice(2) };
+        return { photo: API + '/api/wallpapers/photo/' + id };
+      }
+      /* end photoRequest */
+
+      /* one photo at a time, cross-faded between the two layers: opacity only, the GPU of these TVs is weak */
+      var shown = '';
+      function put(url, credit) {
+        if (url === shown) return; /* a live source still on the same photo: nothing to fade */
+        var im = new Image();
+        im.onload = function () {
+          var on = el(side ? 'p1' : 'p0'),
+            off = el(side ? 'p0' : 'p1');
+          side ^= 1;
+          shown = url;
+          on.style.backgroundImage = 'url("' + url + '")';
+          on.className = 'on';
+          off.className = '';
+          /* the photographer, where the source asks for a credit line (Unsplash), as Home shows it */
+          var c = el('credit');
+          c.textContent = credit || '';
+          c.style.display = c.textContent ? 'block' : 'none';
+        };
+        im.src = url;
+      }
+      function show() {
+        if (!order.length) return;
+        var id = order[pos % order.length],
+          r = photoRequest(id);
+        pos++;
+        if (r.photo) return put(r.photo, credits[id] || '');
+        /* nothing from the live source (no photo yet, no network): the photo on screen stays */
+        get(r.live).then(function (j) {
+          if (j && j.url) put(j.url, j.credit);
+        });
+      }
+
+      function arm() {
+        clearInterval(timer);
+        /* one photo stays; a live source alone is asked again, so the saver follows Home when the source moves on */
+        if (order.length < 2 && !(order.length === 1 && photoRequest(order[0]).live)) return;
+        timer = setInterval(show, Math.max(10, every) * 1000);
+      }
+
+      function pad(n) {
+        return (n < 10 ? '0' : '') + n;
+      }
+      function tickClock() {
+        var d = new Date(),
+          h = d.getHours(),
+          m = d.getMinutes();
+        el('time').textContent = pad(h) + ':' + pad(m);
+        try {
+          el('date').textContent = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+        } catch (e) {
+          el('date').textContent = pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
+        }
+      }
+
+      /* the TV's country, as the launcher works it out for the scenes of an add-on (app/src/js/scenes.js) */
+      function country() {
+        var c = '';
+        try {
+          var w = window.webOSSystem && window.webOSSystem.country ? window.webOSSystem : window.PalmSystem;
+          var j = w && w.country ? (typeof w.country === 'string' ? JSON.parse(w.country) : w.country) : null;
+          c = (j && (j.smartServiceCountry || j.country)) || '';
+        } catch (e) {}
+        if (!c) {
+          var m = /[-_]([A-Za-z]{2,3})$/.exec((window.webOSSystem && window.webOSSystem.locale) || navigator.language || '');
+          c = m ? m[1] : '';
+        }
+        return String(c).toUpperCase();
+      }
+
+      var credits = {};
+      function load() {
+        return get(API + '/api/screensaver/photos?cc=' + encodeURIComponent(country())).then(function (r) {
+          credits = r.credits || {};
+          list = (r.photos || []).slice();
+          if (typeof r.every === 'number') every = r.every;
+          order = shuffle(list.slice());
+          pos = 0;
+          if (order.length) {
+            show();
+            arm();
+          }
+        });
+      }
+
+      function begin() {
+        if (started) return;
+        started = true;
+        tickClock();
+        setInterval(tickClock, 10000);
+        load();
+        /* the library changes (photos uploaded from the phone): read it again every ten minutes */
+        setInterval(load, 600000);
+      }
+
+      /* keep the screen dark until the page is ready, then fade in the first photo; never stay on top of the system:
+   when the TV goes to standby or another app takes the screen, the page closes itself (the standby flow waits for it otherwise) */
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) dismiss();
+        else begin();
+      });
+      begin();
+    </script>
+  </body>
+</html>

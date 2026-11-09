@@ -13,7 +13,7 @@ reports from TVs that are not in the [tested list](../tested-tvs.md).
 | `cards/` | The catalog of downloadable cards (`catalog/<id>/card.json`, `index.json`): see [Making a card](cards.md). |
 | `helper/` | The root service (Node.js), one module per part: see [Internals](internals.md#the-service). |
 | `scripts/` | Boot, setup and restore scripts: `bootstrap.sh`, `10-cleanyourtv-home`, `stage-home.sh`, `undo-home.sh`, the debloat scripts. |
-| `voice/` | Source of the small speech program `cytv-asr` and its build script. |
+| `voice/` | Source of the small speech programs `cytv-asr` (64-bit) and `cytv-asr32` (32-bit ARM kernel) and their build script. |
 | `third-party/` | The bundled inputhook files and the QR library. |
 | `tools/` | `check.sh`: every check (the tests in `tools/test` under Node 8.12.0 and the current Node, the built pages); `build-pages.js`: builds the launcher and manager pages from their sources; `theme-docs.js`: regenerates the table of theme settings in the docs; `theme-index.js`: writes `themes/index.json`; `theme-preview.mjs`: renders a theme in headless Chrome (and makes its screenshot). |
 | `ipk/build.py` | Builds the release files. |

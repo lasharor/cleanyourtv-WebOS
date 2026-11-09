@@ -3,7 +3,7 @@
 // This file only wires the parts together. Each part is a feature module with create(ctx) -> { name, paths/prefix, handle, start };
 // ctx carries what they share (config, the TV profile, luna). A part that fails to load is left out and reported at /api/service;
 // the rest keeps working. AGENTS.md has the map of the files.
-const VERSION = '1.6.21';
+const VERSION = '1.6.22';
 const fs = require('fs');
 const P = require('./paths'),
   diag = require('./diag');
@@ -70,6 +70,9 @@ load('zram', () => require('./zram').create(ctx));
 load('preload', () => require('./preload').create(ctx));
 load('fstrim', () => require('./fstrim').create(ctx));
 load('addons', () => require('./addons').create(ctx));
+load('screensaver', () => require('./screensaver').create(ctx));
+// every tool on the TV as an MCP server (/api/mcp): the service's own and the add-ons'; the voice assistant uses it too
+load('mcp', () => require('./toolhub').create(ctx));
 
 require('./server')
   .create({ features: () => loaded })

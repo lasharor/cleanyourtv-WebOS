@@ -1,5 +1,5 @@
 function aiHelp() {
-  return 'Chat with a language model through OpenRouter. Run these on the TV (ssh):\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"key":"sk-or-...","model":"openrouter/auto"}}\'\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"enabled":true}}\'\n\nOptional: "system" sets the instructions. Ask by text from anywhere on the TV:\ncurl -X POST localhost:8765/api/voice/ask -d \'{"text":"What is the capital of Peru?"}\'\n\nSpoken and typed questions go to OpenRouter and the model you chose; no audio does. The key stays on the TV.\n\nHome Assistant (Assist), with a long-lived access token:\ncurl -X POST localhost:8765/api/voice/set -d \'{"ha":{"url":"http://homeassistant.local:8123","token":"..."}}\'\nOptional: "route" is ha-first, ha-only or ai-only; "selfSigned":true accepts a self-signed certificate; "agent" is a conversation entity.';
+  return 'Answers from language models: OpenRouter, a server of yours with the OpenAI-compatible API (Ollama, for example), or several, asked in order. If one does not answer, the next one is. Run these on the TV (ssh):\n\ncurl -X POST localhost:8765/api/voice/set -d \'{"llm":{"enabled":true,"providers":[{"type":"server","base":"http://192.168.1.20:11434/v1","model":"llama3.2:3b"},{"type":"openrouter","key":"sk-or-...","model":"openrouter/auto"}]}}\'\n\nOptional: "system" sets the instructions; a provider takes "name", "key", "waitS" (10, 25, 30, 45 or 60) and "off". Ask by text from anywhere on the TV:\ncurl -X POST localhost:8765/api/voice/ask -d \'{"text":"What is the capital of Peru?"}\'\n\nSpoken and typed questions go as text to the providers in their order; no audio does. Each key stays on the TV and goes only to its own provider.\n\nHome Assistant (Assist), with a long-lived access token:\ncurl -X POST localhost:8765/api/voice/set -d \'{"ha":{"url":"http://homeassistant.local:8123","token":"..."}}\'\nOptional: "route" is ha-first, ha-only or ai-only; "selfSigned":true accepts a self-signed certificate; "agent" is a conversation entity.';
 }
 function liveRefresh() {
   api('/api/live/status').then(
@@ -47,6 +47,64 @@ function openNotifyQr() {
       $('sharemsg').textContent = tr('The service did not answer.');
     }
   );
+}
+/* MCP on the network (helper/toolhub.js): a page on the phone with the address and the token */
+function openMcpQr() {
+  if (!mnet || !mnet.lan) {
+    banner('Switch on Accept MCP clients from the network first', 'err');
+    return;
+  }
+  shareMode = 'mcp';
+  push('share');
+  $('share').style.display = 'block';
+  $('shareurl').textContent = '';
+  $('qrbox').style.visibility = 'hidden';
+  $('share').querySelector('h2').textContent = tr('Connect an agent to the TV');
+  $('share').querySelector('ol').innerHTML = tr(
+    '<li>Send the link below to your agent on a computer on the <b>same network</b> as the TV. It reads the setup there and connects.</li><li>Or scan the QR code with a phone, press <b>Copy the prompt</b> and paste it to your agent.</li><li>The <b>code</b> below works once. This screen closes when the agent connects.</li>'
+  );
+  $('sharemsg').textContent = tr('Preparing…');
+  api('/api/mcp/lan', { page: true }).then(
+    function (r) {
+      if (view !== 'share' || shareMode !== 'mcp') return;
+      if (!r.pageUrl) {
+        $('sharemsg').textContent = tr('The port could not open: see Accept MCP clients from the network.');
+        return;
+      }
+      drawQr(r.pageUrl);
+      $('qrbox').style.visibility = 'visible';
+      $('shareurl').textContent = r.pageUrl;
+      /* the code on a line of its own: next to the long address it was broken in two */
+      $('sharemsg').textContent =
+        tr('Code') +
+        ' ' +
+        r.code +
+        '. ' +
+        tr('It works once, for ten minutes. The page is not encrypted: use a network you trust. Back closes the code.');
+      mcpWatch();
+    },
+    function () {
+      $('sharemsg').textContent = tr('The service did not answer.');
+    }
+  );
+}
+/* while the QR code is on screen, look every two seconds whether a device paired with it; when one has, the screen closes itself */
+function mcpWatch() {
+  setTimeout(function () {
+    if (view !== 'share' || shareMode !== 'mcp') return;
+    api('/api/mcp/lan').then(
+      function (n) {
+        if (view !== 'share' || shareMode !== 'mcp') return;
+        if (!n.paired) return mcpWatch();
+        mnet = n;
+        closeShare();
+        banner(n.paired.name + ' ' + tr('connected'), 'ok');
+      },
+      function () {
+        mcpWatch();
+      }
+    );
+  }, 2000);
 }
 /* Add-ons (helper/addons.js): the ones on the TV and the project's catalog */
 function loadAddons() {
@@ -672,24 +730,27 @@ function setChannel(tag) {
     }
   );
 }
+/* the models of one provider (pvId): OpenRouter can pick a model itself, a server of yours lists only the models it has */
 function openModels() {
-  banner('Loading the model list\u2026', 'work');
-  api('/api/voice/models').then(
+  var p = llmFind(pvId);
+  if (!p) return;
+  banner('Loading the model list…', 'work');
+  api('/api/voice/models?id=' + encodeURIComponent(p.id)).then(
     function (r) {
       if (r.error) {
         banner(r.error, 'err');
         return;
       }
       banner('');
-      mdl = [{ id: 'openrouter/auto', name: 'Auto (OpenRouter picks)', price: null }].concat(r.picks);
-      var cur = ((vo || {}).llm || {}).model;
+      mdl = (p.type === 'server' ? [] : [{ id: 'openrouter/auto', name: 'Auto (OpenRouter picks)', price: null }]).concat(r.picks || []);
+      var cur = p.model;
       if (
         cur &&
         !mdl.some(function (x) {
           return x.id === cur;
         })
       )
-        mdl.splice(1, 0, { id: cur, name: cur, price: null });
+        mdl.splice(p.type === 'server' ? 0 : 1, 0, { id: cur, name: cur, price: null });
       push('models');
       for (var k = 0; k < rows.length; k++)
         if (rows[k].sub && /selected$/.test(rows[k].sub)) {
@@ -759,7 +820,7 @@ function pickAgent(id) {
   );
 }
 function pickModel(id) {
-  api('/api/voice/set', { llm: { model: id } }).then(
+  api('/api/voice/set', { llm: { provider: { id: pvId, model: id } } }).then(
     function (x) {
       if (x.error) {
         banner(x.error, 'err');
@@ -789,7 +850,7 @@ function openPair(only) {
           '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter the <b>address</b> of Home Assistant and a <b>long-lived access token</b>, and tap <b>Save</b>.</li>'
         )
       : tr(
-          '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Enter your <b>OpenRouter key</b> and model, and tap <b>Save</b>.</li>'
+          '<li>Phone on the <b>same Wi-Fi</b> as the TV.</li><li>Scan the code with the camera.</li><li>Add <b>OpenRouter</b> or <b>your own server</b>, choose a model, and tap <b>Save</b>.</li>'
         );
   $('sharemsg').textContent = tr('Preparing\u2026');
   api('/api/voice/pair', only === 'ha' ? { only: 'ha' } : {}).then(
@@ -858,4 +919,305 @@ function voiceRefresh() {
       pollT = setTimeout(voiceRefresh, 2000);
     }
   );
+}
+/* AI chat: an ordered list of providers (OpenRouter, servers of yours); the first answers, the next is asked when one fails */
+var pvId = '' /* the provider the Provider screen shows */,
+  pvRm = { id: '', t: 0 } /* Remove asks for a second OK within 5 s */,
+  pvBusy = false;
+var PV_OK = '#9be3b0',
+  PV_ERR = '#ff9a8a',
+  PV_NONE = '#8a8d96', // not tried yet: a grey that shows on the dark rows and on the light focused row
+  PV_HELP =
+    'OK opens this provider. Channel up and down move it in the order. The dot is its last result: green answered, red did not, grey not tried yet. Addresses and keys are set on your phone.';
+function llmList() {
+  return ((vo || {}).llm || {}).providers || [];
+}
+function llmIndex(id) {
+  var l = llmList();
+  for (var i = 0; i < l.length; i++) if (id && l[i].id === id) return i;
+  return -1;
+}
+function llmFind(id) {
+  var i = llmIndex(id);
+  return i < 0 ? null : llmList()[i];
+}
+/* the names of the providers that are not switched off, in the order they are asked */
+function llmChain(l) {
+  return l
+    .filter(function (p) {
+      return !p.off;
+    })
+    .map(function (p) {
+      return p.name;
+    })
+    .join(' → ');
+}
+function llmHost(base) {
+  return String(base || '')
+    .replace(/^[a-z]+:\/\//i, '')
+    .replace(/\/.*/, '');
+}
+function llmAgo(at) {
+  var t = +at || 0;
+  if (t && t < 1e12) t *= 1000; /* seconds or milliseconds */
+  var s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + ' min ago';
+  if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+  return Math.floor(s / 86400) + ' d ago';
+}
+function llmSecs(ms) {
+  return ((ms || 0) / 1000).toFixed(1) + ' s';
+}
+/* the last try of a provider: "answered 2 min ago (1.1 s)", "did not answer 5 min ago", "not tried yet" */
+function llmLast(p) {
+  var l = p.last;
+  if (!l) return 'not tried yet';
+  return l.ok ? 'answered ' + llmAgo(l.at) + ' (' + llmSecs(l.ms) + ')' : 'did not answer ' + llmAgo(l.at);
+}
+function llmDot(p) {
+  return !p.last ? PV_NONE : p.last.ok ? PV_OK : PV_ERR;
+}
+function llmModel(p) {
+  return p.model || (p.type === 'server' ? 'no model chosen' : 'openrouter/auto');
+}
+/* a failed test in plain words */
+function llmErr(r) {
+  if (/time/i.test(r.error || '')) return 'Did not answer in time';
+  if (r.stage === 'connect') return 'Could not connect';
+  if (r.stage === 'auth') return 'Refused the key';
+  return r.error || 'Did not answer in time';
+}
+/* POST /api/voice/set {llm: body}; then() redraws itself, else the list is drawn again */
+function llmSet(body, okMsg, then) {
+  api('/api/voice/set', { llm: body }).then(
+    function (x) {
+      if (x.error) {
+        banner(x.error, 'err');
+        return;
+      }
+      vo = x;
+      if (okMsg) banner(okMsg, 'ok');
+      if (then) then();
+      else {
+        build();
+        draw();
+      }
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+/* the row of the Providers screen to return to: Back from a provider's screen lands on it after it moved */
+function llmBackTo(id) {
+  var top = idxStack[idxStack.length - 1];
+  if (top && top[0] === 'providers') top[1] = Math.max(0, llmIndex(id));
+}
+/* moves a provider to position to (0 is first); the focus follows it */
+function llmMove(id, to) {
+  var l = llmList(),
+    from = llmIndex(id);
+  if (from < 0 || to < 0 || to >= l.length || to === from) return;
+  var ids = l.map(function (p) {
+    return p.id;
+  });
+  ids.splice(from, 1);
+  ids.splice(to, 0, id);
+  llmSet({ order: ids }, 'Order saved', function () {
+    if (view === 'providers') idx = Math.max(0, llmIndex(id));
+    else llmBackTo(id);
+    build();
+    draw();
+  });
+}
+/* reads the status again (a test records its result there) and redraws the screen that shows it */
+function llmStatus() {
+  api('/api/voice/status').then(
+    function (v) {
+      vo = v;
+      if (view === 'providers' || view === 'provider' || view === 'voice') {
+        build();
+        if (idx >= rows.length) idx = 0;
+        draw();
+      }
+    },
+    function () {}
+  );
+}
+function llmTestCall(p) {
+  return api('/api/voice/test', { id: p.id }, ((p.waitS || 25) + 20) * 1000);
+}
+/* asks every provider "Say OK", one after the other, a banner for each */
+function llmTestAll() {
+  if (pvBusy) return;
+  var l = llmList().slice(),
+    i = 0;
+  pvBusy = true;
+  var step = function () {
+    if (i >= l.length) {
+      pvBusy = false;
+      llmStatus();
+      return;
+    }
+    var p = l[i++];
+    banner('Asking ' + p.name + '…', 'work');
+    llmTestCall(p).then(
+      function (r) {
+        banner(p.name + ': ' + (r.ok ? 'answered in ' + llmSecs(r.ms) : llmErr(r)), r.ok ? 'ok' : 'err');
+        step();
+      },
+      function () {
+        banner(p.name + ': ' + 'The service did not answer', 'err');
+        step();
+      }
+    );
+  };
+  step();
+}
+/* the Providers screen: one row per provider in the order they are asked */
+function provRows() {
+  var l = llmList();
+  if (!l.length) {
+    rows.push({
+      label: 'Set up from your phone',
+      sub: 'add OpenRouter or your own server',
+      info: {
+        t: 'Set up from your phone',
+        d: 'Shows a QR code. On a phone on the same Wi-Fi, add OpenRouter or a server of yours, set their keys, models and order, and write instructions. Nothing is typed on the TV.',
+      },
+      fn: openPair,
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  l.forEach(function (p, i) {
+    rows.push({
+      label: p.name + (i === 0 && l.length > 1 ? ' · first' : ''),
+      sub: p.off ? 'off' : llmModel(p) + ' · ' + llmLast(p),
+      dim: !!p.off,
+      dot: llmDot(p),
+      pid: p.id,
+      info: { t: 'AI providers', d: PV_HELP },
+      fn: function () {
+        pvId = p.id;
+        pvRm.id = '';
+        push('provider');
+      },
+    });
+  });
+  rows.push({ sep: true });
+  rows.push({ label: 'Test all', sub: 'asks each one “Say OK”', fn: llmTestAll });
+  rows.push({ label: 'Add a provider', sub: 'on your phone', fn: openPair });
+  rows.push({ label: 'Back', fn: pop });
+}
+/* Channel up (-1) or down (+1) on a provider row of the Providers screen moves it in the order */
+function provKey(dir) {
+  if (view !== 'providers' || pvBusy) return;
+  var r = rows[idx];
+  if (r && r.pid) llmMove(r.pid, llmIndex(r.pid) + dir);
+}
+/* the Provider screen: one provider (pvId) */
+function provOneRows() {
+  var p = llmFind(pvId),
+    l = llmList();
+  if (!p) {
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  var i = llmIndex(p.id),
+    last = i === l.length - 1;
+  rows.push({
+    label: 'Test now',
+    sub: (p.hasKey ? 'key saved' : 'no key') + ' · ' + llmLast(p),
+    fn: function () {
+      if (pvBusy) return;
+      pvBusy = true;
+      banner('Asking ' + p.name + '…', 'work');
+      llmTestCall(p).then(
+        function (r) {
+          pvBusy = false;
+          if (r.ok) banner('Answered in ' + llmSecs(r.ms) + ': “' + String(r.answer || '').slice(0, 80) + '”', 'ok');
+          else banner(llmErr(r), 'err');
+          llmStatus();
+        },
+        function () {
+          pvBusy = false;
+          banner('The service did not answer', 'err');
+        }
+      );
+    },
+  });
+  rows.push({ label: 'Model', sub: llmModel(p), fn: openModels });
+  rows.push({
+    label: 'Wait for an answer',
+    sub: (p.waitS || 25) + ' s',
+    fn: function () {
+      var w = [10, 25, 30, 45, 60],
+        n = w[(w.indexOf(p.waitS || 25) + 1) % w.length];
+      llmSet({ provider: { id: p.id, waitS: n } });
+    },
+  });
+  rows.push({
+    label: 'Use this provider',
+    sub: onoff(!p.off),
+    fn: function () {
+      llmSet({ provider: { id: p.id, off: !p.off } });
+    },
+  });
+  rows.push({ sep: true });
+  rows.push({
+    label: 'Make first',
+    sub: i === 0 ? 'first' : '',
+    dim: i === 0,
+    fn: function () {
+      if (i === 0) return;
+      llmSet({ first: p.id }, 'Order saved', function () {
+        llmBackTo(p.id);
+        build();
+        draw();
+      });
+    },
+  });
+  rows.push({
+    label: 'Move up',
+    dim: i === 0,
+    fn: function () {
+      llmMove(p.id, i - 1);
+    },
+  });
+  rows.push({
+    label: 'Move down',
+    dim: last,
+    fn: function () {
+      llmMove(p.id, i + 1);
+    },
+  });
+  rows.push({
+    label: 'Remove',
+    sub: 'press OK twice',
+    info: {
+      t: 'Remove',
+      d: 'Removes this provider and its key from the TV. Press OK twice. The ones after it move up a place; if no provider is left that can answer, AI chat switches off.',
+    },
+    fn: function () {
+      var now = Date.now();
+      if (pvRm.id !== p.id || now - pvRm.t > 5000) {
+        pvRm = { id: p.id, t: now };
+        banner('Press OK again to remove ' + p.name, 'err');
+        return;
+      }
+      pvRm.id = '';
+      var nx = i === 0 ? l[1] : null;
+      llmSet({ remove: p.id }, nx ? nx.name + ' now answers first' : p.name + ' removed', function () {
+        pop();
+        if (idx >= rows.length) idx = 0;
+        if (rows[idx].sep) idx = Math.max(0, idx - 1); /* the last provider went: the one above it */
+        draw();
+      });
+    },
+  });
+  rows.push({ sep: true });
+  rows.push({ label: 'Back', fn: pop });
 }

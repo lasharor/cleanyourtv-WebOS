@@ -60,6 +60,21 @@ function closeShare() {
     pop();
     return;
   }
+  if (shareMode === 'mcp') {
+    /* the code is taken off: no agent can pair with it any more */
+    pop();
+    api('/api/mcp/lan', { pair: false }).then(
+      function (n) {
+        mnet = n;
+        if (view === 'mcpnet') {
+          build();
+          draw();
+        }
+      },
+      function () {}
+    );
+    return;
+  }
   if (shareMode === 'live') {
     pop();
     liveRefresh();

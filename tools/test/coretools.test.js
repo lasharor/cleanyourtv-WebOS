@@ -1,0 +1,275 @@
+// The service's own tools of wave 1 (coretools.js): what is on screen, running apps, closing one, Home / Live TV / the Inputs list, the
+// volume, the TV, the most used apps, the weather, a new conversation, and the richer card. Every part they use is a stand-in here.
+const { ok, req, run, memoryConfig } = require('./lib');
+
+run(async () => {
+  const lunaCalls = [];
+  let foreground = 'netflix',
+    power = 'Active';
+  const luna = async (uri, params) => {
+    lunaCalls.push({ uri, params });
+    if (/getForegroundAppInfo/.test(uri)) return { returnValue: true, appId: foreground };
+    if (/getPowerState/.test(uri)) return { returnValue: true, state: power };
+    return { returnValue: true };
+  };
+  const apps = {
+    listApps: async () => [
+      { id: 'netflix', title: 'Netflix' },
+      { id: 'youtube.leanback.v4', title: 'YouTube' },
+      { id: 'spotify-beehive', title: 'Spotify' },
+      { id: 'com.webos.app.hdmi1', title: 'PS5', input: true },
+    ],
+    inputs: async () => ({ devices: [{ id: 'HDMI_1', appId: 'com.webos.app.hdmi1', label: 'PS5', port: 1 }] }),
+    usageScores: () => ({ netflix: 3.2, 'youtube.leanback.v4': 7.5, 'spotify-beehive': 0.4, 'gone.app': 9 }),
+    launch: async () => ({ returnValue: true }),
+  };
+  const closed = [],
+    stopped = [];
+  let runningApps = [
+    { id: 'netflix', title: 'Netflix' },
+    { id: 'com.example.svc', title: 'Helper', background: true },
+  ];
+  const running = {
+    list: async () => ({ apps: runningApps }),
+    close: async id => (closed.push(id), true),
+    stop: id => (stopped.push(id), true),
+  };
+  const went = [];
+  const remap = { go: async to => (went.push(to), { returnValue: true }) };
+  let vol = { volume: 12, max: 100, mute: false, output: 'external_optical', known: true };
+  const searched = [],
+    asked = [];
+  const weather = {
+    search: async q => (searched.push(q), /haifa/i.test(q) ? [{ name: 'Haifa', area: 'Haifa District, Israel', lat: 32.8, lon: 35 }] : []),
+    get: async (lat, lon, unit) => (
+      asked.push({ lat, lon, unit }), { now: { temp: 21, code: 95 }, days: [{ date: '2026-11-08', code: 61, max: 23, min: 17 }] }
+    ),
+  };
+  let mstatus = { service: { updateTo: null }, frontend: { updateTo: null }, checkedAt: 1 };
+  const shown = [];
+  const config = memoryConfig({
+    cards: { s1: { type: 'clock' }, s2: { type: 'weather', place: 'Tel Aviv', lat: 32.08, lon: 34.78, unit: 'f' } },
+  });
+  // themes: the current one, the one before, and a set / revert that remember each other
+  let th = { id: 'classic', accent: '', prev: null };
+  const theme = {
+    list: async () => ({
+      current: { id: th.id, accent: th.accent },
+      previous: th.prev,
+      themes: [
+        { id: 'classic', name: 'Classic', installed: true, description: 'long' },
+        { id: 'moon', name: 'Moon', installed: false },
+      ],
+    }),
+    set: async b => {
+      if (b.id && ['classic', 'moon'].indexOf(b.id) < 0) return { error: 'unknown theme', status: 400 };
+      th = { id: b.id || th.id, accent: b.accent !== undefined ? b.accent : '', prev: { id: th.id, accent: th.accent } };
+      return { ok: true };
+    },
+    revert: () => {
+      if (!th.prev) return { error: 'nothing to go back to', status: 400 };
+      th = { id: th.prev.id, accent: th.prev.accent, prev: { id: th.id, accent: th.accent } };
+      return { ok: true };
+    },
+  };
+  // remapped buttons: on, one key; fire runs it
+  let remapOn = true;
+  const fired = [];
+  remap.buttons = () => ({ on: remapOn, keys: { 403: { type: 'app', id: 'netflix', name: 'Red' }, 1249: { type: 'home' } } });
+  remap.fire = async c => (fired.push(c), { returnValue: true });
+  const features = { apps, running, remap, theme, manager: { status: () => mstatus }, cards: { weather } };
+  const ctx = {
+    config,
+    version: '1.6.20',
+    luna,
+    audio: { volume: () => vol },
+    profile: { get: () => ({ model: 'OLED65G26LA', sdk: '10.1.0', firmware: '33.21.65' }) },
+    feature: n => features[n] || null,
+    notify: { show: async o => shown.push(o) },
+  };
+  const C = req('coretools').create(ctx).tools;
+  const txt = r => r.content[0].text;
+  const val = r => JSON.parse(txt(r));
+
+  // get_current_app
+  let r = await C.call('get_current_app', {});
+  ok(!r.isError && val(r).name === 'Netflix', 'get_current_app names the app in front');
+  foreground = 'com.webos.app.hdmi1';
+  r = await C.call('get_current_app', {});
+  ok(val(r).name === 'PS5' && val(r).input === 'HDMI_1', 'an input in front is named as the input');
+  foreground = 'com.webos.app.home';
+  ok(val(await C.call('get_current_app', {})).name === 'Home', 'Home is called Home');
+  foreground = '';
+  ok(/nothing/.test(val(await C.call('get_current_app', {})).name), 'no app in front says so');
+
+  // list_running_apps, close_app
+  r = await C.call('list_running_apps', {});
+  ok(val(r).length === 2 && val(r)[1].background === true && val(r)[0].name === 'Netflix', 'list_running_apps lists apps and services');
+  r = await C.call('close_app', { id: 'netflix' });
+  ok(!r.isError && closed.join() === 'netflix', 'close_app closes a running app');
+  r = await C.call('close_app', { id: 'com.example.svc' });
+  ok(!r.isError && stopped.join() === 'com.example.svc', 'and stops a background service');
+  r = await C.call('close_app', { id: 'youtube.leanback.v4' });
+  ok(r.isError && /not running/.test(txt(r)) && closed.length === 1, 'an app that is not running is not closed');
+  runningApps = runningApps.concat([{ id: 'com.webos.app.home', title: 'Home' }]);
+  r = await C.call('close_app', { id: 'com.webos.app.home' });
+  ok(r.isError && closed.length === 1, 'Home is never closed');
+
+  // navigate
+  for (const to of ['home', 'live_tv', 'input_list']) await C.call('navigate', { to });
+  ok(went.join() === 'home,live_tv,input_list', 'navigate goes to Home, Live TV and the Inputs list');
+  const closes = () => lunaCalls.filter(c => /closeByAppId/.test(c.uri) && c.params.id === 'com.webos.app.screensaver').length;
+  ok(closes() === 0, 'an awake screen is left alone');
+  power = 'Screen Saver';
+  await C.call('navigate', { to: 'input_list' });
+  ok(closes() === 1 && went[went.length - 1] === 'input_list', 'the screen saver is closed first, else the Inputs list opens under it');
+  await C.call('show_notification', { title: 'Wake' });
+  ok(closes() === 2, 'and before a card');
+  for (const t of ['launch_app', 'switch_input', 'close_app']) await C.call(t, { id: 'netflix', input: 'PS5' });
+  ok(closes() === 5, 'launch_app, switch_input and close_app close it too');
+  const before = closes();
+  for (const t of ['list_apps', 'get_volume', 'tv_info', 'list_running_apps']) await C.call(t, {});
+  ok(closes() === before, 'a tool that only reads leaves it on');
+  shown.length = 0;
+  power = 'Active';
+  went.length = 3;
+  r = await C.call('navigate', { to: 'settings' });
+  ok(r.isError && went.length === 3, 'navigate refuses anywhere else');
+
+  // get_volume
+  r = await C.call('get_volume', {});
+  ok(val(r).volume === 12 && val(r).muted === false && val(r).output === 'external_optical', 'get_volume reads the volume');
+  vol = Object.assign({}, vol, { known: false });
+  ok((await C.call('get_volume', {})).isError, 'a volume not heard yet is not made up');
+
+  // tv_info
+  r = await C.call('tv_info', {});
+  ok(
+    val(r).model === 'OLED65G26LA' && val(r).cleanyourtv === '1.6.20' && val(r).power === 'Active' && val(r).update === 'none',
+    'tv_info: model, version, power, no update'
+  );
+  mstatus = { service: { updateTo: '1.7.0' }, frontend: {}, checkedAt: 1 };
+  ok(val(await C.call('tv_info', {})).update === 'available: 1.7.0', 'tv_info says when an update is available');
+
+  // most_used_apps
+  r = await C.call('most_used_apps', { limit: 2 });
+  ok(
+    val(r)
+      .map(a => a.id)
+      .join() === 'youtube.leanback.v4,netflix',
+    'most_used_apps: most used first, only apps that are installed'
+  );
+  ok(val(await C.call('most_used_apps', {})).length === 3, 'five at most by default');
+
+  // get_weather
+  r = await C.call('get_weather', { place: 'Haifa' });
+  ok(!r.isError && /Haifa/.test(val(r).place) && val(r).now === '21°C, thunderstorm' && asked[0].unit === 'c', 'get_weather for a place');
+  ok(val(r).days[0].sky === 'rain' && val(r).days[0].max === '23°C', 'with the next days');
+  r = await C.call('get_weather', {});
+  ok(
+    !r.isError && val(r).place === 'Tel Aviv' && asked[1].lat === 32.08 && asked[1].unit === 'f',
+    "no place: the weather card's place and unit"
+  );
+  r = await C.call('get_weather', { place: 'Nowhereville' });
+  ok(r.isError && /no place/.test(txt(r)), 'an unknown place says so');
+  // found on the TV: the place was on a downloaded forecast card (x-forecast), not the built-in weather card
+  config.update('test', c => {
+    c.cards = { a: { type: 'x-stocks' }, b: { type: 'x-forecast', place: 'Haifa', lat: 32.8, lon: 35, unit: 'c' } };
+  });
+  r = await C.call('get_weather', {});
+  ok(!r.isError && val(r).place === 'Haifa' && asked[asked.length - 1].lat === 32.8, "no place: a downloaded forecast card's place");
+  config.update('test', c => {
+    c.cards = { a: { type: 'x-stocks' } };
+  });
+  r = await C.call('get_weather', {});
+  ok(r.isError && /say a place/.test(txt(r)), 'no card with a place: asks for one');
+
+  // show_notification with the new options
+  r = await C.call('show_notification', {
+    title: 'Dinner',
+    text: 'Ready',
+    seconds: 30,
+    position: 'bottom-left',
+    image: 'https://example.com/a.jpg',
+  });
+  ok(
+    !r.isError && shown[0].seconds === 30 && shown[0].position === 'bottom-left' && shown[0].image === 'https://example.com/a.jpg',
+    'a card with a picture, time and place'
+  );
+  await C.call('show_notification', { title: 'x', seconds: 999 });
+  ok(shown[1].seconds === 60 && !shown[1].position && !shown[1].image, 'at most 60 seconds; the defaults stay');
+  r = await C.call('show_notification', { title: 'x', image: 'file:///etc/passwd' });
+  ok(r.isError && shown.length === 2, 'a picture must be an http or https address');
+  r = await C.call('show_notification', { title: 'x', position: 'everywhere' });
+  ok(r.isError && shown.length === 2, 'a position must be one of the nine');
+
+  // theme
+  r = await C.call('theme', { action: 'list' });
+  ok(
+    val(r).current.id === 'classic' && val(r).themes.length === 2 && !val(r).themes[0].description,
+    'theme list: the themes and the current one'
+  );
+  r = await C.call('theme', { action: 'set', id: 'moon', accent: '#4c8dff' });
+  ok(
+    !r.isError && val(r).current.id === 'moon' && val(r).current.accent === '#4c8dff' && val(r).previous.id === 'classic',
+    'theme set: a theme with an accent'
+  );
+  r = await C.call('theme', { action: 'set', id: 'nope' });
+  ok(r.isError && /unknown theme/.test(txt(r)) && th.id === 'moon', 'an unknown theme is refused');
+  r = await C.call('theme', { action: 'set' });
+  ok(r.isError && th.id === 'moon', 'set needs an id or an accent');
+  r = await C.call('theme', { action: 'revert' });
+  ok(!r.isError && val(r).current.id === 'classic', 'theme revert: back to the one before');
+
+  // remote_buttons
+  const sc = closes();
+  r = await C.call('remote_buttons', { action: 'list' });
+  ok(
+    val(r).on === true && val(r).buttons[0].button === 'Red' && /app netflix/.test(val(r).buttons[0].does),
+    'remote_buttons list: each button and what it does'
+  );
+  r = await C.call('remote_buttons', { action: 'press', code: '403' });
+  ok(!r.isError && fired.join() === '403', 'remote_buttons press: runs the button');
+  r = await C.call('remote_buttons', { action: 'press', code: '7' });
+  ok(r.isError && fired.length === 1, 'a button that is not remapped is refused');
+  remapOn = false;
+  r = await C.call('remote_buttons', { action: 'press', code: '403' });
+  ok(r.isError && /switched off/.test(txt(r)) && fired.length === 1, 'nothing runs while remapping is off');
+  ok(closes() === sc, 'an awake screen is left alone by remote_buttons');
+
+  // new_conversation
+  r = await C.call('new_conversation', {});
+  ok(!r.isError && val(r).forgotten === true, 'new_conversation forgets the conversation');
+
+  // an add-on's tool that changes the screen (onScreen: true, or the actions that do): the hub closes the screen saver first
+  const hubCalls = [];
+  const addonTool = {
+    list: () => [
+      {
+        name: 'box',
+        description: 'A box.',
+        inputSchema: { type: 'object', properties: { action: { type: 'string' } } },
+        onScreen: ['open'],
+      },
+    ],
+    call: async (n, a) => (hubCalls.push(a.action), { content: [{ type: 'text', text: 'ok' }], isError: false }),
+  };
+  const hub = req('toolhub').create(
+    Object.assign({}, ctx, {
+      feature: n => (n === 'addons' ? { providers: () => [{ id: 'demo', name: 'Demo', mod: { tools: addonTool } }] } : features[n] || null),
+    })
+  );
+  power = 'Screen Saver';
+  const c0 = closes();
+  await hub.call('box', { action: 'status' });
+  ok(closes() === c0 && hubCalls.join() === 'status', "an add-on tool's action that does not change the screen leaves the screen saver on");
+  await hub.call('box', { action: 'open' });
+  ok(closes() === c0 + 1 && hubCalls.join() === 'status,open', 'the one that does closes it first');
+  ok(!('onScreen' in (await hub.list()).filter(t => t.name === 'box')[0]), 'onScreen is not sent to clients');
+  power = 'Active';
+
+  // a missing part says so instead of throwing
+  const bare = req('coretools').create({ feature: () => null }).tools;
+  for (const n of ['get_current_app', 'list_running_apps', 'close_app', 'navigate', 'get_volume', 'most_used_apps', 'get_weather'])
+    ok((await bare.call(n, { id: 'x', to: 'home' })).isError, n + ' without its part is an error, not a crash');
+});

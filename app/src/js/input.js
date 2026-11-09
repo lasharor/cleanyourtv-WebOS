@@ -1,4 +1,26 @@
 /* ---------- input: tap OK to open, hold OK for options ---------- */
+
+/* ---------- the screen saver only opens itself over an idle launcher ---------- */
+/* helper/screensaver.js opens the screen saver page after two quiet minutes on Home, to cover the times tvpowerd does not fire. It
+   cannot see the remote, so the launcher reports its keys; without a word from the launcher the service never opens the page by
+   itself (LG's Home in front, or a launcher from before this), which is why a TV being used with its remote is never covered.
+   One request per five seconds at most: a held direction key sends nothing extra. */
+var seenT = 0;
+function seenActivity() {
+  var now = Date.now();
+  if (now - seenT < 5000) return;
+  seenT = now;
+  try {
+    var x = new XMLHttpRequest();
+    x.open('POST', API + '/api/screensaver/active', true);
+    x.send('{}');
+  } catch (e) {}
+}
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden) seenActivity();
+});
+seenActivity();
+
 var lastMove = 0,
   snapT = 0,
   downT = 0,
@@ -113,6 +135,7 @@ document.addEventListener('cursorStateChange', function (ev) {
   pointerShow(ev.detail && ev.detail.visibility);
 });
 document.addEventListener('mousemove', function (ev) {
+  seenActivity(); /* the pointer of the remote: the TV is being used */
   if (stack.length || LIVE.on || PAGER.on || CS.on) return;
   if (cursorEvents ? !pointerShown : Date.now() - lastKey < 1500) return;
   var dy = lastMX < 0 ? 0 : ev.clientY - lastMY;
@@ -151,6 +174,7 @@ function pointerKeyPress(k) {
 }
 document.addEventListener('keydown', function (e) {
   var k = e.keyCode;
+  seenActivity();
   /* a right-to-left layout: Left moves to what is on the left, which is the next tile in the row (Live TV keeps left-to-right) */
   if (rtl() && !LIVE.on && (k === 37 || k === 39)) k = 76 - k;
   pointerKeyPress(k);
@@ -303,14 +327,68 @@ function guidePage() {
   for (var i = 0; i < PAGES.length; i++) if (PAGES[i].guide) return PAGES[i].id;
   return '';
 }
-/* launching Home with {inputs:true} opens the Inputs list */
+/* launching Home with {inputs:true} opens the Inputs list; {page:<add-on id>} turns to that add-on's page, in the book or not (manager > Open page) */
+/* The launch parameters handled last. webOS shows Home (visibilitychange) about a second before it delivers webOSRelaunch, and
+   launchParams already hold the new ones then: a {page} that is new turns the page at the show (pageOnShow), and the relaunch that
+   follows finds the page open. Parameters that did not change are left to the relaunch: Home shown again by closing an app keeps
+   the parameters of its last launch. */
+var seenParams = '';
+/* the t of the last open handled (POST /api/book/open sends it with the launch and on GET /api/book/open): each open turns once, so the
+   relaunch webOS delivers late (40 s seen) does not turn to the page again after you left it */
+var pageT = 0;
+function turnTo(id, t) {
+  if (typeof t === 'number') {
+    if (t <= pageT) return false;
+    pageT = t;
+  }
+  if (PAGER.index(id) <= 0) return false;
+  closeMenus();
+  PAGER.go(id, null, true);
+  return true;
+}
+/* The service tells the launcher of an open at once (GET /api/book/open waits for one): Home's own relaunch and visibility events can
+   come seconds late, while its requests are answered. Only opens made after this launcher started count. */
+var openSince = Date.now();
+function watchOpen() {
+  api('/api/book/open?since=' + openSince).then(
+    function (r) {
+      if (r && typeof r.t === 'number' && r.t > openSince) {
+        openSince = r.t;
+        if (r.id && r.fresh && !turnTo(r.id, r.t) && PAGER.index(r.id) < 0)
+          /* an add-on the launcher does not know yet (switched on a moment ago) */
+          PAGER.load().then(function () {
+            if (PAGER.index(r.id) > 0) {
+              closeMenus();
+              PAGER.go(r.id, null, true);
+            }
+          });
+      }
+      watchOpen();
+    },
+    function () {
+      setTimeout(watchOpen, 5000);
+    }
+  );
+}
+function pageOnShow() {
+  var raw = webOSSystem.launchParams || '',
+    p = {};
+  if (raw === seenParams) return;
+  seenParams = raw;
+  try {
+    p = JSON.parse(raw || '{}');
+  } catch (e) {}
+  if (!p || p.inputs || typeof p.page !== 'string') return;
+  turnTo(p.page, p.t);
+}
 function wantInputs(pages) {
+  if (pages) seenParams = webOSSystem.launchParams || '';
   var p = {};
   try {
     p = JSON.parse(webOSSystem.launchParams || '{}');
   } catch (e) {}
-  /* the Guide button: which page has the guide is known once the add-on pages are loaded */
-  if (p && p.guide && !p.inputs && pages) {
+  /* the Guide button, or a page to open: which pages there are is known once the add-on pages are loaded */
+  if (p && (p.guide || p.page) && !p.inputs && pages) {
     $('homepage').style.visibility = 'hidden'; /* no flash of the dashboard on the way to the guide */
     pages.then(function () {
       wantInputs();
@@ -321,6 +399,8 @@ function wantInputs(pages) {
   if (p && p.inputs) {
     closeMenus();
     inputsMenu();
+  } else if (p && typeof p.page === 'string') {
+    turnTo(p.page, p.t);
   } else if (p && p.guide && guidePage()) {
     noteGuideFrom(p);
     closeMenus();
@@ -375,7 +455,7 @@ document.addEventListener('webOSRelaunch', function () {
     return;
   }
   csSearchEnd();
-  if (PAGER.on && !(p && p.live)) PAGER.home(); /* Home pressed: back to the first page */
+  if (PAGER.on && !(p && (p.live || p.page))) PAGER.home(); /* Home pressed: back to the first page */
   load();
   refreshSoon();
   wantInputs(PAGER.load());
@@ -397,6 +477,7 @@ document.addEventListener('visibilitychange', function () {
     /* hidden in those 5 s and only shown again later: the TV really went elsewhere */
     if (liveBlip && LIVE.on) LIVE.exit();
     liveBlip = false;
+    pageOnShow(); /* before the refresh below, which keeps the page busy for most of a second */
     load();
     refreshSoon();
     WALL.shown();

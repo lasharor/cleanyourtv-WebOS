@@ -5,15 +5,44 @@ const cp = require('child_process');
 const diag = require('./diag'),
   P = require('./paths');
 
-// run a program; resolves {ok, code, out, err, error} and never rejects
+// run a program; resolves {ok, code, out, err, error} and never rejects.
+// Node 8 (webOS 5 and 6) sometimes aborts the child it has just forked, before the program runs: the child prints Node's
+// "uv_close: Assertion !uv__is_closing(handle)" to the service log and ends with SIGABRT. On an LG 65UP77006LB (webOS 6.5.3) it
+// happened to the first program started while the service was starting, at every start (issue 125: there it was mkswap, so zram did
+// not come on). Such a child is started again, up to three times, half a second apart: it ended within 2 seconds, by SIGABRT, without
+// a byte of output, so the program never ran. Once was not always enough: on that TV the second start aborted as well after a power
+// on from standby.
 function run(cmd, args, opts) {
   const o = Object.assign({ env: P.ENV, timeout: 60000, maxBuffer: 8 << 20 }, opts || {});
-  return new Promise(resolve =>
-    diag.execFile(cmd, args || [], o, (e, out, err) =>
-      resolve({ ok: !e, code: e ? e.code : 0, out: String(out || ''), err: String(err || ''), error: e ? String(e.message || e) : '' })
-    )
-  );
+  const once = () =>
+    new Promise(resolve => {
+      const t0 = Date.now();
+      diag.execFile(cmd, args || [], o, (e, out, err) =>
+        resolve({
+          ok: !e,
+          code: e ? e.code : 0,
+          out: String(out || ''),
+          err: String(err || ''),
+          error: e ? String(e.message || e) : '',
+          abortedAtStart: !!e && e.message === 'exit SIGABRT' && !out && !err && Date.now() - t0 < 2000,
+        })
+      );
+    });
+  const attempt = n =>
+    once().then(r => {
+      if (!r.abortedAtStart || n >= RETRIES) return clean(r);
+      diag.note('exec', 'aborted at start (Node 8), again: ' + cmd);
+      console.log('exec: ' + cmd + ' ended by SIGABRT before it ran (Node 8); started again (' + (n + 1) + ' of ' + RETRIES + ')');
+      return new Promise(res => setTimeout(res, RETRY_MS)).then(() => attempt(n + 1));
+    });
+  return attempt(0);
 }
+const RETRIES = 3,
+  RETRY_MS = 500;
+const clean = r => {
+  delete r.abortedAtStart;
+  return r;
+};
 // run a shell command line
 const sh = (script, ms) => run('/bin/sh', ['-c', script], { timeout: ms || 60000 });
 // the callback form, for code that streams or needs the child

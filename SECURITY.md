@@ -17,12 +17,14 @@ traffic on your network.
 ## Voice
 
 Optional and off by default. Installing it downloads files over HTTPS from PyPI, Ubuntu's archive and Moonshine's
-model server; each file is checked against a SHA-256 value written in the code, and a mismatch stops the install. The
-recogniser is a 64-bit program started by the root service with its own copy of the C library; it reads audio from a
+model server (on a TV with a 32-bit ARM kernel: PyPI, Ubuntu's archive and Hugging Face, at a fixed revision); each file
+is checked against a SHA-256 value written in the code, and a mismatch stops the install. The recogniser is a 64-bit
+program (a 32-bit hard-float one on a 32-bit ARM kernel) started by the root service with its own copy of the C library; it reads audio from a
 pipe and prints text. Audio from the remote's microphone is held in memory only while recognising. Only the recognised
 text is sent, and only to the address you set (plain `http://` is possible: the token is then visible on your network)
-and, if you switch on AI chat, to `openrouter.ai` over HTTPS with your OpenRouter key and the model you chose; OpenRouter and
-that model's provider see the text. The phone setup page is a short-lived page on the local network (port 8769, a random 128-bit address, ten minutes,
+and, if you switch on AI chat, to the AI providers you set, in their order until one answers: `openrouter.ai` over HTTPS with
+your OpenRouter key (OpenRouter and the model's provider see the text), and a self-hosted server of yours at the address you
+gave (plain `http://` is possible); each key goes only to its own provider. The phone setup page is a short-lived page on the local network (port 8769, a random 128-bit address, ten minutes,
 closed after saving, plain HTTP: the key is visible on the network while it is typed). With Home Assistant set up, the recognised text goes to the address you set with your long-lived access token (plain `http://` makes the token visible on your network; a self-signed certificate is accepted only when switched on). The keys and the token are kept in `config.json` (readable by root only) and are never returned by the
 service. Pausing LG's voice assistant sends it SIGSTOP; nothing of LG's is modified.
 

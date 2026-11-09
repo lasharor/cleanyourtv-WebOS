@@ -62,13 +62,26 @@ var INFO = {
   'Trim now':
     'Trims the writable partitions on the built-in storage now and shows how much was freed. A second run right after frees almost nothing.',
   'Listen on the voice button': 'On: pressing the button you learned starts listening. A card shows what was heard.',
-  'AI chat (OpenRouter)':
-    'On: what you say is also sent as text to a language model through OpenRouter and the answer is shown on screen. Needs your OpenRouter key; the text goes to OpenRouter and the model provider, never audio.',
+  'AI chat':
+    'On: what you say is also sent as text to the AI providers, and the answer is shown on screen. They are asked in order; if one does not answer, the next one is. Only text is sent, never audio. Without a provider, OK shows the phone setup.',
+  'AI providers':
+    'Where AI chat gets its answers: OpenRouter, or a server of yours with the OpenAI-compatible API (Ollama, for example). They are asked from the top; if one does not answer, the next one is. Open it to test, reorder or switch one off.',
   'Set up from your phone':
-    'Shows a QR code. Scan it with a phone on the same Wi-Fi to enter your OpenRouter key, choose a model, write instructions and set a server address. Nothing is typed on the TV.',
+    'Shows a QR code. Scan it with a phone on the same Wi-Fi and enter the settings there. Nothing is typed on the TV.',
   'Model':
-    'Choose the model that answers. The list is read from OpenRouter: the newest models of the main providers, with the price per million words in. The phone page lists every model.',
-  'Set up with commands': 'Shows the commands to set the key, model and instructions from a shell, and how to ask by text.',
+    'The model this provider answers with. OpenRouter lists the newest models of the main makers, with the price per million words in; a server of yours lists the models it has. The phone page takes any model name.',
+  'Test now':
+    'Asks this provider “Say OK” and shows how long the answer took, or why it failed: no connection, a refused key or no answer in time.',
+  'Wait for an answer':
+    'How long this provider gets to answer before the next one is asked. Choose to go to the next value: 10, 25, 30, 45 or 60 seconds. All providers together get 60 seconds.',
+  'Use this provider': 'On: this provider is asked in its turn. Off: it is skipped, and keeps its place, key and model.',
+  'Make first': 'Moves this provider to the top of the list, so it is asked first.',
+  'Move up': 'Moves this provider one place up, so it is asked before the one above it. Channel up does the same in the list.',
+  'Move down': 'Moves this provider one place down, so it is asked after the one below it. Channel down does the same in the list.',
+  'Test all': 'Asks every provider “Say OK”, one after the other, switched-off ones too, and shows each result.',
+  'Add a provider':
+    'Shows a QR code. On a phone on the same Wi-Fi, add OpenRouter or a server of yours with its address, key and model. Up to 8.',
+  'Set up with commands': 'Shows the commands to set the AI providers and instructions from a shell, and how to ask by text.',
   'Forget the conversation': 'The AI and Home Assistant remember the last turns for ten minutes. This clears them.',
   'Home Assistant (Assist)':
     'Sends what you say as text to Home Assistant\u2019s Assist and shows its answer. Needs the address and a long-lived access token (Home Assistant profile page), entered on your phone. Choosing this row tests the connection.',

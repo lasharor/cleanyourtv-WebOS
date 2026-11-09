@@ -272,4 +272,97 @@ run(async () => {
     /--no-reboot/.test(uninstall) && /undo-home\.sh.*\|\|/.test(uninstall),
     'no-reboot uninstall also handles native takeover and stops on failed undo'
   );
+  // the app manager restarts when the TV goes to standby: the stand-in sees its registration end with "is not running", waits until
+  // the app manager answers again, has webapp-mgr close the launcher and ends, so the new app manager starts Home afresh (a launcher
+  // left open as com.webos.app.home was taken for Home, and nothing came to the front: a black screen with only the pointer)
+  {
+    const D = path.join(tmp, 'standin-sam');
+    fs.mkdirSync(D);
+    fs.mkdirSync(path.join(D, 'bin'));
+    fs.writeFileSync(
+      path.join(D, 'bin', 'luna-send'),
+      '#!/bin/sh\nD=' +
+        JSON.stringify(D) +
+        '\nfor a; do case "$a" in luna://*) m=$a ;; esac; done\necho "$m" >> $D/calls\n' +
+        'case "$m" in\n*registerApp) echo \'{"registered":true,"event":"registered"}\'; sleep 1;' +
+        ' echo \'{"serviceName":"com.webos.applicationManager","returnValue":false,"errorCode":-1,"errorText":"com.webos.applicationManager is not running."}\'; while :; do sleep 1; done ;;\n' +
+        '*/running) n=$(cat $D/asked 2>/dev/null || echo 0); echo $((n+1)) > $D/asked; [ $n -ge 1 ] && echo \'{"returnValue":true,"running":[]}\' ;;\n' +
+        '*) echo \'{"returnValue":true}\' ;;\nesac\n'
+    );
+    fs.chmodSync(path.join(D, 'bin', 'luna-send'), 0o755);
+    const t0 = Date.now();
+    const r = cp.spawnSync('sh', [path.join(root, 'scripts', 'home-standin.sh'), '{"reason":"preload"}'], {
+      env: Object.assign({}, process.env, { PATH: path.join(D, 'bin') + ':' + process.env.PATH, CYTV_BOOT_LOG: path.join(D, 'boot.log') }),
+      timeout: 20000,
+      encoding: 'utf8',
+    });
+    cp.spawnSync('pkill', ['-f', D]); // nothing of the stand-in luna-send is left
+    const log = fs.readFileSync(path.join(D, 'boot.log'), 'utf8'),
+      calls = fs.readFileSync(path.join(D, 'calls'), 'utf8');
+    ok(
+      (r.status === 0 || r.signal === 'SIGTERM') &&
+        Date.now() - t0 < 15000 &&
+        /registered with the app manager/.test(log) &&
+        /the app manager restarted \(the TV went to standby\); the launcher is closed/.test(log) &&
+        calls.indexOf('/running') >= 0 &&
+        calls.lastIndexOf('/running') < calls.indexOf('killApp'),
+      'after the app manager restarts, the stand-in waits for it, closes the launcher and ends (' + (Date.now() - t0) + ' ms)'
+    );
+  }
+  // Home at power on: when the TV comes back from standby (the power state Active after Active Standby) with LG's setting Home Auto
+  // Launch on and an input in front, the stand-in launches Home, as LG's own Home program does; with the setting off, or with an
+  // app the TV was turned on with in front, it does not
+  const powerOn = (name, setting, fg) => {
+    const D = path.join(tmp, name);
+    fs.mkdirSync(D);
+    fs.mkdirSync(path.join(D, 'bin'));
+    fs.writeFileSync(
+      path.join(D, 'bin', 'luna-send'),
+      '#!/bin/sh\nD=' +
+        JSON.stringify(D) +
+        '\nfor a; do case "$a" in luna://*) m=$a ;; esac; done\necho "$m" >> $D/calls\n' +
+        'case "$m" in\n' +
+        '*registerApp) echo \'{"registered":true,"event":"registered"}\'; while :; do sleep 1; done ;;\n' +
+        '*getPowerState) for s in Active "Active Standby" Active; do echo "{ \\"subscribed\\": true, \\"returnValue\\": true, \\"state\\": \\"$s\\" }"; sleep 1; done; while :; do sleep 1; done ;;\n' +
+        '*getSystemSettings) echo \'{"settings":{"homeAutoLaunch":"' +
+        setting +
+        '"},"returnValue":true}\' ;;\n' +
+        '*getForegroundAppInfo) echo \'{"appId":"' +
+        fg +
+        '","returnValue":true}\' ;;\n' +
+        '*) echo \'{"returnValue":true}\' ;;\nesac\n'
+    );
+    fs.chmodSync(path.join(D, 'bin', 'luna-send'), 0o755);
+    const c = cp.spawn('sh', [path.join(root, 'scripts', 'home-standin.sh'), '{"reason":"preload"}'], {
+      env: Object.assign({}, process.env, { PATH: path.join(D, 'bin') + ':' + process.env.PATH, CYTV_BOOT_LOG: path.join(D, 'boot.log') }),
+      stdio: 'ignore',
+      detached: true,
+    });
+    return new Promise(res =>
+      setTimeout(() => {
+        try {
+          process.kill(-c.pid);
+        } catch (_) {}
+        cp.spawnSync('pkill', ['-f', D]);
+        const read = f => (fs.existsSync(path.join(D, f)) ? fs.readFileSync(path.join(D, f), 'utf8') : '');
+        res({ log: read('boot.log'), calls: read('calls') });
+      }, 6000)
+    );
+  };
+  let po = await powerOn('standin-poweron', 'on', 'com.webos.app.hdmi1');
+  ok(
+    /the TV came on \(com.webos.app.hdmi1\) and Home Auto Launch is on: Home is opened/.test(po.log) &&
+      (po.calls.match(/applicationManager\/launch/g) || []).length === 1,
+    'back from standby on an input with Home Auto Launch on: Home is launched, once'
+  );
+  po = await powerOn('standin-poweron-off', 'off', 'com.webos.app.hdmi1');
+  ok(
+    /Home Auto Launch is off in LG's settings/.test(po.log) && !/applicationManager\/launch/.test(po.calls),
+    'with Home Auto Launch off the TV stays on its input'
+  );
+  po = await powerOn('standin-poweron-app', 'on', 'netflix');
+  ok(
+    /the TV came on with netflix in front; Home is not opened over it/.test(po.log) && !/applicationManager\/launch/.test(po.calls),
+    'an app the TV was turned on with stays in front'
+  );
 });
