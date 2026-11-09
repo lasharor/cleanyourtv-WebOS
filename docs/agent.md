@@ -84,8 +84,10 @@ same screen holds the network access below, so everything the tools may reach is
 default; off, the AI only answers questions as before. Then:
 
 1. Home Assistant still answers first when the routing says so ([Voice](voice.md#home-assistant-assist)).
-2. Otherwise the question goes to OpenRouter with the tools (at most 40). The model may ask for tools; the TV runs them, sends back
-   what they answered and asks again, at most five rounds. The card on the screen says which tool runs.
+2. Otherwise the AI providers are asked in their order ([Voice](voice.md)). OpenRouter gets the question with the tools (at most 40);
+   a server of yours only answers, without tools. The model may ask for tools; the TV runs them, sends back what they answered and
+   asks again, at most five rounds. The card on the screen says which tool runs. Once a tool has run, the question is not handed to
+   the next provider, so nothing is done twice.
 3. The model's last words are the answer on the card.
 
 A tool that turns something off or deletes something (`power_off`, or a signed tool with `"confirm": true`) never runs on the

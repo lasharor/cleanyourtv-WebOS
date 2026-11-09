@@ -1603,7 +1603,7 @@
  "Apps and add-ons that signed tools. Switch one on to let the voice assistant and MCP clients on your network use its tools. Tools that ask you first run only after you say yes to the voice assistant, and never from the network.": "Apps and add-ons that signed tools. Switch one on to let the voice assistant and MCP clients on your network use its tools. Tools that ask you first run only after you say yes to the voice assistant, and never from the network.",
  "Look for tools again": "Look for tools again",
  "Let the voice assistant act on the TV": "Let the voice assistant act on the TV",
- "set up the AI chat first": "set up the AI chat first",
+ "add OpenRouter first": "add OpenRouter first",
  "Accept MCP clients from the network": "Accept MCP clients from the network",
  "no agent yet": "no agent yet",
  "Connect an agent": "Connect an agent",
