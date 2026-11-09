@@ -86,6 +86,10 @@ card are small and stay single files.
       nothing comes to the front at power on or on the Home key (a black screen with only the pointer). The stand-in sees its
       registration end with `com.webos.applicationManager is not running`, waits until the app manager answers again, has
       `webapp-mgr` close the launcher and ends, so the new app manager starts the stand-in afresh the next time Home is launched.
+      The stand-in also follows the power state, as LG's own Home program does for its setting Home Auto Launch (General > Home
+      Settings, `homeAutoLaunch`): the boot manager only starts the last input when the TV comes back from standby. When the state
+      turns `Active` after `Active Standby` or `Suspend`, the setting is on and an input (or nothing) is in front, the stand-in launches
+      Home; an app the TV was turned on with stays in front.
       `bootstrap.sh verify` does the same once: when the launcher does not come up after a stand-in setup (a TV with CRIU never runs
       the stand-in, issues 72 and 84; `criu` in `tvprofile.js` records it but does not decide), it writes `home-method` `mount`, runs the boot
       script again and checks again; the rollback removes the file only if the setup wrote it.
