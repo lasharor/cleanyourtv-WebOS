@@ -70,13 +70,43 @@ listens on the network until then, and switching it off again closes the port.
    and expires a few minutes after you leave the page. **A scan takes the code off the TV at once**: the TV says "Code scanned. Finish
    on the phone." and keeps the window open only for the phone that scanned it, until it has paired. A phone that is already paired
    and scans the code again just connects: the TV closes the window and says it is connected.
-4. Press Back on the TV. The phone page now shows **Connected**. Add it to the home screen for a one-tap remote.
+4. Press Back on the TV. The phone page now shows **Connected**. Add it to the home screen for a one-tap remote (on an iPhone, before
+   pairing: see [On an iPhone or iPad](#on-an-iphone-or-ipad-the-remote-as-an-app)).
 
 The page draws the QR with the generator that ships with CleanYourTV (`/addon/qrcode.js`, one copy in the repository: a catalog add-on
 brings no copy of its own).
 
 The phone keeps a token in the browser (`localStorage`). It has to be the same address every time, so give the TV a fixed address in
 your router; if the address changes, pair again.
+
+### On an iPhone or iPad: the remote as an app
+
+There is no app to install on an iPhone, but the page itself can live on the Home Screen as an app: full screen, its own icon, no
+address bar. The TV serves what iOS needs for that (`/manifest.webmanifest`, `/apple-touch-icon.png`).
+
+1. Scan the TV's QR code with the camera. Safari opens the page; on an iPhone it says **put the remote on the Home Screen first**.
+2. In Safari tap **Share** (in iOS 26 it is in the **•••** menu), choose **Add to Home Screen**, keep **Open as Web App** on and tap
+   **Add**.
+3. Open **TV remote** from the Home Screen. The code from the QR code is already filled in: tap **Pair this device**.
+
+Pair in the app, not in Safari: iOS gives a Home Screen app its own storage, apart from Safari's, so a phone paired in Safari has to pair
+once more in the app (and then shows twice in the TV's list; remove the Safari one). A phone that already paired in Safari finds the same
+steps under **This remote** (tap the TV's name).
+
+What is different from the Android app:
+
+- **Turning the TV on.** A web page cannot send the Wake-on-LAN packet. With Quick Start+ on (the default) the TV keeps answering in
+  standby, and the power button turns it on and off as usual. From deep standby use one of the senders under
+  [If you already have something that wakes machines](#if-you-already-have-something-that-wakes-machines).
+- **While the TV is off.** The app cannot open without the TV: iOS keeps an offline copy only for pages served over HTTPS, and the TV
+  serves plain HTTP on the home network. Opened while the TV is in deep standby, the app shows an error until the TV is back.
+- **The tick on a key press.** iOS has no vibration for web pages; on iOS 18 and newer the page plays the system's switch tick instead.
+  It follows **Settings > Sounds & Haptics > System Haptics**.
+- **The address.** The app is tied to the TV's address: if it changes, delete the app and add it again. A fixed address in the router
+  avoids that.
+
+On iOS 17 and older, Add to Home Screen has no **Open as Web App** switch; the page asks for an app by itself (its manifest and the
+`apple-mobile-web-app-capable` tag), so it opens the same way.
 
 ## The name of a device
 
