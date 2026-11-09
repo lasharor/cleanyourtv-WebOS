@@ -8,7 +8,7 @@
 ## The voice assistant can act on the TV
 
 - **Let the voice assistant act on the TV** (manager app, Features > AI agents (MCP)): the AI may open apps, switch inputs, show a card and use the tools of add-ons you
-  approved. Off by default. The tools go to OpenRouter, in its place among the AI providers; a server of yours only answers.
+  approved. Off by default. Every AI provider, OpenRouter or a server of yours (Ollama), gets the tools; a model that cannot use tools only answers.
   Turning the TV off asks first: say "yes" within 30 seconds.
 - **`/api/mcp`**: every tool of the service and of the add-ons, over the Model Context Protocol, for programs on the TV.
 - **Accept MCP clients from the network** (manager app, Features > AI agents (MCP)): off by default; switched on, AI agents on other computers (any MCP client, or a script) can use the same tools on port 8802. Each agent pairs once with a code shown on the TV and gets a token of its own; the TV lists the

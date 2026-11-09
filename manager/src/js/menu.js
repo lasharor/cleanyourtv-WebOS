@@ -404,7 +404,7 @@ function build() {
       va = (vo && vo.llm) || {},
       ags = mn.agents || [],
       VOICE_D =
-        'The voice assistant may open apps, switch inputs, show a card and use the tools of the add-ons you approved in Add-ons > Agent tools (MCP). Turning the TV off asks first: say yes within 30 seconds. The tools go to OpenRouter, in its place among the AI providers; a server of yours only answers, and so does a model that cannot use tools.';
+        'The voice assistant may open apps, switch inputs, show a card and use the tools of the add-ons you approved in Add-ons > Agent tools (MCP). Turning the TV off asks first: say yes within 30 seconds. The tools go to the AI provider that is asked, OpenRouter or a server of yours; a model that cannot use tools only answers.';
     /* the voice assistant uses the same tools as the network: the switch for it lives here. hasKey: OpenRouter is an AI provider with
        its key, the one provider that gets the tools */
     rows.push({
