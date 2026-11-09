@@ -39,7 +39,8 @@ is dimmed and a tap only says why in the line under the TV name ("Nothing on the
   and sends them when you stop; the mic in the field listens again.
 - **On the TV remote**: the TV listens through its remote's microphone (it needs **Voice** installed in the manager; until then this
   choice is dimmed). The screen follows the TV: **Listening on the TV**, **Recognising**, **Thinking**, then the answer. On TVs where LG
-  opens the microphone only while the button is held, hold the remote's mic button while you speak.
+  opens the microphone only while the button is held, hold the remote's mic button while you speak. This means a paired phone can
+  start the TV's remote microphone: see [Control who has access](#control-who-has-access).
 
 **Remember my choice** (on by default) keeps the place for the next tap; switched off, the question comes every time. A **hold** on the
 mic button asks again, and so does the chip at the top of the voice screen.
@@ -154,6 +155,12 @@ is accurate to about a minute.
 **Remove unused phones** is a security setting: a phone that was lost, sold or forgotten would otherwise be able to control the TV for ever. The
 service checks when it starts and every hour; a phone that is connected is never removed, and one that is removed can pair again with a new code.
 Choosing **Never** turns it off and asks first, and the screen says what it means: a lost phone keeps the remote until someone removes it by hand.
+
+**A paired phone can start the TV's remote microphone.** With [Voice](voice.md) installed, the mic button's **On the TV remote** makes the
+TV listen through its remote's microphone, as the remote's own mic button does: the TV shows its **Listening** card, records what is
+said, recognises the words on the TV and sends them to the voice assistant. The audio stays on the TV; the phone gets only the words and
+the answer. Every paired phone that is not blocked can do this while the add-on is on, and the TV listens to one at a time. To stop a phone,
+block or remove it on the add-on's page; to stop all of them, switch the add-on off or uninstall Voice.
 
 ## Turning the TV on
 
