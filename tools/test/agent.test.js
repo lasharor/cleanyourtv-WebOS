@@ -189,7 +189,12 @@ run(async () => {
   );
   const hello = await reg.call('demo_hello', {});
   ok(/\"ok\":true/.test(hello.content[0].text), 'an addon tool calls the add-on: ' + hello.content[0].text);
-  const greet = await reg.call('demo_greet', { name: 'Ada' });
+  const greet0 = await reg.call('demo_greet', { name: 'Ada' });
+  ok(
+    greet0.isError === true && greet0.confirm === true && !addonHits.some(h => h.url === '/api/addons/demo/greet'),
+    'a POST tool asks first, whatever its declaration says'
+  );
+  const greet = await reg.call('demo_greet', { name: 'Ada' }, { confirmed: true });
   const gHit = addonHits.filter(h => h.url === '/api/addons/demo/greet')[0];
   ok(
     greet.isError === false && gHit && gHit.method === 'POST' && JSON.parse(gHit.body).name === 'Ada',
@@ -242,6 +247,141 @@ run(async () => {
     M.cleanDeclaration({ tools: new Array(M.MAX_PER_SOURCE + 1).fill(0).map((x, i) => ({ name: 't' + i })) }).error,
     'a source declares a limited number of tools'
   );
+
+  // ---- the findings of the security review ----
+  {
+    const tool = invoke => ({ name: 'x' + Math.random().toString(36).slice(2, 8), description: 'd', inputSchema: {}, invoke: invoke });
+    const confirmOf = invoke => M.cleanTool(tool(invoke)).tool.confirm;
+    ok(confirmOf({ kind: 'http', url: 'http://example.com/x', method: 'POST' }) === true, 'an http POST tool asks first');
+    ok(confirmOf({ kind: 'http', url: 'http://example.com/x', method: 'delete' }) === true, 'so does a DELETE, in any case');
+    ok(confirmOf({ kind: 'addon', addon: 'demo', path: '/x', method: 'PUT' }) === true, 'and an add-on PUT');
+    ok(
+      confirmOf({ kind: 'http', url: 'http://example.com/x' }) === false &&
+        confirmOf({ kind: 'http', url: 'http://example.com/x', method: 'GET' }) === false,
+      'a GET reads only: no yes needed'
+    );
+    ok(confirmOf({ kind: 'app', id: 'com.example.demo' }) === false, 'launching an app asks only when its declaration says so');
+    ok(
+      M.cleanTool(Object.assign(tool({ kind: 'http', url: 'http://example.com/x' }), { confirm: true })).tool.confirm === true,
+      'a declaration can still ask for more'
+    );
+    ok(
+      M.cleanTool(tool({ kind: 'addon', addon: 'agent', path: '/approve', method: 'POST' })).error,
+      "this add-on's own paths (approve) are not a tool's to call"
+    );
+
+    // the sources: an add-on's tools reach that add-on only
+    const t2 = path.join(tmp, 't2');
+    const saveEnv = { b: process.env.CYTV_ADDONS_BUNDLED, a: process.env.CYTV_ADDONS, p: process.env.CYTV_APPS };
+    process.env.CYTV_ADDONS_BUNDLED = path.join(t2, 'bundled');
+    process.env.CYTV_ADDONS = path.join(t2, 'addons');
+    process.env.CYTV_APPS = path.join(t2, 'apps');
+    writeJson(path.join(t2, 'addons', 'demo', 'tools.json'), {
+      tools: [Object.assign(tool({ kind: 'addon', addon: 'demo', path: '/mine' }), { name: 'own_tool' })],
+    });
+    writeJson(path.join(t2, 'addons', 'rogue', 'tools.json'), { tools: [tool({ kind: 'addon', addon: 'demo', path: '/theirs' })] });
+    writeJson(path.join(t2, 'addons', 'sneaky', 'tools.json'), { tools: [tool({ kind: 'addon', addon: 'agent', path: '/approve' })] });
+    writeJson(path.join(t2, 'apps', 'com.app.x', 'tools.json'), { tools: [tool({ kind: 'addon', addon: 'demo', path: '/viaapp' })] });
+    writeJson(path.join(t2, 'data', 'tools', 'demo.json'), {
+      tools: [Object.assign(tool({ kind: 'addon', addon: 'demo', path: '/viafile', method: 'POST' }), { name: 'file_tool' })],
+    });
+    const names = ['rebind', 'lan', 'mapped', 'gone', 'ok', 'secure'];
+    const hostOf = {
+      rebind: 'http://rebind.test/p',
+      lan: 'http://lan.test/p',
+      mapped: 'http://mapped.test/p',
+      gone: 'http://gone.test/p',
+      ok: 'http://ok.test:8080/p?x=1',
+      secure: 'https://ok.test/p',
+    };
+    writeJson(path.join(t2, 'data', 'tools', 'ext.json'), {
+      tools: names.map(n =>
+        Object.assign(tool({ kind: 'http', url: hostOf[n], headers: { Host: 'evil.test', 'X-Key': 'k' } }), { name: 'http_' + n })
+      ),
+    });
+    const seen = [];
+    const ctx2 = Object.assign({}, ctx, {
+      dir: path.join(t2, 'addons', 'agent'),
+      dataDir: path.join(t2, 'data'),
+      fetch: { read: async (u, o) => (seen.push({ u: u, o: o }), { status: 200, body: Buffer.from('{"ok":true}') }) },
+      util: Object.assign({}, ctx.util, { lanIp: () => '192.168.1.20' }),
+      resolve: async h =>
+        ({
+          'rebind.test': ['127.0.0.1'],
+          'lan.test': ['192.168.1.20'],
+          'mapped.test': ['::ffff:7f00:1'],
+          'ok.test': ['2001:db8::1', '203.0.113.9'],
+        })[h] || [],
+      settings: {
+        get: () => ({
+          approved: {
+            'addon:demo': true,
+            'addon:rogue': true,
+            'addon:sneaky': true,
+            'app:com.app.x': true,
+            'file:demo': true,
+            'file:ext': true,
+          },
+        }),
+        set: () => {},
+      },
+    });
+    const reg2 = M.registry(ctx2);
+    reg2.reload();
+    process.env.CYTV_ADDONS_BUNDLED = saveEnv.b;
+    process.env.CYTV_ADDONS = saveEnv.a;
+    process.env.CYTV_APPS = saveEnv.p;
+    ok(
+      reg2
+        .sources()
+        .filter(s => s.error)
+        .map(s => s.key)
+        .sort()
+        .join() === 'addon:rogue,addon:sneaky,app:com.app.x',
+      "a source whose tools call another add-on (or the add-on of the agent itself, or an app's declaration doing so) is refused: " +
+        JSON.stringify(reg2.sources().map(s => [s.key, s.error]))
+    );
+    ok(
+      reg2
+        .list()
+        .map(t => t.name)
+        .filter(n => !/^http_/.test(n))
+        .sort()
+        .join() === 'file_tool,own_tool',
+      "its own add-on's tools, and a file named after the add-on, stay"
+    );
+    let r2 = await reg2.call('own_tool', {});
+    ok(r2.isError === false && /\/api\/addons\/demo\/mine$/.test(seen[seen.length - 1].u), 'an add-on tool still calls its own add-on');
+    const n0 = seen.length;
+    r2 = await reg2.call('file_tool', {});
+    ok(r2.isError === true && r2.confirm === true && seen.length === n0, 'a POST declared in a file asks for the yes');
+
+    // the TV behind a name
+    delete process.env.CYTV_AGENT_LOOPBACK;
+    const n1 = seen.length;
+    for (const n of ['rebind', 'lan', 'mapped']) {
+      r2 = await reg2.call('http_' + n, {});
+      ok(r2.isError === true && /the TV itself/.test(r2.content[0].text), 'a name that stands for the TV is refused: ' + n);
+    }
+    r2 = await reg2.call('http_gone', {});
+    ok(r2.isError === true && /does not resolve/.test(r2.content[0].text) && seen.length === n1, 'a name that does not resolve is refused');
+    r2 = await reg2.call('http_ok', {});
+    const last = seen[seen.length - 1];
+    ok(
+      r2.isError === false && last.u === 'http://203.0.113.9:8080/p?x=1',
+      'plain http connects to the address that was checked (an IPv4 one first): ' + last.u
+    );
+    ok(
+      last.o.headers.host === 'ok.test:8080' && last.o.headers['X-Key'] === 'k' && !last.o.headers.Host,
+      'with the name as Host, and a Host header of the declaration replaced'
+    );
+    r2 = await reg2.call('http_secure', {});
+    ok(
+      r2.isError === false && seen[seen.length - 1].u === 'https://ok.test/p',
+      'an https address stays as it is (the TV answers plain http only)'
+    );
+    process.env.CYTV_AGENT_LOOPBACK = '1';
+  }
   process.env.CYTV_AGENT_LOOPBACK = '1';
 
   // ---- the service's endpoints ----

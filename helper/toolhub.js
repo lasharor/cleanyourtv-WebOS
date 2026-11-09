@@ -279,6 +279,17 @@ function create(ctx) {
     });
   const fails = new Map(),
     hits = new Map();
+
+  // the per-address counters keep an address only while it matters: past 500 addresses, the ones whose window is over go, and the oldest
+  // if that is not enough
+  function trim(map, windowMs) {
+    if (map.size <= 500) return;
+    const now = Date.now();
+    map.forEach((v, k) => {
+      if (now - v.t > windowMs) map.delete(k);
+    });
+    while (map.size > 500) map.delete(map.keys().next().value);
+  }
   let srv = null,
     lanError = '', // why the port did not open (another program has it), for the manager
     page = null, // {path, until, win}: the page behind the manager's QR code, for one pairing window
@@ -294,6 +305,7 @@ function create(ctx) {
       f.t = now;
     }
     fails.set(ip, f);
+    trim(fails, 600000);
     if (f.n >= 10) {
       send(429, { error: 'too many wrong codes or tokens: wait ten minutes' });
       return false;
@@ -417,6 +429,7 @@ function create(ctx) {
       r.t = Date.now();
     }
     hits.set(ip, r);
+    trim(hits, 60000);
     if (++r.n > PER_MINUTE) return send(429, { error: 'at most ' + PER_MINUTE + ' requests a minute' });
     if (u === '/logout') {
       if (req.method !== 'POST') return send(405, { error: 'POST to /logout' });

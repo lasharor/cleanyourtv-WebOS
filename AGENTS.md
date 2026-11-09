@@ -31,6 +31,7 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 | Phone remote (pairing, tokens, WebSocket, keys into the TV) | the catalog add-on phoneremote: `addons/catalog/phoneremote/service.js`, `ws.js` (RFC 6455 server and client for Node 8), `remotekeys.js` (the key adapter: pointer socket, ime, audio), `page.js` (phone page), `src/` (the add-on's own page on the TV: pairing and the paired phones, built into `page/index.html`), `docs/phone-remote.md` |
 | Turning the TV on from the phone (Wake-on-LAN), and the hook for an app that wraps the phone page | the `window.CYTV_APP` hook and the on/off button in `addons/catalog/phoneremote/page.js`; `ready.mac` and `ready.wol` in `addons/catalog/phoneremote/service.js`; the shared QR code an add-on page draws with is `third-party/qrcode-generator` (served as `/addon/qrcode.js`); no app is part of this repository |
 | The screen saver (our page over LG's) | `scripts/20-cleanyourtv-screensaver` (called by `10-cleanyourtv-home`, off by default), `scripts/stage-screensaver.sh`, `helper/screensaver.js`, `screensaver/app/`, `docs/screensaver.md` |
+| Tools for AI agents (MCP): the voice assistant's tools, the network endpoint, pairing, the agent add-on | `helper/coretools.js` (the TV's own tools), `helper/toolhub.js` (the list, `/api/mcp`, the network port), `helper/devices.js` (paired agents), `addons/catalog/agent/` (signed tools of apps and add-ons: `tools.js`), `docs/agent.md`, `docs/security.md` |
 | Picture notifications | `notify/app/`, `helper/notify.js`, `helper/notifyapi.js` |
 | Voice (Moonshine, AI providers with fallback, Home Assistant) | `helper/voice.js` (microphone, recogniser, settings, the phone setup page), `helper/answers.js` (Assist, the AI providers in order: OpenRouter and self-hosted servers, your server), `voice/`; the manager screens in `manager/src/js/screens.js` (AI providers) |
 | Themes | `helper/themeschema.js` (the schema), `helper/theme.js` (downloads), `themes/` (read from GitHub), `docs/themes.md` |
@@ -83,6 +84,13 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 7. **Do not release, tag, force-push or change repository settings.** The maintainer does that. Work on a branch and open the pull request
    against `dev`; once merged, every push to `dev` publishes the dev build (the pre-release `dev`), which people can install from the
    manager app (Update channel > Dev builds). A release goes out from `dev` once a day, unless the file `RELEASE-HOLD` is in the repository root (`tools/release.sh` then releases nothing; delete the file to release again). If `RELEASE-NOTES.md` is in the repository root, `tools/release.sh` uses it as the release notes (sections, credits, pictures from `docs/screenshots/`) instead of the commit subjects and removes it in the release commit: write it as the changes come in.
+
+8. **Tools for AI agents (MCP) are an attack surface.** A tool is what a model, or whoever reaches the network port, can do on the TV with no one
+   watching. A new tool must be needed, read-only where it can be, and take no shell command, file path or service API path from the model.
+   Anything that turns the TV off, deletes, changes a setting or calls out must be marked `confirm` (`destructiveHint`): it then runs only from the
+   voice assistant, after a plain "yes" on the TV, never from the network. A tool that calls an address must refuse the TV itself, also a name
+   that resolves to it; a tool of an add-on reaches only that add-on. Keep the keys and the pairing secrets out of logs and answers. A change needs
+   tests in `tools/test/` (`agent`, `coretools`, `voiceagent`, `devices`) and the pages `docs/agent.md` and `docs/security.md`.
 
 ## Commands
 

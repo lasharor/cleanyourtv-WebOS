@@ -47,11 +47,11 @@ only while an agent is paired or **Connect an agent** shows a code. An agent pai
 tries a minute per address, eight wrong codes take it off) and gets a token of its own (`<id>.<128-bit secret>`). The TV keeps only a
 SHA-256 of each secret, in `config.json` (`mcp.agents`, readable by root only), compares it in constant time and never logs it. With its
 token an agent can call `POST /mcp` (MCP over HTTP, JSON-RPC 2.0): **open apps, switch inputs, show cards and use the tools of the add-ons
-you approved**, nothing else of the service. Tools that turn something off or delete something (`power_off`) are refused from the network.
+you approved**, nothing else of the service. Tools that turn something off or delete something (`power_off`, and every signed tool that is not a plain read: a method other than GET, or `"confirm": true`) are refused from the network: they run only from the voice assistant, after you say a plain "yes" on the TV. The remote's remapped buttons (`remote_buttons press`) can only open an app, an input, Live TV, Home or the picker; none turns the TV off. A signed tool reaches only the add-on that declared it, and an address it calls is refused when it stands for the TV itself, whatever name it is written as.
 Each agent is listed in that screen's **Connected devices** menu and can be blocked, allowed or removed there, all at once with **Remove all devices**; an agent not used
 for two weeks (the default; 1 day to 1 month, or never) is removed by itself. A request that carries an `Origin` header (a web page in a
 browser) is refused, ten wrong codes or tokens lock an address out for ten minutes, and requests are limited to 60 a minute and 64 KB. It is plain
-HTTP: anyone who can watch your network can read a token, so use it on a network you trust. The page behind the QR code shows the code,
+HTTP: anyone who can watch your network can read a token, the pairing code and the page behind the QR code, so use it on a network you trust. The agent add-on's own page (port 8803, for approving sources) listens on the network the same way while you have it open, behind its code; it is a short-lived page like the other add-on pages. The per-address counters (wrong tries, requests a minute) keep at most 500 addresses. The page behind the QR code shows the code,
 not a token. Its address is short to type (`http://<tv>:8802/` and 8 letters and digits, about 40 bits); a wrong address counts as a wrong try, so ten misses shut an address out for ten minutes. Its status (`/<8 characters>/status`, while it is open) tells only the name and address of the agent that paired, when, and whether it has made a call.
 
 ## Themes

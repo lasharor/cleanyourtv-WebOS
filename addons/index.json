@@ -3,7 +3,7 @@
     {
       "id": "agent",
       "name": "Agent tools (MCP)",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "description": "Turns the abilities the TV's apps and add-ons sign into tools the voice assistant and MCP clients can use.",
       "about": "One bridge between the TV and a language model, built on a scheme instead of a fixed list. Installed apps and add-ons sign the scheme with a small tools.json that names their abilities; this add-on turns each into an MCP tool, gives them to the voice assistant and answers list and call over JSON-RPC at /api/addons/agent/mcp. Nothing is used until you approve it: open Set up from your phone and switch on the apps and add-ons whose tools the assistant may use. Tools that turn something off or delete something ask you first, and you say yes on the TV.",
       "preview": "",
@@ -16,11 +16,11 @@
         "luna://com.webos.applicationManager/launch"
       ],
       "files": {
-        "README.md": "4f99509070bc496c524a369aebab2bda6f200d68965db592e2cf00a8864babce",
-        "addon.json": "e4e38edc8a3854b153ac84533faf39ab7df69424b0f4d98583757a98e55a684e",
+        "README.md": "cd1e822f2b4d5bb1718f39f1c64b0ca226f95a27ee64c51887ee60e9c58b32c5",
+        "addon.json": "7b4fb93c3dcf4443fdee2957f7488da5e0b868edd741639be7e7b0f8954570c4",
         "phone.js": "e427d5b68caffe8bbb5bdf1ba08cb4ecd162030efe31763a3579677b471caa32",
         "service.js": "69a222688733986363201b5c2e92de4000ba578aa47cd411170ee2dd352edfee",
-        "tools.js": "515c83df002577387ceb237ae6302478351318355fba3a305f65986fec2bc421"
+        "tools.js": "7094da82e4da0327618eb9782f37adf6b3a6c829aa214c21c34b31622403b292"
       }
     },
     {

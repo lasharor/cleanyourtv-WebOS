@@ -23,7 +23,8 @@ assistant and the service's MCP endpoint `/api/mcp` then offer them. The full pa
 - `name`: a letter, then letters, digits, `_` or `-` (64 at most); `description`: what it does, for the model (300 at most).
 - `inputSchema`: a JSON Schema object, at most 12 arguments, each with a JSON type. The arguments are checked against it.
 - `confirm: true`: the tool turns something off or deletes something. It runs only with `{confirmed: true}`, which the voice assistant
-  passes after the person said yes on the TV; an MCP client cannot pass it.
+  passes after the person said yes on the TV; an MCP client cannot pass it. An `addon` or `http` tool with a `method` other than `GET`
+  is treated as `confirm: true` whatever the file says.
 - At most 16 tools in one file.
 
 `{name}` in the invoke is replaced by that argument: URL-encoded in a `path` or `url`; elsewhere a value that is exactly `{name}`
@@ -34,8 +35,8 @@ keeps the argument's type.
 | kind | Fields | What it does |
 |---|---|---|
 | `app` | `id`, `params` | Launches an installed app, with the given launch parameters. |
-| `addon` | `addon`, `path`, `method`, `body` | Calls that add-on's own endpoint (`/api/addons/<addon><path>`); not the loader's paths, no `..`. |
-| `http` | `url`, `method`, `headers`, `body` | Calls an address. The host is fixed in the file; the TV itself is refused; no redirects. |
+| `addon` | `addon`, `path`, `method`, `body` | Calls that add-on's own endpoint (`/api/addons/<addon><path>`). `addon` must be the id of the source that declares the tool (`addon:<id>` or `file:<id>`); not the loader's paths, not `agent`, no `..`. |
+| `http` | `url`, `method`, `headers`, `body` | Calls an address. The host is fixed in the file; the TV itself is refused, also a name that resolves to it; no redirects. |
 
 ## Sources and approval
 

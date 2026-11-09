@@ -9,20 +9,22 @@
 //
 // Every file that declares tools is a source. A source gives no tools until the person approves it (the add-on's phone page);
 // the approvals are this add-on's settings. A tool marked "confirm" runs only with {confirmed: true}, which the voice assistant
-// passes after the person said yes. Calls to the TV itself (127.0.0.1, localhost, its own address) are refused: the service's
-// API is root, and an add-on tool reaches only its own add-on's paths.
+// passes after the person said yes; a tool that is not a plain read (a method other than GET) is treated as one whatever it
+// declares. Calls to the TV itself (127.0.0.1, localhost, its own address, a name that resolves to one) are refused: the service's
+// API is root, and an add-on tool reaches only the paths of the add-on that declared it.
 //
 // Node 8.12 (webOS 5/6): no optional chaining, no nullish coalescing, no object spread, no fs.promises, no global URL.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
+const dns = require('dns');
 
 const NAME = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/; // a tool name: a letter, then letters, digits, _ and - (what OpenAI-style tools accept)
 const KINDS = ['app', 'addon', 'http'];
 const MAX_PER_SOURCE = 16;
 const MAX_RESULT = 4000;
-const RESERVED = ['catalog', 'install', 'remove', 'sdk', 'book', 'preview', 'repos', 'update']; // paths of the loader, not add-ons
+const RESERVED = ['catalog', 'install', 'remove', 'sdk', 'book', 'preview', 'repos', 'update', 'agent']; // paths of the loader, and this add-on itself (its /approve would let a tool approve sources)
 const SERVICE_URL = process.env.CYTV_AGENT_SERVICE_URL || 'http://127.0.0.1:8765'; // where the add-on kind calls another add-on
 const TYPES = ['string', 'number', 'integer', 'boolean', 'object', 'array'];
 
@@ -64,6 +66,8 @@ function isSelf(host, lanIp) {
     h === '::' ||
     h === '::1' ||
     /^::ffff:127\./.test(h) ||
+    /^::ffff:7f[0-9a-f]{2}:[0-9a-f]{1,4}$/.test(h) ||
+    (!!lanIp && h === '::ffff:' + lanIp) ||
     (!!lanIp && h === lanIp)
   );
 }
@@ -136,7 +140,9 @@ function cleanTool(t, source) {
         properties: props,
         required: Array.isArray(s.required) ? s.required.filter(x => typeof x === 'string') : [],
       },
-      confirm: t.confirm === true,
+      // a tool that changes something asks first, whatever the declaration says: an app launch and a GET are the only ones that
+      // may run without a yes, and a declaration may still ask for more
+      confirm: t.confirm === true || (inv.kind !== 'app' && String(inv.method || 'GET').toUpperCase() !== 'GET'),
       invoke: inv,
     },
   };
@@ -213,6 +219,26 @@ const noBreaks = h => {
   return o;
 };
 
+// an add-on tool may call only the add-on that declared it: the source is addon:<id> (its own folder) or file:<id> (a declaration
+// dropped for that add-on). An app's declaration, or any other name, may not reach an add-on's endpoints
+function ownsAddon(sourceKey, addon) {
+  const m = /^(?:addon|file):(.+)$/.exec(String(sourceKey || ''));
+  return !!m && m[1] === addon;
+}
+function foreignAddonTool(src) {
+  const bad = src.tools.filter(t => t.invoke.kind === 'addon' && !ownsAddon(src.key, t.invoke.addon))[0];
+  return bad
+    ? src.key + ': tool ' + bad.name + " may call only its own add-on's paths (the source must be addon:" + bad.invoke.addon + ')'
+    : '';
+}
+
+// the addresses a host name stands for ([] when it does not resolve); an address given as such is its own answer
+function resolveHost(host) {
+  return new Promise(resolve => {
+    dns.lookup(host, { all: true }, (e, list) => resolve(e || !Array.isArray(list) ? [] : list.map(x => x.address)));
+  });
+}
+
 function registry(ctx) {
   ctx = ctx || {};
   const here = path.dirname(ctx.dir || __dirname); // the folder installed add-ons live in (ctx.dir is this add-on's own)
@@ -226,6 +252,7 @@ function registry(ctx) {
     luna: ctx.luna || null,
     fetch: ctx.fetch || null,
     log: ctx.log || (() => {}),
+    resolve: ctx.resolve || resolveHost,
     lanIp: () => {
       try {
         return ctx.util && ctx.util.lanIp ? ctx.util.lanIp() : '';
@@ -259,6 +286,9 @@ function registry(ctx) {
       const r = readTools(f);
       found.push({ key: 'file:' + m[1], kind: 'file', id: m[1], file: f, tools: r.tools || [], error: r.error || '' });
     }
+    found.forEach(src => {
+      if (!src.error) src.error = foreignAddonTool(src);
+    });
     const ok = approvals();
     index = {};
     errors = found.filter(s => s.error).map(s => s.error);
@@ -339,6 +369,7 @@ function registry(ctx) {
       const body = inv.body !== undefined ? interp(inv.body, a) : undefined;
       if (inv.kind === 'addon') {
         if (!deps.fetch) return failTool('calling an add-on needs the network permission');
+        if (!ownsAddon(e.source, inv.addon)) return failTool("a tool may call only its own add-on's paths");
         const p = interp(inv.path, a, true);
         if (/\.\./.test(p)) return failTool('the path may not contain ..');
         const r = await deps.fetch.read(SERVICE_URL + '/api/addons/' + inv.addon + p, {
@@ -354,11 +385,36 @@ function registry(ctx) {
       }
       // http: the host is the declaration's; check it again with the TV's address now known
       if (!deps.fetch) return failTool('calling an address needs the network permission');
-      const u = interp(inv.url, a, true);
-      if (isSelf(url.parse(u).hostname, deps.lanIp())) return failTool('an http tool may not call the TV itself');
+      let u = interp(inv.url, a, true);
+      const lan = deps.lanIp(),
+        pu = url.parse(u),
+        headers = noBreaks(interp(inv.headers || {}, a));
+      if (isSelf(pu.hostname, lan)) return failTool('an http tool may not call the TV itself');
+      // a name that points at the TV (a DNS name for 127.0.0.1 or its own address, or the address written another way) is the TV too
+      const addrs = await deps.resolve(String(pu.hostname).replace(/^\[|\]$/g, ''));
+      if (!addrs.length) return failTool('the address does not resolve');
+      if (addrs.some(x => isSelf(x, lan))) return failTool('an http tool may not call the TV itself');
+      if (pu.protocol === 'http:') {
+        // plain http: connect to the address that was just checked, so the name cannot change its answer in between. (An https
+        // call to the TV fails on its own: the service answers plain http only.)
+        const pick = addrs.filter(x => x.indexOf(':') < 0)[0] || addrs[0];
+        Object.keys(headers).forEach(k => {
+          if (k.toLowerCase() === 'host') delete headers[k];
+        });
+        headers.host = pu.host;
+        u = url.format({
+          protocol: pu.protocol,
+          slashes: true,
+          auth: pu.auth,
+          hostname: pick,
+          port: pu.port,
+          pathname: pu.pathname,
+          search: pu.search,
+        });
+      }
       const r = await deps.fetch.read(u, {
         method: method,
-        headers: noBreaks(interp(inv.headers || {}, a)),
+        headers: headers,
         body: body,
         maxBytes: 1 << 20,
         idleMs: 30000,

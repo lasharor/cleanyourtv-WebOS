@@ -92,7 +92,8 @@ default; off, the AI only answers questions as before. Then:
 
 A tool that turns something off or deletes something (`power_off`, or a signed tool with `"confirm": true`) never runs on the
 model's word. The TV shows **Turn the TV off? Say yes within 30 seconds to go ahead.** Hold the mic and say "yes" (also "yeah",
-"ok", "do it", "go ahead"): the TV runs it without asking the model again. Anything else, or 30 seconds of silence, drops it.
+"ok", "do it", "go ahead", "confirm", with or without "please"): the TV runs it without asking the model again. The whole reply must be
+the yes: "okay, what's the weather" or "sure, why not" is not one. Anything else, or 30 seconds of silence, drops it.
 
 Some OpenRouter models cannot use tools. The voice setup page marks the ones that can (**can act**). With a model that cannot, the TV
 asks once more without tools and the AI only answers.
@@ -202,7 +203,9 @@ a `tools.json`. The add-on knows no app by name; it reads the declarations and g
 
 - `name`: a letter, then letters, digits, `_` or `-` (64 at most). `description`: what it does, for the model (300 characters).
 - `inputSchema`: a JSON Schema object; at most 12 arguments, each with a JSON type.
-- `confirm`: `true` for a tool that turns something off or deletes something: it then runs only after a yes.
+- `confirm`: `true` for a tool that turns something off or deletes something: it then runs only after a yes. A tool that is not a plain
+  read asks for the yes whatever it declares: every `addon` or `http` tool with a `method` other than `GET` (POST, PUT, PATCH, DELETE) is
+  treated as `confirm: true`. Only a GET and an app launch run without one.
 - At most 16 tools in one file.
 
 A `{name}` in the invoke is replaced by that argument. In a `path` or `url` the argument is URL-encoded; elsewhere a value that is
@@ -211,8 +214,8 @@ exactly `{name}` keeps the argument's type.
 | kind | Fields | What it does |
 |---|---|---|
 | `app` | `id`, `params` | Launches the app with launch parameters. |
-| `addon` | `addon`, `path`, `method`, `body` | Calls that add-on's own endpoint, `/api/addons/<addon><path>`. The loader's paths (`install`, `remove`, `repos`, `update`, `catalog`) and `..` are refused. |
-| `http` | `url`, `method`, `headers`, `body` | Calls an address. The scheme and host are fixed in the file (no `{argument}` there); the TV itself (127.0.0.1, localhost, its own address) is refused, and redirects are not followed. |
+| `addon` | `addon`, `path`, `method`, `body` | Calls that add-on's own endpoint, `/api/addons/<addon><path>`. A tool reaches only the add-on that declared it: `addon` must be the id of its own source (`addon:<id>`, or a `file:<id>` named after the add-on); a source with a tool for another add-on is refused whole, and so is an app's declaration. The loader's paths (`install`, `remove`, `repos`, `update`, `catalog`), the agent add-on itself and `..` are refused. |
+| `http` | `url`, `method`, `headers`, `body` | Calls an address. The scheme and host are fixed in the file (no `{argument}` there); the TV itself (127.0.0.1, localhost, its own address) is refused, also when a name resolves to one (the call checks every address the name stands for), and redirects are not followed. A plain `http://` call connects to the address that was checked, with the name as `Host`; an `https://` call to the TV fails on its own, since the service speaks plain HTTP only. |
 
 ### Where it looks
 

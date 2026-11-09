@@ -284,7 +284,8 @@ const MAX_ROUNDS = 5, // every tool goes with every question (at most toolhub.MA
 const AGENT_SYSTEM =
   'You are a voice assistant on a television, and you can act on the TV with the tools you are given. Use a tool when the user asks you to do something on the TV, or asks about something a tool can look up; otherwise answer from your own knowledge, and say when something may be out of date. The user speaks to you through the remote control and your answer appears as text on the screen, so keep it short: one to three plain sentences, no markdown, no lists, no emoji. After using a tool, say in one short sentence what you did or found; if a tool fails, say so plainly. If the speech looks like a recognition mistake, answer what was most likely meant.';
 const today = () => ' Today is ' + new Date().toISOString().slice(0, 10) + '.';
-const YES = /^(yes|yeah|yep|yup|sure|ok|okay|do it|go ahead|confirm)\b/i;
+// the whole reply must be a yes: "okay, what's the weather" or "sure, why not" is not one (it would run a tool that turns the TV off)
+const YES = /^\s*(yes|yeah|yep|yup|sure|ok|okay|do it|go ahead|confirm)(\s*,?\s*please)?[\s.!]*$/i;
 let pending = null; // {provider, name, args, description, at}: a tool that waits for the person's yes
 
 // the tools /api/mcp lists, with the tool settings applied (deps.merged: toolhub's own list; a tool that is off is left out), as

@@ -34,6 +34,17 @@ function create(store, opts) {
     label = opts.label || 'device';
   let win = null; // {id, code, until, wrong, paired: {id, name, ip, at}}
   const tries = new Map(); // ip -> {n, t}
+
+  // the per-address counters keep an address only while it matters: past 500 addresses, the ones whose window is over go, and the oldest
+  // if that is not enough
+  function trim(map, windowMs) {
+    if (map.size <= 500) return;
+    const now = Date.now();
+    map.forEach((v, k) => {
+      if (now - v.t > windowMs) map.delete(k);
+    });
+    while (map.size > 500) map.delete(map.keys().next().value);
+  }
   const seenAt = {}; // id -> last time "seen" was saved
 
   const state = () => {
@@ -82,6 +93,7 @@ function create(store, opts) {
       return { error: 'too many tries: wait a minute', status: 429 };
     }
     tries.set(ip, t);
+    trim(tries, 60000);
     if (!windowOpen() || win.paired)
       return { error: 'no code is open on the TV, or it was used already: show a new code on the TV', status: 403 };
     if (typeof code !== 'string' || code.length !== win.code.length || !same(code, win.code)) {

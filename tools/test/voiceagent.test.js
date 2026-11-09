@@ -146,6 +146,17 @@ run(async () => {
   await A.askLlm('turn off the tv');
   ok((await A.confirmPending('Yes please')) === 'Done.', '"yes" runs it');
   ok(calls.length === 1 && calls[0].name === 'power_off' && calls[0].opts.confirmed === true, 'with confirmed: true, without the model');
+  for (const said of ["okay what's the weather", 'sure, why not', 'yes turn it up']) {
+    script = [{ content: null, tool_calls: [tc('power_off', {})] }];
+    await A.askLlm('turn off the tv');
+    ok(
+      (await A.confirmPending(said)) === 'Okay, I did not do that.' && calls.length === 1,
+      'a yes with more after it is not a yes: ' + said
+    );
+  }
+  script = [{ content: null, tool_calls: [tc('power_off', {})] }];
+  await A.askLlm('turn off the tv');
+  ok((await A.confirmPending('Okay.')) === 'Done.' && calls.length === 2, 'a plain "okay." is');
 
   // ---- with the AI providers (#208): only OpenRouter gets the tools, and a tool that ran is not done again by the next one ----
   const srv = { id: 'p1', type: 'server', base: ai.url, model: 'srv' },
