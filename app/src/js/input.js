@@ -142,15 +142,18 @@ function pointerEdgeClick(ev) {
 }
 document.addEventListener('click', pointerEdgeClick);
 
+function pointerKeyPress(k) {
+  /* 1536 and 1537 describe the pointer showing and hiding; they are not remote button presses. */
+  if (k === 1536 || k === 1537) return;
+  pointerEdgeFocus = false;
+  lastKey = Date.now();
+  pointerLive = false;
+}
 document.addEventListener('keydown', function (e) {
   var k = e.keyCode;
   /* a right-to-left layout: Left moves to what is on the left, which is the next tile in the row (Live TV keeps left-to-right) */
   if (rtl() && !LIVE.on && (k === 37 || k === 39)) k = 76 - k;
-  /* 1536 and 1537: webOS's keys for the pointer showing and hiding, not a button of the remote */
-  if (k !== 1536 && k !== 1537) {
-    lastKey = Date.now();
-    pointerLive = false;
-  }
+  pointerKeyPress(k);
   /* a card's sheet has the keys while it is open (it undoes the swap above itself) */
   if (CS.on) {
     csKey(k, e);

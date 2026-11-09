@@ -21,6 +21,7 @@ function source(js, name) {
 run(async () => {
   const js = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'menus.js'), 'utf8');
   const theme = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'theme.js'), 'utf8');
+  const homeCss = fs.readFileSync(path.join(root, 'app', 'src', 'css', 'home.css'), 'utf8');
 
   // ---- hovering a menu row ----
   const hv = {};
@@ -231,6 +232,33 @@ run(async () => {
   ok(
     click.pointerEdgeClick({ target: { closest: () => 'tile' }, preventDefault() {} }) === false && opened.length === 1,
     'a click that lands on a real tile is left to that tile'
+  );
+
+  // ---- a real remote key cancels the one blank click that belongs to pointer edge focus ----
+  const key = {
+    pointerEdgeFocus: true,
+    lastKey: 0,
+    pointerLive: true,
+    Date: { now: () => 1234 },
+  };
+  vm.createContext(key);
+  vm.runInContext(source(inp, 'pointerKeyPress'), key, { filename: 'pointerKeyPress' });
+  key.pointerKeyPress(40);
+  ok(
+    key.pointerEdgeFocus === false && key.lastKey === 1234 && key.pointerLive === false,
+    'a remote key clears pointer edge focus and records ordinary key input'
+  );
+  key.pointerEdgeFocus = true;
+  key.pointerKeyPress(1536);
+  ok(key.pointerEdgeFocus === true, 'the pointer-show event is not treated as a remote key press');
+
+  const focusRule = homeCss.match(/\[data-theme="moon"\] #tile-focus \{([\s\S]*?)\n\}/);
+  ok(
+    focusRule &&
+      /transition:\s*transform/.test(focusRule[1]) &&
+      /opacity calc/.test(focusRule[1]) &&
+      !/(width|height|border-radius) calc/.test(focusRule[1]),
+    'the Moon focus frame animates only transform and opacity'
   );
 
   // ---- Moon's shared focus frame follows the selected tile without becoming another target ----

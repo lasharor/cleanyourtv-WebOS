@@ -573,9 +573,6 @@ body {
   pointer-events: none;
   transition:
     transform calc(0.3s * var(--spd)) cubic-bezier(0.2, 0.85, 0.3, 1),
-    width calc(0.3s * var(--spd)) cubic-bezier(0.2, 0.85, 0.3, 1),
-    height calc(0.3s * var(--spd)) cubic-bezier(0.2, 0.85, 0.3, 1),
-    border-radius calc(0.3s * var(--spd)) linear,
     opacity calc(0.15s * var(--spd)) linear;
 }
 #grid .tile.sys {

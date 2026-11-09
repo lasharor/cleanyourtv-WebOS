@@ -13,24 +13,24 @@ same on every supported webOS version.
   Channel or the LG store) appears within a few seconds by itself, also while Home is on screen; one you never opened yet sorts last
   when the grid is sorted by use.
 - **Top buttons.** Inputs, Live TV (your playlist), TV (LG's own tuner), Settings and Customise, and a clock. The buttons you see are
-  yours to change.
+yours to change.
 - **Open apps.** Optionally a green dot on the tile of every app that is open, as on the active input in the Inputs list: off by
   default, **Customise** > **Mark running apps** switches it on, in the launcher and in the Inputs picker. Back on the home screen lists
   the open apps to close them (see [Running apps](#running-apps)).
 
 ## Keys
 
-| Action                                          | How                                           |
-| ----------------------------------------------- | --------------------------------------------- |
-| Open an app                                     | OK                                            |
-| App options (move, dock, icon, hide, uninstall) | Hold OK on an app                             |
-| Move or remove a top button                     | Hold OK on it                                 |
-| Customise                                       | The **Customise** button                      |
-| Live TV                                         | The **Live TV** button or tile                |
-| LG's own Live TV (the tuner)                    | A **TV** button, or **TV** in the Inputs list |
-| Switch input                                    | The **Inputs** button                         |
-| Put an input on Home                            | Hold OK on it in the Inputs list              |
-| Close running apps                              | Back on the home screen                       |
+| Action | How |
+|---|---|
+| Open an app | OK |
+| App options (move, dock, icon, hide, uninstall) | Hold OK on an app |
+| Move or remove a top button | Hold OK on it |
+| Customise | The **Customise** button |
+| Live TV | The **Live TV** button or tile |
+| LG's own Live TV (the tuner) | A **TV** button, or **TV** in the Inputs list |
+| Switch input | The **Inputs** button |
+| Put an input on Home | Hold OK on it in the Inputs list |
+| Close running apps | Back on the home screen |
 
 The Magic Remote pointer works too: pointing and clicking, and holding the button on an app for its options. The wheel moves from tile to tile on the
 home screen (along the dock, then the grid row by row) and up and down in every menu, where the list scrolls one row at a time and, under the pointer, only when it reaches the first or last row on show.
@@ -75,7 +75,7 @@ In detail:
 - the **dock**: each app in it can be replaced (an app already in the dock swaps places), moved or removed, and **Add an app...**
   fills a free place. Holding OK on an app gives **Move** (to rearrange tiles interactively with arrow keys and confirm with OK), **Add to dock** or **Remove from dock**, **Change icon** and **Reset icon** (see [Your own icon](#your-own-icon)), **Hide app** and **Uninstall** (with a confirmation prompt, for user-installed LG Store and Homebrew apps);
 - the **top buttons**: move one left or right, remove it, or add Inputs, Settings, Live TV, TV, **Power off** or any app. **TV** opens LG's own Live TV (the
-  tuner) and is offered only when the TV has that app and **Show LG's own Live TV** is on in the manager;
+tuner) and is offered only when the TV has that app and **Show LG's own Live TV** is on in the manager;
   **Power off** asks first and then switches the TV off completely, unlike the remote's power key, which only suspends it (Quick Start+).
   The next start is a cold boot, so it takes longer, and Wake-on-LAN no longer wakes the TV;
 - **hidden apps** (show them again);
@@ -89,6 +89,7 @@ In detail:
 
 Putting the dock, buttons, hidden apps, order and clock back to the defaults is in the manager app: **Reset Home customisation**.
 
+
 ## Cards
 
 Cards are set up in the [manager app](manager.md), **Cards**. Themes with places for cards (**Lock Screen**, **Bloom** and **Horizon**)
@@ -100,15 +101,15 @@ same place.
 
 **Cards that come with an add-on** need more than a template: data from the internet, or buttons for the remote. The **Weather forecast** add-on (Add-ons > Get more) brings a weather card (the temperature and the sky now, with the next days where there is room) that adapts to the size of its place: the whole card is one button, and OK (or a click) opens a drawer at the right edge with **Now** (feels like, humidity, wind, UV, pressure, air quality, sunrise and sunset), **Hours** and **Days**; Back closes it. The city, the unit (°C or °F) and the size are set on the TV, in **Customise** > **Top & cards** > **Weather** (a row the launcher shows for any card of an add-on that declares settings, here once the add-on is installed): **City** is typed with the TV's keyboard and searched by name (OK searches, then pick the city from the list), and the setting is shared by every place that shows the card. **More on your phone** opens the QR code of the cards page in the manager app (the same as **Cards** > **Set up from your phone**). While no city is set, the card says so and is one button: hover it, or press OK or click, and its settings open. The drawer and the settings panel are declared by the add-on's card; the launcher only shows them and owns the keys (see [A drawer and settings](development/addons.md#a-drawer-and-settings)). The **Spotify now playing** add-on brings a card with the cover, title and artist of what plays on your Spotify account with a thin progress bar and buttons for previous, play or pause, next and the output (Premium for the buttons). The cover opens the Spotify app of the TV on the song that plays; the output button lists the devices of your Spotify account (and the speakers of the network that sleep, which it wakes) to move the music to. A title that is too long runs sideways instead of being cut. It is set up from the phone (Add-ons > Spotify now playing > Set up from your phone) with your own Spotify developer app. The card shows only what the add-on's service hands it; it runs in the same closed frame as the other page cards (no network). See [Add-ons](development/addons.md#providing-something-to-the-service-cards). The **Jellyfin continue watching** add-on brings a row with where you were on your Jellyfin server, with the pictures and a bar for how far you got; OK on one opens your Jellyfin app (Jellyfin, Litefin or Moonfin), and Litefin opens that title itself. It is set up from the phone too (Add-ons > Jellyfin continue watching > Set up from your phone). The card shows only what the add-on's service hands it; it runs in the same closed frame as the other page cards (no network). See [Add-ons](development/addons.md#providing-something-to-the-service-cards).
 
-| Card                    | What it shows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Greeting                | Good morning, afternoon or evening, with your name if you set one, and the date or the weather on a second line where there is room.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Weather                 | The temperature and the sky now at a city you choose in Customise > Top & cards > Weather or on the phone page, from Open-Meteo (free, no account); °C or °F. **Look** chooses Minimal (the temperature, the sky, a line of words) or Rich (the next hours as well). OK on the card opens a drawer from the right with Now (rain, feels like, wind, UV, humidity, pressure, air quality, sun), Hours (the next 24) and Days (the next seven). The card only appears with the Weather add-on installed. The TV asks at most every 30 minutes and keeps the last answer for when the internet is away. |
-| Home Assistant entity   | One entity with an icon, its state (On, Off, 8.4 °C) and its name. Select it with the remote (it joins the row of top buttons) and press OK to switch a light, switch, fan or automation, or to run a scene or script. Locks, alarms and covers are never switched from the TV.                                                                                                                                                                                                                                                                                                                      |
-| Home Assistant entities | A list of entities, one per line on the phone page, with an optional title. Under **Card background**, keep the theme default or choose **Dark background** for better contrast over bright wallpapers.                                                                                                                                                                                                                                                                                                                                                                                              |
-| Home Assistant camera   | A camera's picture, renewed every 10, 30 or 60 seconds while Home is shown.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Home Assistant weather  | A `weather.*` entity: the sky now with an icon, the temperature (from an outside temperature sensor if you choose one, otherwise the entity's own), humidity and wind, and the forecast for the next days or hours from `weather.get_forecasts` (Home Assistant 2023.9 and newer; older versions are read from the `forecast` attribute). Asked every five minutes, the forecast at most every 15 minutes. It also feeds `{{weather.temp}}`, `{{weather.text}}` and the greeting's weather line.                                                                                                     |
-| Text                    | Your own text. `{{greeting}}`, `{{time}}`, `{{date}}` and `{{weekday}}` are filled in and kept up to date, and `{{weather.temp}}` and `{{weather.text}}` with a weather card on Home; `**bold**`, `*italic*` and a line starting with `#` for a heading. In three sizes.                                                                                                                                                                                                                                                                                                                             |
+| Card | What it shows |
+|---|---|
+| Greeting | Good morning, afternoon or evening, with your name if you set one, and the date or the weather on a second line where there is room. |
+| Weather | The temperature and the sky now at a city you choose in Customise > Top & cards > Weather or on the phone page, from Open-Meteo (free, no account); °C or °F. **Look** chooses Minimal (the temperature, the sky, a line of words) or Rich (the next hours as well). OK on the card opens a drawer from the right with Now (rain, feels like, wind, UV, humidity, pressure, air quality, sun), Hours (the next 24) and Days (the next seven). The card only appears with the Weather add-on installed. The TV asks at most every 30 minutes and keeps the last answer for when the internet is away. |
+| Home Assistant entity | One entity with an icon, its state (On, Off, 8.4 °C) and its name. Select it with the remote (it joins the row of top buttons) and press OK to switch a light, switch, fan or automation, or to run a scene or script. Locks, alarms and covers are never switched from the TV. |
+| Home Assistant entities | A list of entities, one per line on the phone page, with an optional title. Under **Card background**, keep the theme default or choose **Dark background** for better contrast over bright wallpapers. |
+| Home Assistant camera | A camera's picture, renewed every 10, 30 or 60 seconds while Home is shown. |
+| Home Assistant weather | A `weather.*` entity: the sky now with an icon, the temperature (from an outside temperature sensor if you choose one, otherwise the entity's own), humidity and wind, and the forecast for the next days or hours from `weather.get_forecasts` (Home Assistant 2023.9 and newer; older versions are read from the `forecast` attribute). Asked every five minutes, the forecast at most every 15 minutes. It also feeds `{{weather.temp}}`, `{{weather.text}}` and the greeting's weather line. |
+| Text | Your own text. `{{greeting}}`, `{{time}}`, `{{date}}` and `{{weekday}}` are filled in and kept up to date, and `{{weather.temp}}` and `{{weather.text}}` with a weather card on Home; `**bold**`, `*italic*` and a line starting with `#` for a heading. In three sizes. |
 
 The single entity and entity list cards use an entity's `mdi:` icon when Home Assistant provides it and the bundled icon set contains it. Otherwise they use the standard icon for that entity type.
 The launcher loads the bundled icon map when a card first needs an MDI icon.
@@ -203,15 +204,15 @@ chosen in the manager app.
 
 Settings are stored on the TV in `/media/developer/cleanyourtv/config.json`:
 
-| Key            | Meaning                                                                                                  |
-| -------------- | -------------------------------------------------------------------------------------------------------- |
-| `dock`         | App ids in the dock (up to four).                                                                        |
-| `topbar`       | The buttons at the top.                                                                                  |
-| `hidden`       | App ids you hid.                                                                                         |
+| Key | Meaning |
+|---|---|
+| `dock` | App ids in the dock (up to four). |
+| `topbar` | The buttons at the top. |
+| `hidden` | App ids you hid. |
 | `pinnedInputs` | The inputs on Home: `{id, label, port}`, `id` being the input's app (for example `com.webos.app.hdmi2`). |
-| `sort`         | `usage` or `alpha`.                                                                                      |
-| `clock`        | `auto`, `12` or `24`.                                                                                    |
-| `runDots`      | `true` shows a green dot on open apps (off by default).                                                  |
+| `sort` | `usage` or `alpha`. |
+| `clock` | `auto`, `12` or `24`. |
+| `runDots` | `true` shows a green dot on open apps (off by default). |
 
 See [`config.example.json`](https://github.com/lasharor/cleanyourtv-WebOS/blob/main/config.example.json). Change settings in
 the launcher; the file is read and written by the service.
