@@ -561,6 +561,41 @@ body {
 #grid .tile.f {
   transform: scale(var(--grid-fs));
 }
+/* Moon uses one warm glass frame that slides between the focused dock and grid tiles. */
+[data-theme="moon"] #dock .tile.f::before,
+[data-theme="moon"] #grid .tile.f::before {
+  display: none;
+}
+[data-theme="moon"] .tile.fill.f {
+  box-shadow: 0 24px 36px rgba(0, 0, 0, 0.6);
+}
+#tile-focus {
+  display: none;
+}
+[data-theme="moon"] #tile-focus {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 8;
+  display: block;
+  box-sizing: border-box;
+  border: 4px solid rgba(var(--focus-c, 241, 182, 111), 0.94);
+  background: linear-gradient(
+    125deg,
+    rgba(var(--focus-c, 241, 182, 111), 0.2),
+    rgba(var(--focus-c, 241, 182, 111), 0.065) 45%,
+    rgba(255, 255, 255, 0.015) 68%
+  );
+  box-shadow:
+    0 26px 44px rgba(0, 0, 0, 0.58),
+    0 0 20px rgba(var(--focus-c, 241, 182, 111), 0.7),
+    inset 0 0 12px rgba(var(--focus-c, 241, 182, 111), 0.24);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform calc(0.3s * var(--spd)) cubic-bezier(0.2, 0.85, 0.3, 1),
+    opacity calc(0.15s * var(--spd)) linear;
+}
 #grid .tile.sys {
   flex-direction: column;
 }
@@ -2893,7 +2928,7 @@ var TH0 = {
   themeStrip = null /* the page strip's look and place in this theme (addons.js); null: the defaults */,
   lastTheme = null,
   themeKeys = [],
-  themeAttrs = ['data-bar', 'data-labels', 'data-clock', 'data-grid', 'data-galign', 'data-cstyle', 'data-cards'];
+  themeAttrs = ['data-theme', 'data-bar', 'data-labels', 'data-clock', 'data-grid', 'data-galign', 'data-cstyle', 'data-cards'];
 function applyTheme(t) {
   var st = document.documentElement.style,
     b = document.body,
@@ -2910,6 +2945,7 @@ function applyTheme(t) {
     if (window.SCENES) SCENES.apply(null);
     return;
   }
+  b.setAttribute('data-theme', t.id || '');
   for (k in t.vars) {
     st.setProperty(k, t.vars[k]);
     themeKeys.push(k);
@@ -3032,6 +3068,7 @@ function setFocus(nr, nc, first) {
   var e = rows[r][c];
   e.classList.add('f');
   updateFocusArt(e);
+  moonTileFocus(e);
   var a = e._a,
     nm = a ? a.title : e._o ? barLabel(e._o) : '',
     n = $('name');
@@ -3068,6 +3105,47 @@ function setFocus(nr, nc, first) {
     sh = Math.min(0, Math.max(50 - (gt + (r - 2) * (TH.tileH + TH.gapY)), TH.viewH - 54 - (gt + gr * TH.tileH + (gr - 1) * TH.gapY)));
   } /* row height + gap from the theme: no layout reads */
   $('scroll').style.transform = sh ? 'translateY(' + sh + 'px)' : '';
+}
+
+/* Moon uses one glass frame that travels between the dock and app rows. A single element makes the movement continuous instead of
+   fading one tile's ring out and another tile's ring in. It is visual only and never joins the remote's focus rows. */
+function moonTileFocus(e) {
+  var sc = $('scroll'),
+    dock = $('dock'),
+    grid = $('grid'),
+    frame = $('tile-focus'),
+    parent = e && e.parentNode;
+  if (!frame) {
+    frame = document.createElement('div');
+    frame.id = 'tile-focus';
+    sc.appendChild(frame);
+  }
+  if (document.body.getAttribute('data-theme') !== 'moon' || !e || (parent !== dock && parent !== grid)) {
+    frame.style.opacity = '0';
+    return;
+  }
+  var cs = window.getComputedStyle(e),
+    sr = sc.getBoundingClientRect(),
+    er = e.getBoundingClientRect(),
+    currentW = er.width || er.right - er.left,
+    currentH = er.height || er.bottom - er.top,
+    isDock = parent === dock,
+    scale = parseFloat(cs.getPropertyValue(isDock ? '--dock-fs' : '--grid-fs')) || 1,
+    lift = isDock ? parseFloat(cs.getPropertyValue('--dock-lift')) || 0 : 0,
+    baseW = e.offsetWidth,
+    baseH = e.offsetHeight,
+    ew = baseW * scale,
+    eh = baseH * scale,
+    x = er.left - sr.left - (ew - currentW) / 2,
+    y = er.top - sr.top - (eh - currentH) / 2 + lift,
+    radius = parseFloat(cs.borderRadius) || 0,
+    pad = 4;
+  frame.style.width = Math.round(ew + pad * 2) + 'px';
+  frame.style.height = Math.round(eh + pad * 2) + 'px';
+  frame.style.borderRadius = Math.round(radius * scale + pad) + 'px';
+  frame.style.setProperty('--focus-c', e.style.getPropertyValue('--c') || '241,182,111');
+  frame.style.opacity = '1';
+  frame.style.transform = 'translate(' + Math.round(x - pad) + 'px,' + Math.round(y - pad) + 'px)';
 }
 function mapCol(from, to, col) {
   return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;
@@ -7280,6 +7358,39 @@ function options(e) {
   else if (e._o && !e._o.fixed) barMenu(e._o);
 }
 
+/* A push or overlay grid starts outside the visible Home layout. The pointer cannot hover a tile there, so crossing the empty edge below
+   the dock opens the first row, just like Down. Once the grid is open, crossing a row edge moves between rows and back to the dock. */
+var pointerEdgeFocus = false;
+function pointerRowMove(ev, dy) {
+  if (!(TH.push || TH.overlay) || !rows[r] || !rows[r][c]) return false;
+  if (r === 1 && dy > 0 && rows[2] && rows[2].length) {
+    var dockBox = $('dock').getBoundingClientRect();
+    if (ev.clientY > dockBox.bottom + 8) {
+      pointerEdgeFocus = true;
+      setFocus(2, mapCol(rows[1].length, rows[2].length, c));
+      return true;
+    }
+  }
+  if (r >= 2 && dy > 0 && r < rows.length - 1 && rows[r + 1] && rows[r + 1].length) {
+    var rowBox = rows[r][c].getBoundingClientRect();
+    if (ev.clientY > rowBox.bottom + 8) {
+      pointerEdgeFocus = true;
+      setFocus(r + 1, mapCol(rows[r].length, rows[r + 1].length, c));
+      return true;
+    }
+  }
+  if (r >= 2 && dy < 0) {
+    var currentBox = rows[r][c].getBoundingClientRect(),
+      up = r === 2 ? 1 : r - 1;
+    if (ev.clientY < currentBox.top - 8 && rows[up] && rows[up].length) {
+      pointerEdgeFocus = true;
+      setFocus(up, mapCol(rows[r].length, rows[up].length, c));
+      return true;
+    }
+  }
+  return false;
+}
+
 /* Pointer focus follows real pointer movement only: a tile sliding under a still cursor, a cursor jitter when
    the remote is picked up, or a pointer move right after a button press must not steal the focus. The first move after a button press
    needs 24 px; after that every move of 4 px or more counts, so a cursor that comes to rest over a tile always focuses it (before, a
@@ -7321,22 +7432,46 @@ document.addEventListener('mousemove', function (ev) {
   seenActivity(); /* the pointer of the remote: the TV is being used */
   if (stack.length || LIVE.on || PAGER.on || CS.on) return;
   if (cursorEvents ? !pointerShown : Date.now() - lastKey < 1500) return;
+  var dy = lastMX < 0 ? 0 : ev.clientY - lastMY;
   if (!pointerMoved(ev.clientX, ev.clientY)) return;
   var el = ev.target.closest ? ev.target.closest('.tile,.pill,.card-btn') : null,
     p = el && posOf(el);
-  if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
+  if (p) {
+    pointerEdgeFocus = false;
+    if (!(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
+  } else pointerRowMove(ev, dy);
 });
 
+/* The Magic Remote's wheel click is a mouse click while the pointer is visible. After an edge crossing, the pointer itself is still in
+   the empty edge rather than over the focused tile, so let that one blank click open the tile selected by the crossing. */
+function pointerEdgeClick(ev) {
+  if (!pointerEdgeFocus || stack.length || LIVE.on || PAGER.on || CS.on || moving) return false;
+  var el = ev.target.closest ? ev.target.closest('.tile,.pill,.card-btn') : null;
+  if (el) {
+    pointerEdgeFocus = false;
+    return false;
+  }
+  if (!rows[r] || !rows[r][c]) return false;
+  pointerEdgeFocus = false;
+  act(rows[r][c]);
+  ev.preventDefault();
+  return true;
+}
+document.addEventListener('click', pointerEdgeClick);
+
+function pointerKeyPress(k) {
+  /* 1536 and 1537 describe the pointer showing and hiding; they are not remote button presses. */
+  if (k === 1536 || k === 1537) return;
+  pointerEdgeFocus = false;
+  lastKey = Date.now();
+  pointerLive = false;
+}
 document.addEventListener('keydown', function (e) {
   var k = e.keyCode;
   seenActivity();
   /* a right-to-left layout: Left moves to what is on the left, which is the next tile in the row (Live TV keeps left-to-right) */
   if (rtl() && !LIVE.on && (k === 37 || k === 39)) k = 76 - k;
-  /* 1536 and 1537: webOS's keys for the pointer showing and hiding, not a button of the remote */
-  if (k !== 1536 && k !== 1537) {
-    lastKey = Date.now();
-    pointerLive = false;
-  }
+  pointerKeyPress(k);
   /* a card's sheet has the keys while it is open (it undoes the swap above itself) */
   if (CS.on) {
     csKey(k, e);
