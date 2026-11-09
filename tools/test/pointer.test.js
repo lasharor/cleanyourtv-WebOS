@@ -298,7 +298,7 @@ run(async () => {
     made[0].style.width === '437px' &&
       made[0].style.height === '231px' &&
       made[0].style.borderRadius === '40px' &&
-      made[0].style.transform === 'translate(102px,244px)',
+      made[0].style.transform === 'translate(102px,230px)',
     'the Moon dock frame uses the final lift and scale even while the tile is still animating'
   );
   moon.document.body.getAttribute = () => 'classic';

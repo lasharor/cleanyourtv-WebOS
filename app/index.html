@@ -3089,13 +3089,15 @@ function moonTileFocus(e) {
     er = e.getBoundingClientRect(),
     currentW = er.width || er.right - er.left,
     currentH = er.height || er.bottom - er.top,
-    scale = parseFloat(cs.getPropertyValue(parent === dock ? '--dock-fs' : '--grid-fs')) || 1,
+    isDock = parent === dock,
+    scale = parseFloat(cs.getPropertyValue(isDock ? '--dock-fs' : '--grid-fs')) || 1,
+    lift = isDock ? parseFloat(cs.getPropertyValue('--dock-lift')) || 0 : 0,
     baseW = e.offsetWidth,
     baseH = e.offsetHeight,
     ew = baseW * scale,
     eh = baseH * scale,
     x = er.left - sr.left - (ew - currentW) / 2,
-    y = er.top - sr.top - (eh - currentH) / 2,
+    y = er.top - sr.top - (eh - currentH) / 2 + lift,
     radius = parseFloat(cs.borderRadius) || 0,
     pad = 4;
   frame.style.width = Math.round(ew + pad * 2) + 'px';
