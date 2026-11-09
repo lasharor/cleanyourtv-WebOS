@@ -250,6 +250,7 @@ run(async () => {
       offsetLeft: 128,
       offsetTop: 259,
       style: { getPropertyValue: name => (name === '--c' ? '18,132,224' : '') },
+      getBoundingClientRect: () => ({ left: 218, top: 304, width: 405, height: 210 }),
     },
     moon = {
       document: {
@@ -287,7 +288,7 @@ run(async () => {
       made[0].style.height === '229px' &&
       made[0].style.borderRadius === '40px' &&
       made[0].style['--focus-c'] === '18,132,224' &&
-      made[0].style.transform === 'translate(114px,250px)' &&
+      made[0].style.transform === 'translate(104px,245px)' &&
       made[0].style.opacity === '1',
     "Moon fits one glass frame to the app's rendered box and uses the icon's colour"
   );
@@ -297,7 +298,7 @@ run(async () => {
     made[0].style.width === '437px' &&
       made[0].style.height === '231px' &&
       made[0].style.borderRadius === '40px' &&
-      made[0].style.transform === 'translate(112px,235px)',
+      made[0].style.transform === 'translate(102px,244px)',
     'the Moon dock frame uses the final lift and scale even while the tile is still animating'
   );
   moon.document.body.getAttribute = () => 'classic';

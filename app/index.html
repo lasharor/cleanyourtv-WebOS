@@ -3085,14 +3085,17 @@ function moonTileFocus(e) {
     return;
   }
   var cs = window.getComputedStyle(e),
+    sr = sc.getBoundingClientRect(),
+    er = e.getBoundingClientRect(),
+    currentW = er.width || er.right - er.left,
+    currentH = er.height || er.bottom - er.top,
     scale = parseFloat(cs.getPropertyValue(parent === dock ? '--dock-fs' : '--grid-fs')) || 1,
     baseW = e.offsetWidth,
     baseH = e.offsetHeight,
     ew = baseW * scale,
     eh = baseH * scale,
-    lift = parent === dock ? parseFloat(cs.getPropertyValue('--dock-lift')) || 0 : 0,
-    x = (parent.offsetLeft || 0) + e.offsetLeft - (ew - baseW) / 2,
-    y = (parent.offsetTop || 0) + e.offsetTop + lift - (eh - baseH) / 2,
+    x = er.left - sr.left - (ew - currentW) / 2,
+    y = er.top - sr.top - (eh - currentH) / 2,
     radius = parseFloat(cs.borderRadius) || 0,
     pad = 4;
   frame.style.width = Math.round(ew + pad * 2) + 'px';
