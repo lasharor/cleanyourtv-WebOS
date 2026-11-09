@@ -82,8 +82,9 @@ and troubleshooting.
    screen, sent from your network with a POST request, for example from Home Assistant.
 
 5. **[Voice, on the TV](https://lasharor.github.io/cleanyourtv-WebOS/voice/) (optional).** Speech recognition from the remote's
-   microphone with a local model (Moonshine), answers from Home Assistant's Assist, a language model through OpenRouter or your own server, shown as
-   text. No audio is recorded or sent anywhere.
+   microphone with a local model (Moonshine), answers from Home Assistant's Assist, a language model (through OpenRouter, or
+   self-hosted on any OpenAI-compatible server such as Ollama) or your own server, shown as text. No audio is recorded or sent
+   anywhere.
 
 6. **[Removing LG's ads and telemetry](https://lasharor.github.io/cleanyourtv-WebOS/debloat/) (optional).** Stops LG's ad and
    telemetry services and blocks a few ad servers, only while the launcher is Home, and undoes cleanly.

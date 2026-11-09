@@ -814,7 +814,10 @@
    "llm": {
     "enabled": false,
     "hasKey": false,
-    "model": "openrouter/auto"
+    "lastVia": "",
+    "model": "openrouter/auto",
+    "providers": [],
+    "system": ""
    },
    "pairedAt": 0,
    "pairing": false,

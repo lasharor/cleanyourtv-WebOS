@@ -95,14 +95,21 @@ function launch(id, params) {
 function onoff(v) {
   return v ? 'On' : 'Off';
 }
+var bannerAt = 0; // when the banner was last set: one left from an earlier action is cleared when the screen changes
 function banner(text, cls) {
   var b = $('banner');
+  bannerAt = Date.now();
   b.textContent = tr(text || '');
   b.className = cls || '';
   b.style.display = text ? '' : 'none';
 }
 
+// a banner set by the action that changes the screen stays (a result such as "Model: …"); an older one belongs to the screen left
+function staleBanner() {
+  if (Date.now() - bannerAt > 1000) banner('');
+}
 function push(v) {
+  staleBanner();
   idxStack.push([view, idx]);
   view = v;
   idx = 0;
@@ -110,6 +117,7 @@ function push(v) {
   draw();
 } // into a screen; pop returns to the row we left
 function pop() {
+  staleBanner();
   var p = idxStack.pop() || ['main', 0];
   view = p[0];
   idx = p[1];
