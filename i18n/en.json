@@ -1657,5 +1657,13 @@
  "Always on": "Always on",
  "The add-on gives": "The add-on gives",
  "What the AI may do with this add-on:": "What the AI may do with this add-on:",
- "Agents can disconnect themselves": "Agents can disconnect themselves"
+ "Agents can disconnect themselves": "Agents can disconnect themselves",
+ "TV remote": "TV remote",
+ "On an iPhone or iPad, put the remote on the Home Screen first": "On an iPhone or iPad, put the remote on the Home Screen first",
+ "In Safari, tap Share (in iOS 26 it is in the ••• menu).": "In Safari, tap Share (in iOS 26 it is in the ••• menu).",
+ "Choose Add to Home Screen, keep Open as Web App on, and tap Add.": "Choose Add to Home Screen, keep Open as Web App on, and tap Add.",
+ "Open TV remote from the Home Screen and pair it there with the code from the TV.": "Open TV remote from the Home Screen and pair it there with the code from the TV.",
+ "The Home Screen app keeps its own login: a device paired here in Safari has to pair again in the app.": "The Home Screen app keeps its own login: a device paired here in Safari has to pair again in the app.",
+ "Tip: in Safari, Share > Add to Home Screen turns this remote into an app. It pairs once more in the app.": "Tip: in Safari, Share > Add to Home Screen turns this remote into an app. It pairs once more in the app.",
+ "To use the remote as an app: Share > Add to Home Screen now. The app pairs with this code.": "To use the remote as an app: Share > Add to Home Screen now. The app pairs with this code."
 }

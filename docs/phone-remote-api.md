@@ -140,6 +140,16 @@ Do not log these addresses: they hold the token.
 | `GET /api/logo/<n>?t=…` | the logo of channel `n` (an image, cached for an hour) |
 | `GET /icon/<app id>?t=…` | the app's icon (an image, cached for an hour) |
 
+## The Home Screen app (no token)
+
+These carry nothing secret and need no token. They let iOS (and Android browsers) keep the phone page on the Home Screen as an app.
+
+| Call | Answer |
+|---|---|
+| `GET /manifest.webmanifest[?code=…]` | the web app manifest (`display: standalone`, scope `/`). With a 6-digit `code`, `start_url` is `/?code=<code>`: the page links the manifest with the code it was opened with, so an app added from Safari starts with the code filled in |
+| `GET /apple-touch-icon.png`, `/apple-touch-icon-precomposed.png`, `/icon-180.png` | the 180 × 180 icon (PNG) |
+| `GET /icon-512.png` | the 512 × 512 icon (PNG) |
+
 ## On the TV itself
 
 The add-on's page on the TV uses these calls on `http://127.0.0.1:8765` (loopback only), under `/api/addons/phoneremote`: `GET /state` (the

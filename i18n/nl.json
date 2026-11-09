@@ -1412,5 +1412,13 @@
  "Open page": "Pagina openen",
  "shows it now": "nu meteen te zien",
  "Back returns to Home": "Terug brengt je naar Home",
- "not in the book": "niet in het boek"
+ "not in the book": "niet in het boek",
+ "TV remote": "Tv-afstandsbediening",
+ "On an iPhone or iPad, put the remote on the Home Screen first": "Op een iPhone of iPad: zet de afstandsbediening eerst op het beginscherm",
+ "In Safari, tap Share (in iOS 26 it is in the ••• menu).": "Tik in Safari op Deel (in iOS 26 staat dat in het •••-menu).",
+ "Choose Add to Home Screen, keep Open as Web App on, and tap Add.": "Kies Zet op beginscherm, laat Open als webapp aan staan en tik op Voeg toe.",
+ "Open TV remote from the Home Screen and pair it there with the code from the TV.": "Open Tv-afstandsbediening vanaf het beginscherm en koppel daar met de code van de tv.",
+ "The Home Screen app keeps its own login: a device paired here in Safari has to pair again in the app.": "De app op het beginscherm heeft een eigen login: een toestel dat hier in Safari is gekoppeld, moet in de app opnieuw koppelen.",
+ "Tip: in Safari, Share > Add to Home Screen turns this remote into an app. It pairs once more in the app.": "Tip: in Safari maakt Deel > Zet op beginscherm van deze afstandsbediening een app. In de app koppel je nog één keer.",
+ "To use the remote as an app: Share > Add to Home Screen now. The app pairs with this code.": "Wil je de afstandsbediening als app? Kies nu Deel > Zet op beginscherm. De app koppelt met deze code."
 }
