@@ -40,6 +40,7 @@ move to the next tile, and a click focuses what it opens. While the pointer is h
 after a button press, it does not move the focus.
 In a theme whose app grid opens over or pushes up Home, moving the pointer below the dock opens the first app row; moving it past a row's
 top or bottom edge moves to the row above or below, and moving above the first app row returns to the dock.
+Moon uses one warm glass highlight that slides between the selected dock tile and app tile instead of drawing a separate ring on each.
 
 ![App options](screenshots/options.jpg)
 

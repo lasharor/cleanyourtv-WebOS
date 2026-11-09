@@ -18,7 +18,7 @@ var TH0 = {
   themeStrip = null /* the page strip's look and place in this theme (addons.js); null: the defaults */,
   lastTheme = null,
   themeKeys = [],
-  themeAttrs = ['data-bar', 'data-labels', 'data-clock', 'data-grid', 'data-galign', 'data-cstyle', 'data-cards'];
+  themeAttrs = ['data-theme', 'data-bar', 'data-labels', 'data-clock', 'data-grid', 'data-galign', 'data-cstyle', 'data-cards'];
 function applyTheme(t) {
   var st = document.documentElement.style,
     b = document.body,
@@ -34,6 +34,7 @@ function applyTheme(t) {
     if (window.SCENES) SCENES.apply(null);
     return;
   }
+  b.setAttribute('data-theme', t.id || '');
   for (k in t.vars) {
     st.setProperty(k, t.vars[k]);
     themeKeys.push(k);
@@ -154,6 +155,7 @@ function setFocus(nr, nc, first) {
   c = Math.min(nc, rows[r].length - 1);
   var e = rows[r][c];
   e.classList.add('f');
+  moonTileFocus(e);
   var a = e._a,
     nm = a ? a.title : e._o ? barLabel(e._o) : '',
     n = $('name');
@@ -190,6 +192,32 @@ function setFocus(nr, nc, first) {
     sh = Math.min(0, Math.max(50 - (gt + (r - 2) * (TH.tileH + TH.gapY)), TH.viewH - 54 - (gt + gr * TH.tileH + (gr - 1) * TH.gapY)));
   } /* row height + gap from the theme: no layout reads */
   $('scroll').style.transform = sh ? 'translateY(' + sh + 'px)' : '';
+}
+
+/* Moon uses one glass frame that travels between the dock and app rows. A single element makes the movement continuous instead of
+   fading one tile's ring out and another tile's ring in. It is visual only and never joins the remote's focus rows. */
+function moonTileFocus(e) {
+  var sc = $('scroll'),
+    dock = $('dock'),
+    grid = $('grid'),
+    frame = $('tile-focus'),
+    parent = e && e.parentNode;
+  if (!frame) {
+    frame = document.createElement('div');
+    frame.id = 'tile-focus';
+    sc.appendChild(frame);
+  }
+  if (document.body.getAttribute('data-theme') !== 'moon' || !e || (parent !== dock && parent !== grid)) {
+    frame.style.opacity = '0';
+    return;
+  }
+  var sr = sc.getBoundingClientRect(),
+    er = e.getBoundingClientRect();
+  frame.style.width = e.offsetWidth + 16 + 'px';
+  frame.style.height = e.offsetHeight + 16 + 'px';
+  frame.style.borderRadius = parseInt(window.getComputedStyle(e).borderRadius, 10) + 8 + 'px';
+  frame.style.opacity = '1';
+  frame.style.transform = 'translate(' + (er.left - sr.left - 8) + 'px,' + (er.top - sr.top - 8) + 'px)';
 }
 function mapCol(from, to, col) {
   return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;

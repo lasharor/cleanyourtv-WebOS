@@ -20,6 +20,7 @@ function source(js, name) {
 
 run(async () => {
   const js = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'menus.js'), 'utf8');
+  const theme = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'theme.js'), 'utf8');
 
   // ---- hovering a menu row ----
   const hv = {};
@@ -231,4 +232,51 @@ run(async () => {
     click.pointerEdgeClick({ target: { closest: () => 'tile' }, preventDefault() {} }) === false && opened.length === 1,
     'a click that lands on a real tile is left to that tile'
   );
+
+  // ---- Moon's shared focus frame follows the selected tile without becoming another target ----
+  const made = [],
+    scroll = {
+      appendChild(el) {
+        made.push(el);
+      },
+      getBoundingClientRect: () => ({ left: 100, top: 50 }),
+    },
+    dockEl = {},
+    gridEl = {},
+    focused = {
+      parentNode: gridEl,
+      offsetWidth: 405,
+      offsetHeight: 210,
+      getBoundingClientRect: () => ({ left: 220, top: 310 }),
+    },
+    moon = {
+      document: {
+        body: { getAttribute: () => 'moon' },
+        createElement: () => ({ style: {} }),
+      },
+      window: { getComputedStyle: () => ({ borderRadius: '34px' }) },
+      $(id) {
+        if (id === 'scroll') return scroll;
+        if (id === 'dock') return dockEl;
+        if (id === 'grid') return gridEl;
+        if (id === 'tile-focus') return made[0] || null;
+        return null;
+      },
+    };
+  vm.createContext(moon);
+  vm.runInContext(source(theme, 'moonTileFocus'), moon, { filename: 'moonTileFocus' });
+  moon.moonTileFocus(focused);
+  ok(
+    made.length === 1 &&
+      made[0].id === 'tile-focus' &&
+      made[0].style.width === '421px' &&
+      made[0].style.height === '226px' &&
+      made[0].style.borderRadius === '42px' &&
+      made[0].style.transform === 'translate(112px,252px)' &&
+      made[0].style.opacity === '1',
+    'Moon creates one glass frame around the focused app at its rendered position'
+  );
+  moon.document.body.getAttribute = () => 'classic';
+  moon.moonTileFocus(focused);
+  ok(made.length === 1 && made[0].style.opacity === '0', 'another theme hides the shared frame and keeps its ordinary focus ring');
 });
