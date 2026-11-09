@@ -77,11 +77,44 @@
       }
     },
     {
+      "id": "markets",
+      "name": "Stocks and crypto",
+      "version": "1.1.0",
+      "description": "Two cards for Home: your stocks (with a free Twelve Data key) and your crypto coins, with a chart and details on OK.",
+      "about": "Stocks: US shares and ETFs (AAPL, SPY) from Twelve Data, an official API that needs your own free key (twelvedata.com): set it in Add-ons > Stocks and crypto > Set up from your phone. The free plan has 8 credits a minute and 800 a day, one per symbol: prices every 5 minutes for 5 symbols, every 20 for 20, while the US market is open. Crypto: coins (BTC, ETH) from CoinGecko's free public API, no key, every 2 minutes; it has its own terms: the data is credited to CoinGecko (the drawer says so), and its limits are lower than CoinGecko's keyed plans and can change. Pick a list in Customise or type your own on the phone page; OK on a card opens the list, a chart and the details. Only your symbols (and the key, to Twelve Data) leave the TV.",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "luna": [],
+      "files": {
+        "addon.json": "b7a6701cff16271878ce3c1111ab4305b0e2891d30aa01a29192d00df8cf49fb",
+        "cards/crypto/card.css": "5dcdc4418017a72426e48451bdf16cf49909274d011071b18af3a7daf7f8a62c",
+        "cards/crypto/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
+        "cards/crypto/card.js": "d6048398d3632f35cadbd158a4f475087c3f0dd26f2008c88fa326c6a11b2ecb",
+        "cards/crypto/drawer.css": "7149bfa02c542255c13ff4d6f159030cfdc76cf5dbc3260f8aaeb000f947ca4d",
+        "cards/crypto/drawer.html": "1411157ab10ef9883bb9fff34be2a8e8f0109935690f059ff5b027bda1aa0501",
+        "cards/crypto/drawer.js": "18b579c17dd4af23dd79ea5f767c25900d916e25974ab51bd6dc42596f1c30ea",
+        "cards/crypto/preview.jpg": "d07114d5edaafe6cd7986ba36d814b5557b9391d31b92cce5983378a2959096f",
+        "cards/stocks/card.css": "5dcdc4418017a72426e48451bdf16cf49909274d011071b18af3a7daf7f8a62c",
+        "cards/stocks/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
+        "cards/stocks/card.js": "d6048398d3632f35cadbd158a4f475087c3f0dd26f2008c88fa326c6a11b2ecb",
+        "cards/stocks/drawer.css": "7149bfa02c542255c13ff4d6f159030cfdc76cf5dbc3260f8aaeb000f947ca4d",
+        "cards/stocks/drawer.html": "1411157ab10ef9883bb9fff34be2a8e8f0109935690f059ff5b027bda1aa0501",
+        "cards/stocks/drawer.js": "18b579c17dd4af23dd79ea5f767c25900d916e25974ab51bd6dc42596f1c30ea",
+        "cards/stocks/preview.jpg": "74e61eadd008c36fc89bd4b297b9a550d0c9d1534274e0951317960e27c13247",
+        "markets.js": "98277528e03984abfda0fe56eaa3f341603488920b687752c4dec7f722dc0530",
+        "phone.js": "fa62dd5738d653d74a63dcef6643e3c68e323a29f9b2d25fc4238851278f06d1",
+        "service.js": "20e4dd09feb975385422788741c35cb448a60f7f68200179a501082fa788579a"
+      }
+    },
+    {
       "id": "phoneremote",
       "name": "Phone remote",
-      "version": "1.0.1",
-      "description": "A phone on your Wi-Fi as the TV's remote: buttons, a touchpad, the keyboard, the apps and Live TV.",
-      "about": "A phone on the same Wi-Fi becomes the TV's remote control. It pairs once with a 6-digit code the TV shows, then its browser page reconnects by itself: the remote's buttons, a touchpad that moves the TV's pointer, a keyboard that types into the field open on the TV, the TV's apps and the channels of your Live TV playlist, and a power button. Each phone can be blocked or removed, and a phone that is not used for a while is removed by itself. The phone remote is off until you switch it on in Add-ons; its page (Add-ons > Phone remote, and a page of the book on Home) pairs a phone and lists the paired ones.",
+      "version": "1.1.0",
+      "description": "A phone on your Wi-Fi as the TV's remote: buttons, a touchpad, the keyboard, voice, the apps and Live TV.",
+      "about": "A phone on the same Wi-Fi becomes the TV's remote control. It pairs once with a 6-digit code the TV shows, then its browser page reconnects by itself: the remote's buttons, a touchpad that moves the TV's pointer, a keyboard that types into the field open on the TV, a mic button that asks the TV's voice assistant and shows the conversation (speak or type on the phone, or let the TV listen on its remote), the TV's apps and the channels of your Live TV playlist, and a power button. Each phone can be blocked or removed, and a phone that is not used for a while is removed by itself. The phone remote is off until you switch it on in Add-ons; its page (Add-ons > Phone remote, and a page of the book on Home) pairs a phone and lists the paired ones.",
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
@@ -96,12 +129,12 @@
         "luna://com.webos.service.tv.systemproperty/getSystemInfo"
       ],
       "files": {
-        "addon.json": "4e5f3eab4b00b15608f4c0b05dd3bd8161748cc1844052a1ed038bd6e60806c9",
+        "addon.json": "42eba53bf6647e9b5f143ae5af7d59cbfda89e665fa6e9b29730a6047a10cddc",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "b8990cc1898e5e938d6004066889ee703a3a70ddc2202b16f4c27fd853ed4a3e",
-        "page.js": "985cedb9ca9b6038eff61f4ac45f0db1a803b0ee6b0adcf99430c9b0dec926ee",
+        "page/index.html": "505cfb0e67a5150249491be32a78f90f2397fe6e8d8bb8d117d9a7fc8f35c927",
+        "page.js": "73c8e2b4e3d3dedcb3fb4bfaa04c88a1ab9a34882cc8b953c6d38ac12764190d",
         "remotekeys.js": "2f65affbb6a6ff057947d81a553ee3d2063d293edaed4cdcb4a0019b380ea8d3",
-        "service.js": "b78115301ab56e0c4244279b420ff4ab76da4686fc33fb49332c96a0d4a83c3e",
+        "service.js": "7c2476a5d1fb542b7c2a26d0b1df9a5c9cd647c71cf54cbe85f4e66469750045",
         "src/css/page.css": "63830f9abe5d49fbf15a55e3e3c8dd957d0e0d7ce957cf514d22f25e5f8a2f97",
         "src/html/body.html": "992ae98d98f7d1b984c99003f0b9ab60036571d4eabe6fdcd7e7eb7ae4c9720f",
         "src/index.html": "0b5bf4e17fbb9d9af05d28a881851b3b9a95d8aa37c6269261cccd8f64367cba",
@@ -190,7 +223,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "7d3a63b9cc719a492b395761abf370c8502ba7026d8a153269e7bc8b6c8ee5e2",
+        "page/index.html": "f376064e6def4f7f31729e11ecea2597f6725075df16ddce491610dedf835d68",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
