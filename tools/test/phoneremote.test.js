@@ -305,6 +305,67 @@ run(async () => {
     page.headers['x-frame-options'] === 'DENY' && page.headers['content-security-policy'] === "frame-ancestors 'none'",
     'the phone page says it may not be put in a frame (x-frame-options and a frame-ancestors policy)'
   );
+  // the page as an app on the Home Screen (iPhone, iPad): the manifest and the icons, with no token, and the tags iOS reads
+  {
+    const mf = await get(port, '/manifest.webmanifest');
+    let m = {};
+    try {
+      m = JSON.parse(mf.text);
+    } catch (_) {}
+    ok(
+      mf.code === 200 &&
+        /^application\/manifest\+json/.test(mf.headers['content-type'] || '') &&
+        m.display === 'standalone' &&
+        m.start_url === '/' &&
+        m.scope === '/' &&
+        m.name === 'Phone remote' &&
+        m.short_name === 'TV remote' &&
+        m.icons.some(i => i.sizes === '512x512' && /^\/icon-512\.png\?v=[0-9a-f]{8}$/.test(i.src)),
+      'the manifest is served without a token: a standalone app whose start is the phone page, with a 512 px icon'
+    );
+    const mc = JSON.parse((await get(port, '/manifest.webmanifest?code=' + code)).text);
+    ok(mc.start_url === '/?code=' + code && mc.id === '/', 'a manifest asked for with a code starts the app with that code (same app id)');
+    const bad = JSON.parse((await get(port, '/manifest.webmanifest?code=12x456')).text);
+    ok(bad.start_url === '/', 'a code that is not six digits does not get into start_url');
+    for (const u of ['/apple-touch-icon.png', '/apple-touch-icon-precomposed.png', '/icon-180.png', '/icon-512.png?v=abc']) {
+      const r = await new Promise((resolve, reject) =>
+        http
+          .get({ host: '127.0.0.1', port, path: u }, res => {
+            const b = [];
+            res.on('data', d => b.push(d));
+            res.on('end', () => resolve({ code: res.statusCode, headers: res.headers, buf: Buffer.concat(b) }));
+          })
+          .on('error', reject)
+      );
+      const w = r.buf.length > 24 ? r.buf.readUInt32BE(16) : 0;
+      ok(
+        r.code === 200 &&
+          r.headers['content-type'] === 'image/png' &&
+          r.buf.slice(1, 4).toString() === 'PNG' &&
+          w === (/512/.test(u) ? 512 : 180),
+        u + ' is a PNG of the right size (' + w + ' px)'
+      );
+    }
+    ok((await get(port, '/apple-touch-icon-120x120.png')).code === 404, 'other icon names are a plain 404');
+    ok(
+      /<link rel=manifest href="\/manifest\.webmanifest">/.test(page.text) &&
+        withCode.text.indexOf('<link rel=manifest href="/manifest.webmanifest?code=' + code + '">') > 0 &&
+        page.text.indexOf(
+          '<link rel=apple-touch-icon href="/apple-touch-icon.png?v=' + require('../../addons/catalog/phoneremote/page').ICON_V + '">'
+        ) > 0 &&
+        /<meta name=apple-mobile-web-app-capable content=yes>/.test(page.text) &&
+        /apple-mobile-web-app-status-bar-style content=black-translucent/.test(page.text) &&
+        /viewport-fit=cover/.test(page.text),
+      'the page links the manifest (with the code it was opened with) and the icon, and asks iOS for a full-screen app'
+    );
+    ok(
+      /\.head\{padding-top:max\(20px,calc\(env\(safe-area-inset-top/.test(page.text) &&
+        /\.tabbar\{padding-bottom:max\(4px,env\(safe-area-inset-bottom/.test(page.text) &&
+        /\.drawer\{padding-bottom:max\(/.test(page.text) &&
+        /#pairbox\{padding-top:max\(/.test(page.text),
+      'full screen, the top bar, the tab bar, the sheets and the pairing screen keep clear of the status bar and the home indicator'
+    );
+  }
   const noToken = await get(port, '/api/apps');
   ok(
     noToken.code === 403 &&
@@ -1043,6 +1104,23 @@ run(async () => {
       'a phone that was already paired scanned it and connected: the window closes and the state says which phone it was'
     );
     pp.c.terminate();
+    // Safari on an iPhone, paired, scans the code to add the remote to the Home Screen: its hello says keep, the window stays open, and the
+    // Home Screen app (the same address) pairs with the same code
+    s = await call(sc.pr, '/api/phoneremote/pair', 'POST', {});
+    const kc = s.j.pairing.code;
+    await get(sc.port, '/?code=' + kc);
+    const kp = await phone(sc.port, undefined);
+    kp.c.send(JSON.stringify({ t: 'hello', token: sc.token, keep: true }));
+    await sleep(100);
+    s = await call(sc.pr, '/api/phoneremote');
+    ok(
+      kp.msgs[0] && kp.msgs[0].t === 'ready' && s.j.pairing && s.j.pairing.code === kc && s.j.pairing.scanned > 0,
+      'a paired page that says keep connects and leaves the scanned window open'
+    );
+    const ka = await post(sc.port, '/api/pair', { code: kc, name: 'home screen app' });
+    ok(ka.code === 200 && ka.j.token, 'and the Home Screen app pairs with that same code');
+    kp.c.terminate();
+    s = await call(sc.pr, '/api/phoneremote/pair', 'POST', { stop: true });
     // a new phone scans, then finishes pairing on the phone: the window stays open for it, and its own connection does not close it
     s = await call(sc.pr, '/api/phoneremote/pair', 'POST', {});
     await get(sc.port, '/?code=' + s.j.pairing.code);
@@ -1401,9 +1479,9 @@ run(async () => {
   );
   ok(
     /function buzz\(\)\{try\{if\(window\.CYTV_APP&&window\.CYTV_APP\.buzz\)/.test(pg) &&
-      /function go\(\)\{send\(\{t:'key',k:k\}\);buzz\(\)\}/.test(pg) &&
+      /function go\(\)\{send\(\{t:'key',k:k\}\);if\(!ov\)buzz\(\)\}/.test(pg) &&
       /else step\('ENTER'\);buzz\(\)/.test(pg),
-    'a key press and a touchpad tap ask the app for a short vibration (the pad does not buzz on every swipe step)'
+    "a key press and a touchpad tap ask the app for a short vibration (the pad does not buzz on every swipe step; on an iPhone the key's own switch ticks instead)"
   );
   ok(
     /bridge\(\$\('pad'\)\);bridge\(\$\('sbar'\)\)/.test(pg) &&
@@ -1440,8 +1518,53 @@ run(async () => {
       /code\.length!==6\|\|ready/.test(pg) &&
       /\$\('code'\)\.value=code;cells\(\);\s*setTimeout\(function\(\)\{var n=\$\('pname'\);try\{n\.focus\(\);n\.select\(\)\}/.test(pg) &&
       !/cells\(\);pair\(\)/.test(pg) &&
-      /window\.cytvPair\(m\[1\]\);tidy\(\)/.test(pg),
+      /window\.cytvPair\(m\[1\]\);/.test(pg),
     'a scanned code (the web QR or the app) fills the code in and stays on the pairing screen with the cursor in the name; it does not pair by itself, and an already connected page ignores it'
+  );
+  // iPhone and iPad: the page as a Home Screen app
+  ok(
+    /if\(IOSWEB\)\{\$\('code'\)\.value=m\[1\];cells\(\);return\}\s*window\.cytvPair\(m\[1\]\);/.test(pg) &&
+      /var IOS=ios\(\),IOSWEB=IOS&&!homeApp\(\)&&!window\.CYTV_APP;/.test(pg) &&
+      /navigator\.standalone/.test(pg) &&
+      /display-mode: standalone/.test(pg),
+    'in Safari on an iPhone the scanned code stays in the address until the phone pairs, so Add to Home Screen takes it along (not in a wrapper app)'
+  );
+  ok(
+    /if\(homeApp\(\)\)\{var used='';try\{used=localStorage\.getItem\(UK\)/.test(pg) &&
+      /if\(used===m\[1\]\)\{\$\('code'\)\.value='';cells\(\);tidy\(\);return\}/.test(pg) &&
+      /var UK='cytv-code-used'/.test(pg),
+    'the Home Screen app fills a code from its start address in once, not again on every start'
+  );
+  ok(
+    /if\(IOSWEB\)\{\$\('ioscard'\)\.className='ioscard';\$\('iostip'\)\.className='';/.test(pg) &&
+      /<div id=ioscard class="ioscard hide">/.test(pg) &&
+      /<p id=iostip class=hide>/.test(pg),
+    'in Safari on an iPhone the pairing screen says to put the remote on the Home Screen first (hidden elsewhere), and This remote has the tip'
+  );
+  ok(
+    /if\(tok&&IOSWEB\)\{HAND=true;/.test(pg) &&
+      /JSON\.stringify\(HAND\?\{t:'hello',token:tok,keep:true\}:\{t:'hello',token:tok\}\)/.test(pg),
+    'Safari on an iPhone, already paired, opened with a code: its hello says keep, so the Home Screen app can still pair with the code'
+  );
+  ok(
+    /navigator\.vibrate\(8\);return\}\}catch\(e\)\{\}haptic\(\)\}/.test(pg) &&
+      /function haptic\(\)\{if\(IOS\)hapDue=true\}/.test(pg) &&
+      /if\(IOS\)document\.addEventListener\('touchend',function\(\)\{if\(hapDue\)\{hapDue=false;tickNow\(\)\}\},true\);/.test(pg) &&
+      /<input type=checkbox switch tabindex=-1>/.test(pg) &&
+      /a\.tagName==='TEXTAREA'\|\|\(a\.tagName==='INPUT'&&a\.type!=='checkbox'\)\)&&a\.offsetWidth\)return;/.test(pg) &&
+      /hap\.click\(\);if\(document\.activeElement===hap\.firstChild\)hap\.firstChild\.blur\(\)/.test(pg),
+    'an iPhone (no navigator.vibrate) gets its tick from a hidden switch when the finger lifts (Safari counts a touch then), never while text is being typed'
+  );
+  ok(
+    /function bind\(el\)\{var k=el\.getAttribute\('data-k'\),rep=el\.getAttribute\('data-r'\),t1=0,t2=0,ov=IOS&&!window\.CYTV_APP;/.test(
+      pg
+    ) &&
+      /if\(ov\)overlay\(el\);/.test(pg) &&
+      /function go\(\)\{send\(\{t:'key',k:k\}\);if\(!ov\)buzz\(\)\}/.test(pg) &&
+      /if\(!\(ov&&e\.type==='touchstart'\)\)e\.preventDefault\(\);/.test(pg) &&
+      /l\.htmlFor='hsw';l\.className='hapov'/.test(pg) &&
+      /hsw\.addEventListener\('focus',function\(\)\{hsw\.blur\(\)\}\)/.test(pg),
+    'iOS 26.5 and newer: each key carries a label for one hidden switch, so the finger itself toggles it (no tick from script); the key lets its tap become a click there'
   );
   // a backslash in the page's script is an escape of the template it is written in: \d must reach the phone as \d
   ok(
