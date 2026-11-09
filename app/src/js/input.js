@@ -64,6 +64,39 @@ function options(e) {
   else if (e._o && !e._o.fixed) barMenu(e._o);
 }
 
+/* A push or overlay grid starts outside the visible Home layout. The pointer cannot hover a tile there, so crossing the empty edge below
+   the dock opens the first row, just like Down. Once the grid is open, crossing a row edge moves between rows and back to the dock. */
+var pointerEdgeFocus = false;
+function pointerRowMove(ev, dy) {
+  if (!(TH.push || TH.overlay) || !rows[r] || !rows[r][c]) return false;
+  if (r === 1 && dy > 0 && rows[2] && rows[2].length) {
+    var dockBox = $('dock').getBoundingClientRect();
+    if (ev.clientY > dockBox.bottom + 8) {
+      pointerEdgeFocus = true;
+      setFocus(2, mapCol(rows[1].length, rows[2].length, c));
+      return true;
+    }
+  }
+  if (r >= 2 && dy > 0 && r < rows.length - 1 && rows[r + 1] && rows[r + 1].length) {
+    var rowBox = rows[r][c].getBoundingClientRect();
+    if (ev.clientY > rowBox.bottom + 8) {
+      pointerEdgeFocus = true;
+      setFocus(r + 1, mapCol(rows[r].length, rows[r + 1].length, c));
+      return true;
+    }
+  }
+  if (r >= 2 && dy < 0) {
+    var currentBox = rows[r][c].getBoundingClientRect(),
+      up = r === 2 ? 1 : r - 1;
+    if (ev.clientY < currentBox.top - 8 && rows[up] && rows[up].length) {
+      pointerEdgeFocus = true;
+      setFocus(up, mapCol(rows[r].length, rows[up].length, c));
+      return true;
+    }
+  }
+  return false;
+}
+
 /* Pointer focus follows real pointer movement only: a tile sliding under a still cursor, a cursor jitter when
    the remote is picked up, or a pointer move right after a button press must not steal the focus. The first move after a button press
    needs 24 px; after that every move of 4 px or more counts, so a cursor that comes to rest over a tile always focuses it (before, a
@@ -105,22 +138,46 @@ document.addEventListener('mousemove', function (ev) {
   seenActivity(); /* the pointer of the remote: the TV is being used */
   if (stack.length || LIVE.on || PAGER.on || CS.on) return;
   if (cursorEvents ? !pointerShown : Date.now() - lastKey < 1500) return;
+  var dy = lastMX < 0 ? 0 : ev.clientY - lastMY;
   if (!pointerMoved(ev.clientX, ev.clientY)) return;
   var el = ev.target.closest ? ev.target.closest('.tile,.pill,.card-btn') : null,
     p = el && posOf(el);
-  if (p && !(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
+  if (p) {
+    pointerEdgeFocus = false;
+    if (!(p[0] === r && p[1] === c)) setFocus(p[0], p[1]);
+  } else pointerRowMove(ev, dy);
 });
 
+/* The Magic Remote's wheel click is a mouse click while the pointer is visible. After an edge crossing, the pointer itself is still in
+   the empty edge rather than over the focused tile, so let that one blank click open the tile selected by the crossing. */
+function pointerEdgeClick(ev) {
+  if (!pointerEdgeFocus || stack.length || LIVE.on || PAGER.on || CS.on || moving) return false;
+  var el = ev.target.closest ? ev.target.closest('.tile,.pill,.card-btn') : null;
+  if (el) {
+    pointerEdgeFocus = false;
+    return false;
+  }
+  if (!rows[r] || !rows[r][c]) return false;
+  pointerEdgeFocus = false;
+  act(rows[r][c]);
+  ev.preventDefault();
+  return true;
+}
+document.addEventListener('click', pointerEdgeClick);
+
+function pointerKeyPress(k) {
+  /* 1536 and 1537 describe the pointer showing and hiding; they are not remote button presses. */
+  if (k === 1536 || k === 1537) return;
+  pointerEdgeFocus = false;
+  lastKey = Date.now();
+  pointerLive = false;
+}
 document.addEventListener('keydown', function (e) {
   var k = e.keyCode;
   seenActivity();
   /* a right-to-left layout: Left moves to what is on the left, which is the next tile in the row (Live TV keeps left-to-right) */
   if (rtl() && !LIVE.on && (k === 37 || k === 39)) k = 76 - k;
-  /* 1536 and 1537: webOS's keys for the pointer showing and hiding, not a button of the remote */
-  if (k !== 1536 && k !== 1537) {
-    lastKey = Date.now();
-    pointerLive = false;
-  }
+  pointerKeyPress(k);
   /* a card's sheet has the keys while it is open (it undoes the swap above itself) */
   if (CS.on) {
     csKey(k, e);

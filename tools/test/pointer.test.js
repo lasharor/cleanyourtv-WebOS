@@ -20,6 +20,8 @@ function source(js, name) {
 
 run(async () => {
   const js = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'menus.js'), 'utf8');
+  const theme = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'theme.js'), 'utf8');
+  const homeCss = fs.readFileSync(path.join(root, 'app', 'src', 'css', 'home.css'), 'utf8');
 
   // ---- hovering a menu row ----
   const hv = {};
@@ -156,4 +158,178 @@ run(async () => {
   wh.cursorEvents = false;
   wh.pointerShown = false;
   ok(wh.wheelHome(1) === true, 'a TV without pointer events: every notch moves, as before');
+
+  // ---- crossing the empty vertical edge with the Magic Remote ----
+  const pcalls = [],
+    box = (top, bottom) => ({ getBoundingClientRect: () => ({ top, bottom }) }),
+    edge = {
+      TH: { push: {} },
+      rows: [
+        [box(0, 50)],
+        [box(500, 710), box(500, 710), box(500, 710), box(500, 710)],
+        [box(760, 970), box(760, 970)],
+        [box(1020, 1230), box(1020, 1230), box(1020, 1230)],
+      ],
+      r: 1,
+      c: 2,
+      pointerEdgeFocus: false,
+      $(id) {
+        return id === 'dock' ? box(500, 710) : null;
+      },
+      mapCol(from, to, col) {
+        return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;
+      },
+      setFocus(nr, nc) {
+        pcalls.push([nr, nc]);
+        edge.r = nr;
+        edge.c = nc;
+      },
+    };
+  vm.createContext(edge);
+  vm.runInContext(source(inp, 'pointerRowMove'), edge, { filename: 'pointerRowMove' });
+  ok(
+    edge.pointerRowMove({ clientY: 730 }, 30) === true && JSON.stringify(pcalls[0]) === '[2,1]',
+    'pointer down past the dock opens the first app row'
+  );
+  ok(
+    edge.pointerRowMove({ clientY: 990 }, 30) === true && JSON.stringify(pcalls[1]) === '[3,2]',
+    'pointer down past an app row advances to the next row'
+  );
+  ok(
+    edge.pointerRowMove({ clientY: 990 }, -30) === true && JSON.stringify(pcalls[2]) === '[2,1]',
+    'pointer up above a lower app row returns to the previous app row'
+  );
+  ok(
+    edge.pointerRowMove({ clientY: 730 }, -30) === true && JSON.stringify(pcalls[3]) === '[1,3]',
+    'pointer up above the first app row returns to the dock'
+  );
+
+  // ---- clicking after an edge crossing: the cursor is still in empty space, but the Magic Remote click opens the focused tile ----
+  const opened = [],
+    click = {
+      pointerEdgeFocus: true,
+      stack: [],
+      LIVE: { on: false },
+      PAGER: { on: false },
+      CS: { on: false },
+      moving: false,
+      rows: [[0], ['dock'], ['app']],
+      r: 2,
+      c: 0,
+      act: el => opened.push(el),
+    };
+  vm.createContext(click);
+  vm.runInContext(source(inp, 'pointerEdgeClick'), click, { filename: 'pointerEdgeClick' });
+  let prevented = false;
+  ok(
+    click.pointerEdgeClick({ target: {}, preventDefault: () => (prevented = true) }) === true &&
+      opened.join() === 'app' &&
+      prevented &&
+      click.pointerEdgeFocus === false,
+    'a blank Magic Remote click after crossing an edge opens the focused app once'
+  );
+  click.pointerEdgeFocus = true;
+  ok(
+    click.pointerEdgeClick({ target: { closest: () => 'tile' }, preventDefault() {} }) === false && opened.length === 1,
+    'a click that lands on a real tile is left to that tile'
+  );
+
+  // ---- a real remote key cancels the one blank click that belongs to pointer edge focus ----
+  const key = {
+    pointerEdgeFocus: true,
+    lastKey: 0,
+    pointerLive: true,
+    Date: { now: () => 1234 },
+  };
+  vm.createContext(key);
+  vm.runInContext(source(inp, 'pointerKeyPress'), key, { filename: 'pointerKeyPress' });
+  key.pointerKeyPress(40);
+  ok(
+    key.pointerEdgeFocus === false && key.lastKey === 1234 && key.pointerLive === false,
+    'a remote key clears pointer edge focus and records ordinary key input'
+  );
+  key.pointerEdgeFocus = true;
+  key.pointerKeyPress(1536);
+  ok(key.pointerEdgeFocus === true, 'the pointer-show event is not treated as a remote key press');
+
+  const focusRule = homeCss.match(/\[data-theme="moon"\] #tile-focus \{([\s\S]*?)\n\}/);
+  ok(
+    focusRule &&
+      /transition:\s*transform/.test(focusRule[1]) &&
+      /opacity calc/.test(focusRule[1]) &&
+      !/(width|height|border-radius) calc/.test(focusRule[1]),
+    'the Moon focus frame animates only transform and opacity'
+  );
+
+  // ---- Moon's shared focus frame follows the selected tile without becoming another target ----
+  const made = [],
+    scroll = {
+      appendChild(el) {
+        made.push(el);
+      },
+      getBoundingClientRect: () => ({ left: 100, top: 50 }),
+    },
+    dockEl = { offsetLeft: 0, offsetTop: 0 },
+    gridEl = { offsetLeft: 0, offsetTop: 0 },
+    focused = {
+      parentNode: gridEl,
+      offsetWidth: 405,
+      offsetHeight: 210,
+      offsetLeft: 128,
+      offsetTop: 259,
+      style: { getPropertyValue: name => (name === '--c' ? '18,132,224' : '') },
+      getBoundingClientRect: () => ({ left: 218, top: 304, width: 405, height: 210 }),
+    },
+    moon = {
+      document: {
+        body: { getAttribute: () => 'moon' },
+        createElement: () => ({
+          style: {
+            setProperty(name, value) {
+              this[name] = value;
+            },
+          },
+        }),
+      },
+      window: {
+        getComputedStyle: () => ({
+          borderRadius: '34px',
+          getPropertyValue: name =>
+            name === '--grid-fs' ? '1.05' : name === '--dock-fs' ? '1.06' : name === '--dock-lift' ? '-14px' : '0',
+        }),
+      },
+      $(id) {
+        if (id === 'scroll') return scroll;
+        if (id === 'dock') return dockEl;
+        if (id === 'grid') return gridEl;
+        if (id === 'tile-focus') return made[0] || null;
+        return null;
+      },
+    };
+  vm.createContext(moon);
+  vm.runInContext(source(theme, 'moonTileFocus'), moon, { filename: 'moonTileFocus' });
+  moon.moonTileFocus(focused);
+  ok(
+    made.length === 1 &&
+      made[0].id === 'tile-focus' &&
+      made[0].style.width === '433px' &&
+      made[0].style.height === '229px' &&
+      made[0].style.borderRadius === '40px' &&
+      made[0].style['--focus-c'] === '18,132,224' &&
+      made[0].style.transform === 'translate(104px,245px)' &&
+      made[0].style.opacity === '1',
+    "Moon fits one glass frame to the app's rendered box and uses the icon's colour"
+  );
+  focused.parentNode = dockEl;
+  moon.moonTileFocus(focused);
+  ok(
+    made[0].style.width === '437px' &&
+      made[0].style.height === '231px' &&
+      made[0].style.borderRadius === '40px' &&
+      made[0].style.transform === 'translate(102px,230px)',
+    'the Moon dock frame uses the final lift and scale even while the tile is still animating'
+  );
+  moon.document.body.getAttribute = () => 'classic';
+  moon.moonTileFocus(focused);
+  ok(made.length === 1 && made[0].style.opacity === '0', 'another theme hides the shared frame and keeps its ordinary focus ring');
 });
