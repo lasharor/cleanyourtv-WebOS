@@ -107,6 +107,16 @@ run(async () => {
   ok(lines === 101, 'open gives a stream of the unpacked body');
   r = await fetch.read(u + '/empty', { unzip: 'sniff', totalMs: 2000 });
   ok(r.body.length === 0, 'an empty body ends, also when its first bytes are looked at');
-  ok(Date.now() - t0 < 8000, 'all of this ends quickly');
+  // connectMs: a server that is off or an address nobody answers is known in that time, not after the whole idle time
+  const t1 = Date.now();
+  const ce = await fetch.read('http://192.0.2.1:9/', { connectMs: 300, idleMs: 20000, allowHttp: true }).then(
+    () => null,
+    e => e
+  );
+  ok(
+    ce && (ce.code === 'connect' || /^E[A-Z]+$/.test(ce.code || '')) && Date.now() - t1 < 3000,
+    'connectMs ends a connection that is not made (' + (ce && ce.code) + ')'
+  );
+  ok(Date.now() - t0 < 12000, 'all of this ends quickly');
   s.server.close();
 });

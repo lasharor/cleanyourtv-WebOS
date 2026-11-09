@@ -56,7 +56,12 @@ function draw() {
         (r.dim ? ' dim' : '') +
         '" data-i="' +
         i +
-        '"><span class="lb"></span>' +
+        '">' +
+        (r.dot
+          ? '<i style="display:inline-block;flex:0 0 auto;width:16px;height:16px;border-radius:8px;margin-right:16px;background:' +
+            r.dot +
+            '"></i><span class="lb" style="margin-left:0;margin-right:0"></span>'
+          : '<span class="lb"></span>') +
         (r.sub ? '<span class="st"></span>' : '') +
         '</div>';
   });
@@ -74,6 +79,26 @@ function draw() {
   $('head').className = '';
   drawAbout(rows[idx], ie);
   $('sub').style.wordBreak = '';
+  /* the AI providers screens name what they show in the heading */
+  var hd = view === 'providers' ? 'AI providers' : view === 'provider' ? (llmFind(pvId) || {}).name || '' : '';
+  $('head').querySelector('h1').textContent = hd ? tr(hd) : 'CleanYourTV';
+  if (view === 'providers' || view === 'provider') {
+    var pp = llmFind(pvId);
+    $('sub').textContent = tr(
+      view === 'providers'
+        ? 'Asked from the top. If one does not answer, the next one is asked.'
+        : pp && pp.type === 'server'
+          ? 'Your own server · ' + llmHost(pp.base)
+          : 'OpenRouter'
+    );
+    if (inf) {
+      var b4 = document.createElement('b');
+      b4.textContent = tr(inf.t);
+      ie.appendChild(b4);
+      ie.appendChild(document.createTextNode(tr(inf.d)));
+    }
+    return;
+  }
   if (view === 'notifyhow' || view === 'voicehow') {
     $('sub').textContent = tr(kText);
     $('sub').style.whiteSpace = 'pre-line';
