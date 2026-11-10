@@ -5015,8 +5015,8 @@ var SCENES = (function () {
   };
 })();
 /* ---------- Wallpapers: the service's photos (uploads and the photo sources of add-ons, GET /api/wallpapers/list) behind Home instead of the theme's
-   background. A random photo each time Home opens and every cfg.wall.secs seconds (0: only when Home opens), cross-faded between two
-   layers (opacity only). Darkened like a theme's wallpaper. Off, or no photos: the theme as it is. ---------- */
+   background. A random photo every cfg.wall.secs seconds while Home is on screen; when Home opens again, a new one only if that many
+   seconds have passed since the last change (0: a new photo each time Home opens), cross-faded between two layers (opacity only). Darkened like a theme's wallpaper. Off, or no photos: the theme as it is. ---------- */
 /* seconds between photos; settings saved before 1.6.10 hold minutes in "every" */
 function wallSecs() {
   var w = cfg.wall || {};
@@ -5028,6 +5028,7 @@ var WALL = (function () {
     cur = '',
     curCredit = '',
     side = 0,
+    last = 0 /* when the photo on screen was put there (ms) */,
     timer = 0,
     pollT = 0,
     els = null;
@@ -5097,6 +5098,7 @@ var WALL = (function () {
       dim();
       document.body.classList.add('wpon');
       cur = id;
+      last = Date.now();
       curCredit = text || '';
       credit(curCredit);
     };
@@ -5171,10 +5173,13 @@ var WALL = (function () {
   }
   return {
     sync: sync,
-    /* Home is on screen again: a new photo, and the timer runs again */
+    /* Home is on screen again: a new photo when it is time for one (every time with 0 seconds; else once the interval has passed since the
+       last change, so opening Home does not change the photo or decode a new one before then), and the timer runs again */
     shown: function () {
       if (want() && list.length) {
-        next();
+        var gone = Date.now() - last,
+          sec = wallSecs();
+        if (!sec || !last || gone < 0 || gone >= sec * 1000) next();
         arm();
       }
     },
