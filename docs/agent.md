@@ -84,8 +84,8 @@ same screen holds the network access below, so everything the tools may reach is
 default; off, the AI only answers questions as before. Then:
 
 1. Home Assistant still answers first when the routing says so ([Voice](voice.md#home-assistant-assist)).
-2. Otherwise the AI providers are asked in their order ([Voice](voice.md)). OpenRouter gets the question with the tools (at most 40);
-   a server of yours only answers, without tools. The model may ask for tools; the TV runs them, sends back what they answered and
+2. Otherwise the AI providers are asked in their order ([Voice](voice.md)). Every provider, OpenRouter or a server of yours (Ollama and the like), gets the question with the tools (at most 40);
+   the model of a server must take tools (Ollama: a model marked "tools", with a context large enough for them). The model may ask for tools; the TV runs them, sends back what they answered and
    asks again, at most five rounds. The card on the screen says which tool runs. Once a tool has run, the question is not handed to
    the next provider, so nothing is done twice.
 3. The model's last words are the answer on the card.
@@ -95,7 +95,7 @@ model's word. The TV shows **Turn the TV off? Say yes within 30 seconds to go ah
 "ok", "do it", "go ahead", "confirm", with or without "please"): the TV runs it without asking the model again. The whole reply must be
 the yes: "okay, what's the weather" or "sure, why not" is not one. Anything else, or 30 seconds of silence, drops it.
 
-Some OpenRouter models cannot use tools. The voice setup page marks the ones that can (**can act**). With a model that cannot, the TV
+Some models cannot use tools (OpenRouter's, or a server's). The voice setup page marks the ones that can (**can act**). With a model that cannot, the TV
 asks once more without tools and the AI only answers.
 
 ## The MCP endpoint

@@ -680,7 +680,7 @@ function applyLlm(cur, b) {
   const pendingModel = list.some(p => p.type === 'openrouter') ? '' : raw.model || ''; // a model set before the OpenRouter key
   if (typeof b.enabled === 'boolean') raw.enabled = b.enabled;
   if (typeof b.system === 'string') raw.system = b.system.slice(0, 1000);
-  if (typeof b.agent === 'boolean') raw.agent = b.agent; // OpenRouter may use the tools of the service and approved add-ons
+  if (typeof b.agent === 'boolean') raw.agent = b.agent; // the AI providers may use the tools of the service and approved add-ons
   const saved = {};
   list.forEach(p => (saved[p.id] = p));
   const newId = taken => {
