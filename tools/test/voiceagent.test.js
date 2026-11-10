@@ -158,7 +158,7 @@ run(async () => {
   await A.askLlm('turn off the tv');
   ok((await A.confirmPending('Okay.')) === 'Done.' && calls.length === 2, 'a plain "okay." is');
 
-  // ---- with the AI providers (#208): only OpenRouter gets the tools, and a tool that ran is not done again by the next one ----
+  // ---- with the AI providers (#208): every provider gets the tools, and a tool that ran is not done again by the next one ----
   const srv = { id: 'p1', type: 'server', base: ai.url, model: 'srv' },
     orp = { id: 'p2', type: 'openrouter', key: 'k', model: 'm' };
   llm = { enabled: true, agent: true, providers: [srv, orp] };
@@ -166,8 +166,14 @@ run(async () => {
   script = [{ content: 'From the server.' }];
   let r2 = await A.askLlm('hi');
   ok(
-    r2.answer === 'From the server.' && r2.via === 'p1' && sent.length === 1 && sent[0].model === 'srv' && sent[0].tools === undefined,
-    'a server of yours gets no tools'
+    r2.answer === 'From the server.' &&
+      r2.via === 'p1' &&
+      sent.length === 1 &&
+      sent[0].model === 'srv' &&
+      !!sent[0].tools &&
+      sent[0].tools.length > 0 &&
+      sent[0].reasoning === undefined,
+    'a server of yours gets the tools (and not the OpenRouter-only reasoning option)'
   );
   llm = { enabled: true, agent: true, providers: [orp, srv] };
   reset();
@@ -189,8 +195,22 @@ run(async () => {
   script = [{ status: 500, error: 'overloaded' }, { content: 'The server answers.' }];
   r2 = await A.askLlm('switch to hdmi 1');
   ok(
-    r2.via === 'p1' && r2.answer === 'The server answers.' && !!sent[0].tools && sent[1].tools === undefined && calls.length === 0,
-    'before any tool ran, the next provider answers, without tools'
+    r2.via === 'p1' && r2.answer === 'The server answers.' && !!sent[0].tools && !!sent[1].tools && calls.length === 0,
+    'before any tool ran, the next provider answers, with the tools too'
+  );
+  // a server whose model takes no tools (Ollama: HTTP 400 "does not support tools") is asked again without them
+  llm = { enabled: true, agent: true, providers: [srv, orp] };
+  reset();
+  script = [{ status: 400, error: 'registry.ollama.ai/library/x does not support tools' }, { content: 'Plain answer.' }];
+  r2 = await A.askLlm('hi');
+  ok(
+    r2.via === 'p1' && r2.answer === 'Plain answer.' && sent.length === 2 && !!sent[0].tools && sent[1].tools === undefined,
+    'a model that takes no tools is asked again without them'
+  );
+  // a provider type added later gets the tools too: askLlm decides nothing by the type of a provider
+  ok(
+    !/\.type|openrouter/.test(String(A.askLlm)),
+    'askLlm does not look at the type of a provider: every provider, now or later, gets the tools'
   );
   llm = { enabled: true, key: 'k', model: 'm', agent: true };
 

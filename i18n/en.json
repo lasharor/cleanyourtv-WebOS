@@ -1702,5 +1702,6 @@
  "The weather from a Home Assistant weather entity, with the temperature outside and the forecast.": "The weather from a Home Assistant weather entity, with the temperature outside and the forecast.",
  "A Home Assistant camera: a new picture every 10, 30 or 60 seconds.": "A Home Assistant camera: a new picture every 10, 30 or 60 seconds.",
  "Your own text, with the greeting, time, date and weather filled in as they change.": "Your own text, with the greeting, time, date and weather filled in as they change.",
- "%d new": "%d new"
+ "%d new": "%d new",
+ "add an AI provider first": "add an AI provider first"
 }
