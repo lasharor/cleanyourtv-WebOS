@@ -256,7 +256,10 @@ run(async () => {
   ok(f.items.length === 2, 'the number of titles is an option');
 
   // ---- pictures that fail: the reason is logged, they are asked for again after a minute, and they are asked for as images ----
-  ok(seen.accepts.length > 0 && seen.accepts.every(a => /^image\//.test(a)), 'pictures are asked for as images, not as JSON (a server may answer 406)');
+  ok(
+    seen.accepts.length > 0 && seen.accepts.every(a => /^image\//.test(a)),
+    'pictures are asked for as images, not as JSON (a server may answer 406)'
+  );
   const retag = tag => {
     resumeItems.forEach(i => {
       Object.keys(i.ImageTags || {}).forEach(k => (i.ImageTags[k] = tag + k));
@@ -282,7 +285,10 @@ run(async () => {
     imageMode = 'ok';
     clock += 61000;
     f = await svc.cards.feed('continue', { nextup: 'off' });
-    ok(f.items.some(i => /^data:image\/jpeg/.test(i.pic)), 'after a minute it is asked for again and shown');
+    ok(
+      f.items.some(i => /^data:image\/jpeg/.test(i.pic)),
+      'after a minute it is asked for again and shown'
+    );
     imageMode = 'big';
     retag('f2');
     said.length = 0;

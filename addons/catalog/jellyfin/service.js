@@ -52,7 +52,8 @@ function create(ctx) {
     try {
       const p = await jf.picture(ref, st);
       if (!p) why = 'the server did not send a picture (' + ref.type + ')';
-      else if (p.body.length > PIC_MAX) why = 'a ' + ref.type + ' picture of ' + p.body.length + ' bytes is over the ' + PIC_MAX + ' byte limit';
+      else if (p.body.length > PIC_MAX)
+        why = 'a ' + ref.type + ' picture of ' + p.body.length + ' bytes is over the ' + PIC_MAX + ' byte limit';
       else uri = 'data:' + p.type + ';base64,' + p.body.toString('base64');
     } catch (e) {
       why = String((e && e.message) || e);
