@@ -30,6 +30,13 @@
    "preview": "bloom/preview.jpg"
   },
   {
+   "id": "cinema",
+   "name": "Cinema",
+   "author": "CleanYourTV",
+   "description": "A dark living-room layout with wide app tiles and a dimmed icon of the focused app in the background.",
+   "preview": "cinema/preview.jpg"
+  },
+  {
    "id": "compact",
    "name": "Compact",
    "author": "CleanYourTV",
