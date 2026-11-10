@@ -99,7 +99,7 @@ function create(o) {
       method: q.method || 'GET',
       body: q.body === undefined ? undefined : JSON.stringify(q.body),
       headers: Object.assign(
-        { Authorization: header(device(), s.token), Accept: 'application/json' },
+        { Authorization: header(device(), s.token), Accept: q.accept || 'application/json' },
         q.body === undefined ? {} : { 'content-type': 'application/json' }
       ),
       idleMs: 15000,
@@ -241,7 +241,7 @@ function create(o) {
       h +
       '&quality=72&format=Jpg' +
       (ref.tag ? '&tag=' + encodeURIComponent(ref.tag) : '');
-    const r = await call(p, { raw: true, maxBytes: 200 * 1024 });
+    const r = await call(p, { raw: true, maxBytes: 200 * 1024, accept: 'image/jpeg,image/png,image/webp,image/*;q=0.8' });
     const type = String((r.headers && r.headers['content-type']) || 'image/jpeg').split(';')[0];
     return /^image\/(jpeg|png|webp)$/.test(type) ? { type, body: r.body } : null;
   }

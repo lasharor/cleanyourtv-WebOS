@@ -40,7 +40,8 @@ run(async () => {
   const said = [];
   // ---- the stand-in for Jellyfin ----
   const seen = { paths: [], auth: [], login: [] };
-  let newRoutes = true;
+  let newRoutes = true,
+    imageMode = 'ok';
   const resumeItems = [
     {
       Id: MOVIE,
@@ -121,8 +122,12 @@ run(async () => {
       if (p === '/Shows/NextUp') return json({ Items: nextItems });
       if (p === '/Items') return json({ Items: [{ Id: SER, ProviderIds: { Tmdb: '1399' } }] });
       if (/^\/Items\/[0-9a-f]{32}\/Images\//.test(p)) {
+        (seen.accepts = seen.accepts || []).push(rq.headers.accept || '');
+        // a server that answers 406 to a request that does not accept images
+        if (!/image\//.test(rq.headers.accept || '')) return json({}, 406);
+        if (imageMode === 'fail') return json({}, 500);
         rs.writeHead(200, { 'content-type': 'image/jpeg' });
-        return rs.end(JPEG);
+        return rs.end(imageMode === 'big' ? Buffer.alloc(60 * 1024, 7) : JPEG);
       }
       json({}, 404);
     });
@@ -249,6 +254,55 @@ run(async () => {
   );
   f = await svc.cards.feed('continue', { count: '2' });
   ok(f.items.length === 2, 'the number of titles is an option');
+
+  // ---- pictures that fail: the reason is logged, they are asked for again after a minute, and they are asked for as images ----
+  ok(
+    seen.accepts.length > 0 && seen.accepts.every(a => /^image\//.test(a)),
+    'pictures are asked for as images, not as JSON (a server may answer 406)'
+  );
+  const retag = tag => {
+    resumeItems.forEach(i => {
+      Object.keys(i.ImageTags || {}).forEach(k => (i.ImageTags[k] = tag + k));
+      if (i.BackdropImageTags) i.BackdropImageTags = [tag + 'b'];
+    });
+  };
+  const realNow = Date.now;
+  let clock = realNow();
+  Date.now = () => clock;
+  try {
+    imageMode = 'fail';
+    retag('f1');
+    said.length = 0;
+    f = await svc.cards.feed('continue', { nextup: 'off' });
+    ok(f.items.length >= 1 && f.items.every(i => i.pic === ''), 'when the server fails, the card still has its titles, without pictures');
+    ok(
+      said.some(m => /jellyfin: no picture: .*500/.test(m)) && said.join('\n').indexOf(TOKEN) < 0,
+      'and the reason is in the log, without the token: ' + said.join(' | ')
+    );
+    const n = seen.paths.length;
+    await svc.cards.feed('continue', { nextup: 'off' });
+    ok(seen.paths.length === n + 1, 'a failed picture is not asked for again at once (only the list is)');
+    imageMode = 'ok';
+    clock += 61000;
+    f = await svc.cards.feed('continue', { nextup: 'off' });
+    ok(
+      f.items.some(i => /^data:image\/jpeg/.test(i.pic)),
+      'after a minute it is asked for again and shown'
+    );
+    imageMode = 'big';
+    retag('f2');
+    said.length = 0;
+    f = await svc.cards.feed('continue', { nextup: 'off' });
+    ok(
+      f.items.every(i => i.pic === '') && said.some(m => /over the \d+ byte limit/.test(m)),
+      'a picture over the limit is left out and the log says why'
+    );
+    imageMode = 'ok';
+    retag('f3');
+    clock += 61000;
+  } finally {
+    Date.now = realNow;
+  }
 
   // ---- the buttons ----
   await svc.cards.feed('continue', {});
