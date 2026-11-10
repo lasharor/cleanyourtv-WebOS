@@ -404,20 +404,25 @@ function build() {
       va = (vo && vo.llm) || {},
       ags = mn.agents || [],
       VOICE_D =
-        'The voice assistant may open apps, switch inputs, show a card and use the tools of the add-ons you approved in Add-ons > Agent tools (MCP). Turning the TV off asks first: say yes within 30 seconds. The tools go to OpenRouter, in its place among the AI providers; a server of yours only answers, and so does a model that cannot use tools.';
-    /* the voice assistant uses the same tools as the network: the switch for it lives here. hasKey: OpenRouter is an AI provider with
-       its key, the one provider that gets the tools */
+        'The voice assistant may open apps, switch inputs, show a card and use the tools of the add-ons you approved in Add-ons > Agent tools (MCP). Turning the TV off asks first: say yes within 30 seconds. The tools go to the AI provider that is asked, OpenRouter or a server of yours; a model that cannot use tools only answers.';
+    /* the voice assistant uses the same tools as the network: the switch for it lives here. It needs one AI provider that can be asked
+       (OpenRouter with its key, or a server of yours with an address); every provider gets the tools */
+    var vReady = (va.providers || []).some(function (p) {
+      return !p.off && !!p.model && (p.type === 'openrouter' ? !!p.hasKey : !!p.base);
+    });
     rows.push({
       label: 'Let the voice assistant act on the TV',
-      sub: !va.hasKey ? 'Off · add OpenRouter first' : onoff(!!va.agent),
-      dim: !va.hasKey,
+      sub: !vReady ? 'Off · add an AI provider first' : onoff(!!va.agent),
+      dim: !vReady,
       info: {
         t: 'Voice assistant acts on the TV',
-        d: !va.hasKey ? 'Needs OpenRouter as an AI provider: Features > Voice > Set up from your phone. ' + VOICE_D : VOICE_D,
+        d: !vReady
+          ? 'Needs an AI provider (OpenRouter or a server of yours): Features > Voice > Set up from your phone. ' + VOICE_D
+          : VOICE_D,
       },
       fn: function () {
-        if (!va.hasKey) {
-          banner('Add OpenRouter as an AI provider first: Features > Voice > Set up from your phone', 'err');
+        if (!vReady) {
+          banner('Add an AI provider (OpenRouter or a server of yours) first: Features > Voice > Set up from your phone', 'err');
           return;
         }
         api('/api/voice/set', { llm: { agent: !va.agent } }).then(
