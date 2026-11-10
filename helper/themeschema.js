@@ -220,6 +220,7 @@ const SCHEMA = [
   ['tile.iconScale', 'num', [0.6, 2], 1, 'Scale of the icon inside the tile.'],
   ['picker.iconScale', 'num', [0.5, 2.5], 1, 'Scale of the app icons in the Input picker over the running app; 1 is the usual size.'],
   ['effects.glow', 'num', [0, 1], 1, 'Strength of the ambient glow at the top.'],
+  ['effects.focusIcon', 'bool', null, false, 'Show the focused app icon as a large, dim background image.'],
   ['effects.glowColor', 'enum', ['app', 'accent'], 'app', '`app`: taken from the focused icon; `accent`: the accent colour.'],
   ['effects.speed', 'num', [0, 2], 1, 'Animation speed multiplier; 0 switches the animations off.'],
   [
@@ -584,6 +585,7 @@ function resolve(t, accent) {
     nightRgb: night.join(','),
     wallpaper: w ? { id: t.id, file: w, dim: v['effects.wallpaperDim'] } : null,
   };
+  if (v['effects.focusIcon']) out.focusIcon = true;
   // only a theme that changes the page strip carries this key, so the replies for the other themes stay as they were
   if (SCHEMA.some(r => String(r[0]).indexOf('strip.') === 0 && v[/** @type {string} */ (r[0])] !== r[3]))
     out.strip = {
