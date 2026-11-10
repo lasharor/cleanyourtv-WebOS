@@ -265,8 +265,8 @@ document.addEventListener('keydown', function (e) {
   }
   if (k === 37 && c > 0) setFocus(r, c - 1);
   else if (k === 39 && c < len - 1) setFocus(r, c + 1);
-  else if (k === 38 && r > 0) setFocus(r - 1, mapCol(len, rows[r - 1].length, c));
-  else if (k === 40 && r < rows.length - 1) setFocus(r + 1, mapCol(len, rows[r + 1].length, c));
+  else if (k === 38 && r > 0) setFocus(r - 1, vertCol(r, r - 1, len, rows[r - 1].length, c));
+  else if (k === 40 && r < rows.length - 1) setFocus(r + 1, vertCol(r, r + 1, len, rows[r + 1].length, c));
   else if (k === 13) {
     /* webOS repeats keydown while OK is held, sometimes without e.repeat: only the first one starts the hold timer */
     if (!downEnter || Date.now() - lastEnter > 1500) {
