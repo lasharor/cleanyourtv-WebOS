@@ -512,6 +512,22 @@ var LIVE = (function () {
       c = hsl2rgb(hashHue(n), 0.5, 0.42);
     $('lv-glow').style.setProperty('--c', c.join(','));
   }
+  /* the tab the guide opens on: the one the playing channel was chosen from ('0' All channels, '1' Favourites, '2' Recent, 'g:<name>' a
+     category) while it still holds the channel, else the channel's first category, else All channels */
+  function guideTab(tab, groups, c, holds) {
+    var g = -1;
+    if (/^[012]$/.test(tab)) g = +tab;
+    else if (tab.indexOf('g:') === 0 && groups.indexOf(tab.slice(2)) >= 0) g = groups.indexOf(tab.slice(2)) + 3;
+    if (g >= 0 && holds(g)) return g;
+    var gi = c.cats[0] ? groups.indexOf(c.cats[0]) : -1;
+    return gi >= 0 ? gi + 3 : 0;
+  }
+  /* remembers the tab a channel is chosen from, so the guide opens on it again */
+  function keepTab() {
+    try {
+      localStorage.setItem('live.tab', L.g < 3 ? String(L.g) : 'g:' + groups[L.g - 3]);
+    } catch (e) {}
+  }
   function openList() {
     L.open = true;
     var c = byNum[cur],
@@ -520,11 +536,17 @@ var LIVE = (function () {
       tuned = +localStorage.getItem('live.tuned') || 0;
     } catch (e) {}
     if (!c && tuned) c = byNum[tuned];
-    L.g = 0;
-    if (c && c.cats[0]) {
-      var gi = groups.indexOf(c.cats[0]);
-      if (gi >= 0) L.g = gi + 3;
-    } else if (
+    var tab = '';
+    try {
+      tab = localStorage.getItem('live.tab') || '';
+    } catch (e) {}
+    L.g = c
+      ? guideTab(tab, groups, c, function (g) {
+          return listFor(g).indexOf(c) >= 0;
+        })
+      : 0;
+    if (
+      !c &&
       groups.length &&
       !chans.some(function (x) {
         return x.url;
@@ -1195,6 +1217,7 @@ var LIVE = (function () {
       } else if (k === 13) {
         if (L.list[L.ci]) {
           var n = L.list[L.ci].num;
+          keepTab();
           closeList();
           play(n);
           return;
@@ -1356,6 +1379,7 @@ var LIVE = (function () {
       if (el) {
         var ch = L.list[num(el, 'data-j')];
         if (ch) {
+          keepTab();
           closeList();
           play(ch.num);
         }

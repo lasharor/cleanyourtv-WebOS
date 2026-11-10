@@ -38,6 +38,9 @@ On the home screen the tile under the pointer takes the focus as soon as the poi
 middle of the screen, not where it hid), whether you move the remote or turn the wheel; the notch that brings the pointer back does not
 move to the next tile, and a click focuses what it opens. While the pointer is hidden,
 after a button press, it does not move the focus.
+In a theme whose app grid opens over or pushes up Home, moving the pointer below the dock opens the first app row; moving it past a row's
+top or bottom edge moves to the row above or below, and moving above the first app row returns to the dock.
+Moon uses one glass highlight in the selected app icon's colour that slides between the dock and app rows instead of drawing a separate ring on each.
 
 ![App options](screenshots/options.jpg)
 
