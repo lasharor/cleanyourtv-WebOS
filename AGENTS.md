@@ -19,6 +19,7 @@ disk, and a reboot without the boot scripts brings LG's Home back.
 | Settings (`config.json`) and who changed them | `helper/config.js`: change settings only with `config.update(source, fn)`; changes are logged |
 | Anything that differs between TVs (webOS version, firmware) | `helper/tvprofile.js`, also asked by `scripts/bootstrap.sh` |
 | Apps, icons, usage, launching, running apps (Back on Home) | `helper/apps.js`, `helper/running.js` |
+| The Bluetooth button (paired devices, connecting a controller) | `helper/bluetooth.js`, `bluetoothMenu` in `app/src/js/menus.js` |
 | Downloads, programs, luna, TV paths | `helper/fetch.js`, `helper/exec.js`, `helper/luna.js`, `helper/paths.js` |
 | The manager app and its API (updates, options, keys) | `manager/src/` (built into `manager/app/index.html`), `helper/manager.js`, `helper/updates.js`, `helper/selfupdate.js` |
 | The Input key, the Inputs list over the running app | `helper/inputkey.js`, `helper/inputhook.js`, `helper/picker.js`, `picker/app/`, `scripts/inputkey.sh` |

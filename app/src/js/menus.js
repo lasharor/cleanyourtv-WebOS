@@ -419,6 +419,201 @@ function inputsMenu() {
     openMenu(t('Inputs'), items);
   });
 }
+/* The Bluetooth button: the paired devices (LG's remote left out), OK connects or disconnects a controller, keyboard or mouse, holding OK
+   removes one. Other devices (headphones) are shown dimmed: LG's settings connect them. Pair a controller... looks for devices and pairs
+   one (a DualSense that a PS5 took over is paired again). The list is read again after each change and by Refresh. */
+var BT_ICON = { gamepad: 'gamepad', keyboard: 'keyboard' };
+function btError(x) {
+  if (x && x.error) toast(t('Bluetooth: %s').replace('%s', x.error), true);
+}
+function bluetoothMenu() {
+  var data = null,
+    busy = '';
+  var build = function () {
+      var devs = (data && data.devices) || [],
+        items = devs.map(function (d) {
+          var state =
+            busy === d.address
+              ? d.connected
+                ? t('Disconnecting…')
+                : t('Connecting…')
+              : d.connecting
+                ? t('Connecting…')
+                : d.connected
+                  ? t('Connected')
+                  : t('Not connected');
+          return {
+            icon: BT_ICON[d.kind] || 'bluetooth',
+            label: d.name,
+            sub: d.connectable ? state : state + ' · ' + t('Connect it in LG’s settings'),
+            dim: !d.connected,
+            stay: true,
+            fn: function () {
+              if (!d.connectable || busy) return;
+              busy = d.address;
+              refreshMenu();
+              api('/api/bluetooth', { address: d.address, connect: !d.connected }).then(
+                function (x) {
+                  busy = '';
+                  update(x);
+                  btError(x);
+                },
+                function () {
+                  busy = '';
+                  update(data);
+                  toast(t('The service did not answer.'), true);
+                }
+              );
+            },
+            /* hold OK: remove the pairing, asked first */
+            hold: function () {
+              openMenu(t('Remove %s?').replace('%s', d.name), [
+                {
+                  label: t('Remove'),
+                  sub: t('To use it again, pair it again.'),
+                  icon: 'trash',
+                  fn: function () {
+                    backMenu();
+                    api('/api/bluetooth/remove', { address: d.address }).then(function (x) {
+                      update(x);
+                      btError(x);
+                    });
+                  },
+                },
+                {
+                  label: t('Cancel'),
+                  fn: function () {
+                    backMenu();
+                  },
+                },
+              ]);
+            },
+          };
+        });
+      if (!devs.length)
+        items.push({
+          note: data && data.error ? t('Bluetooth is not available: %s').replace('%s', data.error) : t('No paired devices.'),
+        });
+      if (data && data.available)
+        items.push({
+          icon: 'gamepad',
+          label: t('Pair a controller...'),
+          stay: true,
+          fn: function () {
+            btPairMenu(function () {
+              api('/api/bluetooth').then(update);
+            });
+          },
+        });
+      items.push({
+        label: t('Refresh'),
+        stay: true,
+        fn: function () {
+          api('/api/bluetooth').then(update);
+        },
+      });
+      return items;
+    },
+    update = function (x) {
+      if (x) data = x;
+      if (stack.length && stack[stack.length - 1].build === build) refreshMenu();
+    };
+  api('/api/bluetooth').then(
+    function (x) {
+      data = x;
+      openBuilt(t('Bluetooth'), build);
+    },
+    function () {
+      toast(t('The service did not answer.'), true);
+    }
+  );
+}
+/* Pairing: the TV looks for devices (about 20 s, Search again starts it anew) and the list follows every 2 s while this menu is open. OK
+   on a controller pairs it; the service removes an old pairing of it first. Leaving the menu stops the search. done: called after a pairing. */
+function btPairMenu(done) {
+  var data = null,
+    pairing = '',
+    timer = 0;
+  var open = function () {
+      return stack.length && stack[stack.length - 1].build === build;
+    },
+    stop = function () {
+      clearTimeout(timer);
+      timer = 0;
+      api('/api/bluetooth/scan', { start: false }).then(
+        function () {},
+        function () {}
+      );
+    },
+    poll = function () {
+      timer = setTimeout(function () {
+        if (!open()) {
+          if (!pairing) stop();
+          return;
+        }
+        api('/api/bluetooth').then(function (x) {
+          if (!pairing) update(x);
+          poll();
+        }, poll);
+      }, 2000);
+    },
+    scan = function () {
+      api('/api/bluetooth/scan', { start: true }).then(function (x) {
+        update(x);
+        btError(x);
+      });
+    },
+    build = function () {
+      var found = (data && data.found) || [],
+        items = [{ note: t('Hold Create and PS on the controller until its light blinks fast.') }];
+      found.forEach(function (f) {
+        items.push({
+          icon: BT_ICON[f.kind] || 'bluetooth',
+          label: f.name,
+          sub: pairing === f.address ? t('Pairing…') : f.paired ? t('Pair again') : t('Pair'),
+          stay: true,
+          fn: function () {
+            if (pairing) return;
+            pairing = f.address;
+            refreshMenu();
+            api('/api/bluetooth/pair', { address: f.address }).then(
+              function (x) {
+                pairing = '';
+                if (x && x.error) {
+                  update(x);
+                  return btError(x);
+                }
+                toast(t('%s is paired. Press its PS button to connect it.').replace('%s', f.name));
+                if (open()) backMenu();
+                stop();
+                done();
+              },
+              function () {
+                pairing = '';
+                update(data);
+                toast(t('The service did not answer.'), true);
+              }
+            );
+          },
+        });
+      });
+      if (!found.length) items.push({ note: data && data.discovering ? t('Looking for devices…') : t('Nothing found.') });
+      items.push({
+        label: t('Search again'),
+        stay: true,
+        fn: scan,
+      });
+      return items;
+    },
+    update = function (x) {
+      if (x) data = x;
+      if (open()) refreshMenu();
+    };
+  data = { found: [], discovering: true };
+  openBuilt(t('Pair a controller'), build);
+  scan();
+  poll();
+}
 function isPinned(id) {
   return apps.some(function (a) {
     return a.id === id && a.input;
