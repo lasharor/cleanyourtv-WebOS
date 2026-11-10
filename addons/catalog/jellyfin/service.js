@@ -31,18 +31,39 @@ function create(ctx) {
     const n = parseInt(opt && opt.count, 10);
     return n >= 1 && n <= 6 ? n : 0;
   };
-  // pictures already made into data: addresses, by image and tag (a picture changes only with its tag)
+  // pictures already made into data: addresses, by image and tag (a picture changes only with its tag). One that failed is asked for
+  // again after a minute, not kept as empty, and the reason goes to the log (once in ten minutes for the same reason)
   let pics = {},
-    picKeys = [];
+    picKeys = [],
+    failedAt = {},
+    said = {};
+  const note = why => {
+    if (said[why] && Date.now() - said[why] < 600000) return;
+    said[why] = Date.now();
+    if (ctx.log) ctx.log('jellyfin: no picture: ' + why);
+  };
   async function pic(ref, st) {
     if (!ref) return '';
     const key = st + '|' + ref.id + '|' + ref.type + '|' + (ref.index || 0) + '|' + (ref.tag || '');
     if (pics[key] !== undefined) return pics[key];
-    let uri = '';
+    if (failedAt[key] && Date.now() - failedAt[key] < 60000) return '';
+    let uri = '',
+      why = '';
     try {
       const p = await jf.picture(ref, st);
-      if (p && p.body.length <= PIC_MAX) uri = 'data:' + p.type + ';base64,' + p.body.toString('base64');
-    } catch (_) {}
+      if (!p) why = 'the server did not send a picture (' + ref.type + ')';
+      else if (p.body.length > PIC_MAX)
+        why = 'a ' + ref.type + ' picture of ' + p.body.length + ' bytes is over the ' + PIC_MAX + ' byte limit';
+      else uri = 'data:' + p.type + ';base64,' + p.body.toString('base64');
+    } catch (e) {
+      why = String((e && e.message) || e);
+    }
+    if (!uri) {
+      failedAt[key] = Date.now();
+      note(why);
+      return '';
+    }
+    delete failedAt[key];
     pics[key] = uri;
     picKeys.push(key);
     while (picKeys.length > 40) delete pics[picKeys.shift()];
@@ -70,7 +91,10 @@ function create(ctx) {
     let room = FEED_PICS;
     for (const i of items) {
       let p = await pic(st === 'poster' ? i.poster : i.wide, st);
-      if (p.length > room) p = '';
+      if (p.length > room) {
+        note('the pictures of one answer do not fit together; the rest are left out');
+        p = '';
+      }
       room -= p.length;
       out.push({
         title: i.title,
