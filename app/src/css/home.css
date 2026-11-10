@@ -113,6 +113,22 @@ body {
   opacity: var(--glow-op);
 }
 
+#focus-art {
+  position: absolute;
+  z-index: 1;
+  left: 550px;
+  top: 130px;
+  width: 820px;
+  height: 820px;
+  object-fit: contain;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity calc(0.25s * var(--spd)) linear;
+}
+#focus-art.on {
+  opacity: 0.26;
+}
+
 #top {
   position: absolute;
   left: 0;

@@ -118,6 +118,22 @@ body {
   opacity: var(--glow-op);
 }
 
+#focus-art {
+  position: absolute;
+  z-index: 1;
+  left: 550px;
+  top: 130px;
+  width: 820px;
+  height: 820px;
+  object-fit: contain;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity calc(0.25s * var(--spd)) linear;
+}
+#focus-art.on {
+  opacity: 0.26;
+}
+
 #top {
   position: absolute;
   left: 0;
@@ -2031,7 +2047,7 @@ body.scenes-on {
   transform: none;
 }
 </style></head><body>
-<div id="homepage"><div class="glow" id="gA"></div><div class="glow" id="gB"></div>
+<div id="homepage"><div class="glow" id="gA"></div><div class="glow" id="gB"></div><img id="focus-art" alt="">
 <div id="top"><div id="clock"><div id="greet"></div><div id="time"></div><div id="date"></div></div><div id="bar"></div></div>
 <div id="shelf"><div id="name"></div></div>
 <div id="cards"></div><div id="cs"></div><input id="csq" type="text" autocomplete="off">
@@ -2838,6 +2854,29 @@ function retryTileIcons() {
   });
 }
 
+/* Cinema: use the selected app's existing icon as a quiet, full-screen backdrop. */
+function updateFocusArt(e) {
+  var art = $('focus-art'),
+    a = e && e._a,
+    o = e && e._o,
+    id = a && !a.sys && !a.input ? a.id : o && o.app ? o.app : '',
+    src = '';
+  if (!art) return;
+  if (TH && TH.focusIcon && id) {
+    src =
+      (e && e._i && e._i.src) || (id === '__live' ? LIVE_ICON : API + '/icon/' + encodeURIComponent(id) + (a && a.iv ? '?v=' + a.iv : ''));
+  }
+  if (src) {
+    if (art._src !== src) {
+      art._src = src;
+      art.src = src;
+    }
+    art.classList.add('on');
+  } else {
+    art.classList.remove('on');
+  }
+}
+
 /* ---------- ambient glow: two layers cross-fade, updated only once focus settles ---------- */
 function glowNow(e) {
   var col = TH.glow || e.style.getPropertyValue('--c') || '74,84,112';
@@ -2880,6 +2919,7 @@ var TH0 = {
     push: null,
     overlayH: 510,
     glow: '',
+    focusIcon: false,
     slots: [],
     shelfDock: null,
     dockBottom: false,
@@ -2901,6 +2941,7 @@ function applyTheme(t) {
   if (typeof PAGER !== 'undefined') PAGER.draw();
   if (!t || !t.vars) {
     TH = TH0;
+    updateFocusArt(null);
     if (window.SCENES) SCENES.apply(null);
     return;
   }
@@ -2944,6 +2985,7 @@ function applyTheme(t) {
     push: t.push || null,
     overlayH: t.overlayH || 510,
     glow: t.glowRgb || '',
+    focusIcon: t.focusIcon === true,
     slots: t.slots || [],
     shelfDock: t.shelf || null,
     dockBottom: !!t.dockBottom,
@@ -3025,6 +3067,7 @@ function setFocus(nr, nc, first) {
   c = Math.min(nc, rows[r].length - 1);
   var e = rows[r][c];
   e.classList.add('f');
+  updateFocusArt(e);
   moonTileFocus(e);
   var a = e._a,
     nm = a ? a.title : e._o ? barLabel(e._o) : '',
