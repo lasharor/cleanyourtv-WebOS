@@ -10,6 +10,7 @@ var TH0 = {
     push: null,
     overlayH: 510,
     glow: '',
+    focusIcon: false,
     slots: [],
     shelfDock: null,
     dockBottom: false,
@@ -31,6 +32,7 @@ function applyTheme(t) {
   if (typeof PAGER !== 'undefined') PAGER.draw();
   if (!t || !t.vars) {
     TH = TH0;
+    updateFocusArt(null);
     if (window.SCENES) SCENES.apply(null);
     return;
   }
@@ -74,6 +76,7 @@ function applyTheme(t) {
     push: t.push || null,
     overlayH: t.overlayH || 510,
     glow: t.glowRgb || '',
+    focusIcon: t.focusIcon === true,
     slots: t.slots || [],
     shelfDock: t.shelf || null,
     dockBottom: !!t.dockBottom,
@@ -155,6 +158,7 @@ function setFocus(nr, nc, first) {
   c = Math.min(nc, rows[r].length - 1);
   var e = rows[r][c];
   e.classList.add('f');
+  updateFocusArt(e);
   moonTileFocus(e);
   var a = e._a,
     nm = a ? a.title : e._o ? barLabel(e._o) : '',

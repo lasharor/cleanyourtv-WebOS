@@ -164,7 +164,8 @@ function create(ctx) {
     return closed;
   }
 
-  let busy = Promise.resolve(); // one change at a time
+  /** @type {Promise<any>} */
+  let busy = Promise.resolve(); // one change at a time; what a queued change returns comes back to its caller
   const queue = fn => (busy = busy.then(fn, fn));
 
   // sets every saved choice the TV does not have; closeNow: also closes the disabled apps that run (once, after the boot)
