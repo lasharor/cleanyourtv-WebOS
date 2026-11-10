@@ -159,6 +159,18 @@ run(async () => {
   wh.pointerShown = false;
   ok(wh.wheelHome(1) === true, 'a TV without pointer events: every notch moves, as before');
 
+  // ---- Up and Down between app rows of different length keep the column (issue 225) ----
+  const vc = { mapCol: (f, t, c) => (f > 1 ? Math.round((c * (t - 1)) / (f - 1)) : 0) };
+  vm.createContext(vc);
+  vm.runInContext(source(theme, 'vertCol'), vc, { filename: 'vertCol' });
+  ok(
+    vc.vertCol(2, 3, 10, 4, 1) === 1 && vc.vertCol(2, 3, 10, 4, 7) === 3,
+    'Down from a row of 10 to a row of 4: the same column, the last at most'
+  );
+  ok(vc.vertCol(3, 2, 4, 10, 3) === 3, 'Up from a row of 4 to a row of 10: the same column');
+  ok(vc.vertCol(1, 2, 5, 10, 2) === 5, 'dock to the grid stays proportional');
+  ok(/vertCol\(r, r \+ 1/.test(inp) && /vertCol\(r, r - 1/.test(inp), 'the arrow keys use it');
+
   // ---- crossing the empty vertical edge with the Magic Remote ----
   const pcalls = [],
     box = (top, bottom) => ({ getBoundingClientRect: () => ({ top, bottom }) }),

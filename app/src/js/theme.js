@@ -241,6 +241,11 @@ function moonTileFocus(e) {
 function mapCol(from, to, col) {
   return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;
 }
+/* the column an Up or Down lands on: between two app rows of the grid the same column (clamped to a shorter row, so app 2 of a row of 10
+   goes to the second of the next row), elsewhere (dock, top row) the proportional one */
+function vertCol(from, to, fromLen, toLen, col) {
+  return from >= 2 && to >= 2 ? Math.min(col, toLen - 1) : mapCol(fromLen, toLen, col);
+}
 function posOf(e) {
   for (var i = 0; i < rows.length; i++) {
     var j = rows[i].indexOf(e);
