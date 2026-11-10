@@ -104,6 +104,10 @@ ARM kernel) started by the root service with its own copy of the C library; it r
   reaches your server.
 - The phone setup page is a short-lived page on the local network (port 8769, a random 128-bit address, ten minutes, closed after
   saving, plain HTTP: the key is visible on the network while it is typed).
+- With **Home Assistant recognises the speech** switched on (off by default, `voice.stt`), the audio of each phrase (at most 30 seconds,
+  16 kHz mono PCM, held in memory, never written to disk) goes to your Home Assistant over its WebSocket API (`ws://` or `wss://`
+  at the address you set, with the same token, sent once in the sign-in message; a self-signed certificate only when you switched
+  that on). Nothing else is sent to anyone for it. If Home Assistant fails, the recogniser on the TV is used when installed.
 - With Home Assistant set up, the recognised text goes to the address you set, with your long-lived access token (plain `http://` is
   possible: the token is then visible on your network; a self-signed certificate is accepted only when you switch that on).
 - The keys and the token are kept in `config.json` (readable by root only) and are never returned by the service.

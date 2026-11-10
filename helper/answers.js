@@ -3,6 +3,7 @@
 // goes in, text comes out; the settings are the voice section of config.json (voice.js passes them in with init).
 const fetch = require('./fetch'),
   hub = require('./toolhub'),
+  haaudio = require('./haaudio'),
   { URL } = require('./netcompat');
 
 let cfg = () => ({});
@@ -432,7 +433,7 @@ async function confirmPending(text) {
 }
 
 // ---- Home Assistant: the Assist (conversation) API with a long-lived access token ----
-const HA_DEFAULTS = { url: '', token: '', selfSigned: false, route: 'ha-first', agent: '' };
+const HA_DEFAULTS = { url: '', token: '', selfSigned: false, route: 'ha-first', agent: '', pipeline: '' };
 const HA_ROUTES = ['ha-first', 'ha-only', 'ai-only'];
 const haCfg = () => Object.assign({}, HA_DEFAULTS, cfg().ha || {});
 const haReady = h => !!(h.url && h.token);
@@ -484,6 +485,18 @@ async function askHa(text) {
     type,
     code,
   };
+}
+// Speech recognition by Home Assistant (voice.stt = 'ha', docs/voice.md): the audio of one utterance goes to the Assist pipeline over the
+// WebSocket API (haaudio.js). end 'intent': Assist also answers (the reply has askHa's shape, so respond() uses it as it would the reply to
+// the text); end 'stt': only the text. Resolves {recognised, assist}; fails with a short reason (voice.js then uses the recogniser on the
+// TV, when it is installed).
+async function recogniseHa(pcm, end) {
+  const h = haCfg();
+  if (!haReady(h)) throw new Error('Home Assistant is not set up');
+  if (haConv && Date.now() - haConv.at > 600000) haConv = null;
+  const r = await haaudio.recognise(h, pcm, { pipeline: h.pipeline, conversation: haConv && haConv.id, end });
+  if (r.conversation) haConv = { id: r.conversation, at: Date.now() };
+  return { recognised: r.recognised, assist: r.assist };
 }
 async function haTest() {
   const h = haCfg();
@@ -590,6 +603,7 @@ module.exports = {
   confirmPending,
   pendingConfirm,
   askHa,
+  recogniseHa,
   haTest,
   haAgents,
   models,
