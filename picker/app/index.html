@@ -17,7 +17,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;colo
 [dir=rtl] .chip.act::after,[dir=rtl] .tile.act::after{right:auto;left:26px}
 .tile{position:relative;flex:1 1 0;min-width:0;height:180px;border-radius:calc(var(--tile-r) * 1.4);overflow:hidden;background:var(--panel2);display:flex;align-items:center;justify-content:center;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);transform:scale(.96);transition:transform .15s ease-out}
-.tile img{max-width:58%;max-height:58%;object-fit:contain}
+.tile img{max-width:calc(58% * var(--icon-s-picker, 1));max-height:calc(58% * var(--icon-s-picker, 1));object-fit:contain}
 .tile.cover img{position:absolute;left:0;top:0;width:100%;height:100%;max-width:none;max-height:none;object-fit:cover}   /* a picture of your own as Full tile (helper/icons.js) */
 .tile.f{transform:translateY(-10px) scale(1.06);box-shadow:0 0 0 5px var(--focus),0 26px 44px rgba(0,0,0,.5)}
 .chip{position:relative;flex:1 1 auto;min-width:max(200px,fit-content);max-width:340px;height:180px;padding:0 32px;border-radius:calc(var(--tile-r) * 1.4);overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--panel2);color:var(--ink);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);

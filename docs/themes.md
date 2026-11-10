@@ -214,6 +214,7 @@ when the focus moves down into it (Back or Up closes it); a dock at the top leav
 | `dock.tileFrostColor` | `#rrggbb` | `#ffffff` | Tint of the dock-tile frost (`dock.tileFrost`): a light colour for a glassy frost, a dark one to deepen the tiles. |
 | `dock.lift` | 0 to 40 | `10` | How far the focused dock tile rises, in px. |
 | `dock.focusScale` | 1 to 1.3 | `1.05` | Scale of the focused dock tile. |
+| `dock.iconScale` | 0.5 to 2.5 | `1` | Extra scale of the icons in the dock only; multiplies `tile.iconScale`. The tile does not change size. |
 | **grid** | | | |
 | `grid.mode` | `below`, `push`, `overlay` | `below` | `below`: the grid sits under the dock and scrolls (a dock at the bottom behaves as `push`); `push`: the grid sits under the dock out of sight, and when the focus moves down into it the dock moves up to `grid.dockUp` and the grid appears below it; `overlay`: the grid opens over the screen above the dock. |
 | `grid.dockUp` | 0 to 700 | `220` | `push` mode: where the dock stops, counted from the top of the screen, while the grid has the focus, in px. |
@@ -230,12 +231,15 @@ when the focus moves down into it (Back or Up closes it); a dock at the top leav
 | `grid.focusScale` | 1 to 1.4 | `1.12` | Scale of the focused tile. |
 | `grid.overlayDim` | 0 to 1 | `0.95` | Opacity of the layer behind the overlay grid. |
 | `grid.overlayH` | 200 to 900 | `510` | Visible height of the overlay grid before it scrolls, in px. |
+| `grid.iconScale` | 0.5 to 2.5 | `1` | Extra scale of the icons in the app grid only; multiplies `tile.iconScale`. The tile does not change size. |
 | **tile** | | | |
 | `tile.gloss` | 0 to 1 | `0` | A light highlight on every tile. |
 | `tile.border` | 0 to 0.6 | `0` | Opacity of a thin outline on every tile. |
 | `tile.ringWidth` | 0 to 10 | `4` | Width of the focus ring, in px; 0 for none. |
 | `tile.ringOffset` | 0 to 14 | `4` | Space between a tile and its focus ring, in px. |
 | `tile.iconScale` | 0.6 to 2 | `1` | Scale of the icon inside the tile. |
+| **picker** | | | |
+| `picker.iconScale` | 0.5 to 2.5 | `1` | Scale of the app icons in the Input picker over the running app; 1 is the usual size. |
 | **effects** | | | |
 | `effects.glow` | 0 to 1 | `1` | Strength of the ambient glow at the top. |
 | `effects.focusIcon` | `true` or `false` | `false` | Show the focused app icon as a large, dim background image. |

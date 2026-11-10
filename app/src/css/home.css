@@ -530,12 +530,12 @@ body {
   background: rgba(var(--dock-frost-rgb), var(--dock-tile-frost));
 }
 #dock .tile img {
-  height: calc(56% * var(--icon-s, 1));
-  max-width: calc(65% * var(--icon-s, 1));
+  height: calc(56% * var(--icon-s, 1) * var(--icon-s-dock, 1));
+  max-width: calc(65% * var(--icon-s, 1) * var(--icon-s-dock, 1));
 }
 #dock .tile svg {
-  width: calc(96px * var(--icon-s, 1));
-  height: calc(96px * var(--icon-s, 1));
+  width: calc(96px * var(--icon-s, 1) * var(--icon-s-dock, 1));
+  height: calc(96px * var(--icon-s, 1) * var(--icon-s-dock, 1));
 }
 #dock .tile.f {
   transform: translateY(var(--dock-lift)) scale(var(--dock-fs));
@@ -545,13 +545,13 @@ body {
   border-radius: var(--tile-r);
 }
 #grid .tile img {
-  width: calc(64% * var(--icon-s, 1));
-  height: calc(64% * var(--icon-s, 1));
-  max-width: calc(75% * var(--icon-s, 1));
+  width: calc(64% * var(--icon-s, 1) * var(--icon-s-grid, 1));
+  height: calc(64% * var(--icon-s, 1) * var(--icon-s-grid, 1));
+  max-width: calc(75% * var(--icon-s, 1) * var(--icon-s-grid, 1));
 }
 #grid .tile svg {
-  width: calc(64px * var(--icon-s, 1));
-  height: calc(64px * var(--icon-s, 1));
+  width: calc(64px * var(--icon-s, 1) * var(--icon-s-grid, 1));
+  height: calc(64px * var(--icon-s, 1) * var(--icon-s-grid, 1));
 }
 #grid .tile.f {
   transform: scale(var(--grid-fs));

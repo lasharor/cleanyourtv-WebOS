@@ -373,7 +373,7 @@ function fit(d, dock) {
     bh = bx[3] - bx[1],
     s = i.style;
   if (dock) {
-    s.height = 'calc(' + 56 / bh + '% * var(--icon-s, 1))';
+    s.height = 'calc(' + 56 / bh + '% * var(--icon-s, 1) * var(--icon-s-dock, 1))';
     s.maxWidth = 'none';
     s.width = 'auto';
     // a gradient picture: the tile takes the same gradient between the picture's top and bottom edges, so no square shows
