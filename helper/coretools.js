@@ -132,7 +132,7 @@ const TOOLS = [
   {
     name: 'remote_buttons',
     description:
-      'The remote buttons that were given another job (remapped) on this TV. action list: each button and what it does; press: do what a button does, by its code.',
+      'The remote buttons that were given another job (remapped) on this TV. action list: each button and what it does (does: everywhere; only_in: in one app); press: do what a button does, by its code. A button that turns the TV off or changes the sound is not pressed from here.',
     inputSchema: S(
       {
         action: { type: 'string', enum: ['list', 'press'] },
@@ -366,14 +366,16 @@ function create(ctx) {
         if (x.action === 'list') {
           const keys = Object.keys(b.keys).map(c => {
             const e = b.keys[c];
-            return { code: c, button: e.name || c, does: e.type + (e.id ? ' ' + e.id : '') };
+            const does = t => t.type + (t.id ? ' ' + t.id : '');
+            const only = (e.apps || []).map(a => a.app + ': ' + does(a));
+            return Object.assign({ code: c, button: e.name || c, does: does(e) }, only.length ? { only_in: only } : {});
           });
           return done({ on: b.on, buttons: keys });
         }
         if (x.action !== 'press') return fail('action is list or press');
         if (!b.on) return fail('remapping is switched off on this TV');
         if (!b.keys[String(x.code)]) return fail('no remapped button with code ' + String(x.code).slice(0, 20) + '; list shows them');
-        const r = await rm.fire(String(x.code));
+        const r = await rm.fire(String(x.code), { tool: true });
         return r.returnValue ? done({ pressed: x.code }) : fail(r.error || 'the action did not run');
       }
       if (name === 'new_conversation') {
