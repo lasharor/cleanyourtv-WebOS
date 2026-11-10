@@ -51,7 +51,8 @@ that only plays a playlist or external boxes. The two switches are independent, 
 
 The tabs are **All channels**, **Favourites**, **Recent** and one per category of your playlist. Channels show badges for country,
 language and quality when the playlist names them (for example `NL`, `EN`, `HD`). Filters narrow the list by country, language and
-quality; search matches names across all channels.
+quality; search matches names across all channels. The guide opens on the tab you last chose a channel from (in **All channels** you
+stay in **All channels**), or on the channel's category when that tab does not hold the playing channel.
 
 ### The Guide button
 
