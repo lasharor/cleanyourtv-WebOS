@@ -257,6 +257,11 @@ run(async () => {
       /label: 'Open page'[\s\S]{0,700}api\('\/api\/book\/open', \{ id: a1\.id \}\)/.test(menuSrc),
       'the manager offers Open page and launches Home with {page: id}'
     );
+    const vi = menuSrc.indexOf("label: 'Let the voice assistant act on the TV'");
+    ok(
+      vi > 0 && /vReady = \(va\.providers \|\| \[\]\)\.some\(/.test(menuSrc) && !/va\.hasKey/.test(menuSrc.slice(vi - 700, vi + 1500)),
+      'the voice-acts switch needs any usable AI provider (a server of yours too), not only OpenRouter'
+    );
   }
   const pages = [
     'app',
