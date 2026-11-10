@@ -25,6 +25,8 @@ const MODES = ['partial', 'semi-full', 'full', 'criu'];
 const TYPES = ['periodic', 'oneshot'];
 const DELAY = 90000; // after boot, once the apps have finished starting: set the policy and close what already runs
 const EVERY = 300000; // the daemon looks every 5 minutes
+const RETRIES = 3; // the preload manager may not be ready early in a cold boot: a failed boot, wake or periodic apply is tried again
+const RETRY_DELAY = 5000;
 const TICK = 10000; // the wake check
 const WAKE = 45000; // a gap this long between two ticks: the TV was suspended
 const WAKE_AGAIN = 30000; // LG may set its policy a while after the wake
@@ -245,7 +247,24 @@ function create(ctx) {
     web.json(res, await status(result));
   }
 
-  const run = closeNow => () => apply(closeNow).catch(e => console.error('preload: ' + e.message));
+  // a failed read (the manager is not up yet) is tried again up to RETRIES times; the API (POST) is not retried. Where the manager does
+  // not exist (older webOS) the error stays and the retries are a few quiet queries.
+  const wait = ms =>
+    new Promise(resolve => {
+      const t = setTimeout(resolve, ms);
+      if (t.unref) t.unref();
+    });
+  const retryDelay = ctx.retryDelay === undefined ? RETRY_DELAY : ctx.retryDelay;
+  async function applyRetry(closeNow) {
+    let r = await apply(closeNow);
+    for (let n = 1; n <= RETRIES && r.error && !r.changed.length && Object.keys(saved()).length; n++) {
+      console.log('preload: ' + r.error + ', trying again in ' + retryDelay / 1000 + ' s (' + n + ' of ' + RETRIES + ')');
+      await wait(retryDelay);
+      r = await apply(closeNow);
+    }
+    return r;
+  }
+  const run = closeNow => () => applyRetry(closeNow).catch(e => console.error('preload: ' + e.message));
   // A TV in standby is suspended and Node's timers do not count that time, so the 5 minute check above comes 5 awake minutes after a
   // wake, while LG sets its own policy again at the wake. A jump of the wall clock is a wake: set the choices at once, and once more
   // when LG has finished.
@@ -281,7 +300,7 @@ function create(ctx) {
     if (every.unref) every.unref();
     syncTick();
   };
-  return { name: 'preload', paths: ['/api/preload'], handle, start, apply, status, tick, ticking: () => !!ticker };
+  return { name: 'preload', paths: ['/api/preload'], handle, start, apply, applyRetry, status, tick, ticking: () => !!ticker };
 }
 
 module.exports = { create, clean, MODES, TYPES };
