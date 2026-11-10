@@ -39,6 +39,14 @@ The original look: near-black, white focus, ten columns.
 
 Folder: [`classic/`](classic/)
 
+### Cinema
+
+A dark living-room layout with wide app tiles, a soft pill top bar and the focused app's dimmed icon in the background.
+
+[![Cinema](cinema/preview.jpg)](cinema/preview.jpg)
+
+Folder: [`cinema/`](cinema/)
+
 ### Big Tiles
 
 Classic with large tiles matching the dock in four columns.
