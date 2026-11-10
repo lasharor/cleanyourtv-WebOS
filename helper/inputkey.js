@@ -19,7 +19,7 @@ function create(ctx) {
   const voiceKey = () => {
     const v = config.get().voice || {};
     const voice = ctx.feature('voice');
-    return v.enabled && voice && voice.installed() ? String(config.keys().voice || '') : '';
+    return v.enabled && voice && (voice.ready || voice.installed)() ? String(config.keys().voice || '') : '';
   };
   // an add-on with the permission key.guide (the TV guide for LG's tuner) is a guide of its own: it takes the key whether Live TV is on or not
   const guideAddon = () => {
