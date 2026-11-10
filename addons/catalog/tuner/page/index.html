@@ -938,7 +938,13 @@ var LIVE = (function () {
      picture time has not moved for STALL_MS is reloaded by stalled(), as after 'waiting'. When 'waiting' fires first, startVariant() has
      reset 'started' by then and this does nothing. */
   function watchProgress() {
-    if (!started || pend || !video || video.paused || video.ended || document.hidden) return;
+    if (!started || pend || !video || !o.on || document.hidden) return;
+    /* webOS 25 can leave the element paused and ended (issue 224): a live stream that ended is a stall, not a channel that stopped */
+    if (video.ended) {
+      lastProgressAt = Date.now();
+      stalled();
+      return;
+    }
     if (lastProgressAt && Date.now() - lastProgressAt >= STALL_MS) {
       lastProgressAt = Date.now();
       stalled();
@@ -984,6 +990,17 @@ var LIVE = (function () {
         clearTimeout(stallT);
         stallT = setTimeout(stalled, STALL_MS);
       }
+    });
+    /* the TV pausing or ending a live stream by itself (issue 224) is a stall too: reload it unless it is playing again by then */
+    v.addEventListener('pause', function () {
+      if (!o.on || !started || pend || failed || document.hidden) return;
+      clearTimeout(stallT);
+      stallT = setTimeout(function () {
+        if (video === v && v.paused && !document.hidden && o.on && started && !pend && !failed) stalled();
+      }, 1500);
+    });
+    v.addEventListener('ended', function () {
+      if (video === v && o.on && started && !pend && !failed) stalled();
     });
     /* capture: a failing <source> reports on the <source>, and that event does not bubble; an old, removed <source> is ignored */
     v.addEventListener(
