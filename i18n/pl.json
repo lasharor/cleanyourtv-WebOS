@@ -1745,5 +1745,21 @@
  "Add an entry for one app": "Dodaj wpis dla jednej aplikacji",
  "another action while that app is in front": "inne działanie, gdy ta aplikacja jest na wierzchu",
  "Remove this entry": "Usuń ten wpis",
- "the Everywhere action runs in that app": "w tej aplikacji działa akcja z Wszędzie"
+ "the Everywhere action runs in that app": "w tej aplikacji działa akcja z Wszędzie",
+ "Bluetooth": "Bluetooth",
+ "Disconnecting…": "Rozłączanie…",
+ "Bluetooth: %s": "Bluetooth: %s",
+ "Bluetooth is not available: %s": "Bluetooth jest niedostępny: %s",
+ "Connect it in LG’s settings": "Połącz go w ustawieniach LG",
+ "To use it again, pair it again.": "Aby znów go używać, sparuj go ponownie.",
+ "No paired devices.": "Brak sparowanych urządzeń.",
+ "Pair a controller...": "Sparuj kontroler...",
+ "Hold Create and PS on the controller until its light blinks fast.": "Przytrzymaj Create i PS na kontrolerze, aż jego światło zacznie szybko migać.",
+ "Pairing…": "Parowanie…",
+ "Pair again": "Sparuj ponownie",
+ "%s is paired. Press its PS button to connect it.": "Sparowano %s. Naciśnij jego przycisk PS, aby go połączyć.",
+ "Looking for devices…": "Wyszukiwanie urządzeń…",
+ "Nothing found.": "Nic nie znaleziono.",
+ "Search again": "Szukaj ponownie",
+ "Pair a controller": "Sparuj kontroler"
 }
