@@ -615,7 +615,7 @@
  "Binary sensors": "Binære sensorer",
  "Climate": "Klima",
  "Fans": "Ventilatorer",
- "Covers": "Dækkener",
+ "Covers": "Persienner og porte",
  "Media players": "Medieafspillere",
  "Scenes": "Scener",
  "Scripts": "Scripts",
@@ -635,11 +635,11 @@
  "Move": "Flyt",
  "Mute": "Lydløs",
  "Volume bar": "Lydstyrkebjælke",
- "Pill": "Pille",
+ "Pill": "Pilleform",
  "Vertical pill on the right": "Lodret pille til højre",
  "Capsule": "Kapsel",
  "Horizontal bar at the top": "Vandret bjælke øverst",
- "Dial": "Skive",
+ "Dial": "Rund skive",
  "Circular dial on the right": "Rund skive til højre",
  "System default (LG webOS)": "Systemstandard (LG webOS)",
  "Stock TV volume bar": "TV'ets originale lydstyrkebjælke",
@@ -1725,5 +1725,7 @@
  "add an AI provider first": "tilføj først en AI-udbyder",
  "the Everywhere action runs in that app": "handlingen Overalt udføres i den pågældende app",
  "Hold Create and PS on the controller until its light blinks fast.": "Hold Create og PS nede på controlleren, indtil lyset blinker hurtigt.",
- "%s is paired. Press its PS button to connect it.": "%s er parret. Tryk på dens PS-knap for at oprette forbindelse."
+ "%s is paired. Press its PS button to connect it.": "%s er parret. Tryk på dens PS-knap for at oprette forbindelse.",
+ "The pairing window closed.": "Parringsvinduet er lukket.",
+ "No phone paired": "Ingen telefon er parret"
 }
