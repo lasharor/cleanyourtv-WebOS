@@ -1200,6 +1200,26 @@ run(async () => {
       /status\('off',t\("Can't reach the TV"\)\)/.test(pg),
     'the page keeps a socket, reconnects on wake and keeps its token'
   );
+  {
+    const css = pg.slice(pg.indexOf('<style>'), pg.indexOf('</style>'));
+    const rule = re => (css.match(re) || [])[1] || '';
+    const dark = rule(/:root\{([^}]*)\}/),
+      light = rule(/html\.light\{([^}]*)\}/),
+      vars = s =>
+        s
+          .split(';')
+          .filter(x => /^--c\d+:/.test(x))
+          .map(x => x.split(':')[0]);
+    ok(
+      vars(dark).length > 30 &&
+        vars(dark).join() === vars(light).join() &&
+        /@media \(prefers-color-scheme:light\)\{html:not\(\.dark\)\{/.test(css) &&
+        /body\{[^}]*background:var\(--c\d+\)/.test(css) &&
+        /theme-color content=#101116 media="\(prefers-color-scheme: dark\)"/.test(pg) &&
+        /theme-color content=#f2f3f7 media="\(prefers-color-scheme: light\)"/.test(pg),
+      'light and dark: every colour that changes is a variable, with a dark value and a light one, the light one when the phone is set to light (or html.light)'
+    );
+  }
   ok(
     (pg.match(/class=drawer/g) || []).length === 6 && /\.drawer\{/.test(pg) && /\.drawer \.top button\{/.test(pg),
     'the inputs, the numbers, the keyboard, the power, the "This remote" and the voice drawer are one and the same: one panel, one handle, one title row, one close button'
@@ -1458,7 +1478,7 @@ run(async () => {
       /id=tabbar/.test(pg) &&
       /\.padrow button\{flex-direction:column;height:64px/.test(pg) &&
       /\.tab\{flex:1;height:60px/.test(pg) &&
-      /\.tabbar\{flex:none;display:flex;border-top:1px solid #2e3140;background:#13141a;padding:0 12px 4px\}/.test(pg) &&
+      /\.tabbar\{flex:none;display:flex;border-top:1px solid var\(--c\d+\);background:var\(--c\d+\);padding:0 12px 4px\}/.test(pg) &&
       /#remote\{[^}]*height:var\(--appH/.test(pg) &&
       !/position:fixed;left:0;right:0;bottom:0/.test(pg),
     'the touchpad has a solid border and no text inside (the hint is below it), its scroll thumb turns orange while dragged, the buttons are 64px, and the tab bar is 64px (60px buttons and 4px)'

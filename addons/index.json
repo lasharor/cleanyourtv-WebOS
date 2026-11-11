@@ -135,7 +135,7 @@
     {
       "id": "phoneremote",
       "name": "Phone remote",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "description": "A phone on your Wi-Fi as the TV's remote: buttons, a touchpad, the keyboard, voice, the apps and Live TV.",
       "about": "A phone on the same Wi-Fi becomes the TV's remote control. It pairs once with a 6-digit code the TV shows, then its browser page reconnects by itself: the remote's buttons, a touchpad that moves the TV's pointer, a keyboard that types into the field open on the TV, a mic button that asks the TV's voice assistant and shows the conversation (speak or type on the phone, or let the TV listen on its remote), the TV's apps and the channels of your Live TV playlist, and a power button. Each phone can be blocked or removed, and a phone that is not used for a while is removed by itself. The phone remote is off until you switch it on in Add-ons; its page (Add-ons > Phone remote, and a page of the book on Home) pairs a phone and lists the paired ones.",
       "preview": "preview.jpg",
@@ -152,10 +152,10 @@
         "luna://com.webos.service.tv.systemproperty/getSystemInfo"
       ],
       "files": {
-        "addon.json": "42eba53bf6647e9b5f143ae5af7d59cbfda89e665fa6e9b29730a6047a10cddc",
+        "addon.json": "31320aa0f93fdaf8b4991166e780e5f31e2160b547d2260ba9682a435b5bdae1",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
         "page/index.html": "09fc30da2b8642312cc2a228d49bcbbff91c489fa9ec1f55ccc804c1883cdc98",
-        "page.js": "f799f607274a0d0ba28cc67614b2a184b57400ef089e1ecb7ca60b98d20ddd3f",
+        "page.js": "1bd6c98af5a81be3833d7cb14390a01ba336fdffa84025c3b65d133fb6cc88fa",
         "pwa/icon-180.png": "57040c5ec7e1dfc01918b2295df594dbc034b85df865140e27829873f02c4aff",
         "pwa/icon-512.png": "08849f214ae06fda96123a5e13ec69f9f30a6b7d13e776e20f21c669af3581e4",
         "remotekeys.js": "2f65affbb6a6ff057947d81a553ee3d2063d293edaed4cdcb4a0019b380ea8d3",

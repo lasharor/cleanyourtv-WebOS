@@ -861,6 +861,88 @@ textarea:focus{border:1.5px solid #ff8a5b;box-shadow:0 0 0 4px rgba(255,138,91,.
 .kv .kvbtn{height:auto;padding:0;border:0;background:transparent;color:#ff8a5b;font-size:inherit;font-weight:600}
 `;
 
+// Light mode: the page follows the phone's own setting (prefers-color-scheme). The stylesheet above is written in the dark colours; each
+// colour in LIGHT becomes a variable with its dark value on :root and its light one when the phone is set to light. A colour not in the list
+// is the same in both (the orange accent, the colour keys, the status dots). A page that is shown inside something with its own theme
+// (an app around it) can set it with html.light or html.dark, which wins over the phone's setting.
+const LIGHT = {
+  // surfaces, from the page's background up
+  '#101116': '#f2f3f7',
+  '#111319': '#e9ebf0',
+  '#13141a': '#ffffff',
+  '#14161c': '#f7f8fa',
+  '#14161d': '#f7f8fa',
+  '#151720': '#eceef3',
+  '#1a1c23': '#ffffff',
+  '#1b1d25': '#ffffff',
+  '#1c1f2a': '#ffffff',
+  '#1d2028': '#f7f8fa',
+  '#20222b': '#eceef3',
+  '#232631': '#eceef3',
+  '#23262f': '#e3e5ec',
+  '#2a2d3a': '#e4e6ec',
+  '#2e3140': '#d9dce5',
+  '#3a3e50': '#c9cdd8',
+  '#3a3e4d': '#c9cdd8',
+  // text
+  '#f4f5f7': '#16181f',
+  '#fff': '#000',
+  '#dde0ea': '#2a2d38',
+  '#c9ccd8': '#4a4f60',
+  '#a3a8b8': '#626879',
+  '#646b82': '#9aa0b2',
+  // the accent while pressed, and the states
+  '#ffb08f': '#e8692f',
+  '#7be0a4': '#1f8a4c',
+  '#f0d58a': '#a77b00',
+  '#f0a0a0': '#c43c3c',
+  '#ff9f9f': '#c43c3c',
+  '#5a3434': '#f0c4c4',
+  '#1d1517': '#fff1f1',
+  '#6b2b2b': '#e9b0b0',
+  '#2a1717': '#fff0f0',
+  '#1d1714': '#fff4ee',
+  '#5a3b2c': '#f5d2c0',
+  '#5a3a2b': '#f5cdb8',
+  '#241a17': '#fff1ea',
+  '#6b4330': '#f0c0a5',
+  '#2a1d18': '#ffeee5',
+  '#12231b': '#e9f8ef',
+  '#bfe9cf': '#1d5c37',
+  '#2a2412': '#fff8e1',
+  '#ffe9a8': '#6b5200',
+  // see-through layers: white on dark becomes black on light
+  'rgba(8,9,12,.66)': 'rgba(20,22,30,.35)',
+  'rgba(255,255,255,.05)': 'rgba(0,0,0,.05)',
+  'rgba(255,255,255,.06)': 'rgba(0,0,0,.07)',
+  'rgba(255,255,255,.03)': 'rgba(0,0,0,.02)',
+  'rgba(255,255,255,.10)': 'rgba(0,0,0,.07)',
+  'rgba(163,168,184,.6)': 'rgba(98,104,121,.6)',
+  'rgba(0,0,0,.45)': 'rgba(0,0,0,.15)',
+};
+const THEMED = (() => {
+  const used = new Map();
+  const css = STYLE.replace(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b(?![0-9a-fA-F])|rgba\([^)]*\)/g, c => {
+    const k = c.toLowerCase();
+    if (!(k in LIGHT)) return c;
+    if (!used.has(k)) used.set(k, '--c' + used.size);
+    return 'var(' + used.get(k) + ')';
+  });
+  const set = pick => [...used].map(([c, v]) => v + ':' + pick(c)).join(';');
+  const light = set(c => LIGHT[c]) + ';color-scheme:light';
+  return (
+    ':root{' +
+    set(c => c) +
+    ';color-scheme:dark}' +
+    '@media (prefers-color-scheme:light){html:not(.dark){' +
+    light +
+    '}}html.light{' +
+    light +
+    '}' +
+    css
+  );
+})();
+
 const P = {
   back: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
   home: '<path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/>',
@@ -918,10 +1000,10 @@ function phonePage(i18n, lang, preCode, hint) {
     `<!doctype html><html lang=${lang}><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name=referrer content=no-referrer>
 <link rel=manifest href="/manifest.webmanifest${pre ? '?code=' + pre : ''}"><link rel=apple-touch-icon href="/apple-touch-icon.png?v=${ICON_V}">
 <meta name=apple-mobile-web-app-capable content=yes><meta name=mobile-web-app-capable content=yes><meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
-<meta name=apple-mobile-web-app-title content="${T('TV remote')}"><meta name=theme-color content=#101116>
+<meta name=apple-mobile-web-app-title content="${T('TV remote')}"><meta name=theme-color content=#101116 media="(prefers-color-scheme: dark)"><meta name=theme-color content=#f2f3f7 media="(prefers-color-scheme: light)"><meta name=color-scheme content="dark light">
 <meta http-equiv=cache-control content=no-store>
 <meta http-equiv=pragma content=no-cache><title>${T('Phone remote')}</title>
-<style>${STYLE}</style>
+<style>${THEMED}</style>
 <div id=pairbox class=hide><div class=glow></div><p class=eyebrow id=eb data-app="${T('Step 2 of 2')}">&nbsp;</p><h1>${T('Enter the code')}</h1><p class=sub id=psub data-app="${T('The 6-digit code is on the TV screen.')}">${T('Use this device as a remote for your TV. You only do this once.')}</p>
 <div id=ioscard class="ioscard hide"><b>${T('On an iPhone or iPad, put the remote on the Home Screen first')}</b>
 <ol><li>${T('In Safari, tap Share (in iOS 26 it is in the ••• menu).')}</li><li>${T('Choose Add to Home Screen, keep Open as Web App on, and tap Add.')}</li><li>${T('Open TV remote from the Home Screen and pair it there with the code from the TV.')}</li></ol>
