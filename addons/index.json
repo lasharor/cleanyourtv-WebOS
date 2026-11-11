@@ -94,9 +94,9 @@
         "cards/continue/card.html": "625e062837cbda14fc3d37f7c716adeaed0ef65ca0b2c87346ee03bbc7213f8d",
         "cards/continue/card.js": "070f228981684091b7da9f9c25af638321f100c53ba1b5bb6263f757a7d22942",
         "cards/continue/preview.jpg": "0ac03a4a4243c4534eddbfee7a7ae1996491f5036b663d690044e2f769446009",
-        "jellyfin.js": "65511aad779fe149625e5f2805fa14be35a2cb60c06fff5a4d0a8b5ea786684b",
+        "jellyfin.js": "c9b0db38396d955ef3a967f6151caece54c91d2eb1bdbb69368144f191018a42",
         "phone.js": "2746902ef82be054d1fee24d8e34b9a0c99e732332ca1e2c2de08cddbe2b8f2a",
-        "service.js": "d3e56e2263ae2b7447428ca09b45d894d5b7c0f207cab5153cceb777ac1e6213"
+        "service.js": "afa05f198b58dfcdadc863472caf7338ed29cb8ccc21970253760d786630f6ea"
       }
     },
     {
@@ -154,7 +154,7 @@
       "files": {
         "addon.json": "42eba53bf6647e9b5f143ae5af7d59cbfda89e665fa6e9b29730a6047a10cddc",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "2aa01d03904edbe9dd04c4bee4d65381466fc914499c1b997f8fd5bb8a6ea40b",
+        "page/index.html": "09fc30da2b8642312cc2a228d49bcbbff91c489fa9ec1f55ccc804c1883cdc98",
         "page.js": "f799f607274a0d0ba28cc67614b2a184b57400ef089e1ecb7ca60b98d20ddd3f",
         "pwa/icon-180.png": "57040c5ec7e1dfc01918b2295df594dbc034b85df865140e27829873f02c4aff",
         "pwa/icon-512.png": "08849f214ae06fda96123a5e13ec69f9f30a6b7d13e776e20f21c669af3581e4",
@@ -248,7 +248,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "4011a3c68d928530e29df05d6b74c6f79aea742048509bc48549c2a122195fe0",
+        "page/index.html": "88cd8cc536afef54e6cef678ef18b34d9f10fd35fb1f4d5cefba5f87a4b099f4",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"

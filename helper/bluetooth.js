@@ -152,7 +152,8 @@ function create(ctx) {
           }
           if (m.returnValue === false) return end(m.errorText || 'the pairing failed');
           if (m.request === 'endPairing') return end('');
-          if (m.request === 'confirmPasskey') luna(BT + 'adapter/supplyPasskeyConfirmation', { address, accept: true });
+          if (m.request === 'confirmPasskey')
+            Promise.resolve(luna(BT + 'adapter/supplyPasskeyConfirmation', { address, accept: true })).catch(() => {}); // a refusal ends the pairing by itself
           else if (m.request && /passkey|pin/i.test(m.request) && m.request !== 'displayPasskey')
             return end('this device needs a code: pair it in LG’s settings');
         }
@@ -172,7 +173,7 @@ function create(ctx) {
       await scan(false);
       if (f.paired) await luna(BT + 'adapter/unpair', { address });
       const e = await pairOnce(address);
-      console.log('bluetooth: pair ' + f.name + (e ? ': ' + e : ''));
+      console.log('bluetooth: pair a ' + f.kind + (e ? ': ' + e : ''));
       return e;
     } finally {
       pairing = '';
@@ -185,7 +186,7 @@ function create(ctx) {
     const d = p.devices.filter(x => x.address === address)[0];
     if (!d) return 'no paired device with that address';
     const e = refused(await luna(BT + 'adapter/unpair', { address }), 'the Bluetooth service refused');
-    console.log('bluetooth: remove ' + d.name + (e ? ': ' + e : ''));
+    console.log('bluetooth: remove a ' + d.kind + (e ? ': ' + e : ''));
     return e;
   }
 
@@ -199,7 +200,7 @@ function create(ctx) {
       await luna(BT + (on ? 'hid/connect' : 'hid/disconnect'), { address }, { wait: 15000 }),
       'the Bluetooth service refused'
     );
-    console.log('bluetooth: ' + (on ? 'connect ' : 'disconnect ') + d.name + (e ? ': ' + e : ''));
+    console.log('bluetooth: ' + (on ? 'connect a ' : 'disconnect a ') + d.kind + (e ? ': ' + e : ''));
     if (!e && settle) await wait(settle);
     return e;
   }

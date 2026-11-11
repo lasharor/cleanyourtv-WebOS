@@ -167,6 +167,24 @@ run(async () => {
     'a passkey to confirm is accepted; a new device is not unpaired first'
   );
 
+  // the answer to the passkey may fail (the TV's service refuses): that must not be an unhandled rejection
+  let unhandled = 0;
+  const onUnhandled = () => unhandled++;
+  process.on('unhandledRejection', onUnhandled);
+  t.devices.filter(d => d.address === '00:00:00:00:00:01')[0].paired = false;
+  t.pairScript = [
+    { subscribed: true, returnValue: true },
+    { request: 'confirmPasskey', passkey: 123456 },
+    { request: 'endPairing', returnValue: true },
+  ];
+  const badLuna = (uri, p) => (/supplyPasskeyConfirmation/.test(uri) ? Promise.reject(new Error('refused')) : t.luna(uri, p));
+  x = await call(B.create({ luna: badLuna, spawn: t.spawn, settle: 0, pairTime: 500 }), '/api/bluetooth/pair', 'POST', {
+    address: '00:00:00:00:00:01',
+  });
+  await new Promise(resolve => setTimeout(resolve, 30));
+  process.removeListener('unhandledRejection', onUnhandled);
+  ok(unhandled === 0 && !x.j.error, 'a failed answer to the passkey is not an unhandled rejection: ' + unhandled);
+
   t.pairScript = [{ subscribed: true, returnValue: true }, { request: 'enterPinCode' }];
   t.devices.filter(d => d.address === PAD)[0].paired = false;
   x = await call(bp, '/api/bluetooth/pair', 'POST', { address: PAD });

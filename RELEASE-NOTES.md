@@ -1,5 +1,0 @@
-## New
-
-- **Every AI provider can use the tools of the voice assistant.** With "Let the voice assistant act on the TV" on, a server of yours (Ollama, LM Studio, llama.cpp, vLLM) now gets the tools like OpenRouter does, wherever it is in the list, so "what is the weather" no longer gets answered from memory by the first provider. A model that takes no tools is still asked without them. The switch in the manager app no longer needs OpenRouter either. By @Edenik.
-- **The Cinema theme** (Theme > Cinema): a dark living-room layout with wide tiles, a soft pill top bar and the focused app's icon, dimmed, in the background. It comes with a new theme setting for theme makers, `effects.focusIcon` (see [Themes](themes.md)). Not tried on a TV by the maintainer yet: please say how it looks on yours. By @mateimalai3-sys (#193).
-- **Live TV: the guide reopens on the tab a channel was chosen from.** A channel picked in All channels, Favourites, Recent or a category no longer sends the guide back to that channel's first category. By @Diplodock (#222).

@@ -75,8 +75,15 @@ run(async () => {
   // remapped buttons: on, one key; fire runs it
   let remapOn = true;
   const fired = [];
-  remap.buttons = () => ({ on: remapOn, keys: { 403: { type: 'app', id: 'netflix', name: 'Red' }, 1249: { type: 'home' } } });
-  remap.fire = async c => (fired.push(c), { returnValue: true });
+  remap.buttons = () => ({
+    on: remapOn,
+    keys: {
+      403: { type: 'app', id: 'netflix', name: 'Red' },
+      1249: { type: 'home', apps: [{ app: 'com.webos.app.music', type: 'mute' }] },
+    },
+  });
+  const firedWith = [];
+  remap.fire = async (c, o) => (fired.push(c), firedWith.push(o), { returnValue: true });
   const features = { apps, running, remap, theme, manager: { status: () => mstatus }, cards: { weather } };
   const ctx = {
     config,
@@ -230,6 +237,14 @@ run(async () => {
   );
   r = await C.call('remote_buttons', { action: 'press', code: '403' });
   ok(!r.isError && fired.join() === '403', 'remote_buttons press: runs the button');
+  ok(
+    firedWith[0] && firedWith[0].tool === true,
+    'the press says it comes from a tool, so that the service refuses what turns the TV off or changes the sound'
+  );
+  ok(
+    val(await C.call('remote_buttons', { action: 'list' })).buttons[1].only_in.join() === 'com.webos.app.music: mute',
+    'remote_buttons list: the entries for one app'
+  );
   r = await C.call('remote_buttons', { action: 'press', code: '7' });
   ok(r.isError && fired.length === 1, 'a button that is not remapped is refused');
   remapOn = false;

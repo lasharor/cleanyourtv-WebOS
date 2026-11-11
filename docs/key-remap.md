@@ -1,6 +1,6 @@
 # Key remapping
 
-A button on the remote can open something of your choice: an app, an input, Live TV, Home or the Inputs list, or nothing at all. Use it for the buttons
+A button on the remote can do something of your choice: open an app, an input, Live TV, Home or the Inputs list, change the volume, mute, turn the screen off, put the TV in standby, open the TV's settings, or do nothing at all. It can do one thing everywhere and something else while a chosen app is in front. Use it for the buttons
 you never press (the Netflix, Prime or other shortcut keys, the colour keys) or for any spare button.
 
 Set it up in the manager app: **Key remapping**. It is **off** until you switch it on with the first row of that screen. While it is off
@@ -10,7 +10,7 @@ switching it on again brings them back.
 | Step | What happens |
 |---|---|
 | **Add a button** | Press the button on your remote. The TV reports which code the button sent, and that code is saved. Nothing about the code is assumed: remotes and firmware differ. |
-| Choose what it does | **Open an app** (the apps on the TV), **Switch to an input** (the HDMI inputs, as the Inputs list shows them), **Open Live TV**, **Go to Home**, **Show the Inputs list** or **Do nothing** (the press is taken away from LG and nothing happens, for a button you never want). |
+| Choose what it does | **Open an app** (the apps on the TV), **Switch to an input** (the HDMI inputs, as the Inputs list shows them), **Open Live TV**, **Go to Home**, **Show the Inputs list**, one of the [extra actions](#extra-actions) below, or **Do nothing** (the press is taken away from LG and nothing happens, for a button you never want). |
 | Pressing it | The button does that, over whatever is running. LG's own action for the button does not happen. |
 
 The list shows each button by name when the TV tells us it ("Prime Video button", "Red button"), and by its number otherwise
@@ -22,6 +22,43 @@ add it again.
 
 Choose a button in the list to change what it does or to give it back to LG. Your saved buttons are still listed while the feature is off.
 **Give every button back to LG** removes them all, after a confirmation. Up to 12 buttons can be remapped.
+
+## One button, different actions in different apps
+
+A button always has an **Everywhere** action: the one you choose when you add it. Choose the button in the list and use **Add an entry for
+one app** to give it another action **Only in** an app you pick (for example Mute everywhere, but Volume up in the music app). Up to 8 apps
+can have their own entry per button. Each entry has its own action, changed or removed from the button's screen (**Remove this entry**); the
+Everywhere action can be changed but not removed while app entries exist (choose **Do nothing** for it if you want nothing to happen
+elsewhere), and **Give the button back to LG** removes the whole button.
+
+When the button is pressed the service asks the TV which app is in front (`getForegroundAppInfo` of the app manager, asked at the press: the
+list of running apps lags by seconds after a start or close, so it is not used). If an entry is set for that app it runs; otherwise the
+Everywhere action runs. If the TV cannot say (no app reported, even after a second try) the Everywhere action runs. Because a button always
+has an Everywhere action, a press is never lost to "no entry". A button without app entries does not ask the TV anything.
+
+A button saved before this feature (one action) is its Everywhere action and keeps working unchanged. In `config.json` the Everywhere action
+is still the flat `type`, `id` and `label` of the button, and the app entries are a list `apps` of `{app, appName, type, id, label}`, which
+an older service ignores.
+
+## Extra actions
+
+These are chosen from a fixed list in the code; each is its own fixed call, the same one the [phone remote](phone-remote.md) makes for the
+same key. No command, path, address or method comes from `config.json` or from a request: an unknown action name is refused when saved
+and ignored when read.
+
+| Action | Does | Call |
+|---|---|---|
+| **Mute** | mutes, or unmutes when muted | `audio/master/getVolume`, then `audio/master/setMuted` with the opposite |
+| **Volume up**, **Volume down** | one step | `audio/master/volumeUp`, `audio/master/volumeDown` (a quick second tap within a quarter second counts; other buttons ignore a repeat within 0.7 s) |
+| **Turn the screen off** | the picture goes dark, the TV keeps running and the network stays up | `tvpower/power/turnOffScreen` |
+| **Put the TV in standby** | the soft off of the remote's own power key, which Wake-on-LAN and Quick Start+ wake again | `tvpower/power/powerOff` with the reason `remoteKey` |
+| **Open the TV's settings** | opens LG's Settings app | `applicationManager/launch` of `com.palm.app.settings` |
+
+The last two change what the TV is doing on purpose: they are only ever a choice you make in the manager, never set automatically. If the TV
+does not have the service (or refuses), the press does nothing, the service log says so once for each kind of failure, and the button
+stays as it is. The assistant's tool `remote_buttons` can list these buttons but does not press one that turns the TV off or changes
+the sound (mute, volume, screen off, standby): those run only from the remote. A full power-off, a restart, the picture mode and the energy
+saving setting are not offered.
 
 ## What cannot be remapped
 
