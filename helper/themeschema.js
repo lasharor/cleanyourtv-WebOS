@@ -173,6 +173,13 @@ const SCHEMA = [
   ['dock.lift', 'int', [0, 40], 10, 'How far the focused dock tile rises, in px.'],
   ['dock.focusScale', 'num', [1, 1.3], 1.05, 'Scale of the focused dock tile.'],
   [
+    'dock.iconScale',
+    'num',
+    [0.5, 2.5],
+    1,
+    'Extra scale of the icons in the dock only; multiplies `tile.iconScale`. The tile does not change size.',
+  ],
+  [
     'grid.mode',
     'enum',
     ['below', 'push', 'overlay'],
@@ -199,12 +206,21 @@ const SCHEMA = [
   ['grid.focusScale', 'num', [1, 1.4], 1.12, 'Scale of the focused tile.'],
   ['grid.overlayDim', 'num', [0, 1], 0.95, 'Opacity of the layer behind the overlay grid.'],
   ['grid.overlayH', 'int', [200, 900], 510, 'Visible height of the overlay grid before it scrolls, in px.'],
+  [
+    'grid.iconScale',
+    'num',
+    [0.5, 2.5],
+    1,
+    'Extra scale of the icons in the app grid only; multiplies `tile.iconScale`. The tile does not change size.',
+  ],
   ['tile.gloss', 'num', [0, 1], 0, 'A light highlight on every tile.'],
   ['tile.border', 'num', [0, 0.6], 0, 'Opacity of a thin outline on every tile.'],
   ['tile.ringWidth', 'int', [0, 10], 4, 'Width of the focus ring, in px; 0 for none.'],
   ['tile.ringOffset', 'int', [0, 14], 4, 'Space between a tile and its focus ring, in px.'],
   ['tile.iconScale', 'num', [0.6, 2], 1, 'Scale of the icon inside the tile.'],
+  ['picker.iconScale', 'num', [0.5, 2.5], 1, 'Scale of the app icons in the Input picker over the running app; 1 is the usual size.'],
   ['effects.glow', 'num', [0, 1], 1, 'Strength of the ambient glow at the top.'],
+  ['effects.focusIcon', 'bool', null, false, 'Show the focused app icon as a large, dim background image.'],
   ['effects.glowColor', 'enum', ['app', 'accent'], 'app', '`app`: taken from the focused icon; `accent`: the accent colour.'],
   ['effects.speed', 'num', [0, 2], 1, 'Animation speed multiplier; 0 switches the animations off.'],
   [
@@ -542,6 +558,10 @@ function resolve(t, accent) {
     '--glow-op': String(v['effects.glow']),
     '--spd': String(v['effects.speed']),
   };
+  // per-surface icon scales: set only when changed, so the replies for the other themes stay as they were
+  if (v['dock.iconScale'] !== 1) vars['--icon-s-dock'] = String(v['dock.iconScale']);
+  if (v['grid.iconScale'] !== 1) vars['--icon-s-grid'] = String(v['grid.iconScale']);
+  if (v['picker.iconScale'] !== 1) vars['--icon-s-picker'] = String(v['picker.iconScale']);
   const w = v['effects.wallpaper'];
   // glass and scenes: only themes that use them carry these keys, so the replies for every other theme stay as they were
   const attrs = { bar: v['bar.style'], labels, clock: v['clock.layout'], grid: mode, galign: v['grid.align'] };
@@ -565,6 +585,7 @@ function resolve(t, accent) {
     nightRgb: night.join(','),
     wallpaper: w ? { id: t.id, file: w, dim: v['effects.wallpaperDim'] } : null,
   };
+  if (v['effects.focusIcon']) out.focusIcon = true;
   // only a theme that changes the page strip carries this key, so the replies for the other themes stay as they were
   if (SCHEMA.some(r => String(r[0]).indexOf('strip.') === 0 && v[/** @type {string} */ (r[0])] !== r[3]))
     out.strip = {

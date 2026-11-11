@@ -10,6 +10,7 @@ var TH0 = {
     push: null,
     overlayH: 510,
     glow: '',
+    focusIcon: false,
     slots: [],
     shelfDock: null,
     dockBottom: false,
@@ -31,6 +32,7 @@ function applyTheme(t) {
   if (typeof PAGER !== 'undefined') PAGER.draw();
   if (!t || !t.vars) {
     TH = TH0;
+    updateFocusArt(null);
     if (window.SCENES) SCENES.apply(null);
     return;
   }
@@ -74,6 +76,7 @@ function applyTheme(t) {
     push: t.push || null,
     overlayH: t.overlayH || 510,
     glow: t.glowRgb || '',
+    focusIcon: t.focusIcon === true,
     slots: t.slots || [],
     shelfDock: t.shelf || null,
     dockBottom: !!t.dockBottom,
@@ -155,6 +158,7 @@ function setFocus(nr, nc, first) {
   c = Math.min(nc, rows[r].length - 1);
   var e = rows[r][c];
   e.classList.add('f');
+  updateFocusArt(e);
   moonTileFocus(e);
   var a = e._a,
     nm = a ? a.title : e._o ? barLabel(e._o) : '',
@@ -236,6 +240,11 @@ function moonTileFocus(e) {
 }
 function mapCol(from, to, col) {
   return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;
+}
+/* the column an Up or Down lands on: between two app rows of the grid the same column (clamped to a shorter row, so app 2 of a row of 10
+   goes to the second of the next row), elsewhere (dock, top row) the proportional one */
+function vertCol(from, to, fromLen, toLen, col) {
+  return from >= 2 && to >= 2 ? Math.min(col, toLen - 1) : mapCol(fromLen, toLen, col);
 }
 function posOf(e) {
   for (var i = 0; i < rows.length; i++) {

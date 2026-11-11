@@ -1,21 +1,35 @@
-/* Key remapping: a remote button (the Netflix or Prime key, a colour key, ...) opens an app, an input, Live TV, Home or the Inputs list, or does nothing.
+/* Key remapping: a remote button (the Netflix or Prime key, a colour key, ...) opens an app, an input, Live TV, Home or the Inputs list, changes the volume,
+   turns the screen or the TV off, opens the TV's settings, or does nothing. A button has an "Everywhere" action and, if you like, another action
+   "Only in <app>" for each app that can be in front.
    The button's code is learned from the TV, never assumed (helper/remap.js). */
 var rm = null,
   rmCode = '',
   rmKey = '' /* LG's name of the button just learned, KEY_AMAZON */,
   rmBtn = '' /* the same as text, "Prime Video" */,
-  rmList = [];
+  rmList = [],
+  rmApp = '' /* the app the action being chosen is for; '' is Everywhere */,
+  rmAppName = '';
 /* "Prime Video button", or "Button 1038" when the name is not known */
 function rmButton(code, e) {
   var n = e ? e.name : code === rmCode ? rmBtn : '';
   return n ? n + ' button' : 'Button ' + code;
 }
+/* the actions with fixed calls: the name in the list, and a note where it turns the TV off or changes the sound */
+var RM_EXTRA = {
+  mute: ['Mutes or unmutes', 'Mute', ''],
+  volume_up: ['Turns the volume up', 'Volume up', ''],
+  volume_down: ['Turns the volume down', 'Volume down', ''],
+  screen_off: ['Turns the screen off', 'Turn the screen off', 'the TV keeps running'],
+  standby: ['Puts the TV in standby', 'Put the TV in standby', 'turns the TV off'],
+  settings: ['Opens the TV\u2019s settings', 'Open the TV\u2019s settings', ''],
+};
 function rmDescribe(e) {
   if (e.type === 'app') return 'Opens ' + (e.label || e.id);
   if (e.type === 'input') return 'Switches to ' + (e.label || e.id);
   if (e.type === 'live') return 'Opens Live TV';
   if (e.type === 'home') return 'Goes to Home';
   if (e.type === 'none') return 'Does nothing';
+  if (RM_EXTRA[e.type]) return RM_EXTRA[e.type][0];
   return 'Shows the Inputs list';
 }
 function openRemap() {
@@ -57,6 +71,10 @@ function rmBack() {
 }
 function rmSave(entry) {
   var body = { code: rmCode, type: entry.type, id: entry.id, label: entry.label, key: rmKey };
+  if (rmApp) {
+    body.app = rmApp;
+    body.appName = rmAppName;
+  }
   api('/api/remap', body).then(
     function (r) {
       if (r.error) {
@@ -65,9 +83,11 @@ function rmSave(entry) {
             ? 'That button already has another job'
             : r.error === 'too many keys'
               ? 'Up to 12 buttons can be used'
-              : r.error === 'off'
-                ? 'Key remapping is off'
-                : r.error,
+              : r.error === 'too many entries'
+                ? 'Up to 8 apps can have their own action'
+                : r.error === 'off'
+                  ? 'Key remapping is off'
+                  : r.error,
           'err'
         );
         return;
@@ -80,10 +100,12 @@ function rmSave(entry) {
     }
   );
 }
-function rmRemove(code) {
-  api('/api/remap', { code: code, remove: true }).then(
+function rmRemove(code, app) {
+  var body = { code: code, remove: true };
+  if (app) body.app = app;
+  api('/api/remap', body).then(
     function () {
-      banner('The button is back to LG\u2019s own action', 'ok');
+      banner(app ? 'That entry is removed' : 'The button is back to LG\u2019s own action', 'ok');
       rmBack();
     },
     function () {
@@ -115,6 +137,7 @@ function rmLearn() {
             if (view !== 'remaplearn') return;
             if (l.state === 'got') {
               rmCode = String(l.code);
+              rmApp = '';
               rmKey = l.key || '';
               rmBtn = l.button || '';
               view = 'remapact'; /* Back from here returns to the list */
@@ -173,6 +196,7 @@ function rmResume() {
       push('remap');
       push('remaplearn');
       rmCode = String(l.code);
+      rmApp = '';
       rmKey = l.key || '';
       rmBtn = l.button || '';
       view = 'remapact';
@@ -184,6 +208,7 @@ function rmResume() {
 }
 /* the apps or the inputs to choose from */
 function rmChoose(kind) {
+  /* kind 'for' lists the apps to give their own action; 'app' the apps to open */
   api(kind === 'input' ? '/api/inputs' : '/api/apps').then(
     function (r) {
       rmList = [];
@@ -195,7 +220,7 @@ function rmChoose(kind) {
         ((r && r.apps) || []).forEach(function (a) {
           if (a && a.id && !a.input) rmList.push({ id: a.id, title: a.title || a.id });
         });
-      push(kind === 'input' ? 'remapinputs' : 'remapapps');
+      push(kind === 'input' ? 'remapinputs' : kind === 'for' ? 'remapfor' : 'remapapps');
     },
     function () {
       banner('The service did not answer', 'err');
@@ -213,11 +238,14 @@ function rmRows() {
     codes.forEach(function (c) {
       rows.push({
         label: rmDescribe(keys[c]),
-        sub: rmButton(c, keys[c]),
+        sub:
+          rmButton(c, keys[c]) +
+          (keys[c].apps && keys[c].apps.length ? ' \u00b7 and ' + keys[c].apps.length + ' app' + (keys[c].apps.length > 1 ? 's' : '') : ''),
         dim: !on,
         fn: on
           ? function () {
               rmCode = c;
+              rmApp = '';
               rmKey = '';
               rmBtn = keys[c].name || '';
               push('remapkey');
@@ -252,17 +280,54 @@ function rmRows() {
     rows.push({ label: 'Give every button back to LG', fn: rmClear });
     rows.push({ label: 'No, keep them', fn: pop });
   } else if (view === 'remapkey') {
+    var btn = ((rm && rm.keys) || {})[rmCode] || { type: '' };
+    rows.push({
+      label: 'Everywhere',
+      sub: rmDescribe(btn),
+      fn: function () {
+        rmApp = '';
+        push('remapact');
+      },
+    });
+    (btn.apps || []).forEach(function (a) {
+      rows.push({
+        label: 'Only in ' + (a.appName || a.app),
+        sub: rmDescribe(a),
+        fn: function () {
+          rmApp = a.app;
+          rmAppName = a.appName || a.app;
+          push('remapentry');
+        },
+      });
+    });
+    if ((btn.apps || []).length < ((rm && rm.maxApps) || 8))
+      rows.push({
+        label: 'Add an entry for one app',
+        sub: 'another action while that app is in front',
+        fn: function () {
+          rmChoose('for');
+        },
+      });
+    rows.push({
+      label: 'Give the button back to LG',
+      fn: function () {
+        rmRemove(rmCode, '');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+  } else if (view === 'remapentry') {
     rows.push({
       label: 'Change what it does',
-      sub: rmDescribe(((rm && rm.keys) || {})[rmCode] || { type: '' }),
       fn: function () {
         push('remapact');
       },
     });
     rows.push({
-      label: 'Give the button back to LG',
+      label: 'Remove this entry',
+      sub: 'the Everywhere action runs in that app',
       fn: function () {
-        rmRemove(rmCode);
+        rmRemove(rmCode, rmApp);
       },
     });
     rows.push({ sep: true });
@@ -301,12 +366,35 @@ function rmRows() {
         rmSave({ type: 'picker' });
       },
     });
+    ['mute', 'volume_up', 'volume_down', 'screen_off', 'standby', 'settings'].forEach(function (t) {
+      rows.push({
+        label: RM_EXTRA[t][1],
+        sub: RM_EXTRA[t][2],
+        fn: function () {
+          rmSave({ type: t });
+        },
+      });
+    });
     rows.push({
       label: 'Do nothing',
       sub: "blocks the button's own action",
       fn: function () {
         rmSave({ type: 'none' });
       },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+  } else if (view === 'remapfor') {
+    if (!rmList.length) rows.push({ label: 'No apps found', fn: function () {} });
+    rmList.forEach(function (a) {
+      rows.push({
+        label: a.title,
+        fn: function () {
+          rmApp = a.id;
+          rmAppName = a.title;
+          push('remapact');
+        },
+      });
     });
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
@@ -328,7 +416,10 @@ function rmRows() {
 function rmSub() {
   if (view === 'remaplearn') return kText;
   if (view === 'remapclear') return 'Remove every remapped button?';
-  if (view === 'remapact' || view === 'remapkey') return rmButton(rmCode);
+  if (view === 'remapact') return rmButton(rmCode) + (rmApp ? ' \u00b7 only in ' + (rmAppName || rmApp) : ' \u00b7 everywhere');
+  if (view === 'remapentry') return rmButton(rmCode) + ' \u00b7 only in ' + (rmAppName || rmApp);
+  if (view === 'remapkey') return rmButton(rmCode);
+  if (view === 'remapfor') return 'Which app gets its own action?';
   if (view === 'remapapps') return 'Open which app?';
   if (view === 'remapinputs') return 'Switch to which input?';
   if (view === 'remap' && !(rm && rm.enabled)) return 'Off. Switch it on to remap buttons.';

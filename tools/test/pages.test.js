@@ -257,6 +257,11 @@ run(async () => {
       /label: 'Open page'[\s\S]{0,700}api\('\/api\/book\/open', \{ id: a1\.id \}\)/.test(menuSrc),
       'the manager offers Open page and launches Home with {page: id}'
     );
+    const vi = menuSrc.indexOf("label: 'Let the voice assistant act on the TV'");
+    ok(
+      vi > 0 && /vReady = \(va\.providers \|\| \[\]\)\.some\(/.test(menuSrc) && !/va\.hasKey/.test(menuSrc.slice(vi - 700, vi + 1500)),
+      'the voice-acts switch needs any usable AI provider (a server of yours too), not only OpenRouter'
+    );
   }
   const pages = [
     'app',
@@ -405,12 +410,23 @@ run(async () => {
   const live = fs.readFileSync(path.join(root, 'helper', 'addons-bundled', 'iptv', 'src', 'js', 'live.js'), 'utf8');
   ok(
     /progressT = setInterval\(watchProgress, 1000\)/.test(live) &&
-      /function watchProgress\(\) \{\s*if \(!started \|\| pend \|\| !video \|\| video\.paused \|\| video\.ended/.test(live) &&
+      /function watchProgress\(\) \{\s*if \(!started \|\| pend \|\| !video \|\| !o\.on/.test(live) &&
       /Date\.now\(\) - lastProgressAt >= STALL_MS/.test(live) &&
       /clearInterval\(progressT\)/.test(live) &&
       /started = false;\s*lastTime = -1;\s*lastProgressAt = 0;/.test(live) &&
       /healthyT = setTimeout\(function \(\) \{\s*reloads = 0;\s*\}, 30000\)/.test(live),
     'Live TV reloads a stream whose picture time stops without a waiting event (issue 109)'
+  );
+  // issue 224: webOS 25 left the video paused and ended, which the watchdog skipped: pause and ended now reload it, ended also in the watchdog
+  ok(
+    /function watchProgress\(\) \{\s*if \(!started \|\| pend \|\| !video \|\| !o\.on \|\| document\.hidden\) return;\s*[^]*?if \(video\.ended\) \{\s*lastProgressAt = Date\.now\(\);\s*stalled\(\);/.test(
+      live
+    ) &&
+      /v\.addEventListener\('pause', function \(\) \{\s*if \(!o\.on \|\| !started \|\| pend \|\| failed \|\| document\.hidden\) return;[^]*?v\.paused[^]*?stalled\(\);[^]*?, 1500\)/.test(
+        live
+      ) &&
+      /v\.addEventListener\('ended', function \(\) \{\s*if \(video === v && o\.on && started && !pend && !failed\) stalled\(\);/.test(live),
+    'Live TV reloads a stream the TV leaves paused or ended (issue 224)'
   );
   // the text of an add-on on the Add-ons tab was cut off at the bottom of the screen (Weather forecast): it sits in a box of six lines and, when
   // longer, drifts up by itself (the remote cannot scroll it), with a fade at the cut edge; only transform animates

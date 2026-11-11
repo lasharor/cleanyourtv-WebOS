@@ -110,7 +110,7 @@ const SRC32 = {
 };
 const UBUNTU_LIBS32 = UBUNTU_LIBS.map(l => (l === 'ld-linux-aarch64.so.1' ? 'ld-linux-armhf.so.3' : l));
 
-const DEFAULTS = { enabled: false, url: '', token: '', suppressLg: false, llm: {}, ha: {} };
+const DEFAULTS = { enabled: false, url: '', token: '', suppressLg: false, stt: 'tv', llm: {}, ha: {} };
 let job = { state: 'idle', message: '', at: 0 },
   listening = false,
   last = null;
@@ -122,6 +122,10 @@ const cfg = () => Object.assign({}, DEFAULTS, ctx.config.get().voice || {});
 // which recogniser is installed: the 32-bit one (cytv-asr32) or the 64-bit one (cytv-asr)
 const is32 = () => fs.existsSync(V + '/cytv-asr32');
 const installed = () => fs.existsSync(V + '/installed') && (is32() || fs.existsSync(V + '/cytv-asr'));
+// voice.stt = 'ha': Home Assistant's Assist pipeline recognises the speech (the audio goes to it, answers.recogniseHa); 'tv' (default): the recogniser on the TV
+const haStt = () => cfg().stt === 'ha' && haReady(haCfg());
+// something can recognise speech: the recogniser on the TV, or Home Assistant
+const ready = () => installed() || haStt();
 
 // The 64-bit recogniser (cytv-asr) needs a 64-bit kernel: the programs of the TV can be 32-bit (they are on the G2), but a TV whose
 // kernel is 32-bit ARM (uname -m: armv7l, as on the 43UP7550PTZ, issue 175) cannot start it at all (the shell then reads the 64-bit
@@ -499,7 +503,7 @@ const show = o => {
 const readSeconds = t => Math.min(60, Math.max(8, 6 + String(t || '').length / 12)); // time to read an answer on screen
 
 // What happens with recognised (or typed) text: ask the model if switched on, tell your server if set, show the result.
-async function respond(text, card) {
+async function respond(text, card, assist) {
   const c = cfg(),
     l = llmCfg(),
     h = haCfg(),
@@ -526,7 +530,7 @@ async function respond(text, card) {
   }
   if (useHa && !confirmed) {
     try {
-      const r = await askHa(text);
+      const r = assist || (await askHa(text)); // assist: Home Assistant already ran the intent stage on the audio
       haText = r.text;
       if (r.understood && r.text) {
         out.answer = r.text;
@@ -598,7 +602,7 @@ async function respond(text, card) {
 
 async function listen() {
   if (listening || job.state === 'working') return { started: false, error: listening ? 'already listening' : 'installing' };
-  if (!installed()) return { started: false, error: 'voice is not installed' };
+  if (!ready()) return { started: false, error: 'voice is not installed' };
   listening = true;
   last = { at: Date.now(), state: 'listening' };
   (async () => {
@@ -611,15 +615,29 @@ async function listen() {
       }
       show({ kind: 'thinking', title: 'Recognising', seconds: 60 });
       last = { at: Date.now(), state: 'recognising' }; // the phone remote's mic follows these steps
-      const t0 = Date.now(),
-        text = await transcribe(pcm),
-        ms = Date.now() - t0;
+      const t0 = Date.now();
+      let text = null,
+        assist = null;
+      if (haStt()) {
+        // Home Assistant recognises the audio (and answers, unless the AI alone does): any failure goes to the recogniser on the TV, if installed
+        const ai = llmReady(llmCfg()),
+          intent = haCfg().route !== 'ai-only' && !(ai && answers.pendingConfirm()); // not for a "yes" that answers the assistant's question
+        try {
+          const r = await answers.recogniseHa(pcm, intent ? 'intent' : 'stt');
+          text = r.recognised;
+          assist = r.assist;
+        } catch (e) {
+          if (!installed()) throw e;
+        }
+      }
+      if (text === null) text = await transcribe(pcm);
+      const ms = Date.now() - t0;
       if (!text) {
         last = { at: Date.now(), state: 'nothing recognised', ms };
         return show({ kind: 'answer', title: 'Voice', text: 'I could not make out any words', seconds: 4 });
       }
       last = { at: Date.now(), state: 'heard', text, ms };
-      const r = await respond(text, true);
+      const r = await respond(text, true, assist);
       Object.assign(last, { sent: !!r.sent, answer: r.answer, via: r.via || '', error: r.error });
     } catch (e) {
       last = { at: Date.now(), state: 'error', error: e.message };
@@ -648,7 +666,7 @@ function lgPids() {
 }
 function syncLg() {
   const c = cfg(),
-    want = !!(c.enabled && c.suppressLg && installed());
+    want = !!(c.enabled && c.suppressLg && ready());
   for (const pid of lgPids()) {
     try {
       process.kill(pid, want ? 'SIGSTOP' : 'SIGCONT');
@@ -680,7 +698,7 @@ function applyLlm(cur, b) {
   const pendingModel = list.some(p => p.type === 'openrouter') ? '' : raw.model || ''; // a model set before the OpenRouter key
   if (typeof b.enabled === 'boolean') raw.enabled = b.enabled;
   if (typeof b.system === 'string') raw.system = b.system.slice(0, 1000);
-  if (typeof b.agent === 'boolean') raw.agent = b.agent; // OpenRouter may use the tools of the service and approved add-ons
+  if (typeof b.agent === 'boolean') raw.agent = b.agent; // the AI providers may use the tools of the service and approved add-ons
   const saved = {};
   list.forEach(p => (saved[p.id] = p));
   const newId = taken => {
@@ -823,9 +841,22 @@ function draftProvider(o) {
   return p;
 }
 
+// Home Assistant has an address and a token, saved or in this change (v: the voice settings, b: the change)
+const haSetUp = (v, b) => haReady(Object.assign({}, HA_DEFAULTS, v.ha || {}, b.ha && b.ha.clear ? HA_DEFAULTS : {}, haPart(b.ha)));
+const haPart = h => {
+  const o = {};
+  if (h && typeof h.url === 'string' && haBase(h.url)) o.url = haBase(h.url);
+  if (h && typeof h.token === 'string' && h.token.trim()) o.token = h.token.trim();
+  return o;
+};
 function applySet(b) {
   const v = cfg();
-  if (typeof b.enabled === 'boolean') v.enabled = b.enabled && installed();
+  if (typeof b.stt === 'string') {
+    if (b.stt !== 'tv' && b.stt !== 'ha') return 'the speech recognition must be tv or ha';
+    if (b.stt === 'ha' && !haSetUp(v, b)) return 'set up Home Assistant (address and token) before it recognises the speech';
+    v.stt = b.stt;
+  }
+  if (typeof b.enabled === 'boolean') v.enabled = b.enabled && (installed() || (v.stt === 'ha' && haSetUp(v, b)));
   if (typeof b.url === 'string') {
     const u = b.url.trim().slice(0, 500);
     if (u && !/^https?:\/\/[^\s]+$/.test(u)) return 'the server address must start with http:// or https://';
@@ -854,11 +885,15 @@ function applySet(b) {
       if (!HA_ROUTES.includes(b.ha.route)) return 'the routing must be one of ' + HA_ROUTES.join(', ');
       h.route = b.ha.route;
     }
+    if (typeof b.ha.pipeline === 'string') {
+      if (!/^[\w.\-]{0,100}$/.test(b.ha.pipeline.trim())) return 'that pipeline name is not valid';
+      h.pipeline = b.ha.pipeline.trim();
+    }
     if (typeof b.ha.agent === 'string') {
       if (!/^[\w.\-]{0,100}$/.test(b.ha.agent.trim())) return 'that agent name is not valid';
       h.agent = b.ha.agent.trim();
     }
-    if (b.ha.url !== undefined || b.ha.agent !== undefined || b.ha.clear) answers.forgetHa();
+    if (b.ha.url !== undefined || b.ha.agent !== undefined || b.ha.pipeline !== undefined || b.ha.clear) answers.forgetHa();
     v.ha = h;
   }
   if (llm) v.llm = llm;
@@ -1118,6 +1153,7 @@ const status = () => {
   const c = cfg();
   return {
     installed: installed(),
+    stt: cfg().stt === 'ha' ? 'ha' : 'tv',
     unsupported: unsupported(),
     bytes: installed() || job.state === 'working' ? dirSize(V) : 0,
     enabled: !!c.enabled,
@@ -1134,7 +1170,7 @@ const status = () => {
     last,
     pairing: !!pair,
     pairedAt,
-    engine: 'Moonshine tiny (English)',
+    engine: haStt() ? 'Home Assistant (Assist)' : 'Moonshine tiny (English)',
   };
 };
 
@@ -1158,7 +1194,7 @@ function create(c) {
     setInterval(syncLg, 20000);
     setTimeout(syncLg, 5000);
   };
-  return { name: 'voice', prefix: '/api/voice/', handle, start, status, installed, listen, syncLg, capture };
+  return { name: 'voice', prefix: '/api/voice/', handle, start, status, installed, ready, listen, syncLg, capture };
 }
 async function handle(req, res, u, body) {
   const json = (o, code) => {

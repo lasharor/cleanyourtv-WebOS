@@ -3,6 +3,7 @@
 // goes in, text comes out; the settings are the voice section of config.json (voice.js passes them in with init).
 const fetch = require('./fetch'),
   hub = require('./toolhub'),
+  haaudio = require('./haaudio'),
   { URL } = require('./netcompat');
 
 let cfg = () => ({});
@@ -57,8 +58,8 @@ async function toServer(c, payload) {
 // A provider is OpenRouter (type 'openrouter', at most one) or a self-hosted server with the OpenAI-compatible chat API (type
 // 'server': Ollama, LM Studio, llama.cpp's llama-server, vLLM and others; base such as http://<computer>:11434/v1). Each one's key
 // goes only to that provider's own address (a server may be on plain http on the home network) and is never returned.
-// voice.llm = { enabled, system, agent, providers: [{ id, type, name, base, key, model, waitS, off }] }; agent: the OpenRouter
-// provider may use the TV's tools (the agent, below)
+// voice.llm = { enabled, system, agent, providers: [{ id, type, name, base, key, model, waitS, off }] }; agent: the providers may use
+// the TV's tools (the agent, below)
 const orApi = () => process.env.CYTV_OPENROUTER || 'https://openrouter.ai/api/v1'; // overridden only by the tests
 const LLM_DEFAULTS = { enabled: false, system: '', providers: [], agent: false };
 const WAITS = [10, 25, 30, 45, 60]; // seconds to wait for one provider's answer (defaults: 25 for a server, 30 for OpenRouter)
@@ -183,7 +184,7 @@ function note(p, ok, ms, e) {
   };
 }
 // The providers in their order: resolves {answer, via, name, tried: [{id, name, error}]}; fails with every reason when none
-// answered. With llm.agent, the OpenRouter provider gets the TV's tools (agentOne); once a tool has run, a failure is not handed
+// answered. With llm.agent, every provider gets the TV's tools (agentOne); once a tool has run, a failure is not handed
 // to the next provider, so nothing is done twice.
 async function askLlm(text, opts) {
   const l = llmCfg(),
@@ -192,7 +193,7 @@ async function askLlm(text, opts) {
   if (Date.now() - lastTurn > 600000) history = []; // a new conversation after ten quiet minutes
   const turns = history.concat({ role: 'user', content: text }).slice(-12);
   const system = (l.system || DEFAULT_SYSTEM) + today();
-  const tools = l.agent && list.some(p => p.type === 'openrouter') ? await gatherTools() : null;
+  const tools = l.agent ? await gatherTools() : null;
   const start = Date.now(),
     tried = [];
   const skipped = p => (health[p.id] || {}).skipUntil > Date.now();
@@ -211,7 +212,7 @@ async function askLlm(text, opts) {
     const t0 = Date.now();
     try {
       const ms = Math.min(p.waitS * 1000, left),
-        a = tools && tools.names.length && p.type === 'openrouter' ? await agentOne(p, l, turns, tools, ms, opts || {}) : null;
+        a = tools && tools.names.length ? await agentOne(p, l, turns, tools, ms, opts || {}) : null;
       const answer = a !== null ? a : await askOne(p, turns, system, ms - (Date.now() - t0));
       note(p, true, Date.now() - t0);
       lastVia = p.id;
@@ -337,7 +338,7 @@ function callTool(entry, args, confirmed) {
 // the question the TV asks before a tool that turns something off or deletes something
 const confirmText = d => String(d).replace(/[.\s]+$/, '') + '? Say yes within 30 seconds to go ahead.';
 
-// the loop with the OpenRouter provider: send the tools, run the calls the model asks for, give it the results, until it answers in
+// the loop with a provider (OpenRouter or a server of yours): send the tools, run the calls the model asks for, give it the results, until it answers in
 // words. Resolves the answer; null: this model cannot use tools, so the caller asks it without them. ms is the time for the model's
 // answers (a tool's own time is not counted). A failure after a tool ran carries acted, so askLlm does not ask the next provider.
 async function agentOne(p, l, turns, tools, ms, opts) {
@@ -432,7 +433,7 @@ async function confirmPending(text) {
 }
 
 // ---- Home Assistant: the Assist (conversation) API with a long-lived access token ----
-const HA_DEFAULTS = { url: '', token: '', selfSigned: false, route: 'ha-first', agent: '' };
+const HA_DEFAULTS = { url: '', token: '', selfSigned: false, route: 'ha-first', agent: '', pipeline: '' };
 const HA_ROUTES = ['ha-first', 'ha-only', 'ai-only'];
 const haCfg = () => Object.assign({}, HA_DEFAULTS, cfg().ha || {});
 const haReady = h => !!(h.url && h.token);
@@ -484,6 +485,18 @@ async function askHa(text) {
     type,
     code,
   };
+}
+// Speech recognition by Home Assistant (voice.stt = 'ha', docs/voice.md): the audio of one utterance goes to the Assist pipeline over the
+// WebSocket API (haaudio.js). end 'intent': Assist also answers (the reply has askHa's shape, so respond() uses it as it would the reply to
+// the text); end 'stt': only the text. Resolves {recognised, assist}; fails with a short reason (voice.js then uses the recogniser on the
+// TV, when it is installed).
+async function recogniseHa(pcm, end) {
+  const h = haCfg();
+  if (!haReady(h)) throw new Error('Home Assistant is not set up');
+  if (haConv && Date.now() - haConv.at > 600000) haConv = null;
+  const r = await haaudio.recognise(h, pcm, { pipeline: h.pipeline, conversation: haConv && haConv.id, end });
+  if (r.conversation) haConv = { id: r.conversation, at: Date.now() };
+  return { recognised: r.recognised, assist: r.assist };
 }
 async function haTest() {
   const h = haCfg();
@@ -590,6 +603,7 @@ module.exports = {
   confirmPending,
   pendingConfirm,
   askHa,
+  recogniseHa,
   haTest,
   haAgents,
   models,

@@ -2,7 +2,8 @@
 
 Recognises speech from the remote's microphone **on the TV**. The text is shown on screen and can be sent to a server you run,
 to language models (OpenRouter, a self-hosted AI server, or both, one taking over when the other fails), or to both; the answer
-is shown as text on screen. Answers are not spoken. No audio is recorded or sent anywhere.
+is shown as text on screen. Answers are not spoken. No audio is recorded or sent anywhere, unless you switch on
+[Home Assistant recognises the speech](#home-assistant-recognises-the-speech-optional).
 
 It is **off and not installed by default**. Nothing described here runs until you install it.
 
@@ -162,8 +163,8 @@ asked before it, with their reason. Add `"card":false` to skip the screen.
 ### Letting the AI act on the TV
 
 **Let the voice assistant act on the TV** (manager app, **Features > AI agents (MCP)**; the voice setup page; or `{"llm":{"agent":true}}`) lets the model use tools: open apps, switch inputs, show
-a card, turn the TV off after you say yes, and the tools of add-ons you approved. It is off by default. The tools go to OpenRouter,
-in its place among the AI providers; a server of yours only answers. How it works, the yes, and the MCP endpoint other programs
+a card, turn the TV off after you say yes, and the tools of add-ons you approved. It is off by default. The tools go to every AI provider,
+OpenRouter or a server of yours; a model that cannot use tools only answers. How it works, the yes, and the MCP endpoint other programs
 can use: [Tools for the assistant](agent.md).
 
 ## The speech model
@@ -178,7 +179,7 @@ can use: [Tools for the assistant](agent.md).
 | Cost on the G2 | Load 0.3 s; a 3 s phrase takes about 1.4 s; about 190 MB of memory while recognising, none when idle. |
 | Reported accuracy | 12.0 % average word error rate on the Open ASR Leaderboard datasets, 4.8 % on LibriSpeech test-clean (figures from the Moonshine project; not measured through the remote's microphone). |
 | Language | English. Moonshine also publishes German, Spanish, Arabic, Japanese, Mandarin, Tagalog and Vietnamese models and larger English ones (small 123 M, medium 245 M parameters). |
-| Audio | 16 kHz mono from the microphone stream of LG's `voiceinput` service, read from the socket its reply names (`/var/voiceinput/voiceinput_remote1.soc` on the 65UR91, `/tmp/voiceinput_remote1.soc` when the reply names none). Held in memory while recognising, then discarded; not written to disk or sent anywhere. |
+| Audio | 16 kHz mono from the microphone stream of LG's `voiceinput` service, read from the socket its reply names (`/var/voiceinput/voiceinput_remote1.soc` on the 65UR91, `/tmp/voiceinput_remote1.soc` when the reply names none). Held in memory while recognising, then discarded; not written to disk. Sent nowhere, except to your Home Assistant when you switch on [its speech recognition](#home-assistant-recognises-the-speech-optional). |
 
 **Which TVs.** A TV with a **64-bit kernel** gets the 64-bit recogniser. A TV whose kernel is 32-bit ARM (`uname -m` says `armv7l`,
 as on the 43UP7550PTZ, issue 175) cannot start a 64-bit program at all, so it gets the 32-bit recogniser instead: the same Moonshine
@@ -188,7 +189,7 @@ The TV's programs are 32-bit ARM and soft-float. Neither recogniser can use the 
 `cytv-asr32` is hard-float. Each runs through the loader and libraries that the download places in the same folder. Nothing in the
 system folders is changed.
 
-Only text goes further: to your server, to the AI providers you set, or nowhere. LG's own assistant is a separate path
+Only text goes further (unless Home Assistant recognises the speech, below): to your server, to the AI providers you set, or nowhere. LG's own assistant is a separate path
 with its own cloud recognition; **Switch off LG's voice assistant** pauses it while voice is on.
 
 ## Home Assistant (Assist)
@@ -231,4 +232,29 @@ curl -X POST localhost:8765/api/voice/ask -d '{"text":"turn on the living room l
 `{"text","answer","via","error"}`, where `via` is `ha` or `ai`.
 
 The token is stored in `config.json` on the TV only and is never returned by the service. Only the recognised text goes to your
-Home Assistant. With a plain `http://` address the token is visible on your network.
+Home Assistant (the audio, too, when you switch on the next section). With a plain `http://` address the token is visible on your network.
+
+### Home Assistant recognises the speech (optional)
+
+The recogniser on the TV speaks English. For another language (Polish, say) with everything on your network, let Home Assistant
+recognise the speech: after you speak, the TV sends the **audio** of that one phrase (16 kHz, 16-bit, mono, at most 30 seconds,
+normally a few) to your Home Assistant's Assist pipeline over its WebSocket API (`assist_pipeline/run`, starting at the `stt`
+stage), so the speech-to-text engine of that pipeline (a Whisper in your language, for example) does the recognising. The text it
+returns is used exactly as the text of the recogniser on the TV: shown on the card and passed on according to **Which answers
+first**. With *Home Assistant first* or *only*, the pipeline also runs its intent stage and its answer is shown, so the same
+phrase is not sent twice; with *the AI only* it recognises and nothing more.
+
+It is **off by default** (`"stt":"tv"`), and the audio then never leaves the TV. It needs the Home Assistant address and token (above)
+and no speech download: voice can be switched on without installing the recogniser. If Home Assistant cannot be reached, refuses the
+token or reports an error, the recogniser on the TV is used when it is installed; otherwise the card shows the reason.
+
+```sh
+curl -X POST localhost:8765/api/voice/set -d '{"stt":"ha"}'
+curl -X POST localhost:8765/api/voice/set -d '{"ha":{"pipeline":"01hxyz..."}}'   # optional: a pipeline id; without one, the preferred pipeline
+curl -X POST localhost:8765/api/voice/set -d '{"stt":"tv"}'                      # back to the recogniser on the TV
+```
+
+Choose the language in Home Assistant, in the pipeline (**Settings** > **Voice assistants**): its speech-to-text engine, language
+and conversation agent are the pipeline's, so **Assist agent** (above) does not apply to the audio path. The conversation id is passed
+on as for text. Settings are only in the API for now; the status (`/api/voice/status`) shows `stt`. Not tested on a real TV: whether
+LG's remote on every model delivers the audio in this form is the same as for the recogniser on the TV (see *Audio* above).

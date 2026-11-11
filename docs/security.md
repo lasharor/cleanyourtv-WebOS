@@ -47,7 +47,7 @@ only while an agent is paired or **Connect an agent** shows a code. An agent pai
 tries a minute per address, eight wrong codes take it off) and gets a token of its own (`<id>.<128-bit secret>`). The TV keeps only a
 SHA-256 of each secret, in `config.json` (`mcp.agents`, readable by root only), compares it in constant time and never logs it. With its
 token an agent can call `POST /mcp` (MCP over HTTP, JSON-RPC 2.0): **open apps, switch inputs, show cards and use the tools of the add-ons
-you approved**, nothing else of the service. Tools that turn something off or delete something (`power_off`, and every signed tool that is not a plain read: a method other than GET, or `"confirm": true`) are refused from the network: they run only from the voice assistant, after you say a plain "yes" on the TV. The remote's remapped buttons (`remote_buttons press`) can only open an app, an input, Live TV, Home or the picker; none turns the TV off. A signed tool reaches only the add-on that declared it, and an address it calls is refused when it stands for the TV itself, whatever name it is written as.
+you approved**, nothing else of the service. Tools that turn something off or delete something (`power_off`, and every signed tool that is not a plain read: a method other than GET, or `"confirm": true`) are refused from the network: they run only from the voice assistant, after you say a plain "yes" on the TV. The remote's remapped buttons (`remote_buttons press`) can only open an app, an input, Live TV, Home, the picker or the TV's settings; a button whose action turns the screen or the TV off or changes the sound (the extra actions of [key remapping](key-remap.md)) is refused there and runs only when pressed on the remote. The actions a button can have come from a fixed list in the code, each with fixed calls: nothing in `config.json` or in a request names a command, path, address or luna method. A signed tool reaches only the add-on that declared it, and an address it calls is refused when it stands for the TV itself, whatever name it is written as.
 Each agent is listed in that screen's **Connected devices** menu and can be blocked, allowed or removed there, all at once with **Remove all devices**; an agent not used
 for two weeks (the default; 1 day to 1 month, or never) is removed by itself. A request that carries an `Origin` header (a web page in a
 browser) is refused, ten wrong codes or tokens lock an address out for ten minutes, and requests are limited to 60 a minute and 64 KB. It is plain
@@ -104,6 +104,10 @@ ARM kernel) started by the root service with its own copy of the C library; it r
   reaches your server.
 - The phone setup page is a short-lived page on the local network (port 8769, a random 128-bit address, ten minutes, closed after
   saving, plain HTTP: the key is visible on the network while it is typed).
+- With **Home Assistant recognises the speech** switched on (off by default, `voice.stt`), the audio of each phrase (at most 30 seconds,
+  16 kHz mono PCM, held in memory, never written to disk) goes to your Home Assistant over its WebSocket API (`ws://` or `wss://`
+  at the address you set, with the same token, sent once in the sign-in message; a self-signed certificate only when you switched
+  that on). Nothing else is sent to anyone for it. If Home Assistant fails, the recogniser on the TV is used when installed.
 - With Home Assistant set up, the recognised text goes to the address you set, with your long-lived access token (plain `http://` is
   possible: the token is then visible on your network; a self-signed certificate is accepted only when you switch that on).
 - The keys and the token are kept in `config.json` (readable by root only) and are never returned by the service.

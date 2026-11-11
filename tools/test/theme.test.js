@@ -106,6 +106,8 @@ run(async () => {
     plain.vars['--greet-d'] === 'none' && plain.vars['--dock-tile-alpha'] === '1',
     'by default there is no greeting and the dock tiles are opaque'
   );
+  const focusArt = themeMod.resolve(themeMod.normalize({ effects: { focusIcon: true } }, 'focus-art'));
+  ok(focusArt.focusIcon === true && !plain.focusIcon, 'effects.focusIcon reaches the launcher only when enabled');
   // clock.style, effects.scenes and cards.style (scenes.js): only a theme that uses them carries the keys, so other replies stay the same
   const couch = themeMod.resolve(
     themeMod.normalize({ clock: { style: 'glass' }, effects: { scenes: 'couch', sceneSecs: 5 }, cards: { style: 'glass' } }, 'couch')
@@ -130,6 +132,19 @@ run(async () => {
   const scaled = themeMod.resolve(themeMod.normalize({ tile: { iconScale: 1.3 } }, 'scaled'));
   ok(scaled.vars['--icon-s'] === '1.3', 'tile.iconScale sets the icon scale');
   ok(plain.vars['--icon-s'] === '1', 'by default icon scale is 1');
+  // dock, grid and picker icon scales: separate variables, only present when changed, clamped
+  ok(
+    !('--icon-s-dock' in plain.vars) && !('--icon-s-grid' in plain.vars) && !('--icon-s-picker' in plain.vars),
+    'by default there are no per-surface icon scale variables'
+  );
+  const surf = themeMod.resolve(
+    themeMod.normalize({ dock: { iconScale: 1.8 }, grid: { iconScale: 0.8 }, picker: { iconScale: 99 } }, 'surf')
+  );
+  ok(
+    surf.vars['--icon-s-dock'] === '1.8' && surf.vars['--icon-s-grid'] === '0.8' && surf.vars['--icon-s-picker'] === '2.5',
+    'dock.iconScale, grid.iconScale and picker.iconScale set their own variables and are clamped'
+  );
+  ok(surf.vars['--icon-s'] === '1', 'per-surface icon scales leave tile.iconScale alone');
   // shelf.dockAlign: the name follows the dock, so the dock's geometry is carried to the page; off by default, so other replies are unchanged
   const nameDock = themeMod.resolve(
     themeMod.normalize(
