@@ -135,7 +135,13 @@ var LIVE = (function () {
      picture time has not moved for STALL_MS is reloaded by stalled(), as after 'waiting'. When 'waiting' fires first, startVariant() has
      reset 'started' by then and this does nothing. */
   function watchProgress() {
-    if (!started || pend || !video || video.paused || video.ended || document.hidden) return;
+    if (!started || pend || !video || !o.on || document.hidden) return;
+    /* webOS 25 can leave the element paused and ended (issue 224): a live stream that ended is a stall, not a channel that stopped */
+    if (video.ended) {
+      lastProgressAt = Date.now();
+      stalled();
+      return;
+    }
     if (lastProgressAt && Date.now() - lastProgressAt >= STALL_MS) {
       lastProgressAt = Date.now();
       stalled();
@@ -181,6 +187,17 @@ var LIVE = (function () {
         clearTimeout(stallT);
         stallT = setTimeout(stalled, STALL_MS);
       }
+    });
+    /* the TV pausing or ending a live stream by itself (issue 224) is a stall too: reload it unless it is playing again by then */
+    v.addEventListener('pause', function () {
+      if (!o.on || !started || pend || failed || document.hidden) return;
+      clearTimeout(stallT);
+      stallT = setTimeout(function () {
+        if (video === v && v.paused && !document.hidden && o.on && started && !pend && !failed) stalled();
+      }, 1500);
+    });
+    v.addEventListener('ended', function () {
+      if (video === v && o.on && started && !pend && !failed) stalled();
     });
     /* capture: a failing <source> reports on the <source>, and that event does not bubble; an old, removed <source> is ignored */
     v.addEventListener(
@@ -512,6 +529,22 @@ var LIVE = (function () {
       c = hsl2rgb(hashHue(n), 0.5, 0.42);
     $('lv-glow').style.setProperty('--c', c.join(','));
   }
+  /* the tab the guide opens on: the one the playing channel was chosen from ('0' All channels, '1' Favourites, '2' Recent, 'g:<name>' a
+     category) while it still holds the channel, else the channel's first category, else All channels */
+  function guideTab(tab, groups, c, holds) {
+    var g = -1;
+    if (/^[012]$/.test(tab)) g = +tab;
+    else if (tab.indexOf('g:') === 0 && groups.indexOf(tab.slice(2)) >= 0) g = groups.indexOf(tab.slice(2)) + 3;
+    if (g >= 0 && holds(g)) return g;
+    var gi = c.cats[0] ? groups.indexOf(c.cats[0]) : -1;
+    return gi >= 0 ? gi + 3 : 0;
+  }
+  /* remembers the tab a channel is chosen from, so the guide opens on it again */
+  function keepTab() {
+    try {
+      localStorage.setItem('live.tab', L.g < 3 ? String(L.g) : 'g:' + groups[L.g - 3]);
+    } catch (e) {}
+  }
   function openList() {
     L.open = true;
     var c = byNum[cur],
@@ -520,11 +553,17 @@ var LIVE = (function () {
       tuned = +localStorage.getItem('live.tuned') || 0;
     } catch (e) {}
     if (!c && tuned) c = byNum[tuned];
-    L.g = 0;
-    if (c && c.cats[0]) {
-      var gi = groups.indexOf(c.cats[0]);
-      if (gi >= 0) L.g = gi + 3;
-    } else if (
+    var tab = '';
+    try {
+      tab = localStorage.getItem('live.tab') || '';
+    } catch (e) {}
+    L.g = c
+      ? guideTab(tab, groups, c, function (g) {
+          return listFor(g).indexOf(c) >= 0;
+        })
+      : 0;
+    if (
+      !c &&
       groups.length &&
       !chans.some(function (x) {
         return x.url;
@@ -1195,6 +1234,7 @@ var LIVE = (function () {
       } else if (k === 13) {
         if (L.list[L.ci]) {
           var n = L.list[L.ci].num;
+          keepTab();
           closeList();
           play(n);
           return;
@@ -1356,6 +1396,7 @@ var LIVE = (function () {
       if (el) {
         var ch = L.list[num(el, 'data-j')];
         if (ch) {
+          keepTab();
           closeList();
           play(ch.num);
         }

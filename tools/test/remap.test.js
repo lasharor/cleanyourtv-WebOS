@@ -55,7 +55,7 @@ run(async () => {
   });
   f.start();
   let r = await call(f, '/api/remap');
-  ok(r.code === 200 && JSON.stringify(r.j.keys) === '{}' && r.j.types.length === 6, 'nothing is remapped at first');
+  ok(r.code === 200 && JSON.stringify(r.j.keys) === '{}' && r.j.types.length === 12, 'nothing is remapped at first');
   ok(r.j.enabled === false, 'the feature is off until it is switched on');
 
   // ---- off: nothing runs, nothing is bound ----
@@ -153,7 +153,7 @@ run(async () => {
   ok(r.returnValue === false && /no such app/.test(r.error), 'an app that cannot start is reported');
   r = (await call(f, '/api/remap')).j;
   ok(
-    r.types.length === 6 && r.max === 12 && r.hook === false,
+    r.types.length === 12 && r.max === 12 && r.hook === false,
     'the manager gets the actions, the 12 limit and whether the hook is attached'
   );
 
@@ -293,4 +293,195 @@ run(async () => {
     binds()['241'] && binds()['241'].command === CMD('241'),
     'with the Input key off, the hook binds its code for the remap, not for the Inputs list'
   );
+
+  // ---- one button, an entry per app ----
+  {
+    const calls = [];
+    let fg = { returnValue: true, appId: 'com.webos.app.music' },
+      vol = { returnValue: true, volumeStatus: { muteStatus: false } },
+      fail = '';
+    const lu = async (uri, payload) => {
+      calls.push(uri.split('//')[1] + ' ' + JSON.stringify(payload));
+      if (/getForegroundAppInfo/.test(uri)) return fg;
+      if (/getVolume/.test(uri)) return vol;
+      if (fail && uri.indexOf(fail) >= 0) return { returnValue: false, errorText: 'no such service' };
+      return { returnValue: true };
+    };
+    const mk = remap => mod.create({ config: memoryConfig({ remapOn: true, remap }), luna: lu, inputhook: hook, feature: () => null });
+    // a button saved before app entries existed: one flat action
+    const c2 = memoryConfig({
+      remapOn: true,
+      remap: { 410: { type: 'app', id: 'netflix', label: 'Netflix', key: 'KEY_NETFLIX' }, 411: { apps: [{ app: 'x', type: 'home' }] } },
+      keys: { input: '', home: '', voice: '', guide: '' },
+    });
+    const g = mod.create({ config: c2, luna: lu, inputhook: hook, feature: () => null });
+    let q = await call(g, '/api/remap');
+    ok(
+      q.j.keys['410'].type === 'app' && q.j.keys['410'].id === 'netflix' && q.j.keys['410'].apps === undefined,
+      'an old saved button is its everywhere entry, unchanged'
+    );
+    ok(!q.j.keys['411'], 'a button with app entries but no everywhere entry is not valid');
+    calls.length = 0;
+    q = await call(g, '/api/remap/fire', 'POST', { code: '410' });
+    ok(
+      q.j.returnValue && calls.length === 1 && /launch .*netflix/.test(calls[0]),
+      'the old button runs, and asks the TV nothing about the app in front'
+    );
+
+    // entries
+    q = await call(g, '/api/remap', 'POST', { code: '999', app: 'com.webos.app.music', type: 'volume_up' });
+    ok(q.code === 400 && q.j.error === 'no fallback', 'an entry for an app needs the button to exist (it has its everywhere entry)');
+    q = await call(g, '/api/remap', 'POST', { code: '410', app: 'a b;reboot', type: 'home' });
+    ok(q.code === 400 && q.j.error === 'bad app', 'an app id with shell characters is refused');
+    q = await call(g, '/api/remap', 'POST', { code: '410', app: 'com.webos.app.music', appName: 'Music', type: 'volume_up' });
+    ok(q.code === 200 && q.j.keys['410'].apps.length === 1 && q.j.keys['410'].apps[0].appName === 'Music', 'an entry for one app is saved');
+    ok(q.j.keys['410'].type === 'app' && q.j.keys['410'].key === 'KEY_NETFLIX', 'and the everywhere entry and the name stay');
+    q = await call(g, '/api/remap', 'POST', { code: '410', app: 'com.webos.app.photos', type: 'mute' });
+    ok(q.code === 200 && q.j.keys['410'].apps.length === 2, 'a second app gets its own entry');
+    q = await call(g, '/api/remap', 'POST', { code: '410', app: 'com.webos.app.music', type: 'volume_down' });
+    ok(q.j.keys['410'].apps.length === 2 && q.j.keys['410'].apps[1].type === 'volume_down', 'setting an app again replaces its entry');
+    q = await call(g, '/api/remap', 'POST', { code: '410', app: 'com.webos.app.photos', type: 'exec', id: 'rm -rf /' });
+    ok(q.code === 400 && q.j.error === 'bad action', 'an entry with an unknown action is refused');
+    q = await call(g, '/api/remap', 'POST', { code: '410', type: 'home' });
+    ok(q.j.keys['410'].type === 'home' && q.j.keys['410'].apps.length === 2, 'changing the everywhere entry keeps the app entries');
+    ok(
+      Object.keys(c2.get().remap['410']).sort().join() === 'apps,key,type',
+      'they are kept in config.json: flat everywhere entry and apps'
+    );
+    for (let i = 0; i < 10; i++) await call(g, '/api/remap', 'POST', { code: '410', app: 'app.n' + i, type: 'home' });
+    ok(c2.get().remap['410'].apps.length === 8, 'at most 8 app entries');
+
+    // the entry for the app in front runs, else the everywhere entry
+    const REPEAT = 740;
+    const press = async (code, front) => {
+      if (front !== undefined) fg = { returnValue: true, appId: front };
+      await sleep(REPEAT);
+      calls.length = 0;
+      return (await call(g, '/api/remap/fire', 'POST', { code })).j;
+    };
+    q = await press('410', 'com.webos.app.music');
+    ok(
+      q.returnValue && calls.length === 2 && calls[1] === 'com.webos.service.audio/master/volumeDown {}',
+      'the app in front has its own entry: it runs, after the foreground app was asked'
+    );
+    q = await press('410', 'com.webos.app.other');
+    ok(
+      q.returnValue && calls.length === 2 && /launch .*"id":"com.webos.app.home"/.test(calls[1]),
+      'an app without an entry gets the everywhere entry'
+    );
+    fg = { returnValue: false };
+    q = await press('410');
+    ok(
+      q.returnValue && /launch .*"id":"com.webos.app.home"/.test(calls[calls.length - 1]),
+      'when the TV cannot say what is in front, the everywhere entry runs'
+    );
+    ok(calls.filter(l => /getForegroundAppInfo/.test(l)).length === 2, 'and the app manager was asked a second time first');
+    // removing an entry
+    q = await call(g, '/api/remap', 'POST', { code: '410', remove: true, app: 'nothing.here' });
+    ok(q.code === 400 && q.j.error === 'no such entry', 'removing an entry that is not there is refused');
+    q = await call(g, '/api/remap', 'POST', { code: '410', remove: true, app: 'com.webos.app.music' });
+    ok(
+      q.code === 200 && !q.j.keys['410'].apps.some(a => a.app === 'com.webos.app.music') && q.j.keys['410'].type === 'home',
+      'an entry is removed, the button stays'
+    );
+    q = await call(g, '/api/remap', 'POST', { code: '410', remove: true });
+    ok(q.code === 200 && !c2.get().remap['410'], 'removing the button removes every entry');
+
+    // tampered config: an unknown action, a bad app id, a duplicate app are dropped on read
+    const h = mk({
+      420: {
+        type: 'home',
+        apps: [
+          { app: 'ok.app', type: 'mute' },
+          { app: 'ok.app', type: 'home' },
+          { app: 'bad app', type: 'home' },
+          { app: 'x.y', type: 'reboot' },
+          { app: 'z', type: 'shell', id: 'ls' },
+        ],
+      },
+      421: { type: 'rm -rf' },
+    });
+    ok(
+      JSON.stringify(h.table()['420'].apps) === '[{"app":"ok.app","type":"mute"}]' && !h.table()['421'],
+      'tampered actions, app ids and duplicates are ignored when read'
+    );
+
+    // the extra actions, each with its fixed calls
+    const one = async (type, code) => {
+      const m = mk({ [code]: { type } });
+      calls.length = 0;
+      return (await call(m, '/api/remap/fire', 'POST', { code })).j;
+    };
+    let t = await one('mute', '430');
+    ok(
+      t.returnValue &&
+        calls.join('|') === 'com.webos.service.audio/master/getVolume {}|com.webos.service.audio/master/setMuted {"muted":true}',
+      'mute: asks the volume, then mutes'
+    );
+    vol = { returnValue: true, volumeStatus: { muteStatus: true } };
+    t = await one('mute', '430');
+    ok(calls[1] === 'com.webos.service.audio/master/setMuted {"muted":false}', 'mute: unmutes when muted');
+    t = await one('volume_up', '431');
+    ok(t.returnValue && calls.join('|') === 'com.webos.service.audio/master/volumeUp {}', 'volume up: one call');
+    t = await one('volume_down', '432');
+    ok(t.returnValue && calls.join('|') === 'com.webos.service.audio/master/volumeDown {}', 'volume down: one call');
+    t = await one('screen_off', '433');
+    ok(
+      t.returnValue && calls.join('|') === 'com.webos.service.tvpower/power/turnOffScreen {}',
+      'screen off: one call to the power service'
+    );
+    t = await one('standby', '434');
+    ok(
+      t.returnValue && calls.join('|') === 'com.webos.service.tvpower/power/powerOff {"reason":"remoteKey"}',
+      'standby: the soft off with the remote key reason'
+    );
+    t = await one('settings', '435');
+    ok(
+      t.returnValue && calls.join('|') === 'com.webos.applicationManager/launch {"id":"com.palm.app.settings","params":{}}',
+      'settings: opens the Settings app'
+    );
+    // a quick second tap of a volume key counts
+    const vk = mk({ 440: { type: 'volume_up' } });
+    await call(vk, '/api/remap/fire', 'POST', { code: '440' });
+    await sleep(300);
+    calls.length = 0;
+    q = await call(vk, '/api/remap/fire', 'POST', { code: '440' });
+    ok(q.j.returnValue && !q.j.repeat && calls.length === 1, 'volume up can be tapped again after a quarter second');
+    // a TV without the service: reported once, nothing else happens
+    fail = 'tvpower';
+    const errs = [],
+      keep = console.error;
+    console.error = m => errs.push(m);
+    const sm = mk({ 450: { type: 'screen_off' } });
+    q = await call(sm, '/api/remap/fire', 'POST', { code: '450' });
+    await sleep(REPEAT);
+    const q2 = await call(sm, '/api/remap/fire', 'POST', { code: '450' });
+    console.error = keep;
+    ok(
+      q.j.returnValue === false && /no such service/.test(q.j.error) && q2.j.returnValue === false,
+      'a TV that refuses the call: the press fails quietly'
+    );
+    ok(errs.length === 1 && /screen_off/.test(errs[0]), 'and the log says so once');
+    fail = '';
+    // saving an action name that is not in the list
+    for (const bad of ['reboot', 'shutDown', 'exec', 'luna://x', 'Mute', '__proto__']) {
+      const w = await call(g, '/api/remap', 'POST', { code: '460', type: bad });
+      ok(w.code === 400 && w.j.error, 'an action name that is not on the list is refused: ' + bad);
+    }
+    // the tool (network, a model) cannot press what turns the TV off or changes the sound
+    for (const type of mod.NOT_FROM_TOOLS) {
+      const tm = mk({ 470: { type } });
+      calls.length = 0;
+      const w = await tm.fire('470', { tool: true });
+      ok(w.returnValue === false && calls.length === 0, 'remote_buttons press does not run ' + type);
+    }
+    const tm = mk({ 471: { type: 'settings', apps: [{ app: 'com.webos.app.music', type: 'standby' }] } });
+    fg = { returnValue: true, appId: 'com.webos.app.music' };
+    calls.length = 0;
+    const w = await tm.fire('471', { tool: true });
+    ok(
+      w.returnValue === false && !calls.some(l => /powerOff/.test(l)),
+      'the tool is refused for the entry that would run, also an app entry'
+    );
+  }
 });

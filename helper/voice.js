@@ -1,8 +1,11 @@
 // Voice (optional): listens through the remote's microphone, turns the speech into text on the TV and sends that text to an
 // address you set. Nothing is recorded or uploaded; only the text leaves the TV, and only to your address. The speech
 // recogniser is Moonshine (moonshine-voice, MIT licence), downloaded on request into /media/developer/cleanyourtv/voice and
-// removable again. It is a 64-bit program, so it runs through its own copy of the 64-bit C library, which this TV (32-bit
-// userland on a 64-bit kernel) does not have. API (loopback only): GET /api/voice/status, POST install | uninstall | set | listen.
+// removable again. On a 64-bit kernel it is a 64-bit program (cytv-asr), so it runs through its own copy of the 64-bit C library, which
+// the TV (32-bit userland on a 64-bit kernel) does not have. On a 32-bit ARM kernel (issue 175) the recogniser is cytv-asr32 with
+// sherpa-onnx (Apache-2.0) and the Moonshine tiny English model; it is a hard-float program, and the TV's own 32-bit programs are
+// soft-float, so it brings its own 32-bit hard-float C library too. API (loopback only): GET /api/voice/status, POST install |
+// uninstall | set | listen.
 const fs = require('fs'),
   http = require('http'),
   path = require('path'),
@@ -86,7 +89,28 @@ const UBUNTU_LIBS = [
   'libgcc_s.so.1',
 ];
 
-const DEFAULTS = { enabled: false, url: '', token: '', suppressLg: false, llm: {}, ha: {} };
+// The 32-bit engine (cytv-asr32, voice/asr32.c): sherpa-onnx's C library and ONNX Runtime (hard-float), the hard-float C library of
+// ubuntu-base for armhf, and the Moonshine tiny English model (MIT) as sherpa-onnx publishes it, at a fixed revision.
+const SRC32 = {
+  wheel: {
+    url: 'https://files.pythonhosted.org/packages/2a/d3/6793600ab1d256c57f4f03d08df15e8a56ea96605e4db7b4f96e8275be8a/sherpa_onnx_core-2.0.1-py3-none-manylinux_2_35_armv7l.whl',
+    sha256: 'c6ee74dffb4acf81f5fb26e1d45560baa6fd5c34bc192546b50c744005eb9702',
+  },
+  ubuntu: {
+    url: 'https://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.5-base-armhf.tar.gz',
+    sha256: 'fd77cb0659326b75c08ce06b6b8649d2e13ef9a704a8e9212fec32cb97d42add',
+  },
+  modelBase:
+    'https://huggingface.co/csukuangfj2/sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27/resolve/d1e6c30921780b8508d04b492dfb3ce8a51605d4/',
+  model: {
+    'encoder_model.ort': '94e90a4654fc45cdfedb77c4c08e1739f48862998e58fada384b25118134f221',
+    'decoder_model_merged.ort': 'cf524c4862d36e9e5ab032eddc73637efd822d70e868ac575cf1a46e1e4708a0',
+    'tokens.txt': '2870d843e14c1e187bf1913a521562a63b53933814bd7f2145120468f494a049',
+  },
+};
+const UBUNTU_LIBS32 = UBUNTU_LIBS.map(l => (l === 'ld-linux-aarch64.so.1' ? 'ld-linux-armhf.so.3' : l));
+
+const DEFAULTS = { enabled: false, url: '', token: '', suppressLg: false, stt: 'tv', llm: {}, ha: {} };
 let job = { state: 'idle', message: '', at: 0 },
   listening = false,
   last = null;
@@ -95,24 +119,30 @@ const setJob = (state, message) => {
   job = { state, message, at: Date.now() };
 };
 const cfg = () => Object.assign({}, DEFAULTS, ctx.config.get().voice || {});
-const installed = () => fs.existsSync(V + '/installed') && fs.existsSync(V + '/cytv-asr');
+// which recogniser is installed: the 32-bit one (cytv-asr32) or the 64-bit one (cytv-asr)
+const is32 = () => fs.existsSync(V + '/cytv-asr32');
+const installed = () => fs.existsSync(V + '/installed') && (is32() || fs.existsSync(V + '/cytv-asr'));
+// voice.stt = 'ha': Home Assistant's Assist pipeline recognises the speech (the audio goes to it, answers.recogniseHa); 'tv' (default): the recogniser on the TV
+const haStt = () => cfg().stt === 'ha' && haReady(haCfg());
+// something can recognise speech: the recogniser on the TV, or Home Assistant
+const ready = () => installed() || haStt();
 
-// The recogniser is a 64-bit ARM program (voice/build.sh), so it needs a 64-bit kernel: the programs of the TV can be 32-bit (they are on
-// the G2), but a TV whose kernel is 32-bit ARM (uname -m: armv7l, as on the 43UP7550PTZ, issue 175) cannot start it at all: the shell
-// then reads the 64-bit loader as a script and reports "syntax error: unexpected word". It is asked once, before anything is downloaded.
-// A kernel that says armv8l or aarch64 is 64-bit (a 32-bit program on a 64-bit kernel is told armv8l); other machines (a computer
-// running the tests) are not judged. CYTV_KERNEL_ARCH stands in for uname in the tests.
+// The 64-bit recogniser (cytv-asr) needs a 64-bit kernel: the programs of the TV can be 32-bit (they are on the G2), but a TV whose
+// kernel is 32-bit ARM (uname -m: armv7l, as on the 43UP7550PTZ, issue 175) cannot start it at all (the shell then reads the 64-bit
+// loader as a script and reports "syntax error: unexpected word"). Such a TV gets the 32-bit recogniser (cytv-asr32), built for ARMv7;
+// an older 32-bit ARM core (armv6 and before) cannot run that either, and nothing is downloaded there. The kernel is asked once, before
+// anything is downloaded. A kernel that says armv8l or aarch64 is 64-bit (a 32-bit program on a 64-bit kernel is told armv8l); other
+// machines (a computer running the tests) are not judged. CYTV_KERNEL_ARCH stands in for uname in the tests.
 let kernel = process.env.CYTV_KERNEL_ARCH || '';
 function kernelArch() {
   if (kernel) return Promise.resolve(kernel);
   return exec.run('uname', ['-m'], { timeout: 5000 }).then(r => (kernel = r.ok ? r.out.trim() : ''));
 }
 const kernel32 = k => /^arm(v[1-7]\w*)?$/.test(k || '');
+const kernelV7 = k => /^armv7\w*$/.test(k || '');
 const unsupported = () =>
-  kernel32(kernel)
-    ? 'Voice needs a TV with a 64-bit kernel. The kernel of this TV is 32-bit ARM (' +
-      kernel +
-      '), so the speech recogniser cannot run on it.'
+  kernel32(kernel) && !kernelV7(kernel)
+    ? 'Voice needs an ARMv7 or newer processor. The kernel of this TV is ' + kernel + ', so the speech recogniser cannot run on it.'
     : '';
 const dirSize = d => {
   let n = 0;
@@ -198,39 +228,68 @@ async function doInstall() {
   await run('tar', ['-xzf', TMP + '/base.tgz', '-C', TMP].concat(members));
   for (const l of UBUNTU_LIBS) fs.copyFileSync(TMP + '/usr/lib/aarch64-linux-gnu/' + l, LIB + '/' + l); // follows the libstdc++ link
   rmrf(TMP);
-  let i = 0;
-  for (const name of Object.keys(SRC.model)) {
-    setJob('working', 'Downloading the speech model (' + ++i + ' of ' + Object.keys(SRC.model).length + ')');
-    await download(SRC.modelBase + name, MODEL + '/' + name, SRC.model[name]);
-  }
-  setJob('working', 'Testing');
-  fs.copyFileSync(SERVICE_DIR + '/voice/cytv-asr', V + '/cytv-asr');
-  fs.chmodSync(V + '/cytv-asr', 0o755);
-  await transcribe(Buffer.alloc(RATE * 2)); // one second of silence: loads the model, so a broken install shows up here
-  fs.writeFileSync(
-    V + '/installed',
-    JSON.stringify({ engine: 'moonshine-voice 0.1.5', model: 'tiny-streaming-en', at: new Date().toISOString() })
+  await downloadModel(SRC);
+  await finish('cytv-asr', { engine: 'moonshine-voice 0.1.5', model: 'tiny-streaming-en' });
+}
+// a 32-bit ARM kernel: sherpa-onnx with Moonshine tiny, and the hard-float C library it needs (the TV's own is soft-float)
+async function doInstall32() {
+  rmrf(V);
+  nc.mkdirp(TMP);
+  nc.mkdirp(LIB);
+  nc.mkdirp(MODEL);
+  setJob('working', 'Downloading the speech engine (9 MB)');
+  await download(SRC32.wheel.url, TMP + '/engine.whl', SRC32.wheel.sha256);
+  const f = unzip(TMP + '/engine.whl', n => /^sherpa_onnx\/lib\/lib(sherpa-onnx-c-api|onnxruntime)\.so$/.test(n));
+  if (Object.keys(f).length !== 2) throw new Error('the engine package has an unexpected layout');
+  for (const n of Object.keys(f)) fs.writeFileSync(LIB + '/' + path.basename(n), f[n]);
+  rmrf(TMP + '/engine.whl');
+  setJob('working', 'Downloading the 32-bit C library (26 MB)');
+  await download(SRC32.ubuntu.url, TMP + '/base.tgz', SRC32.ubuntu.sha256);
+  const L = 'usr/lib/arm-linux-gnueabihf/';
+  await run(
+    'tar',
+    ['-xzf', TMP + '/base.tgz', '-C', TMP].concat(
+      UBUNTU_LIBS32.map(l => L + l),
+      L + 'libstdc++.so.6.0.30'
+    )
   );
+  for (const l of UBUNTU_LIBS32) fs.copyFileSync(TMP + '/' + L + l, LIB + '/' + l); // follows the libstdc++ link
+  rmrf(TMP);
+  await downloadModel(SRC32);
+  await finish('cytv-asr32', { engine: 'sherpa-onnx 2.0.1', model: 'moonshine-tiny-en-quantized-2026-02-27' });
+}
+async function downloadModel(src) {
+  let i = 0;
+  for (const name of Object.keys(src.model)) {
+    setJob('working', 'Downloading the speech model (' + ++i + ' of ' + Object.keys(src.model).length + ')');
+    await download(src.modelBase + name, MODEL + '/' + name, src.model[name]);
+  }
+}
+async function finish(program, info) {
+  setJob('working', 'Testing');
+  fs.copyFileSync(SERVICE_DIR + '/voice/' + program, V + '/' + program);
+  fs.chmodSync(V + '/' + program, 0o755);
+  await transcribe(Buffer.alloc(RATE * 2)); // one second of silence: loads the model, so a broken install shows up here
+  fs.writeFileSync(V + '/installed', JSON.stringify(Object.assign(info, { at: new Date().toISOString() })));
 }
 function install() {
   if (job.state === 'working') return;
-  if (!fs.existsSync(SERVICE_DIR + '/voice/cytv-asr')) {
-    setJob('error', 'This package has no voice program (cytv-asr); update CleanYourTV first.');
-    return;
-  }
   setJob('working', 'Starting');
   // the kernel is asked first: nothing is downloaded for a TV that cannot run the recogniser
   kernelArch()
     .catch(() => '')
     .then(() => {
       if (unsupported()) throw new Error(unsupported());
-      return doInstall();
+      const program = kernelV7(kernel) ? 'cytv-asr32' : 'cytv-asr';
+      if (!fs.existsSync(SERVICE_DIR + '/voice/' + program))
+        throw new Error('This package has no voice program (' + program + '); update CleanYourTV first.');
+      return program === 'cytv-asr32' ? doInstall32() : doInstall();
     })
     .then(
       () => setJob('done', 'Voice is installed'),
       e => {
         rmrf(V);
-        setJob('error', unsupported() ? e.message : 'Install failed: ' + e.message);
+        setJob('error', unsupported() || /^This package has no voice program/.test(e.message) ? e.message : 'Install failed: ' + e.message);
       }
     );
 }
@@ -245,9 +304,15 @@ function uninstall() {
 }
 
 // ---- recognising: 16 kHz signed 16-bit mono PCM in, text out ----
+// both programs start through the loader of their own C library; cytv-asr32 is told two threads (no faster with four on the test TV)
+const recogniser = () =>
+  is32()
+    ? { file: LIB + '/ld-linux-armhf.so.3', args: ['--library-path', LIB, V + '/cytv-asr32', MODEL, '2'] }
+    : { file: LIB + '/ld-linux-aarch64.so.1', args: ['--library-path', LIB, V + '/cytv-asr', MODEL] };
 function transcribe(pcm) {
   return new Promise((resolve, reject) => {
-    const ch = cp.spawn(LIB + '/ld-linux-aarch64.so.1', ['--library-path', LIB, V + '/cytv-asr', MODEL], {
+    const r = recogniser();
+    const ch = cp.spawn(r.file, r.args, {
       env: Object.assign({}, ENV, { LD_PRELOAD: '' }),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -438,7 +503,7 @@ const show = o => {
 const readSeconds = t => Math.min(60, Math.max(8, 6 + String(t || '').length / 12)); // time to read an answer on screen
 
 // What happens with recognised (or typed) text: ask the model if switched on, tell your server if set, show the result.
-async function respond(text, card) {
+async function respond(text, card, assist) {
   const c = cfg(),
     l = llmCfg(),
     h = haCfg(),
@@ -451,10 +516,21 @@ async function respond(text, card) {
     return out;
   }
   if (useHa || useAi) await say({ kind: 'thinking', title: 'Thinking', question: text, text: '', seconds: 90 });
-  let haText = '';
-  if (useHa) {
+  let haText = '',
+    confirmed = false;
+  // the assistant asked "say yes to go ahead" (a tool that turns something off): these words answer it, not a new question
+  if (useAi && answers.pendingConfirm()) {
+    confirmed = true;
     try {
-      const r = await askHa(text);
+      out.answer = await answers.confirmPending(text);
+      out.via = 'ai';
+    } catch (e) {
+      out.error = e.message;
+    }
+  }
+  if (useHa && !confirmed) {
+    try {
+      const r = assist || (await askHa(text)); // assist: Home Assistant already ran the intent stage on the audio
       haText = r.text;
       if (r.understood && r.text) {
         out.answer = r.text;
@@ -465,10 +541,13 @@ async function respond(text, card) {
     }
   }
   let aiFailed = false;
-  if (!out.answer && useAi) {
+  if (!out.answer && useAi && !confirmed) {
     try {
       // the cards do not say which provider answers or is asked; the reply does (provider, tried)
-      const r = await askLlm(text);
+      const r = await askLlm(text, {
+        // a tool runs: the card says which
+        onTool: name => say({ kind: 'thinking', title: 'Working on it', question: text, text: 'Using ' + name, seconds: 90 }),
+      });
       out.answer = r.answer;
       out.via = 'ai';
       out.provider = r.via;
@@ -501,10 +580,10 @@ async function respond(text, card) {
       Object.assign(
         {
           kind: 'answer',
-          title: out.via === 'ha' ? 'Home Assistant' : 'Answer',
+          title: out.via === 'ha' ? 'Home Assistant' : out.via === 'ai' && answers.pendingConfirm() ? 'Confirm' : 'Answer',
           question: text,
           text: out.answer || '',
-          seconds: readSeconds(out.answer),
+          seconds: out.via === 'ai' && answers.pendingConfirm() ? 30 : readSeconds(out.answer),
         },
         out.card && out.card.image ? { image: out.card.image } : {},
         out.card && out.card.seconds ? { seconds: out.card.seconds } : {}
@@ -523,7 +602,7 @@ async function respond(text, card) {
 
 async function listen() {
   if (listening || job.state === 'working') return { started: false, error: listening ? 'already listening' : 'installing' };
-  if (!installed()) return { started: false, error: 'voice is not installed' };
+  if (!ready()) return { started: false, error: 'voice is not installed' };
   listening = true;
   last = { at: Date.now(), state: 'listening' };
   (async () => {
@@ -535,16 +614,31 @@ async function listen() {
         return show({ kind: 'answer', title: 'Voice', text: 'I did not hear anything', seconds: 3 });
       }
       show({ kind: 'thinking', title: 'Recognising', seconds: 60 });
-      const t0 = Date.now(),
-        text = await transcribe(pcm),
-        ms = Date.now() - t0;
+      last = { at: Date.now(), state: 'recognising' }; // the phone remote's mic follows these steps
+      const t0 = Date.now();
+      let text = null,
+        assist = null;
+      if (haStt()) {
+        // Home Assistant recognises the audio (and answers, unless the AI alone does): any failure goes to the recogniser on the TV, if installed
+        const ai = llmReady(llmCfg()),
+          intent = haCfg().route !== 'ai-only' && !(ai && answers.pendingConfirm()); // not for a "yes" that answers the assistant's question
+        try {
+          const r = await answers.recogniseHa(pcm, intent ? 'intent' : 'stt');
+          text = r.recognised;
+          assist = r.assist;
+        } catch (e) {
+          if (!installed()) throw e;
+        }
+      }
+      if (text === null) text = await transcribe(pcm);
+      const ms = Date.now() - t0;
       if (!text) {
         last = { at: Date.now(), state: 'nothing recognised', ms };
         return show({ kind: 'answer', title: 'Voice', text: 'I could not make out any words', seconds: 4 });
       }
       last = { at: Date.now(), state: 'heard', text, ms };
-      const r = await respond(text, true);
-      Object.assign(last, { sent: !!r.sent, answer: r.answer, error: r.error });
+      const r = await respond(text, true, assist);
+      Object.assign(last, { sent: !!r.sent, answer: r.answer, via: r.via || '', error: r.error });
     } catch (e) {
       last = { at: Date.now(), state: 'error', error: e.message };
       show({ kind: 'answer', title: 'Voice', text: e.message, seconds: 8 });
@@ -572,7 +666,7 @@ function lgPids() {
 }
 function syncLg() {
   const c = cfg(),
-    want = !!(c.enabled && c.suppressLg && installed());
+    want = !!(c.enabled && c.suppressLg && ready());
   for (const pid of lgPids()) {
     try {
       process.kill(pid, want ? 'SIGSTOP' : 'SIGCONT');
@@ -604,6 +698,7 @@ function applyLlm(cur, b) {
   const pendingModel = list.some(p => p.type === 'openrouter') ? '' : raw.model || ''; // a model set before the OpenRouter key
   if (typeof b.enabled === 'boolean') raw.enabled = b.enabled;
   if (typeof b.system === 'string') raw.system = b.system.slice(0, 1000);
+  if (typeof b.agent === 'boolean') raw.agent = b.agent; // the AI providers may use the tools of the service and approved add-ons
   const saved = {};
   list.forEach(p => (saved[p.id] = p));
   const newId = taken => {
@@ -746,9 +841,22 @@ function draftProvider(o) {
   return p;
 }
 
+// Home Assistant has an address and a token, saved or in this change (v: the voice settings, b: the change)
+const haSetUp = (v, b) => haReady(Object.assign({}, HA_DEFAULTS, v.ha || {}, b.ha && b.ha.clear ? HA_DEFAULTS : {}, haPart(b.ha)));
+const haPart = h => {
+  const o = {};
+  if (h && typeof h.url === 'string' && haBase(h.url)) o.url = haBase(h.url);
+  if (h && typeof h.token === 'string' && h.token.trim()) o.token = h.token.trim();
+  return o;
+};
 function applySet(b) {
   const v = cfg();
-  if (typeof b.enabled === 'boolean') v.enabled = b.enabled && installed();
+  if (typeof b.stt === 'string') {
+    if (b.stt !== 'tv' && b.stt !== 'ha') return 'the speech recognition must be tv or ha';
+    if (b.stt === 'ha' && !haSetUp(v, b)) return 'set up Home Assistant (address and token) before it recognises the speech';
+    v.stt = b.stt;
+  }
+  if (typeof b.enabled === 'boolean') v.enabled = b.enabled && (installed() || (v.stt === 'ha' && haSetUp(v, b)));
   if (typeof b.url === 'string') {
     const u = b.url.trim().slice(0, 500);
     if (u && !/^https?:\/\/[^\s]+$/.test(u)) return 'the server address must start with http:// or https://';
@@ -777,11 +885,15 @@ function applySet(b) {
       if (!HA_ROUTES.includes(b.ha.route)) return 'the routing must be one of ' + HA_ROUTES.join(', ');
       h.route = b.ha.route;
     }
+    if (typeof b.ha.pipeline === 'string') {
+      if (!/^[\w.\-]{0,100}$/.test(b.ha.pipeline.trim())) return 'that pipeline name is not valid';
+      h.pipeline = b.ha.pipeline.trim();
+    }
     if (typeof b.ha.agent === 'string') {
       if (!/^[\w.\-]{0,100}$/.test(b.ha.agent.trim())) return 'that agent name is not valid';
       h.agent = b.ha.agent.trim();
     }
-    if (b.ha.url !== undefined || b.ha.agent !== undefined || b.ha.clear) answers.forgetHa();
+    if (b.ha.url !== undefined || b.ha.agent !== undefined || b.ha.pipeline !== undefined || b.ha.clear) answers.forgetHa();
     v.ha = h;
   }
   if (llm) v.llm = llm;
@@ -871,6 +983,7 @@ function pairPage(msg, done, token, lang, only) {
     'This address is already in the list',
     'OpenRouter needs a key',
     'Choose a model',
+    'can act',
     'Saved. You can close this page.',
     'No AI provider yet: add OpenRouter or a server of your own.',
     'no connection to the TV',
@@ -881,6 +994,7 @@ function pairPage(msg, done, token, lang, only) {
 <div class=add><button type=button id=addor>+ ${T('OpenRouter')}</button><button type=button id=addsrv>+ ${T('Your own server')}</button></div>
 <label class=c><input type=checkbox id=enabled ${l.enabled ? 'checked' : ''}> ${T('Answer with the AI')}</label>
 <label>${T('Instructions for the AI')} <small>${T('(empty: short plain answers)')}</small></label><textarea id=system rows=3>${esc(l.system)}</textarea>
+<label class=c><input type=checkbox id=agent ${l.agent ? 'checked' : ''}> ${T('Let the AI act on the TV (open apps, switch inputs, approved add-on tools)')} <small>${T('needs a model marked can act')}</small></label>
 <label>${T('Which answers first')}${
     haReady(ha)
       ? ''
@@ -919,7 +1033,7 @@ c.appendChild(field(p,tx('API key'),kh,el('input',{type:'password',autocomplete:
 if(p.hasKey&&!p.clearKey&&srv)c.appendChild(el('a',{href:'#',style:'font-size:14px;color:#aaa',text:tx('Remove the saved key'),onclick:function(e){e.preventDefault();p.clearKey=true;draw()}}));
 var dl='m'+i,mi=el('input',{list:dl,value:p.model,autocomplete:'off',class:p.err.model?'bad':'',oninput:function(e){p.model=e.target.value.trim()}});
 var mh=p.loading?tx('Reading models…'):srv?tx('read from your server'):'';
-c.appendChild(field(p,tx('Model'),mh,mi,'model'));c.appendChild(el('datalist',{id:dl},(p.models||[]).map(function(m){return el('option',{value:m.id,text:m.price!=null?m.name+' \\u00B7 $'+m.price+'/M':m.name})})));
+c.appendChild(field(p,tx('Model'),mh,mi,'model'));c.appendChild(el('datalist',{id:dl},(p.models||[]).map(function(m){return el('option',{value:m.id,text:(m.price!=null?m.name+' \\u00B7 $'+m.price+'/M':m.name)+(m.tools?' \\u00B7 '+tx('can act'):'')})})));
 if(p.mErr)c.appendChild(el('p',{class:'e',text:tx('Could not read the model list: %s. Type the model name.',p.mErr)}));
 var w=el('select',{onchange:function(e){p.waitS=+e.target.value}},D.waits.map(function(s){return el('option',{value:s,text:tx('%d s',s)})}));w.value=String(p.waitS);
 c.appendChild(field(p,tx('Wait for an answer'),'',w,''));
@@ -932,7 +1046,7 @@ function draw(){var box=document.getElementById('cards');list.forEach(function(q
 function add(type){var p={id:'',type:type,name:'',base:'',model:type==='openrouter'?'openrouter/auto':'',waitS:type==='openrouter'?30:25,off:false,hasKey:false,key:'',clearKey:false,models:null,mErr:'',res:null,err:{},ask:false};list.push(p);draw();if(type==='openrouter')loadModels(p);var cs=document.querySelectorAll('.card');var last=cs[cs.length-1];last.scrollIntoView({behavior:'smooth',block:'center'});var f=last.querySelector('input');if(f)f.focus()}
 document.getElementById('addor').onclick=function(){add('openrouter')};document.getElementById('addsrv').onclick=function(){add('server')};
 document.getElementById('save').onclick=function(){var ok=true;list.forEach(function(p){if(!check(p))ok=false});draw();var er=document.getElementById('err');er.textContent='';if(!ok){var b=document.querySelector('.bad');if(b)b.scrollIntoView({block:'center'});return}
-var body={llm:{enabled:document.getElementById('enabled').checked,system:document.getElementById('system').value,providers:list.map(function(p){var o={type:p.type,name:p.name,model:p.model,waitS:p.waitS,off:p.off};if(p.id)o.id=p.id;if(p.type==='server')o.base=p.base;if(p.key)o.key=p.key;if(p.clearKey&&!p.key)o.clearKey=true;return o})},ha:{route:document.getElementById('haroute').value},url:document.getElementById('url').value};
+var body={llm:{enabled:document.getElementById('enabled').checked,system:document.getElementById('system').value,agent:document.getElementById('agent').checked,providers:list.map(function(p){var o={type:p.type,name:p.name,model:p.model,waitS:p.waitS,off:p.off};if(p.id)o.id=p.id;if(p.type==='server')o.base=p.base;if(p.key)o.key=p.key;if(p.clearKey&&!p.key)o.clearKey=true;return o})},ha:{route:document.getElementById('haroute').value},url:document.getElementById('url').value};
 var tk=document.getElementById('token').value;if(tk)body.token=tk;
 post('save-json',body).then(function(r){if(r.error){er.textContent=r.error;return}document.getElementById('main').innerHTML='<p class=m></p>';document.querySelector('#main .m').textContent=tx('Saved. You can close this page.')},function(){er.textContent=tx('no connection to the TV')})};
 draw();list.forEach(function(p){if(p.type==='openrouter'||p.base)loadModels(p)})})();</script>`;
@@ -1039,6 +1153,7 @@ const status = () => {
   const c = cfg();
   return {
     installed: installed(),
+    stt: cfg().stt === 'ha' ? 'ha' : 'tv',
     unsupported: unsupported(),
     bytes: installed() || job.state === 'working' ? dirSize(V) : 0,
     enabled: !!c.enabled,
@@ -1055,20 +1170,31 @@ const status = () => {
     last,
     pairing: !!pair,
     pairedAt,
-    engine: 'Moonshine tiny (English)',
+    engine: haStt() ? 'Home Assistant (Assist)' : 'Moonshine tiny (English)',
   };
 };
 
 function create(c) {
   ctx = c;
-  answers.init(cfg);
+  // the tools the assistant may use (llm.agent): the ones the service's MCP endpoint serves (toolhub.js, /api/mcp)
+  answers.init(cfg, {
+    tools: () => {
+      const hub = ctx.feature && ctx.feature('mcp');
+      return hub && hub.providers ? hub.providers() : [];
+    },
+    // the same list with the tool settings applied (manager: AI agents (MCP) > Tools), so a tool that is off is not offered by voice
+    merged: () => {
+      const hub = ctx.feature && ctx.feature('mcp');
+      return hub && hub.merged ? hub.merged() : null;
+    },
+  });
   // the voice key of LG's own remote handling follows our setting (syncLg); checked now and then
   const start = () => {
     kernelArch().catch(() => {}); // for the status: the manager says at once that this TV cannot run voice
     setInterval(syncLg, 20000);
     setTimeout(syncLg, 5000);
   };
-  return { name: 'voice', prefix: '/api/voice/', handle, start, status, installed, listen, syncLg, capture };
+  return { name: 'voice', prefix: '/api/voice/', handle, start, status, installed, ready, listen, syncLg, capture };
 }
 async function handle(req, res, u, body) {
   const json = (o, code) => {

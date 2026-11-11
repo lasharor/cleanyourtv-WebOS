@@ -5,6 +5,7 @@ const fs = require('fs');
 const P = require('./paths'),
   web = require('./web'),
   exec = require('./exec'),
+  saver = require('./screensaver'),
   debloat = require('./debloat');
 
 // the TV comes back to its last app after a restart; that must not be one of ours
@@ -24,6 +25,23 @@ function setHome(enabled) {
     fixLastApp();
   }
   exec.detached('sleep 3; reboot');
+}
+// LG's screen saver or ours: off unless switched on here (SCREENSAVER-ON, read by 10-cleanyourtv-home at boot). Like Home, the change
+// needs a restart. Switching on also stages the page first, so the folder that is mounted at the next boot holds this version's page.
+function setSaver(enabled) {
+  try {
+    if (enabled) fs.writeFileSync(P.SA_ON, '');
+    else fs.unlinkSync(P.SA_ON);
+  } catch (_) {}
+  exec.detached((enabled ? 'sh ' + P.D + '/stage-screensaver.sh </dev/null; ' : '') + 'sleep 3; reboot');
+}
+// a small text file, or '' when it is not there
+function readText(f) {
+  try {
+    return fs.readFileSync(f, 'utf8');
+  } catch (_) {
+    return '';
+  }
 }
 const KEY_NAMES = ['home', 'voice', 'guide'];
 const PICKER_MODES = ['overlay', 'ondemand', 'launcher'];
@@ -69,10 +87,20 @@ function create(ctx) {
       picker: Object.assign({}, config.get().picker || {}, { mode: inputkey().mode(), released: !!opts.inputKey && !inputkey().on() }),
       voice: voice ? (v => ({ installed: v.installed, enabled: v.enabled, ha: v.ha.configured }))(voice.status()) : null,
       notifyApi: napi ? { enabled: napi.info().enabled, port: napi.info().port } : { enabled: false },
+      mcp: {
+        lan: (m => !!(m && m.lanInfo && m.lanInfo().lan))(ctx.feature && ctx.feature('mcp')),
+        agent: !!(voice && voice.status().llm.agent), // the voice assistant may use the tools
+      },
       wallpapers: wp ? (w => ({ total: w.total, uploads: w.uploads }))(wp.status()) : null,
       icons: !!(ad && ad.module && ad.module('icons')), // the App icons add-on runs
       lang: config.get().lang || '', // the Language setting: '' follows the TV
       home: { enabled: !fs.existsSync(P.DISABLE), fullhome: fs.existsSync(P.FULLHOME_APP), ours },
+      // supported: this TV can have our screen saver in this version (helper/screensaver.js supported)
+      saver: {
+        enabled: fs.existsSync(P.SA_ON),
+        replaced: saver.replaced(),
+        supported: saver.supported(ctx.profile ? ctx.profile.get() : {}, readText(P.D + '/home-method').trim()),
+      },
       inputhook: inputhook.status(keys().input),
       keys: keys(),
       job: updates.job(),
@@ -205,6 +233,10 @@ function create(ctx) {
     }
     if (act === 'home') {
       setHome(b.enabled !== false);
+      return json({ returnValue: true });
+    }
+    if (act === 'saver') {
+      setSaver(b.enabled !== false);
       return json({ returnValue: true });
     }
     if (act === 'restore') {

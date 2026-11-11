@@ -98,4 +98,52 @@ run(async () => {
   // the launcher reports the page again when it is shown, so the key is bound again after the service restarted meanwhile
   const page = fs.readFileSync(path.join(root, 'app', 'index.html'), 'utf8');
   ok(/if \(PAGER\.on\) PAGER\.report\(\);/.test(page), 'the launcher reports its page when it is shown again');
+
+  // manager > an add-on > Open page: POST /api/book/open launches Home with {page, t} and answers the launcher waiting on GET at once
+  {
+    const launched = [];
+    const ob = mod.create({
+      config: memoryConfig({ keys: {} }),
+      inputhook: hook,
+      feature: () => null,
+      luna: async (uri, p) => (launched.push(p), { returnValue: true }),
+    });
+    const fake = (url, method) => {
+      const x = { req: { url, method, on: () => {} }, res: { code: 0, out: '', finished: false, ons: {} } };
+      x.res.writeHead = c => void (x.res.code = c);
+      x.res.setHeader = () => {};
+      x.res.end = s => {
+        x.res.out = s || '';
+        x.res.finished = true;
+      };
+      x.res.on = (e, f) => void (x.res.ons[e] = f);
+      return x;
+    };
+    const since = Date.now() - 1;
+    const w = fake('/api/book/open?since=' + since, 'GET');
+    await ob.handle(w.req, w.res, '/api/book/open', async () => ({}));
+    ok(!w.res.finished, 'GET /api/book/open waits while nothing was opened');
+    let r = await call(ob, '/api/book/open', 'POST', { id: 'phoneremote' });
+    const t = r.j.t;
+    ok(r.code === 200 && r.j.returnValue === true && t > since, 'POST /api/book/open opens a page');
+    ok(
+      launched.length === 1 &&
+        launched[0].id === 'com.webos.app.home' &&
+        launched[0].params.page === 'phoneremote' &&
+        launched[0].params.t === t,
+      'and launches Home with {page, t}'
+    );
+    const told = JSON.parse(w.res.out || 'null');
+    ok(told && told.id === 'phoneremote' && told.t === t && told.fresh === true, 'the waiting launcher is told at once, with the same t');
+    r = await call(ob, '/api/book/open?since=' + since, 'GET');
+    ok(r.j.t === t && r.j.fresh, 'a launcher that asks a moment later gets it too');
+    r = await call(ob, '/api/book/open', 'POST', { id: 'phoneremote' });
+    ok(r.j.t > t, 'a second open of the same page has a new t');
+    r = await call(ob, '/api/book/open', 'POST', { id: '../x' });
+    ok(r.code === 400 && launched.length === 2, 'a bad id is refused and nothing is launched');
+    const w2 = fake('/api/book/open?since=' + (t + 100), 'GET');
+    await ob.handle(w2.req, w2.res, '/api/book/open', async () => ({}));
+    ok(!w2.res.finished && typeof w2.res.ons.close === 'function', 'a launcher already up to date waits; a closed request is dropped');
+    w2.res.ons.close();
+  }
 });

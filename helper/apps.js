@@ -95,6 +95,7 @@ function create(ctx) {
   // the app manager's changes: luna-send -i listApps {subscribe}. Its first answer is the list itself; every later one is a change, after
   // which the list is asked again (once for a burst of changes). The subscription is started again when it ends, waiting longer each time.
   const spawn = ctx.spawn || require('child_process').spawn;
+  const WATCH_AFTER = ctx.watchAfter !== undefined ? ctx.watchAfter : 5000;
   let watchProc = null,
     watchOn = false;
   function watchApps() {
@@ -139,8 +140,14 @@ function create(ctx) {
       proc.on('error', again);
       proc.on('close', again);
     };
-    // a subscription left by an earlier run of the service (it is not ended when the service stops abnormally) goes first
-    exec.run('pkill', ['-f', '^luna-send -i luna://com.webos.applicationManager/listApps'], { timeout: 5000 }).then(run, run);
+    // a subscription left by an earlier run of the service (it is not ended when the service stops abnormally) goes first. The
+    // subscription starts a few seconds later: a child forked while the service is still starting was aborted by Node 8 at every
+    // start on webOS 6.5.3 (see exec.js); the list is asked as usual meanwhile
+    const later = () => {
+      const t = setTimeout(run, WATCH_AFTER);
+      if (t && t.unref) t.unref();
+    };
+    exec.run('pkill', ['-f', '^luna-send -i luna://com.webos.applicationManager/listApps'], { timeout: 5000 }).then(later, later);
   }
   function unwatchApps() {
     watchOn = false;
@@ -441,6 +448,21 @@ function create(ctx) {
     return theme ? Object.assign(c, { theme: theme.resolved() }) : c;
   }
 
+  // open an app; one set up to open on an Android box (androidbox.js) switches the input instead of opening on the TV
+  async function launch(id, params) {
+    const addons = ctx.feature && ctx.feature('addons');
+    const box = addons && addons.module && addons.module('androidbox');
+    const moved = box && box.handles(id) ? await box.open(id) : null;
+    if (moved) return moved;
+    // Home with parameters (manager > an add-on > Open page: {page: id}): the stand-in Home reads them from a file
+    if (id === 'com.webos.app.home' && params && typeof params === 'object') require('./nativehome').homeParams(params);
+    return luna('luna://com.webos.applicationManager/launch', { id, params: params || {} });
+  }
+  function powerOff() {
+    luna('luna://com.webos.service.tvpower/power/shutDown', { reason: 'remoteKey' }).catch(() => {});
+    return { returnValue: true };
+  }
+
   async function handle(req, res, u, body) {
     if (u === '/api/apps') {
       const reply = { apps: await apps(), config: launcherConfig(), usage: usageScores(), version: ctx.version, stamp: appsStamp };
@@ -494,19 +516,11 @@ function create(ctx) {
     if (u === '/api/launch' && req.method === 'POST') {
       const b = await body(req);
       if (!/^[\w.\-]+$/.test(b.id || '')) return web.json(res, { error: 'bad id' }, 400);
-      // an app set up to open on an Android box (androidbox.js) switches the input instead of opening on the TV
-      const addons = ctx.feature && ctx.feature('addons');
-      const box = addons && addons.module && addons.module('androidbox');
-      const moved = box && box.handles(b.id) ? await box.open(b.id) : null;
-      if (moved) return web.json(res, moved);
-      return web.json(res, await luna('luna://com.webos.applicationManager/launch', { id: b.id, params: b.params || {} }));
+      return web.json(res, await launch(b.id, b.params));
     }
     // a full power-off (tvpower/power/shutDown, issue 50): not the standby of the remote's power key, which keeps Quick Start+ and draws power.
     // Wake-on-LAN no longer wakes the TV afterwards and the next start is a cold boot. The reply comes before the TV goes down.
-    if (u === '/api/power/off' && req.method === 'POST') {
-      luna('luna://com.webos.service.tvpower/power/shutDown', { reason: 'remoteKey' }).catch(() => {});
-      return web.json(res, { returnValue: true });
-    }
+    if (u === '/api/power/off' && req.method === 'POST') return web.json(res, powerOff());
     if (u === '/api/config' && req.method === 'POST') {
       saveLauncherConfig(await body(req));
       return web.json(res, { returnValue: true });
@@ -550,6 +564,12 @@ function create(ctx) {
     ],
     prefix: '/icon/',
     handle,
+    // for the voice assistant's own tools (coretools.js): the same code as /api/apps, /api/inputs, /api/launch and /api/power/off
+    listApps: apps,
+    inputs: inputsWithTuner,
+    launch,
+    powerOff,
+    usageScores, // {app id: score}, for the most_used_apps tool
     start: () => {
       setInterval(pollForeground, 4000);
       watchApps();

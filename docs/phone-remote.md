@@ -18,13 +18,41 @@ depends on how far it went down: see [Turning the TV on](#turning-the-tv-on).
     in `Reboot` and it was back on, awake, about a minute later with its uptime reset, and **Shut down** switched it off completely: after
     that it answers nothing on the network and a Wake-on-LAN packet does not bring it back, so its own remote is the only way on.
 
-The phone page has four tabs: **Remote**, **Touchpad**, **Apps** and **Live**. The Remote has a round pad with a large OK and Menu, **123**, Back and Home in its four corners, then volume, Mute and channel, and one playback bar. **123** opens a sheet with the number keys, Exit and the four colour keys. The last row of both the Remote and the Touchpad holds **Inputs** (the TV's ports) and **Keyboard** (a drawer, below). When the TV
+The phone page has four tabs: **Remote**, **Touchpad**, **Apps** and **Live**. The Remote has a round pad with a large OK and Menu, **123**, Back and Home in its four corners, then volume, Mute and channel, and one playback bar. **123** opens a sheet with the number keys, Exit and the four colour keys. The last row of both the Remote and the Touchpad holds **Inputs** (the TV's ports), the **mic** (Voice, below) and **Keyboard** (a drawer, below). When the TV
 cannot be reached the line under the TV name says so ("Can't reach the TV": it may be off, or the phone may be on another network) and the page retries by itself. Every short message (opening an app, not connected, the TV did not come on) shows in that line for a few seconds and then goes back to the real status: nothing is drawn over the keys. The page is always left to right,
 also in an Arabic or Hebrew phone, so the arrows do not swap sides.
 
 **Touchpad.** A swipe moves the TV's pointer as you move, a tap is OK, a tap with two fingers is Back, and two fingers moving scroll. The rail on the right of the pad scrolls too: drag its thumb up or down, and it springs back to the middle when you let go. Both work with a mouse as well (drag, click, wheel; a right click is Back). The first time, the TV asks you to **allow** the connection on its screen: allow it once and the key is kept in the add-on's own data
 folder (`/media/developer/cleanyourtv/addon-data/phoneremote/ssap-key`, mode 600). Until it is allowed (or if the TV refuses) the pad
 falls back to the arrow keys, at a slower pace.
+
+**Voice.** The round orange button between **Inputs** and **Keyboard** (on the Remote and the Touchpad) asks the TV's
+[voice assistant](voice.md): the AI chat, Home Assistant or your server, whichever is set up. While nothing on the TV answers, the button
+is dimmed and a tap only says why in the line under the TV name ("Nothing on the TV answers yet. Set it up in the manager: Voice.", or
+"Update CleanYourTV" when the service on the TV has no voice). Otherwise the first tap asks where you speak:
+
+- **On this phone**: a field opens with the phone's keyboard. Tap the microphone **on the keyboard** (Gboard, the iPhone keyboard, Samsung
+  and others have one) and speak, or type, then send. A web page on plain HTTP, as this one is, may not open the microphone itself, but
+  the keyboard's dictation works in any text box. This needs no speech download on the TV. When the browser lets the page use the
+  microphone (an HTTPS page, or in Chrome on Android an address added under `chrome://flags`, **Insecure origins treated as secure**,
+  for example `http://<tv address>:8799`), the page listens at once with the phone's own speech recognition, shows the words as you speak
+  and sends them when you stop; the mic in the field listens again.
+- **On the TV remote**: the TV listens through its remote's microphone (it needs **Voice** installed in the manager; until then this
+  choice is dimmed). The screen follows the TV: **Listening on the TV**, **Recognising**, **Thinking**, then the answer. On TVs where LG
+  opens the microphone only while the button is held, hold the remote's mic button while you speak. This means a paired phone can
+  start the TV's remote microphone: see [Control who has access](#control-who-has-access).
+
+**Remember my choice** (on by default) keeps the place for the next tap; switched off, the question comes every time. A **hold** on the
+mic button asks again, and so does the chip at the top of the voice screen.
+
+The voice screen fills the phone. Each question is a turn, the question in small type above its answer card, labelled with what
+answered (**Home Assistant** or **AI**); the TV shows its usual card as well. The conversation scrolls, oldest first, and a new answer
+opens at its question so it reads from the start. The field (or, from the TV remote, **Ask another question**) stays at the bottom. The
+conversation is kept while the page is open and starts empty after a reload.
+
+**This remote** (tap the TV's name) has two rows for it: **Voice** (where you speak) and **Show answers here** (off: the voice screen
+closes once the question is sent, or from the TV remote once the TV is done, and the answer shows only on the TV); when the TV cannot
+listen on its remote it says why there. The choice is kept on the phone (`localStorage`, `cytv-voice`) and goes with **Log out of this TV**.
 
 **Keyboard.** The **Keyboard** button (last row of the Remote and the Touchpad) opens a drawer (the same kind as Inputs and Numbers) and brings up the phone's keyboard. What you type goes to the TV as you type, and the line under the TV name says "Typing live on TV". **Clear**, **Delete** (hold to repeat) and **Enter** (sends Enter to the TV and closes the drawer) sit under the box.
 
@@ -34,21 +62,51 @@ It is an add-on from the catalog, not part of the package: the phone remote open
 the TV, so you install it on purpose. In the manager app, **Add-ons**, find **Phone remote**, install it and switch it **On**. Nothing
 listens on the network until then, and switching it off again closes the port.
 
-1. Open the add-on's page: in the manager, **Add-ons > Phone remote**, turn on **Page of the book** (or press 2 on Home afterwards): the
-   page has **Pair a phone**, the paired phones, and **Remove unused phones**.
+1. Open the add-on's page: in the manager, **Add-ons > Phone remote**, choose **Open page** (or turn on **Page of the book** and press 2
+   on Home afterwards; **Open page** works with the page out of the book too): the page has **Pair a phone**, the paired phones, and **Remove unused phones**.
 2. Choose **Pair a phone**. The TV shows a QR code, the address (`http://<tv address>:8799`) and a 6-digit code.
 3. On the phone (same Wi-Fi) scan the code, or type the address. The code it shows is in the address the QR carries, so scanning it
    pairs by itself; typed in, the same code is entered on the page. The code works once
    and expires a few minutes after you leave the page. **A scan takes the code off the TV at once**: the TV says "Code scanned. Finish
    on the phone." and keeps the window open only for the phone that scanned it, until it has paired. A phone that is already paired
    and scans the code again just connects: the TV closes the window and says it is connected.
-4. Press Back on the TV. The phone page now shows **Connected**. Add it to the home screen for a one-tap remote.
+4. Press Back on the TV. The phone page now shows **Connected**. Add it to the home screen for a one-tap remote (on an iPhone, before
+   pairing: see [On an iPhone or iPad](#on-an-iphone-or-ipad-the-remote-as-an-app)).
 
 The page draws the QR with the generator that ships with CleanYourTV (`/addon/qrcode.js`, one copy in the repository: a catalog add-on
 brings no copy of its own).
 
 The phone keeps a token in the browser (`localStorage`). It has to be the same address every time, so give the TV a fixed address in
 your router; if the address changes, pair again.
+
+### On an iPhone or iPad: the remote as an app
+
+There is no app to install on an iPhone, but the page itself can live on the Home Screen as an app: full screen, its own icon, no
+address bar. The TV serves what iOS needs for that (`/manifest.webmanifest`, `/apple-touch-icon.png`).
+
+1. Scan the TV's QR code with the camera. Safari opens the page; on an iPhone it says **put the remote on the Home Screen first**.
+2. In Safari tap **Share** (in iOS 26 it is in the **•••** menu), choose **Add to Home Screen**, keep **Open as Web App** on and tap
+   **Add**.
+3. Open **TV remote** from the Home Screen. The code from the QR code is already filled in: tap **Pair this device**.
+
+Pair in the app, not in Safari: iOS gives a Home Screen app its own storage, apart from Safari's, so a phone paired in Safari has to pair
+once more in the app (and then shows twice in the TV's list; remove the Safari one). A phone that already paired in Safari finds the same
+steps under **This remote** (tap the TV's name).
+
+What is different from the Android app:
+
+- **Turning the TV on.** A web page cannot send the Wake-on-LAN packet. With Quick Start+ on (the default) the TV keeps answering in
+  standby, and the power button turns it on and off as usual. From deep standby use one of the senders under
+  [If you already have something that wakes machines](#if-you-already-have-something-that-wakes-machines).
+- **While the TV is off.** The app cannot open without the TV: iOS keeps an offline copy only for pages served over HTTPS, and the TV
+  serves plain HTTP on the home network. Opened while the TV is in deep standby, the app shows an error until the TV is back.
+- **The tick on a key press.** iOS has no vibration for web pages; on iOS 18 and newer the page plays the system's switch tick instead.
+  It follows **Settings > Sounds & Haptics > System Haptics**.
+- **The address.** The app is tied to the TV's address: if it changes, delete the app and add it again. A fixed address in the router
+  avoids that.
+
+On iOS 17 and older, Add to Home Screen has no **Open as Web App** switch; the page asks for an app by itself (its manifest and the
+`apple-mobile-web-app-capable` tag), so it opens the same way.
 
 ## The name of a device
 
@@ -127,6 +185,12 @@ is accurate to about a minute.
 **Remove unused phones** is a security setting: a phone that was lost, sold or forgotten would otherwise be able to control the TV for ever. The
 service checks when it starts and every hour; a phone that is connected is never removed, and one that is removed can pair again with a new code.
 Choosing **Never** turns it off and asks first, and the screen says what it means: a lost phone keeps the remote until someone removes it by hand.
+
+**A paired phone can start the TV's remote microphone.** With [Voice](voice.md) installed, the mic button's **On the TV remote** makes the
+TV listen through its remote's microphone, as the remote's own mic button does: the TV shows its **Listening** card, records what is
+said, recognises the words on the TV and sends them to the voice assistant. The audio stays on the TV; the phone gets only the words and
+the answer. Every paired phone that is not blocked can do this while the add-on is on, and the TV listens to one at a time. To stop a phone,
+block or remove it on the add-on's page; to stop all of them, switch the add-on off or uninstall Voice.
 
 ## Turning the TV on
 

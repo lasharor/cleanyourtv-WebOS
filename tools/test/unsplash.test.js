@@ -97,6 +97,31 @@ run(async () => {
   ok(/not set up/.test(W.status().summary), 'not set up at first');
   ok((await W.next()).error === 'Unsplash is off' && W.push() === null, 'nothing is asked without a key');
 
+  // ---- the tool (wave 2): status, search words, on or off, credits ----
+  const T = mod.tools,
+    tv = x => JSON.parse(x.content[0].text);
+  ok(T.list().length === 1 && T.list()[0].name === 'unsplash', 'one tool, unsplash');
+  let tr = await T.call('unsplash', { action: 'status' });
+  ok(!tr.isError && tv(tr).configured === false && tv(tr).on === false, 'status: not set up');
+  tr = await T.call('unsplash', { action: 'set_query', query: 'x' });
+  ok(tr.isError && /not set up/.test(tr.content[0].text), 'nothing changes before it is set up');
+  ctx.settings.set({ key: KEY, query: '', on: true });
+  tr = await T.call('unsplash', { action: 'status' });
+  ok(
+    tv(tr).configured === true && tv(tr).on === true && JSON.stringify(tv(tr)).indexOf(KEY.slice(-4)) < 0,
+    'status with a key: on, and no part of the key'
+  );
+  tr = await T.call('unsplash', { action: 'set_query', query: '  snowy   peaks ' });
+  ok(!tr.isError && ctx.settings.get().query === 'snowy peaks', 'set_query saves the search words, tidied');
+  await T.call('unsplash', { action: 'turn', on: false });
+  ok(W.live === false, 'turn off');
+  await T.call('unsplash', { action: 'turn', on: true });
+  ok(W.live === true, 'turn on');
+  ok((await T.call('unsplash', { action: 'turn' })).isError, 'turn needs on');
+  ok(/no Unsplash photo/.test((await T.call('unsplash', { action: 'credits' })).content[0].text), 'credits before any photo says so');
+  ctx.settings.set({ key: '', query: '', on: true });
+  ok(W.live === false, '(the key is taken away again for the tests below)');
+
   // ---- the phone page ----
   const r = await W.settings({});
   const code = r.code;
@@ -148,6 +173,11 @@ run(async () => {
   );
   p = await phone('POST', '/api/credits', {}, code);
   ok(p.j.photos.length === 1 && p.j.photos[0].id === 'ph1abcdef', 'the photographers shown are listed for the phone page');
+  tr = await T.call('unsplash', { action: 'credits' });
+  ok(
+    tv(tr).photographer === 'Ann <b>Lee</b>' && /utm_source=CleanYourTV/.test(tv(tr).link),
+    'the tool names the photographer of the photo on Home'
+  );
 
   // ---- what happens when Unsplash fails ----
   mode = 'limit';

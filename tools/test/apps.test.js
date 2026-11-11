@@ -348,6 +348,29 @@ run(async () => {
   r = await call(withBox, '/api/apps');
   ok(r.j.config.androidBox === undefined, "the launcher is not given the box's address");
 
+  // manager > an add-on > Open page launches Home with {page: id}; the stand-in Home (webOS 5 to 23) reads parameters from a file
+  {
+    const fs = require('fs'),
+      path = require('path'),
+      P = req('paths');
+    fs.writeFileSync(path.join(P.PROC, 'uptime'), '42.50 10.00' + String.fromCharCode(10));
+    r = await call(withBox, '/api/launch', 'POST', { id: 'com.webos.app.home', params: { page: 'phoneremote' } });
+    ok(r.j.returnValue === true && !fs.existsSync(P.HOME_PARAMS), 'Home with a page: no parameter file where Home is not the stand-in');
+    const before = P.STANDIN;
+    P.STANDIN = path.join(process.env.CYTV_DIR, 'home-standin');
+    fs.writeFileSync(P.STANDIN, '/usr/bin/standin');
+    r = await call(withBox, '/api/launch', 'POST', { id: 'com.webos.app.home', params: { page: 'phoneremote' } });
+    ok(
+      r.j.returnValue === true && fs.readFileSync(P.HOME_PARAMS, 'utf8') === '42.50 {"page":"phoneremote"}',
+      'on the stand-in Home the page is written where scripts/home-standin.sh reads it'
+    );
+    fs.unlinkSync(P.HOME_PARAMS);
+    r = await call(withBox, '/api/launch', 'POST', { id: 'netflix', params: { x: 1 } });
+    ok(!fs.existsSync(P.HOME_PARAMS), 'another app does not touch that file');
+    fs.unlinkSync(P.STANDIN);
+    P.STANDIN = before;
+  }
+
   // a new app shows up by itself: the stamp of the list changes when the list does, and the app manager's change notifications
   // (luna-send -i listApps {subscribe}) make the service ask for the list again. A stand-in for luna-send's subscription.
   const { EventEmitter } = require('events');
@@ -369,7 +392,14 @@ run(async () => {
     if (/listApps/.test(args.join(' '))) sub = p; // the volume watch (audio.js) is started with the same spawn
     return p;
   };
-  const watched = req('apps').create({ config: memoryConfig({}), luna: wLuna, spawn: wSpawn, version: '1.6.0', feature: () => null });
+  const watched = req('apps').create({
+    config: memoryConfig({}),
+    luna: wLuna,
+    spawn: wSpawn,
+    version: '1.6.0',
+    feature: () => null,
+    watchAfter: 0,
+  });
   r = await call(watched, '/api/apps');
   const s1 = r.j.stamp;
   r = await call(watched, '/api/apps/stamp');

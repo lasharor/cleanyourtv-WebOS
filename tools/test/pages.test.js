@@ -139,9 +139,139 @@ run(async () => {
     asked = await wake(1, true);
     ok(asked.length === 0, 'nor one that is hidden');
   }
-  const pages = ['app', 'manager/app', 'picker/app', 'notify/app', 'helper/addons-bundled/iptv/page', 'addons/catalog/tuner/page'].map(d =>
-    path.join(root, d, 'index.html')
-  );
+  // manager > an add-on > Open page: Home is launched with {page: id} and turns to it, also to a page switched out of the book
+  {
+    const addonsSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'addons.js'), 'utf8'),
+      inputSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'input.js'), 'utf8');
+    const pagerSrc = addonsSrc.slice(addonsSrc.indexOf('var addonBar'), addonsSrc.indexOf("window.addEventListener('message'"));
+    const wantSrc = inputSrc.slice(inputSrc.indexOf('var seenParams'), inputSrc.indexOf('/* webOS 26: when the TV wakes'));
+    const addon = (id, inBook, claims) => ({
+      id,
+      name: id,
+      status: 'running',
+      enabled: true,
+      page: '/addon/' + id + '/index.html',
+      tile: { label: id, placement: 'book' },
+      inBook,
+      claims: claims || [],
+      order: 0,
+    });
+    const reply = { addons: [addon('weather', true), addon('phoneremote', false, ['back'])] };
+    const homeStyle = { visibility: 'visible' };
+    const sb = {
+      api: () => ({ then: ok1 => (ok1(reply), { then: f => f() }) }),
+      rebuild: () => {},
+      $: () => ({ style: homeStyle }),
+      cfg: {},
+      LOC: '',
+      API: '',
+      closeMenus: () => {},
+      inputsMenu: () => {},
+      liveOn: () => false,
+      LIVE: {},
+      webOSSystem: { launchParams: '{}' },
+      JSON,
+    };
+    vm.runInNewContext(
+      pagerSrc +
+        ';PAGER.draw = function () {};this.P = PAGER;' +
+        wantSrc +
+        ';this.want = wantInputs;this.shown = pageOnShow;this.watchOpen = watchOpen;',
+      sb
+    );
+    const P = sb.P;
+    P.load();
+    ok(
+      P.index('weather') === 1 && P.index('phoneremote') === 2 && P.index('nope') === -1,
+      'a page out of the book can be opened, after the last one'
+    );
+    ok(sb.PAGES.length === 1, 'but it is not a page of the book (the strip and the number buttons leave it out)');
+    ok(P.url(P.find('phoneremote')).indexOf('/addon/phoneremote/index.html?') === 0, 'its address is its own page');
+    const went = [];
+    P.go = (id, params, instant) => went.push([id, params, instant]);
+    P.on = true;
+    P.id = 'phoneremote';
+    ok(P.claims('back') && !P.claims('digits'), 'its claims count while it shows');
+    sb.webOSSystem.launchParams = JSON.stringify({ page: 'phoneremote' });
+    sb.want({ then: f => f() });
+    ok(
+      went.length === 1 && went[0][0] === 'phoneremote' && went[0][2] === true,
+      'Home launched with {page: id} turns to that page at once'
+    );
+    went.length = 0;
+    sb.webOSSystem.launchParams = JSON.stringify({ page: 'nope' });
+    sb.want({ then: f => f() });
+    ok(!went.length, 'an add-on without a page is ignored');
+    // webOS shows Home about a second before webOSRelaunch, with the new launchParams already set: a new {page} turns at the show
+    went.length = 0;
+    sb.webOSSystem.launchParams = JSON.stringify({ keepAlive: true, page: 'phoneremote' });
+    sb.shown();
+    ok(went.length === 1 && went[0][0] === 'phoneremote', 'Home shown with a new {page} turns to it before the relaunch arrives');
+    sb.shown();
+    ok(went.length === 1, 'shown again with the same parameters (an app closed): no second turn');
+    sb.want({ then: f => f() });
+    went.length = 0;
+    sb.shown();
+    ok(!went.length, 'nor after the relaunch handled them');
+    sb.webOSSystem.launchParams = JSON.stringify({ keepAlive: true });
+    sb.shown();
+    ok(!went.length, 'Home shown without a page does not turn');
+    // each open (its t) turns once: the relaunch webOS delivers late does not turn again after you left the page
+    sb.webOSSystem.launchParams = JSON.stringify({ keepAlive: true, page: 'phoneremote', t: 5000 });
+    sb.shown();
+    ok(went.length === 1, 'an open with a t turns at the show');
+    sb.want({ then: f => f() });
+    ok(went.length === 1, 'and its relaunch, late or not, does not turn again');
+    sb.webOSSystem.launchParams = JSON.stringify({ keepAlive: true, page: 'phoneremote', t: 6000 });
+    sb.want({ then: f => f() });
+    ok(went.length === 2, 'a newer open turns again');
+    // the service tells the launcher of an open at once (GET /api/book/open), before webOS delivers the relaunch
+    const replies = [
+      { id: 'phoneremote', t: 9000, fresh: true },
+      { id: 'phoneremote', t: 9500, fresh: false },
+    ];
+    const asked = [];
+    sb.api = p => {
+      asked.push(p);
+      const r = replies.shift();
+      return { then: f => (r ? f(r) : null) };
+    };
+    sb.openSince = 8000;
+    went.length = 0;
+    sb.watchOpen();
+    ok(
+      asked[0] === '/api/book/open?since=8000' && asked[1] === '/api/book/open?since=9000',
+      'the launcher waits for opens, one after another'
+    );
+    ok(went.length === 1 && went[0][0] === 'phoneremote', 'an open the service reports turns the page at once');
+    ok(asked[2] === '/api/book/open?since=9500' && went.length === 1, 'an open older than 10 s (fresh false) is not acted on');
+    sb.webOSSystem.launchParams = JSON.stringify({ keepAlive: true, page: 'phoneremote', t: 9000 });
+    sb.want({ then: f => f() });
+    ok(went.length === 1, 'the relaunch of that open, when webOS delivers it, does not turn again');
+    ok(
+      /PAGER\.on && !\(p && \(p\.live \|\| p\.page\)\)\) PAGER\.home\(\)/.test(inputSrc),
+      'a relaunch with {page: id} does not first turn back to Home'
+    );
+    const menuSrc = fs.readFileSync(path.join(root, 'manager', 'src', 'js', 'menu.js'), 'utf8');
+    ok(
+      /label: 'Open page'[\s\S]{0,700}api\('\/api\/book\/open', \{ id: a1\.id \}\)/.test(menuSrc),
+      'the manager offers Open page and launches Home with {page: id}'
+    );
+    const vi = menuSrc.indexOf("label: 'Let the voice assistant act on the TV'");
+    ok(
+      vi > 0 && /vReady = \(va\.providers \|\| \[\]\)\.some\(/.test(menuSrc) && !/va\.hasKey/.test(menuSrc.slice(vi - 700, vi + 1500)),
+      'the voice-acts switch needs any usable AI provider (a server of yours too), not only OpenRouter'
+    );
+  }
+  const pages = [
+    'app',
+    'manager/app',
+    'picker/app',
+    'notify/app',
+    'screensaver/app',
+    'helper/addons-bundled/iptv/page',
+    'addons/catalog/tuner/page',
+  ].map(d => path.join(root, d, 'index.html'));
   // the cards that bring a page of their own run on the TV too
   fs.readdirSync(path.join(root, 'cards', 'catalog')).forEach(id => {
     ['card.html', id + '.js'].forEach(f => {
@@ -228,11 +358,7 @@ run(async () => {
     'the focus ring has its own rounded corners (an outline is a rectangle before Chromium 94), also on tiles that crop their picture'
   );
   const built = require(path.join(root, 'tools', 'build-pages.js'));
-  for (const p of built.PAGES)
-    ok(
-      built.build(p[0]) === fs.readFileSync(path.join(root, p[1]), 'utf8'),
-      p[1] + ' is built from ' + p[0] + ' (run: node tools/build-pages.js)'
-    );
+  for (const p of built.PAGES) ok(built.fresh(p), p[1] + ' is built from ' + p[0] + ' (run: node tools/build-pages.js)');
   // a long device name (HDMI-CEC) is the second line of a chip in the Inputs picker: the line could not shrink, so it was painted outside the
   // card, over the next ones (issue 19). It wraps onto a second line now, ends in an ellipsis there when that is not enough, and the card
   // reserves the two lines so every card's icon and port sit at the same height.
@@ -284,12 +410,23 @@ run(async () => {
   const live = fs.readFileSync(path.join(root, 'helper', 'addons-bundled', 'iptv', 'src', 'js', 'live.js'), 'utf8');
   ok(
     /progressT = setInterval\(watchProgress, 1000\)/.test(live) &&
-      /function watchProgress\(\) \{\s*if \(!started \|\| pend \|\| !video \|\| video\.paused \|\| video\.ended/.test(live) &&
+      /function watchProgress\(\) \{\s*if \(!started \|\| pend \|\| !video \|\| !o\.on/.test(live) &&
       /Date\.now\(\) - lastProgressAt >= STALL_MS/.test(live) &&
       /clearInterval\(progressT\)/.test(live) &&
       /started = false;\s*lastTime = -1;\s*lastProgressAt = 0;/.test(live) &&
       /healthyT = setTimeout\(function \(\) \{\s*reloads = 0;\s*\}, 30000\)/.test(live),
     'Live TV reloads a stream whose picture time stops without a waiting event (issue 109)'
+  );
+  // issue 224: webOS 25 left the video paused and ended, which the watchdog skipped: pause and ended now reload it, ended also in the watchdog
+  ok(
+    /function watchProgress\(\) \{\s*if \(!started \|\| pend \|\| !video \|\| !o\.on \|\| document\.hidden\) return;\s*[^]*?if \(video\.ended\) \{\s*lastProgressAt = Date\.now\(\);\s*stalled\(\);/.test(
+      live
+    ) &&
+      /v\.addEventListener\('pause', function \(\) \{\s*if \(!o\.on \|\| !started \|\| pend \|\| failed \|\| document\.hidden\) return;[^]*?v\.paused[^]*?stalled\(\);[^]*?, 1500\)/.test(
+        live
+      ) &&
+      /v\.addEventListener\('ended', function \(\) \{\s*if \(video === v && o\.on && started && !pend && !failed\) stalled\(\);/.test(live),
+    'Live TV reloads a stream the TV leaves paused or ended (issue 224)'
   );
   // the text of an add-on on the Add-ons tab was cut off at the bottom of the screen (Weather forecast): it sits in a box of six lines and, when
   // longer, drifts up by itself (the remote cannot scroll it), with a fade at the cut edge; only transform animates

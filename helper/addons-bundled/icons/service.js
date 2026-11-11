@@ -253,7 +253,27 @@ function create(ctx) {
   }
 
   // /api/icons/... is answered through the manifest's "routes" (addon.json); apps.js asks for find(), versions() and mime()
-  return { handle, phone, find, versions, mime };
+  // ---- the tool for the voice assistant and MCP clients ("provides": ["tools"]): which apps have a picture of their own ----
+  // (reset deletes the picture, which must then be uploaded again: it is not a tool)
+  const TOOL = {
+    name: 'icons',
+    description: 'App icons chosen on a phone. action list_custom: the apps that show a picture of their own instead of their icon.',
+    inputSchema: { type: 'object', properties: { action: { type: 'string', enum: ['list_custom'] } }, required: ['action'] },
+
+    group: 'App icons', // the manager's Tools screen
+    labels: { list_custom: 'Apps with their own picture' },
+  };
+  async function callTool(name, args) {
+    const bad = m => ({ content: [{ type: 'text', text: String(m) }], isError: true });
+    if (name !== 'icons') return bad('unknown tool: ' + name);
+    if (!args || args.action !== 'list_custom') return bad('action is list_custom');
+    const v = versions(),
+      names = {};
+    (await apps('en')).forEach(a => (names[a.id] = a.title));
+    const list = Object.keys(v).map(id => ({ id, name: names[id] || id, tile: v[id].tile }));
+    return { content: [{ type: 'text', text: JSON.stringify(list.length ? list : 'no app has a picture of its own') }], isError: false };
+  }
+  return { handle, phone, find, versions, mime, tools: { list: () => [TOOL], call: callTool } };
 }
 
 // the phone page: the apps with their icons, Change and Reset. Change shows a preview of the picture in a dock tile and a grid tile

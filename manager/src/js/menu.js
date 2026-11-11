@@ -99,7 +99,7 @@ function build() {
       haOk = !!ha.configured,
       HR = { 'ha-first': 'Home Assistant first, then the AI', 'ha-only': 'Home Assistant only', 'ai-only': 'The AI only' };
     if (!v.installed && v.unsupported) {
-      /* a 32-bit kernel cannot start the 64-bit recogniser: nothing is offered to download */
+      /* an ARM core older than ARMv7 can run neither recogniser: nothing is offered to download (ARMv7 gets the 32-bit one) */
       rows.push({
         label: 'Voice is not available on this TV',
         sub: 'its kernel is 32-bit',
@@ -398,6 +398,524 @@ function build() {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
+  if (view === 'mcpnet') {
+    mcpLive();
+    var mn = mnet || {},
+      va = (vo && vo.llm) || {},
+      ags = mn.agents || [],
+      VOICE_D =
+        'The voice assistant may open apps, switch inputs, show a card and use the tools of the add-ons you approved in Add-ons > Agent tools (MCP). Turning the TV off asks first: say yes within 30 seconds. The tools go to the AI provider that is asked, OpenRouter or a server of yours; a model that cannot use tools only answers.';
+    /* the voice assistant uses the same tools as the network: the switch for it lives here. It needs one AI provider that can be asked
+       (OpenRouter with its key, or a server of yours with an address); every provider gets the tools */
+    var vReady = (va.providers || []).some(function (p) {
+      return !p.off && !!p.model && (p.type === 'openrouter' ? !!p.hasKey : !!p.base);
+    });
+    rows.push({
+      label: 'Let the voice assistant act on the TV',
+      sub: !vReady ? 'Off · add an AI provider first' : onoff(!!va.agent),
+      dim: !vReady,
+      info: {
+        t: 'Voice assistant acts on the TV',
+        d: !vReady
+          ? 'Needs an AI provider (OpenRouter or a server of yours): Features > Voice > Set up from your phone. ' + VOICE_D
+          : VOICE_D,
+      },
+      fn: function () {
+        if (!vReady) {
+          banner('Add an AI provider (OpenRouter or a server of yours) first: Features > Voice > Set up from your phone', 'err');
+          return;
+        }
+        api('/api/voice/set', { llm: { agent: !va.agent } }).then(
+          function (x) {
+            if (x.error) {
+              banner(x.error, 'err');
+              return;
+            }
+            vo = x;
+            if (st) st.mcp = { lan: !!mn.lan, agent: !!(x.llm && x.llm.agent) };
+            build();
+            draw();
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Accept MCP clients from the network',
+      sub: !mn.lan
+        ? 'Off'
+        : mn.error
+          ? 'On · port ' + mn.port + ' is taken'
+          : ags.length
+            ? 'On · port ' + mn.port + ' · ' + ags.length + (ags.length === 1 ? ' device' : ' devices')
+            : 'On · no agent yet',
+      dim: !!(mn.lan && mn.error),
+      info:
+        mn.lan && mn.error
+          ? {
+              t: 'Accept MCP clients from the network',
+              d:
+                'Port ' +
+                mn.port +
+                ' is used by another program on the TV, so nothing listens. Stop that program, then switch this off and on again.',
+            }
+          : {
+              t: 'Accept MCP clients from the network',
+              d:
+                'Lets AI agents on other computers (any MCP client, or a script) use the same tools. Port ' +
+                (mn.port || 8802) +
+                ' opens only while an agent is paired or a code is shown. Turning the TV off and requests from web pages are refused. Plain HTTP: use a network you trust.',
+            },
+      fn: function () {
+        api('/api/mcp/lan', { lan: !mn.lan }).then(
+          function (n) {
+            mnet = n;
+            if (st) st.mcp = { lan: !!n.lan, agent: !!va.agent };
+            build();
+            draw();
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+    rows.push({
+      label: 'Tools',
+      sub: mtools ? mtools.on + ' ' + tr('of') + ' ' + mtools.all + ' ' + tr('on') : '',
+      info: {
+        t: 'Tools',
+        d: 'Choose which tools the voice assistant and network agents may use, one group or one tool at a time, and what happens to new tools.',
+      },
+      fn: function () {
+        api('/api/mcp/tools').then(
+          function (r) {
+            mtools = r;
+            mtOpen = {}; /* every visit starts with the groups closed */
+            push('mcptools');
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+    if (mn.lan) {
+      var full = ags.length >= (mn.max || 10);
+      rows.push({
+        label: 'Connect an agent',
+        sub: full ? 'at most ' + (mn.max || 10) + ' devices: remove one first' : 'QR code · a code that works once',
+        dim: full,
+        info: {
+          t: 'Connect an agent',
+          d: 'Shows a QR code and a link. Send the link to your agent on a computer on the same network: it reads the setup there and connects. Or open the link on a phone or a computer, copy the prompt and paste it to your agent. The code in it works once, for ten minutes. Back closes it.',
+        },
+        fn: function () {
+          if (full) {
+            banner('At most ' + (mn.max || 10) + ' devices can be paired: remove one first', 'err');
+            return;
+          }
+          openMcpQr();
+        },
+      });
+      rows.push({
+        label: 'Connected devices',
+        sub: ags.length
+          ? ags.length +
+            ' paired' +
+            (ags.filter(function (x) {
+              return x.active;
+            }).length
+              ? ' \u00B7 ' +
+                ags.filter(function (x) {
+                  return x.active;
+                }).length +
+                ' in use'
+              : '')
+          : 'none paired yet',
+        info: {
+          t: 'Connected devices',
+          d: 'Every device that paired with the TV, with when it was last used. Open one to block or remove it, or remove them all at once. Unused devices are removed by themselves.',
+        },
+        fn: function () {
+          api('/api/mcp/lan').then(function (n) {
+            mnet = n;
+            push('mcpdevices');
+          });
+        },
+      });
+    }
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* the tool settings: what happens to new tools, then each group (OK or Right opens it; its first row switches the whole group, the
+     rows under it one tool each). Every change is saved at once. */
+  if (view === 'mcptools') {
+    mcpLive();
+    var mt = mtools || { newTools: 'on', groups: [], on: 0, all: 0 };
+    rows.push({
+      label: 'New tools',
+      sub: mt.newTools === 'off' ? 'Stay off' : 'Turn on by themselves',
+      info: {
+        t: 'New tools',
+        d: 'What happens to a tool the TV has not seen before: an add-on installed or updated, or a service update. **Turn on by themselves** is the default. Tools you already chose keep their state when you change this.',
+      },
+      fn: function () {
+        push('mcpnewtools');
+        idx = mt.newTools === 'off' ? 1 : 0;
+        draw();
+      },
+    });
+    rows.push({ sep: true });
+    mt.groups.forEach(function (g) {
+      var c = mtCount(g),
+        open = !!mtOpen[g.id],
+        fresh = g.items.filter(function (it) {
+          return it.fresh;
+        }).length;
+      rows.push({
+        label: g.name,
+        raw: true,
+        sub: g.off
+          ? 'Add-on is off'
+          : c.on === 0
+            ? 'Off'
+            : c.on === c.all
+              ? tr('All on') + ' · ' + c.all
+              : c.on + ' ' + tr('of') + ' ' + c.all + ' ' + tr('on'),
+        state: mtState(g),
+        chev: open ? 'open' : 'shut',
+        badge: fresh ? fresh + ' ' + tr('new') : '',
+        dim: !!g.off,
+        group: g.id,
+        info: {
+          t: g.name,
+          raw: true,
+          d:
+            (g.kind === 'service'
+              ? tr('Tools of the TV service.')
+              : tr('What the AI may do with this add-on:') +
+                ' ' +
+                c.all +
+                ' ' +
+                tr(c.all === 1 ? 'tool' : 'tools') +
+                '. ' +
+                tr('Each is switched here.')) +
+            (g.off ? '\n\n' + tr('The add-on is switched off in Add-ons. Your choices are kept for when it is on again.') : '') +
+            '\n\n' +
+            c.on +
+            ' ' +
+            tr('of') +
+            ' ' +
+            c.all +
+            ' ' +
+            tr('on.') +
+            ' ' +
+            tr(open ? 'OK closes the group.' : 'OK opens the group.'),
+        },
+        fn: function () {
+          mtToggle(g);
+        },
+        right: function () {
+          if (!mtOpen[g.id]) mtToggle(g);
+        },
+        left: function () {
+          if (mtOpen[g.id]) mtToggle(g);
+        },
+      });
+      if (!open) return;
+      var gs = mtState(g);
+      rows.push({
+        cls: 'allrow',
+        label: mtAll(g),
+        raw: true,
+        sw: gs === 'on' ? 'on' : gs === 'part' ? 'mixed' : 'off',
+        dim: !!g.off,
+        group: g.id,
+        info: {
+          t: mtAll(g),
+          raw: true,
+          d:
+            gs === 'part'
+              ? 'Some are on. OK turns them all on; OK again turns them all off.'
+              : gs === 'on'
+                ? 'OK turns every tool of this group off.'
+                : 'OK turns every tool of this group on.',
+        },
+        fn: function () {
+          mtSet(
+            { group: g.id, on: gs !== 'on', keys: mtKeys(g) },
+            g.name + ': ' + (gs !== 'on' ? tr('all tools on') : tr('all tools off'))
+          );
+        },
+        left: function () {
+          mtToggle(g);
+        },
+      });
+      g.items.forEach(function (it) {
+        rows.push({
+          cls: 'child',
+          label: it.label,
+          sw: it.on ? 'on' : 'off',
+          badge: it.fresh ? 'New' : '',
+          tag: it.confirm ? 'voice only, after a yes' : '',
+          dim: !!g.off,
+          group: g.id,
+          info: {
+            t: it.label,
+            d:
+              (it.confirm ? tr('Runs by voice only, after you say yes on the TV; refused from the network.') + '\n\n' : '') +
+              tr(it.on ? 'On: agents and the voice assistant can use it.' : 'Off: it is not offered, and a call to it is refused.'),
+          },
+          fn: function () {
+            mtSet({ key: it.key, on: !it.on });
+          },
+          left: function () {
+            mtToggle(g);
+          },
+        });
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Agents can disconnect themselves',
+      sub: 'Always on',
+      lock: true,
+      cls: 'locked',
+      nofocus: true,
+      info: {
+        t: 'Agents can disconnect themselves',
+        d: 'A network agent can always log itself out of the TV. This cannot be turned off: an agent must always be able to leave.',
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', info: { t: 'Back', d: 'Back to AI agents (MCP). Changes are saved as you make them.' }, fn: pop });
+    return;
+  }
+  /* what happens to a tool the TV has not seen before */
+  if (view === 'mcpnewtools') {
+    var nt = (mtools && mtools.newTools) || 'on';
+    [
+      ['on', 'Turn on by themselves', 'A new tool can be used at once. You can still turn it off here.'],
+      ['off', 'Stay off until you turn them on', 'A new tool waits here with a New badge, and a card tells you about it.'],
+    ].forEach(function (o) {
+      rows.push({
+        label: o[1],
+        check: nt === o[0],
+        info: { t: o[1], d: o[2] + '\n\n' + 'Applies to tools that appear from now on. Tools you already chose keep their state.' },
+        fn: function () {
+          api('/api/mcp/tools', { newTools: o[0] }).then(
+            function (r) {
+              if (r.error) return banner(r.error, 'err');
+              mtools = r;
+              pop();
+              banner(tr('New tools:') + ' ' + tr(o[1]).toLowerCase(), 'ok');
+            },
+            function () {
+              banner('The service did not answer', 'err');
+            }
+          );
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', info: { t: 'Back', d: 'Back to Tools.' }, fn: pop });
+    return;
+  }
+  /* every paired device: manage one, remove unused ones, remove all */
+  if (view === 'mcpdevices') {
+    mcpLive();
+    /* ags and mn are this function's (declared on the AI agents screen above): one var each, as ES5 lint wants */
+    var mn2 = mnet || {};
+    ags = mn2.agents || [];
+    if (!ags.length) rows.push({ label: 'No device is paired', sub: 'Connect an agent pairs one', dim: true, fn: function () {} });
+    mn = mn2;
+    ags.forEach(function (a) {
+      var soon = a.removesIn != null && a.removesIn < 3 * 864e5;
+      rows.push({
+        label: a.name,
+        sub: a.blocked
+          ? 'Blocked'
+          : a.active
+            ? 'In use now'
+            : 'Last used ' + mcpAgo(a.seen) + (soon ? ' · removed in ' + mcpDays(a.removesIn) : ''),
+        info: {
+          t: a.name,
+          d:
+            'Paired ' +
+            new Date(a.created).toLocaleDateString() +
+            '. ' +
+            (a.ip ? 'Last address: ' + a.ip + '. ' : '') +
+            (a.blocked ? 'Blocked: it can use nothing until you allow it. ' : '') +
+            (a.removesIn == null ? 'It is never removed by itself.' : 'Removed in ' + mcpDays(a.removesIn) + ' if it is not used.') +
+            ' OK opens Manage.',
+        },
+        fn: function () {
+          mcpSel = a.id;
+          push('mcpagent');
+        },
+      });
+    });
+    rows.push({
+      label: 'Remove unused devices',
+      sub: mn.expireDays ? 'After ' + mcpDays(mn.expireDays * 864e5) : 'Never',
+      dim: !mn.expireDays,
+      info: {
+        t: 'Remove unused devices',
+        d: 'For safety: a device that has not been used for this long is removed by itself, and its token stops working. A laptop that was sold or a setup you forgot then stops reaching the TV.',
+      },
+      fn: function () {
+        push('mcpexpire');
+      },
+    });
+    if (ags.length)
+      rows.push({
+        label: 'Remove all devices',
+        sub: 'every token stops working',
+        info: { t: 'Remove all devices', d: 'Asks first, then removes every paired device. Each one has to pair again with a new code.' },
+        fn: function () {
+          mcpAsk = {
+            title: 'Remove all devices?',
+            about: 'Every device stops reaching the TV at once and has to pair again with a new code.',
+            yes: 'Yes, remove all devices',
+            body: { removeAll: true },
+            done: 'All devices removed',
+          };
+          push('mcpconfirm');
+        },
+      });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* one device: block, allow, remove */
+  if (view === 'mcpagent') {
+    mcpLive();
+    var ag = ((mnet && mnet.agents) || []).filter(function (x) {
+      return x.id === mcpSel;
+    })[0];
+    if (!ag) {
+      rows.push({ label: 'This device is no longer paired', dim: true, fn: function () {} });
+      rows.push({ sep: true });
+      rows.push({ label: 'Back', fn: pop });
+      return;
+    }
+    rows.push({
+      label: ag.blocked ? 'Allow this device' : 'Block this device',
+      sub: ag.blocked ? 'it may use the tools again' : 'it stays paired and can use nothing',
+      info: {
+        t: ag.blocked ? 'Allow this device' : 'Block this device',
+        d: ag.blocked
+          ? 'The device can use the TV’s tools again with the token it has.'
+          : 'The device stays paired, but every request is refused until you allow it again. It applies at once.',
+      },
+      fn: function () {
+        var b = ag.blocked ? { allow: ag.id } : { block: ag.id };
+        api('/api/mcp/lan', b).then(function (n) {
+          mnet = n;
+          banner(ag.name + (ag.blocked ? ' allowed' : ' blocked'), 'ok');
+          build();
+          draw();
+        });
+      },
+    });
+    rows.push({
+      label: 'Remove this device',
+      sub: 'its token stops working',
+      info: {
+        t: 'Remove this device',
+        d: 'Asks first. Its token stops working at once, and the device has to pair again with a new code.',
+      },
+      fn: function () {
+        mcpAsk = {
+          title: 'Remove ' + ag.name + '?',
+          about: 'Its token stops working at once. To use the TV again it has to pair with a new code.',
+          yes: 'Yes, remove it',
+          body: { remove: ag.id },
+          done: ag.name + ' removed',
+          back: 2,
+        };
+        push('mcpconfirm');
+      },
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* how long an unused device stays */
+  if (view === 'mcpexpire') {
+    var keepDays = mnet && mnet.expireDays != null ? mnet.expireDays : 14;
+    [
+      [1, '1 day'],
+      [3, '3 days'],
+      [7, '1 week'],
+      [14, '2 weeks'],
+      [30, '1 month'],
+      [0, 'Never'],
+    ].forEach(function (c) {
+      rows.push({
+        label: c[1],
+        sub: c[0] === keepDays ? 'chosen' : c[0] === 14 ? 'the default' : c[0] === 0 ? 'not recommended' : '',
+        info: {
+          t: c[1],
+          d: c[0]
+            ? 'A device that has not been used for ' + c[1] + ' is removed by itself.'
+            : 'Devices stay until you remove them. A lost or sold computer keeps reaching the TV until someone removes it here.',
+        },
+        fn: function () {
+          var set = function () {
+            api('/api/mcp/lan', { expireDays: c[0] }).then(function (n) {
+              mnet = n;
+              pop();
+            });
+          };
+          if (c[0] !== 0) return set();
+          mcpAsk = {
+            title: 'Never remove unused devices?',
+            about: 'Devices stay until you remove them. A lost or sold computer keeps reaching the TV until someone removes it here.',
+            yes: 'Yes, never remove them',
+            body: { expireDays: 0 },
+            done: 'Unused devices are kept',
+            back: 2,
+          };
+          push('mcpconfirm');
+        },
+      });
+    });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
+  /* a confirm: Cancel first */
+  if (view === 'mcpconfirm') {
+    var q = mcpAsk || {};
+    rows.push({ label: 'Cancel', info: { t: q.title || '', d: q.about || '' }, fn: pop });
+    rows.push({
+      label: q.yes || 'Yes',
+      info: { t: q.title || '', d: q.about || '' },
+      fn: function () {
+        api('/api/mcp/lan', q.body || {}).then(
+          function (n) {
+            if (n.error) {
+              banner(n.error, 'err');
+              return;
+            }
+            mnet = n;
+            banner(q.done || 'Done', 'ok');
+            for (var i = 0; i < (q.back || 1); i++) pop();
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
+    return;
+  }
   if (offline) {
     // before the setup: a newer package first, then choose, set up, then the extras
     updIdx = 0;
@@ -445,21 +963,36 @@ function build() {
     rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
     return;
   }
-  if (view === 'confirm-home' || view === 'confirm-uninstall') {
+  if (view === 'confirm-home' || view === 'confirm-uninstall' || view === 'confirm-saver') {
     var un = view === 'confirm-uninstall',
-      on = !(st.home && st.home.enabled);
+      saver = view === 'confirm-saver',
+      on = saver ? !(st.saver && st.saver.enabled) : !(st.home && st.home.enabled);
     rows.push({ label: 'Cancel', fn: pop });
     rows.push({
-      label: un ? 'Yes, remove CleanYourTV' : on ? 'Yes, use CleanYourTV as Home' : 'Yes, use LG’s Home',
+      label: un
+        ? 'Yes, remove CleanYourTV'
+        : saver
+          ? on
+            ? 'Yes, use our screen saver'
+            : 'Yes, use LG’s screen saver'
+          : on
+            ? 'Yes, use CleanYourTV as Home'
+            : 'Yes, use LG’s Home',
       sub: un ? 'settings and apps are deleted; the TV restarts' : 'the TV restarts',
       fn: function () {
-        api(un ? '/api/manager/uninstall' : '/api/manager/home', un ? {} : { enabled: on }).catch(function () {});
+        api(un ? '/api/manager/uninstall' : saver ? '/api/manager/saver' : '/api/manager/home', un ? {} : { enabled: on }).catch(
+          function () {}
+        );
         banner(
           un
             ? 'Removing CleanYourTV… the TV restarts in a moment and LG’s Home comes back.'
-            : on
-              ? 'Switching to CleanYourTV… the TV restarts in a moment.'
-              : 'Switching to LG’s Home… the TV restarts in a moment.',
+            : saver
+              ? on
+                ? 'Switching to our screen saver… the TV restarts in a moment.'
+                : 'Switching to LG’s screen saver… the TV restarts in a moment.'
+              : on
+                ? 'Switching to CleanYourTV… the TV restarts in a moment.'
+                : 'Switching to LG’s Home… the TV restarts in a moment.',
           'work'
         );
       },
@@ -533,6 +1066,15 @@ function build() {
       sub: (a1.description || '') + (a1.error ? ' \u00B7 ' + a1.error : ''),
       fn: function () {},
     });
+    if (a1.bookable && a1.enabled && a1.status === 'running')
+      rows.push({
+        label: 'Open page',
+        sub: a1.inBook ? 'shows it now · Back returns to Home' : 'not in the book · shows it now · Back returns to Home',
+        fn: function () {
+          /* the service launches Home with {page, t} and tells the launcher at once (helper/book.js), also for a page out of the book */
+          api('/api/book/open', { id: a1.id }).catch(function () {});
+        },
+      });
     if (a1.bookable) {
       var bp = bookPages().filter(function (p) {
           return p.inBook;
@@ -895,6 +1437,14 @@ function build() {
       fn: function () {
         openKeys('home');
       },
+    });
+    rows.push({
+      label: 'Screen saver',
+      sub:
+        st.saver && st.saver.supported === false
+          ? 'not available on this TV yet'
+          : onoff(st.saver && st.saver.enabled) + ' \u00B7 photos and a clock when the TV is idle; switching restarts the TV',
+      fn: openSaver,
     });
     rows.push({ sep: true });
     rows.push({ label: 'Back', fn: pop });
@@ -1418,6 +1968,14 @@ function build() {
     rows.push({ sep: true });
     rows.push({ label: 'Share log', sub: 'QR code for your phone', fn: openShare });
   } else if (tb === 'features') {
+    rows.push({
+      label: 'Screen saver',
+      sub:
+        st.saver && st.saver.supported === false
+          ? 'not available on this TV yet'
+          : onoff(st.saver && st.saver.enabled) + (st.saver && st.saver.replaced ? ' \u00B7 ours now' : ' \u00B7 LG\u2019s own'),
+      fn: openSaver,
+    });
     rows.push({ label: 'Live TV', sub: onoff(st.options.liveTv !== false), fn: openLiveTv });
     rows.push({
       label: 'Wallpapers',
@@ -1477,6 +2035,27 @@ function build() {
         );
       },
     });
+    rows.push({
+      label: 'AI agents (MCP)',
+      sub: 'voice: ' + onoff(st.mcp && st.mcp.agent) + ' \u00B7 network: ' + onoff(st.mcp && st.mcp.lan),
+      info: {
+        t: 'AI agents (MCP)',
+        d: 'What the AI may do on the TV: the voice assistant, and MCP clients on other computers. Both use the same tools: open apps, switch inputs, show a card, and the tools of the add-ons you approved. Both are off by default.',
+      },
+      fn: function () {
+        Promise.all([api('/api/mcp/lan'), api('/api/voice/status'), api('/api/mcp/tools')]).then(
+          function (r) {
+            mnet = r[0];
+            vo = r[1];
+            mtools = r[2] && !r[2].error ? r[2] : null;
+            push('mcpnet');
+          },
+          function () {
+            banner('The service did not answer', 'err');
+          }
+        );
+      },
+    });
   } else if (tb === 'addons') {
     addonRows();
   } else if (tb === 'debloat') {
@@ -1513,6 +2092,17 @@ function build() {
 }
 
 /* an entry of a service older than the repositories has no `official`: everything it lists is the project's */
+/* The screen saver's switch (both rows). Where this TV cannot have ours in this version (helper/screensaver.js supported: LG's native
+   Home or screen saver), say so instead of offering a switch that would do nothing. */
+function openSaver() {
+  if (st.saver && st.saver.supported === false) {
+    /* tr() here too, so tools/i18n.js --sync finds the text for en.json (banner() translates it as well; a translated text is not
+       found again) */
+    banner(tr('Not available on this TV yet: it needs a TV whose Home and screen saver LG ships as apps.'), '');
+    return;
+  }
+  push('confirm-saver');
+}
 function isOfficial(e) {
   return e.official !== false;
 }
@@ -1841,4 +2431,84 @@ function volumeSub(theme) {
   if (theme === 'dial') return tr('Dial');
   if (theme === 'pill') return tr('Pill');
   return tr('System default (LG webOS)');
+}
+/* the Tools screen (AI agents (MCP) > Tools): a group's count and state, its keys, opening it, and saving a change */
+function mtCount(g) {
+  var on = 0;
+  g.items.forEach(function (it) {
+    if (it.on) on++;
+  });
+  return { on: on, all: g.items.length };
+}
+function mtState(g) {
+  var c = mtCount(g);
+  return c.on === 0 ? 'off' : c.on === c.all ? 'on' : 'part';
+}
+function mtKeys(g) {
+  return g.items.map(function (it) {
+    return it.key;
+  });
+}
+/* open or close a group. One group is open at a time (opening one closes the other), so the list stays short to scroll. A group with New
+   tools that is closed clears its badges (they were seen). The focus stays on the group's row. */
+function mtToggle(g) {
+  var was = !!mtOpen[g.id],
+    closing = was ? [g.id] : Object.keys(mtOpen);
+  mtOpen = {};
+  if (!was) mtOpen[g.id] = true;
+  var seen = [];
+  ((mtools && mtools.groups) || []).forEach(function (x) {
+    if (
+      closing.indexOf(x.id) >= 0 &&
+      x.items.some(function (it) {
+        return it.fresh;
+      })
+    )
+      seen.push(x);
+  });
+  build();
+  for (var i = 0; i < rows.length; i++)
+    if (rows[i].group === g.id && rows[i].state) {
+      idx = i;
+      break;
+    }
+  draw();
+  seen.forEach(function (x) {
+    mtSet({ seen: x.id, keys: mtKeys(x) });
+  });
+}
+/* one change: saved at once, then the screen drawn again from what the service says now */
+function mtSet(body, said) {
+  api('/api/mcp/tools', body).then(
+    function (r) {
+      if (r.error) return banner(r.error, 'err');
+      mtools = r;
+      if (said) banner(said, 'ok');
+      var was = rows[idx] && rows[idx].label;
+      build();
+      mtRefocus(was);
+      draw();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
+/* "All Spotify tools", and "All Agent tools" (not "All Agent tools tools") */
+function mtAll(g) {
+  return tr('All') + ' ' + g.name + (/\btools$/i.test(g.name) ? '' : ' ' + tr('tools'));
+}
+/* after the list changed: the focus on the row it was on, else the nearest row that can take it (a row that went away, such as a
+   tool an update removed while the screen was open) */
+function mtRefocus(was) {
+  for (var i = 0; i < rows.length; i++)
+    if (rows[i].label === was && !rows[i].sep) {
+      idx = i;
+      return;
+    }
+  idx = Math.min(idx, rows.length - 1);
+  var up = idx;
+  while (up >= 0 && (rows[up].sep || rows[up].nofocus)) up--;
+  if (up >= 0) idx = up;
+  else while (idx < rows.length - 1 && (rows[idx].sep || rows[idx].nofocus)) idx++;
 }

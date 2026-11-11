@@ -1,6 +1,29 @@
 {
   "addons": [
     {
+      "id": "agent",
+      "name": "Agent tools (MCP)",
+      "version": "1.2.1",
+      "description": "Turns the abilities the TV's apps and add-ons sign into tools the voice assistant and MCP clients can use.",
+      "about": "One bridge between the TV and a language model, built on a scheme instead of a fixed list. Installed apps and add-ons sign the scheme with a small tools.json that names their abilities; this add-on turns each into an MCP tool, gives them to the voice assistant and answers list and call over JSON-RPC at /api/addons/agent/mcp. Nothing is used until you approve it: open Set up from your phone and switch on the apps and add-ons whose tools the assistant may use. Tools that turn something off or delete something ask you first, and you say yes on the TV.",
+      "preview": "",
+      "kind": "service",
+      "permissions": [
+        "net.fetch",
+        "luna"
+      ],
+      "luna": [
+        "luna://com.webos.applicationManager/launch"
+      ],
+      "files": {
+        "README.md": "cd1e822f2b4d5bb1718f39f1c64b0ca226f95a27ee64c51887ee60e9c58b32c5",
+        "addon.json": "7b4fb93c3dcf4443fdee2957f7488da5e0b868edd741639be7e7b0f8954570c4",
+        "phone.js": "e427d5b68caffe8bbb5bdf1ba08cb4ecd162030efe31763a3579677b471caa32",
+        "service.js": "69a222688733986363201b5c2e92de4000ba578aa47cd411170ee2dd352edfee",
+        "tools.js": "7094da82e4da0327618eb9782f37adf6b3a6c829aa214c21c34b31622403b292"
+      }
+    },
+    {
       "id": "bigclock",
       "name": "Big clock",
       "version": "1.0.0",
@@ -71,17 +94,50 @@
         "cards/continue/card.html": "625e062837cbda14fc3d37f7c716adeaed0ef65ca0b2c87346ee03bbc7213f8d",
         "cards/continue/card.js": "070f228981684091b7da9f9c25af638321f100c53ba1b5bb6263f757a7d22942",
         "cards/continue/preview.jpg": "0ac03a4a4243c4534eddbfee7a7ae1996491f5036b663d690044e2f769446009",
-        "jellyfin.js": "65511aad779fe149625e5f2805fa14be35a2cb60c06fff5a4d0a8b5ea786684b",
+        "jellyfin.js": "c9b0db38396d955ef3a967f6151caece54c91d2eb1bdbb69368144f191018a42",
         "phone.js": "2746902ef82be054d1fee24d8e34b9a0c99e732332ca1e2c2de08cddbe2b8f2a",
-        "service.js": "d3e56e2263ae2b7447428ca09b45d894d5b7c0f207cab5153cceb777ac1e6213"
+        "service.js": "afa05f198b58dfcdadc863472caf7338ed29cb8ccc21970253760d786630f6ea"
+      }
+    },
+    {
+      "id": "markets",
+      "name": "Stocks and crypto",
+      "version": "1.1.0",
+      "description": "Two cards for Home: your stocks (with a free Twelve Data key) and your crypto coins, with a chart and details on OK.",
+      "about": "Stocks: US shares and ETFs (AAPL, SPY) from Twelve Data, an official API that needs your own free key (twelvedata.com): set it in Add-ons > Stocks and crypto > Set up from your phone. The free plan has 8 credits a minute and 800 a day, one per symbol: prices every 5 minutes for 5 symbols, every 20 for 20, while the US market is open. Crypto: coins (BTC, ETH) from CoinGecko's free public API, no key, every 2 minutes; it has its own terms: the data is credited to CoinGecko (the drawer says so), and its limits are lower than CoinGecko's keyed plans and can change. Pick a list in Customise or type your own on the phone page; OK on a card opens the list, a chart and the details. Only your symbols (and the key, to Twelve Data) leave the TV.",
+      "preview": "preview.jpg",
+      "kind": "service",
+      "permissions": [
+        "net.fetch"
+      ],
+      "luna": [],
+      "files": {
+        "addon.json": "b7a6701cff16271878ce3c1111ab4305b0e2891d30aa01a29192d00df8cf49fb",
+        "cards/crypto/card.css": "5dcdc4418017a72426e48451bdf16cf49909274d011071b18af3a7daf7f8a62c",
+        "cards/crypto/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
+        "cards/crypto/card.js": "d6048398d3632f35cadbd158a4f475087c3f0dd26f2008c88fa326c6a11b2ecb",
+        "cards/crypto/drawer.css": "7149bfa02c542255c13ff4d6f159030cfdc76cf5dbc3260f8aaeb000f947ca4d",
+        "cards/crypto/drawer.html": "1411157ab10ef9883bb9fff34be2a8e8f0109935690f059ff5b027bda1aa0501",
+        "cards/crypto/drawer.js": "18b579c17dd4af23dd79ea5f767c25900d916e25974ab51bd6dc42596f1c30ea",
+        "cards/crypto/preview.jpg": "d07114d5edaafe6cd7986ba36d814b5557b9391d31b92cce5983378a2959096f",
+        "cards/stocks/card.css": "5dcdc4418017a72426e48451bdf16cf49909274d011071b18af3a7daf7f8a62c",
+        "cards/stocks/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
+        "cards/stocks/card.js": "d6048398d3632f35cadbd158a4f475087c3f0dd26f2008c88fa326c6a11b2ecb",
+        "cards/stocks/drawer.css": "7149bfa02c542255c13ff4d6f159030cfdc76cf5dbc3260f8aaeb000f947ca4d",
+        "cards/stocks/drawer.html": "1411157ab10ef9883bb9fff34be2a8e8f0109935690f059ff5b027bda1aa0501",
+        "cards/stocks/drawer.js": "18b579c17dd4af23dd79ea5f767c25900d916e25974ab51bd6dc42596f1c30ea",
+        "cards/stocks/preview.jpg": "74e61eadd008c36fc89bd4b297b9a550d0c9d1534274e0951317960e27c13247",
+        "markets.js": "98277528e03984abfda0fe56eaa3f341603488920b687752c4dec7f722dc0530",
+        "phone.js": "fa62dd5738d653d74a63dcef6643e3c68e323a29f9b2d25fc4238851278f06d1",
+        "service.js": "20e4dd09feb975385422788741c35cb448a60f7f68200179a501082fa788579a"
       }
     },
     {
       "id": "phoneremote",
       "name": "Phone remote",
-      "version": "1.0.1",
-      "description": "A phone on your Wi-Fi as the TV's remote: buttons, a touchpad, the keyboard, the apps and Live TV.",
-      "about": "A phone on the same Wi-Fi becomes the TV's remote control. It pairs once with a 6-digit code the TV shows, then its browser page reconnects by itself: the remote's buttons, a touchpad that moves the TV's pointer, a keyboard that types into the field open on the TV, the TV's apps and the channels of your Live TV playlist, and a power button. Each phone can be blocked or removed, and a phone that is not used for a while is removed by itself. The phone remote is off until you switch it on in Add-ons; its page (Add-ons > Phone remote, and a page of the book on Home) pairs a phone and lists the paired ones.",
+      "version": "1.1.0",
+      "description": "A phone on your Wi-Fi as the TV's remote: buttons, a touchpad, the keyboard, voice, the apps and Live TV.",
+      "about": "A phone on the same Wi-Fi becomes the TV's remote control. It pairs once with a 6-digit code the TV shows, then its browser page reconnects by itself: the remote's buttons, a touchpad that moves the TV's pointer, a keyboard that types into the field open on the TV, a mic button that asks the TV's voice assistant and shows the conversation (speak or type on the phone, or let the TV listen on its remote), the TV's apps and the channels of your Live TV playlist, and a power button. Each phone can be blocked or removed, and a phone that is not used for a while is removed by itself. The phone remote is off until you switch it on in Add-ons; its page (Add-ons > Phone remote, and a page of the book on Home) pairs a phone and lists the paired ones.",
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
@@ -96,12 +152,14 @@
         "luna://com.webos.service.tv.systemproperty/getSystemInfo"
       ],
       "files": {
-        "addon.json": "4e5f3eab4b00b15608f4c0b05dd3bd8161748cc1844052a1ed038bd6e60806c9",
+        "addon.json": "42eba53bf6647e9b5f143ae5af7d59cbfda89e665fa6e9b29730a6047a10cddc",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "00d73e7d0b4cfbd2019bfe0328f34c6ac050093f33ce072845f2d3a4ce970843",
-        "page.js": "985cedb9ca9b6038eff61f4ac45f0db1a803b0ee6b0adcf99430c9b0dec926ee",
+        "page/index.html": "a36c7cc9506fdc898f849af6bb37325413685ae68799c863493c1abb178fd7c5",
+        "page.js": "f799f607274a0d0ba28cc67614b2a184b57400ef089e1ecb7ca60b98d20ddd3f",
+        "pwa/icon-180.png": "57040c5ec7e1dfc01918b2295df594dbc034b85df865140e27829873f02c4aff",
+        "pwa/icon-512.png": "08849f214ae06fda96123a5e13ec69f9f30a6b7d13e776e20f21c669af3581e4",
         "remotekeys.js": "2f65affbb6a6ff057947d81a553ee3d2063d293edaed4cdcb4a0019b380ea8d3",
-        "service.js": "b78115301ab56e0c4244279b420ff4ab76da4686fc33fb49332c96a0d4a83c3e",
+        "service.js": "b654976192692c7d8b088652ebad79b08c1537923fef15ff4f30f57bafe6d425",
         "src/css/page.css": "63830f9abe5d49fbf15a55e3e3c8dd957d0e0d7ce957cf514d22f25e5f8a2f97",
         "src/html/body.html": "992ae98d98f7d1b984c99003f0b9ab60036571d4eabe6fdcd7e7eb7ae4c9720f",
         "src/index.html": "0b5bf4e17fbb9d9af05d28a881851b3b9a95d8aa37c6269261cccd8f64367cba",
@@ -131,9 +189,9 @@
     {
       "id": "spotify",
       "name": "Spotify now playing",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "description": "A card for Home with what plays on your Spotify account, and buttons for the remote.",
-      "about": "A card for Home that shows what plays, or is paused, on any device of your Spotify account: the cover, the title, the artist and a thin progress bar, with previous, play or pause, next and the output (where it plays) as buttons for the remote, and the cover opens the Spotify app of the TV on the song (the controls need Spotify Premium). It asks Spotify's Web API with your own Spotify developer app (only its Client ID: the sign-in uses PKCE, so the project holds no credential and no client secret is needed); the tokens stay on the TV, in this add-on's settings. Set it up from your phone: Add-ons > Spotify now playing > Set up from your phone. The idea and the first version are from @Edenik (pull request 127).",
+      "about": "A card for Home that shows what plays, or is paused, on any device of your Spotify account: the cover, the title, the artist and a thin progress bar, with previous, play or pause, next and the output (where it plays) as buttons for the remote, and the cover opens the Spotify app of the TV on the song (the controls need Spotify Premium). It asks Spotify's Web API with your own Spotify developer app (only its Client ID: the sign-in uses PKCE, so the project holds no credential and no client secret is needed); the tokens stay on the TV, in this add-on's settings. Set it up from your phone: Add-ons > Spotify now playing > Set up from your phone. It also gives the voice assistant and AI agents one tool, spotify (what plays, play, pause, next, previous, the devices, open on the TV). The idea and the first version are from @Edenik (pull request 127).",
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
@@ -144,14 +202,14 @@
         "luna://com.webos.applicationManager/launch"
       ],
       "files": {
-        "addon.json": "59870d7b02a11fd24e91bd5673a558c72c533472971e32241effe689b41615be",
+        "addon.json": "287085747e3654b2d2ec535a55c95c74aaf7b4112c860a0a4878c16e171e0691",
         "cards/nowplaying/card.css": "13ecfa7ba271f3186860529edeb9ec04c4120165a52c2957eee8d51011d9c514",
         "cards/nowplaying/card.html": "d58e43f0b0e52be39c5abd1e6875ccb08de280372486e56ed85543938f96b557",
         "cards/nowplaying/card.js": "f916a8642e1298d15a2d20a05a2b870a3593c42a0f8fdb0845b1878c3313cf71",
         "cards/nowplaying/preview.jpg": "b4ec2f53f497cc06bac9967277cb28250a289a0d578b5a9bf469fe2c71319a82",
         "nowplaying.js": "f71cbe723659db1e961842728c484ff0c05ba697efcd14cb6c8365d0b267f7d6",
         "phone.js": "ab2cb118a3ae58610aad7c6db01ead808d1f982fea6ef3a47e736739ce962f3c",
-        "service.js": "57c6ca58b3a772e645cb7a089c08743a50312738b3c770026f584e1d4db3862b",
+        "service.js": "096088e0d22f78142fc3d1954a376893ab6d085bd65d415077ea1e4aacc8f5ce",
         "spotifyconnect.js": "519ba58fecf2acf196e044b4a77181f6d562945befd02f916931cf3a962cb9d9"
       }
     },
@@ -190,7 +248,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "b581cb45acfecbfb8b689c6f4a57e9ee391df32deb8cf1d4254fc4754069b79f",
+        "page/index.html": "d50c983eeedd95fa114fc88477bdc2eec2ba1ea59ca62692d2fceafe9c7d84f2",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
@@ -199,7 +257,7 @@
     {
       "id": "unsplash",
       "name": "Unsplash",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "A new landscape photo from Unsplash behind Home now and then, with your own free Access Key. Nothing is saved on the TV.",
       "about": "",
       "preview": "",
@@ -209,17 +267,17 @@
       ],
       "luna": [],
       "files": {
-        "addon.json": "29c29a4faaac4a9434080f1405a9e6f187341f9253ca623df6f7ed185743e616",
+        "addon.json": "c3ed3ea1704744779e998a06998a61f749f25290f646128962622e870c82c93e",
         "phone.js": "d9f96764f349e821469a600bb1bf338057e4af1230f5367d939b05ede7d60a5e",
-        "service.js": "feac5e89cddac3b6b9b5d6bb9b90606d237e71b12dde1ed6e83aca939e781fc3"
+        "service.js": "b589155f01ec8bac8b75aa7204e68325e2d0750e414155874b17f0d5a4784959"
       }
     },
     {
       "id": "weather",
       "name": "Weather forecast",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "description": "A weather card with the next hours and days, for any place on Home.",
-      "about": "A card for Home that shows the weather at a city you choose on the TV (Customise > Weather) or on the phone page (Cards > Set up from your phone): now, with the temperature, feels like, humidity, wind, rain chance, UV, air pressure, air quality and sunrise and sunset; the next hours; and the next days. The card is one button for the remote: OK opens a drawer of the add-on with Now, Hours and Days. The weather comes from Open-Meteo (free, no key, no account): only the coordinates of the city you chose leave the TV, at most every 30 minutes. The idea and the first version are from @Edenik (pull request 129).",
+      "about": "A card for Home that shows the weather at a city you choose on the TV (Customise > Weather) or on the phone page (Cards > Set up from your phone): now, with the temperature, feels like, humidity, wind, rain chance, UV, air pressure, air quality and sunrise and sunset; the next hours; and the next days. The card is one button for the remote: OK opens a drawer of the add-on with Now, Hours and Days. The weather comes from Open-Meteo (free, no key, no account): only the coordinates of the city you chose leave the TV, at most every 30 minutes. It also gives the voice assistant and AI agents one tool, weather (a detailed forecast for a place, and finding a place). The idea and the first version are from @Edenik (pull request 129).",
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
@@ -227,7 +285,7 @@
       ],
       "luna": [],
       "files": {
-        "addon.json": "f1423c5588a116d0014f7ce48e1da86b45a7a224821aecf7c756f01cb16c4220",
+        "addon.json": "20b4cbc3fa80fe476c81055b75b632e3e3dd257a0a6e2ffd81c69f245896c60d",
         "cards/forecast/card.css": "d10d6c560e1c7232c283dfe361e4e18699b38008394c2e29ed8ab0f57d474845",
         "cards/forecast/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
         "cards/forecast/card.js": "92322445f11e4945e1921a447116c4b7644d2f5d593d4863ec6ca42dc738a043",
@@ -235,7 +293,7 @@
         "cards/forecast/drawer.html": "23d4a3120edfe92312fc55c95e1c5ec661f4eac1f3004026b4d532a5a3ea3eae",
         "cards/forecast/drawer.js": "e81e72db80ffdada6d98a414eb735268a37c86d4afb1c3ef93fcc5c388030a11",
         "cards/forecast/preview.jpg": "8f718df9627e1a18ed7754cef71ad4cf5b81c101693dda6e39dcf461c415cbd1",
-        "service.js": "820aab46c4fd352d72df9f51e522b6d63e9d88c628599fd96a0ffb883bf68952",
+        "service.js": "bf72c5ff25048bca78f958595a743cc3412c2d798b2772f4d5cd55f4cab9d2ee",
         "weather.js": "a0f80532ff74f5b272414c966297456b78bacb2a219639d31c11191d750c5821"
       }
     }

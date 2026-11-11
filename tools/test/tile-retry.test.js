@@ -65,6 +65,31 @@ run(async () => {
     context.tile({ id: 'demo', title: 'Updated' }) === tile && tile._a.title === 'Updated',
     'cached tiles still receive updated app metadata'
   );
+  let artOn = false;
+  const art = {
+    src: '',
+    _src: '',
+    classList: {
+      add(name) {
+        if (name === 'on') artOn = true;
+      },
+      remove(name) {
+        if (name === 'on') artOn = false;
+      },
+    },
+  };
+  context.$ = id => (id === 'focus-art' ? art : null);
+  context.TH = { focusIcon: true };
+  context.encodeURIComponent = encodeURIComponent;
+  context.updateFocusArt(tile);
+  ok(art.src === icon.src && artOn, 'Cinema shows the focused tile icon as background art');
+  context.updateFocusArt({ _o: { app: 'com.example.settings' } });
+  ok(art.src === 'http://127.0.0.1:8765/icon/com.example.settings' && artOn, 'an app button in the top bar also uses its app icon');
+  context.updateFocusArt({ _o: { action: 'inputs' } });
+  ok(!artOn, 'a top button that is not an app clears the background art');
+  context.TH.focusIcon = false;
+  context.updateFocusArt(tile);
+  ok(!artOn, 'themes without focusIcon keep the background clear');
   const missing = context.tile({ id: 'missing', title: 'Missing' });
   for (let n = 0; n < 10; n++) {
     missing._i.onerror();

@@ -290,6 +290,40 @@ function create(ctx) {
     };
   }
 
+  // {id?, accent?} -> {ok} or {error, status}: the theme (downloaded from GitHub first, a copy on the TV if that fails) and its accent
+  async function set(b) {
+    const c = cur();
+    const id = b.id === undefined ? c.id : String(b.id);
+    if (!ID.test(id)) return { error: 'unknown theme', status: 400 };
+    if (b.id !== undefined && id !== DEFAULT_ID) {
+      // the latest version of the theme from GitHub; a downloaded copy is used when GitHub cannot be reached
+      try {
+        await install(id);
+      } catch (e) {
+        if (!load()[id]) {
+          const unk = e.message === 'unknown theme' || e.message === 'not found on GitHub';
+          return { error: unk ? 'unknown theme' : 'could not download the theme: ' + e.message, status: unk ? 400 : 502 };
+        }
+      }
+    }
+    const all = load();
+    if (!all[id]) return { error: 'unknown theme', status: 400 };
+    let accent = c.accent;
+    if (b.accent !== undefined) {
+      if (b.accent !== '' && !HEX.test(String(b.accent))) return { error: 'the accent must be a colour like #4c8dff', status: 400 };
+      accent = String(b.accent).toLowerCase();
+    } else if (id !== c.id) accent = ''; // a new theme brings its own accent
+    if (id !== c.id || accent !== c.accent) save({ id, accent, prev: { id: c.id, accent: c.accent } });
+    return { ok: true };
+  }
+  // the theme before the last change (and the one now becomes the one to go back to)
+  function revert() {
+    const c = cur();
+    if (!c.prev) return { error: 'nothing to go back to', status: 400 };
+    save({ id: c.prev.id, accent: c.prev.accent, prev: { id: c.id, accent: c.accent } });
+    return { ok: true };
+  }
+
   async function handle(req, res, u, body) {
     const json = (o, code) => {
       res.writeHead(code || 200, { 'content-type': 'application/json' });
@@ -361,36 +395,10 @@ function create(ctx) {
       res.writeHead(404);
       return res.end();
     }
-    const b = await body(req),
-      c = cur();
-    if (act === 'set') {
-      const id = b.id === undefined ? c.id : String(b.id);
-      if (!ID.test(id)) return json({ error: 'unknown theme' }, 400);
-      if (b.id !== undefined && id !== DEFAULT_ID) {
-        // the latest version of the theme from GitHub; a downloaded copy is used when GitHub cannot be reached
-        try {
-          await install(id);
-        } catch (e) {
-          if (!load()[id]) {
-            const unk = e.message === 'unknown theme' || e.message === 'not found on GitHub';
-            return json({ error: unk ? 'unknown theme' : 'could not download the theme: ' + e.message }, unk ? 400 : 502);
-          }
-        }
-      }
-      const all = load();
-      if (!all[id]) return json({ error: 'unknown theme' }, 400);
-      let accent = c.accent;
-      if (b.accent !== undefined) {
-        if (b.accent !== '' && !HEX.test(String(b.accent))) return json({ error: 'the accent must be a colour like #4c8dff' }, 400);
-        accent = String(b.accent).toLowerCase();
-      } else if (id !== c.id) accent = ''; // a new theme brings its own accent
-      if (id !== c.id || accent !== c.accent) save({ id, accent, prev: { id: c.id, accent: c.accent } });
-      return json(await list());
-    }
-    if (act === 'revert') {
-      if (!c.prev) return json({ error: 'nothing to go back to' }, 400);
-      save({ id: c.prev.id, accent: c.prev.accent, prev: { id: c.id, accent: c.accent } });
-      return json(await list());
+    const b = await body(req);
+    if (act === 'set' || act === 'revert') {
+      const r = act === 'set' ? await set(b) : revert();
+      return r.error ? json({ error: r.error }, r.status) : json(await list());
     }
     res.writeHead(404);
     res.end();
@@ -409,6 +417,6 @@ function create(ctx) {
     const t = setTimeout(startup, 8000);
     if (t.unref) t.unref();
   }
-  return { name: 'theme', prefix: '/api/theme/', handle, resolved, list, install, refreshCatalogue, preview };
+  return { name: 'theme', prefix: '/api/theme/', handle, resolved, list, install, refreshCatalogue, preview, set, revert };
 }
 module.exports = { create, normalize, SCHEMA, DEFAULTS, imageOk, fontOk, ID, resolve };

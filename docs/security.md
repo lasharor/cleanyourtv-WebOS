@@ -19,7 +19,10 @@ local network on request, and an optional notification endpoint is off by defaul
 | 8795 | Immich page | The same, for the Immich add-on (address, API key, albums); see [Wallpapers](wallpapers.md#immich-add-on) |
 | 8796 | Unsplash page | The same, for the Unsplash add-on (Access Key, search words); see [Wallpapers](wallpapers.md#unsplash-add-on) |
 | 8797 | Spotify page | The same, for the Spotify add-on (the Client ID of your own Spotify app, the sign-in); see [Spotify now playing](#spotify-now-playing) |
+| 8801 | Stocks and crypto page | The same, for the Stocks and crypto add-on (the Twelve Data API key); see [Cards](launcher.md#cards) |
 | 8800 | Add-on repositories page | The same, for adding a repository of add-ons from your phone (ten minutes); see [Add-on repositories](development/addon-repos.md) |
+| 8802 | MCP on the network | Only when you switch it on in the manager app (Features > AI agents (MCP)); needs a token; see [MCP on the network](#mcp-on-the-network) |
+| 8803 | Agent tools page | The same, for the agent add-on: which apps and add-ons may give the voice assistant their tools; see [Agent tools](agent.md) |
 | 8798 | Jellyfin page | The same, for the Jellyfin add-on (server address, user name and password; the TV keeps only the access token); see [Cards](launcher.md#cards) |
 | 8799 | Phone remote (a catalog add-on) | Only while the add-on is on **and** a phone is paired or its pairing screen is open; every phone needs a token from a one-time code; see [Phone remote](phone-remote.md) |
 
@@ -36,6 +39,20 @@ It is plain HTTP: the token can be read by anyone who can watch the traffic on y
 token so a phone can copy them. The address is created when the code is shown (96 bits of randomness), follows the same allow list, and stops
 working after ten minutes, when notifications are switched off or the service restarts. Anyone who sees the code on the screen, or can read
 the traffic, can read the token while it is open; **New token** replaces it.
+
+## MCP on the network
+
+Off until switched on in the manager app (**Features > AI agents (MCP) > Accept MCP clients from the network**). Port 8802 then listens
+only while an agent is paired or **Connect an agent** shows a code. An agent pairs with that code (6 digits, works once, ten minutes; five
+tries a minute per address, eight wrong codes take it off) and gets a token of its own (`<id>.<128-bit secret>`). The TV keeps only a
+SHA-256 of each secret, in `config.json` (`mcp.agents`, readable by root only), compares it in constant time and never logs it. With its
+token an agent can call `POST /mcp` (MCP over HTTP, JSON-RPC 2.0): **open apps, switch inputs, show cards and use the tools of the add-ons
+you approved**, nothing else of the service. Tools that turn something off or delete something (`power_off`, and every signed tool that is not a plain read: a method other than GET, or `"confirm": true`) are refused from the network: they run only from the voice assistant, after you say a plain "yes" on the TV. The remote's remapped buttons (`remote_buttons press`) can only open an app, an input, Live TV, Home, the picker or the TV's settings; a button whose action turns the screen or the TV off or changes the sound (the extra actions of [key remapping](key-remap.md)) is refused there and runs only when pressed on the remote. The actions a button can have come from a fixed list in the code, each with fixed calls: nothing in `config.json` or in a request names a command, path, address or luna method. A signed tool reaches only the add-on that declared it, and an address it calls is refused when it stands for the TV itself, whatever name it is written as.
+Each agent is listed in that screen's **Connected devices** menu and can be blocked, allowed or removed there, all at once with **Remove all devices**; an agent not used
+for two weeks (the default; 1 day to 1 month, or never) is removed by itself. A request that carries an `Origin` header (a web page in a
+browser) is refused, ten wrong codes or tokens lock an address out for ten minutes, and requests are limited to 60 a minute and 64 KB. It is plain
+HTTP: anyone who can watch your network can read a token, the pairing code and the page behind the QR code, so use it on a network you trust. The agent add-on's own page (port 8803, for approving sources) listens on the network the same way while you have it open, behind its code; it is a short-lived page like the other add-on pages. The per-address counters (wrong tries, requests a minute) keep at most 500 addresses. The page behind the QR code shows the code,
+not a token. Its address is short to type (`http://<tv>:8802/` and 8 letters and digits, about 40 bits); a wrong address counts as a wrong try, so ten misses shut an address out for ten minutes. Its status (`/<8 characters>/status`, while it is open) tells only the name and address of the agent that paired, when, and whether it has made a call.
 
 ## Themes
 
@@ -74,9 +91,10 @@ Waking a speaker is off by default: the sign-in asks for the **streaming** permi
 
 ## Voice
 
-Optional and off by default. Installing it downloads files over HTTPS from PyPI, Ubuntu's archive and Moonshine's model server;
-each file is checked against a SHA-256 value written in the code, and a mismatch stops the install. The recogniser is a 64-bit
-program started by the root service with its own copy of the C library; it reads audio from a pipe and prints text.
+Optional and off by default. Installing it downloads files over HTTPS from PyPI, Ubuntu's archive and Moonshine's model server (on a
+TV with a 32-bit ARM kernel: PyPI, Ubuntu's archive and Hugging Face, at a fixed revision); each file is checked against a SHA-256
+value written in the code, and a mismatch stops the install. The recogniser is a 64-bit program (a 32-bit hard-float one on a 32-bit
+ARM kernel) started by the root service with its own copy of the C library; it reads audio from a pipe and prints text.
 
 - Audio from the remote's microphone is held in memory only while recognising.
 - Only the recognised text is sent, and only to the address you set (plain `http://` is possible: the token is then visible on
@@ -86,6 +104,10 @@ program started by the root service with its own copy of the C library; it reads
   reaches your server.
 - The phone setup page is a short-lived page on the local network (port 8769, a random 128-bit address, ten minutes, closed after
   saving, plain HTTP: the key is visible on the network while it is typed).
+- With **Home Assistant recognises the speech** switched on (off by default, `voice.stt`), the audio of each phrase (at most 30 seconds,
+  16 kHz mono PCM, held in memory, never written to disk) goes to your Home Assistant over its WebSocket API (`ws://` or `wss://`
+  at the address you set, with the same token, sent once in the sign-in message; a self-signed certificate only when you switched
+  that on). Nothing else is sent to anyone for it. If Home Assistant fails, the recogniser on the TV is used when installed.
 - With Home Assistant set up, the recognised text goes to the address you set, with your long-lived access token (plain `http://` is
   possible: the token is then visible on your network; a self-signed certificate is accepted only when you switch that on).
 - The keys and the token are kept in `config.json` (readable by root only) and are never returned by the service.

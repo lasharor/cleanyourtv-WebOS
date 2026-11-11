@@ -10,6 +10,7 @@ var TH0 = {
     push: null,
     overlayH: 510,
     glow: '',
+    focusIcon: false,
     slots: [],
     shelfDock: null,
     dockBottom: false,
@@ -18,7 +19,7 @@ var TH0 = {
   themeStrip = null /* the page strip's look and place in this theme (addons.js); null: the defaults */,
   lastTheme = null,
   themeKeys = [],
-  themeAttrs = ['data-bar', 'data-labels', 'data-clock', 'data-grid', 'data-galign', 'data-cstyle', 'data-cards'];
+  themeAttrs = ['data-theme', 'data-bar', 'data-labels', 'data-clock', 'data-grid', 'data-galign', 'data-cstyle', 'data-cards'];
 function applyTheme(t) {
   var st = document.documentElement.style,
     b = document.body,
@@ -31,9 +32,11 @@ function applyTheme(t) {
   if (typeof PAGER !== 'undefined') PAGER.draw();
   if (!t || !t.vars) {
     TH = TH0;
+    updateFocusArt(null);
     if (window.SCENES) SCENES.apply(null);
     return;
   }
+  b.setAttribute('data-theme', t.id || '');
   for (k in t.vars) {
     st.setProperty(k, t.vars[k]);
     themeKeys.push(k);
@@ -73,6 +76,7 @@ function applyTheme(t) {
     push: t.push || null,
     overlayH: t.overlayH || 510,
     glow: t.glowRgb || '',
+    focusIcon: t.focusIcon === true,
     slots: t.slots || [],
     shelfDock: t.shelf || null,
     dockBottom: !!t.dockBottom,
@@ -154,6 +158,8 @@ function setFocus(nr, nc, first) {
   c = Math.min(nc, rows[r].length - 1);
   var e = rows[r][c];
   e.classList.add('f');
+  updateFocusArt(e);
+  moonTileFocus(e);
   var a = e._a,
     nm = a ? a.title : e._o ? barLabel(e._o) : '',
     n = $('name');
@@ -191,8 +197,54 @@ function setFocus(nr, nc, first) {
   } /* row height + gap from the theme: no layout reads */
   $('scroll').style.transform = sh ? 'translateY(' + sh + 'px)' : '';
 }
+
+/* Moon uses one glass frame that travels between the dock and app rows. A single element makes the movement continuous instead of
+   fading one tile's ring out and another tile's ring in. It is visual only and never joins the remote's focus rows. */
+function moonTileFocus(e) {
+  var sc = $('scroll'),
+    dock = $('dock'),
+    grid = $('grid'),
+    frame = $('tile-focus'),
+    parent = e && e.parentNode;
+  if (!frame) {
+    frame = document.createElement('div');
+    frame.id = 'tile-focus';
+    sc.appendChild(frame);
+  }
+  if (document.body.getAttribute('data-theme') !== 'moon' || !e || (parent !== dock && parent !== grid)) {
+    frame.style.opacity = '0';
+    return;
+  }
+  var cs = window.getComputedStyle(e),
+    sr = sc.getBoundingClientRect(),
+    er = e.getBoundingClientRect(),
+    currentW = er.width || er.right - er.left,
+    currentH = er.height || er.bottom - er.top,
+    isDock = parent === dock,
+    scale = parseFloat(cs.getPropertyValue(isDock ? '--dock-fs' : '--grid-fs')) || 1,
+    lift = isDock ? parseFloat(cs.getPropertyValue('--dock-lift')) || 0 : 0,
+    baseW = e.offsetWidth,
+    baseH = e.offsetHeight,
+    ew = baseW * scale,
+    eh = baseH * scale,
+    x = er.left - sr.left - (ew - currentW) / 2,
+    y = er.top - sr.top - (eh - currentH) / 2 + lift,
+    radius = parseFloat(cs.borderRadius) || 0,
+    pad = 4;
+  frame.style.width = Math.round(ew + pad * 2) + 'px';
+  frame.style.height = Math.round(eh + pad * 2) + 'px';
+  frame.style.borderRadius = Math.round(radius * scale + pad) + 'px';
+  frame.style.setProperty('--focus-c', e.style.getPropertyValue('--c') || '241,182,111');
+  frame.style.opacity = '1';
+  frame.style.transform = 'translate(' + Math.round(x - pad) + 'px,' + Math.round(y - pad) + 'px)';
+}
 function mapCol(from, to, col) {
   return from > 1 ? Math.round((col * (to - 1)) / (from - 1)) : 0;
+}
+/* the column an Up or Down lands on: between two app rows of the grid the same column (clamped to a shorter row, so app 2 of a row of 10
+   goes to the second of the next row), elsewhere (dock, top row) the proportional one */
+function vertCol(from, to, fromLen, toLen, col) {
+  return from >= 2 && to >= 2 ? Math.min(col, toLen - 1) : mapCol(fromLen, toLen, col);
 }
 function posOf(e) {
   for (var i = 0; i < rows.length; i++) {

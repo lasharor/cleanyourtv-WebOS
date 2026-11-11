@@ -48,6 +48,64 @@ function openNotifyQr() {
     }
   );
 }
+/* MCP on the network (helper/toolhub.js): a page on the phone with the address and the token */
+function openMcpQr() {
+  if (!mnet || !mnet.lan) {
+    banner('Switch on Accept MCP clients from the network first', 'err');
+    return;
+  }
+  shareMode = 'mcp';
+  push('share');
+  $('share').style.display = 'block';
+  $('shareurl').textContent = '';
+  $('qrbox').style.visibility = 'hidden';
+  $('share').querySelector('h2').textContent = tr('Connect an agent to the TV');
+  $('share').querySelector('ol').innerHTML = tr(
+    '<li>Send the link below to your agent on a computer on the <b>same network</b> as the TV. It reads the setup there and connects.</li><li>Or scan the QR code with a phone, press <b>Copy the prompt</b> and paste it to your agent.</li><li>The <b>code</b> below works once. This screen closes when the agent connects.</li>'
+  );
+  $('sharemsg').textContent = tr('Preparing…');
+  api('/api/mcp/lan', { page: true }).then(
+    function (r) {
+      if (view !== 'share' || shareMode !== 'mcp') return;
+      if (!r.pageUrl) {
+        $('sharemsg').textContent = tr('The port could not open: see Accept MCP clients from the network.');
+        return;
+      }
+      drawQr(r.pageUrl);
+      $('qrbox').style.visibility = 'visible';
+      $('shareurl').textContent = r.pageUrl;
+      /* the code on a line of its own: next to the long address it was broken in two */
+      $('sharemsg').textContent =
+        tr('Code') +
+        ' ' +
+        r.code +
+        '. ' +
+        tr('It works once, for ten minutes. The page is not encrypted: use a network you trust. Back closes the code.');
+      mcpWatch();
+    },
+    function () {
+      $('sharemsg').textContent = tr('The service did not answer.');
+    }
+  );
+}
+/* while the QR code is on screen, look every two seconds whether a device paired with it; when one has, the screen closes itself */
+function mcpWatch() {
+  setTimeout(function () {
+    if (view !== 'share' || shareMode !== 'mcp') return;
+    api('/api/mcp/lan').then(
+      function (n) {
+        if (view !== 'share' || shareMode !== 'mcp') return;
+        if (!n.paired) return mcpWatch();
+        mnet = n;
+        closeShare();
+        banner(n.paired.name + ' ' + tr('connected'), 'ok');
+      },
+      function () {
+        mcpWatch();
+      }
+    );
+  }, 2000);
+}
 /* Add-ons (helper/addons.js): the ones on the TV and the project's catalog */
 function loadAddons() {
   Promise.all([

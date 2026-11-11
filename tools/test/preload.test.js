@@ -208,4 +208,22 @@ run(async () => {
     x.j.apps.filter(a => a.id === 'netflix')[0].base.mode === 'full' && JSON.parse(fsx.readFileSync(fwF, 'utf8'))['@firmware'] === '2.0',
     'firmware: a file from before the mark is kept and marked'
   );
+
+  // a cold boot: the preload manager is not ready at the first try (issue 226)
+  t = tv();
+  const real = t.luna;
+  let fails = 1;
+  const flaky = async (uri, p) =>
+    uri.indexOf('getPreloadPolicy') >= 0 && fails-- > 0 ? { returnValue: false, errorText: 'not ready' } : real(uri, p);
+  const cf = memoryConfig({ options: { preloadPolicy: { netflix: { enabled: false } } } });
+  pre = P.create({ config: cf, luna: flaky, baseFile: path.join(tmp, 'base226.json'), retryDelay: 1 });
+  x = await pre.applyRetry(false);
+  ok(
+    !x.error && x.changed[0] === 'netflix' && get(t, 'netflix').isEnabled === false,
+    'boot: one failed query, the saved choice is applied on the retry'
+  );
+  fails = 100;
+  pre = P.create({ config: cf, luna: flaky, baseFile: path.join(tmp, 'base226b.json'), retryDelay: 1 });
+  x = await pre.applyRetry(false);
+  ok(!!x.error && fails === 100 - 4, 'boot: the retries are bounded (1 try and 3 retries), then the error stays');
 });
