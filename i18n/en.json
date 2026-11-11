@@ -1708,5 +1708,21 @@
  "Add an entry for one app": "Add an entry for one app",
  "another action while that app is in front": "another action while that app is in front",
  "Remove this entry": "Remove this entry",
- "the Everywhere action runs in that app": "the Everywhere action runs in that app"
+ "the Everywhere action runs in that app": "the Everywhere action runs in that app",
+ "Bluetooth": "Bluetooth",
+ "Disconnecting…": "Disconnecting…",
+ "Bluetooth: %s": "Bluetooth: %s",
+ "Bluetooth is not available: %s": "Bluetooth is not available: %s",
+ "Connect it in LG’s settings": "Connect it in LG’s settings",
+ "To use it again, pair it again.": "To use it again, pair it again.",
+ "No paired devices.": "No paired devices.",
+ "Pair a controller...": "Pair a controller...",
+ "Hold Create and PS on the controller until its light blinks fast.": "Hold Create and PS on the controller until its light blinks fast.",
+ "Pairing…": "Pairing…",
+ "Pair again": "Pair again",
+ "%s is paired. Press its PS button to connect it.": "%s is paired. Press its PS button to connect it.",
+ "Looking for devices…": "Looking for devices…",
+ "Nothing found.": "Nothing found.",
+ "Search again": "Search again",
+ "Pair a controller": "Pair a controller"
 }

@@ -300,6 +300,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       'remap',
       'apps',
       'running',
+      'bluetooth',
       'zram',
       'preload',
       'fstrim',
