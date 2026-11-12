@@ -154,7 +154,7 @@
       "files": {
         "addon.json": "31320aa0f93fdaf8b4991166e780e5f31e2160b547d2260ba9682a435b5bdae1",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "09fc30da2b8642312cc2a228d49bcbbff91c489fa9ec1f55ccc804c1883cdc98",
+        "page/index.html": "5b8d68f3d3ef1e53a1cc2a7c9bce2ffafd659ec20d6eaa2c6cff6d039b75acc3",
         "page.js": "1bd6c98af5a81be3833d7cb14390a01ba336fdffa84025c3b65d133fb6cc88fa",
         "pwa/icon-180.png": "57040c5ec7e1dfc01918b2295df594dbc034b85df865140e27829873f02c4aff",
         "pwa/icon-512.png": "08849f214ae06fda96123a5e13ec69f9f30a6b7d13e776e20f21c669af3581e4",
@@ -248,7 +248,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "88cd8cc536afef54e6cef678ef18b34d9f10fd35fb1f4d5cefba5f87a4b099f4",
+        "page/index.html": "a8ddf4fa90b3ec3aa86c34f1f1532e53826ed8ff5fda807fd52e15e8785bcaf6",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
