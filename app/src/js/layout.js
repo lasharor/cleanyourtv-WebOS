@@ -148,6 +148,7 @@ function stopMoving() {
   var id = moving;
   moving = null;
   if (tiles[id]) tiles[id].classList.remove('moving');
+  if (rows[r] && rows[r][c]) moonTileFocus(rows[r][c]);
   saveCfg();
 }
 function getGridOrder() {

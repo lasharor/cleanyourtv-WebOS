@@ -353,6 +353,7 @@ function fit(d, dock) {
   if (!i) return;
   i.removeAttribute('style');
   d.classList.remove('fill');
+  d.classList.remove('logo');
   d.style.background = '';
   /* a picture of your own shown as Full tile (the App icons add-on): it covers the tile, its middle kept, in the dock and the grid alike */
   if (d._it) {
@@ -367,12 +368,14 @@ function fit(d, dock) {
     st.objectFit = 'cover';
     return;
   }
+  if (c && c.k === 'logo') d.classList.add('logo');
   if (!c || c.k !== 'pad' || !c.box) return;
   var bx = c.box,
     bw = bx[2] - bx[0],
     bh = bx[3] - bx[1],
-    s = i.style;
-  if (dock) {
+    s = i.style,
+    fullGlass = typeof document !== 'undefined' && document.body && document.body.getAttribute('data-theme') === 'liquid-glass';
+  if (dock && !fullGlass) {
     s.height = 'calc(' + 56 / bh + '% * var(--icon-s, 1) * var(--icon-s-dock, 1))';
     s.maxWidth = 'none';
     s.width = 'auto';

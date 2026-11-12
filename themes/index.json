@@ -72,6 +72,13 @@
    "preview": "large/preview.jpg"
   },
   {
+   "id": "liquid-glass",
+   "name": "Liquid Glass",
+   "author": "CYTV themes",
+   "description": "Translucent frosted glass surfaces with luminous edges over a deep dark aurora.",
+   "preview": "liquid-glass/preview.jpg"
+  },
+  {
    "id": "lockscreen",
    "name": "Lock Screen",
    "author": "CleanYourTV",

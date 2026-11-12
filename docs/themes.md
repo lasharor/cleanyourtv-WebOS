@@ -40,6 +40,7 @@ folder of the GitHub repository (the `main` branch):
 | Couch | After [couch-tv](https://github.com/Seagey/couch-tv): five landscapes take turns every 20 seconds behind a large glass clock, the scenery in front of the digits; the date above the clock, round buttons top right, the apps on glass at the bottom; cards on frosted glass. Uses `clock.style`, `effects.scenes` and `cards.style`. |
 | Lock Screen | A phone-style lock screen: a greeting and a big clock top left, and a small, translucent dock low in the corner over a calm blue landscape, so the picture fills the screen. Down moves the dock up and shows all apps below it. Turn Wallpapers on for your own photos. It has slots for cards (Customise > Cards): the greeting is one, and there is a place under the clock. |
 | Moon | A moonlit autumn landscape with a four-app glass dock, warm focus, app-colour rails and places for cards around the clock. |
+| Liquid Glass | Translucent frosted glass panels and pills with specular edges over a deep dark aurora (`aurora.jpg`, MIT), stacked greeting with inline time and date in Outfit (`outfit.ttf`, OFL-1.1), a sliding glass focus frame, and two card slots (`under-clock` and `side`). |
 
 ![Classic, Compact, Large print and Midnight](screenshots/themes-1.jpg)
 
