@@ -215,7 +215,7 @@ manager opens the same page.
 ## Language
 
 Menus follow the TV's language, or the one chosen in the manager app: English, Dutch, German, French, Spanish, Catalan, Russian,
-Turkish, Arabic, Polish, Italian, Brazilian Portuguese, Vietnamese, Hungarian and Swedish. See [Languages](languages.md), also for adding one.
+Turkish, Arabic, Polish, Italian, Brazilian Portuguese, Vietnamese, Hungarian, Swedish and Danish. See [Languages](languages.md), also for adding one.
 
 ## Themes
 
