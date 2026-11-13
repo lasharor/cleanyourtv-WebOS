@@ -74,7 +74,7 @@ In detail:
 
 - the **dock**: each app in it can be replaced (an app already in the dock swaps places), moved or removed, and **Add an app...**
   fills a free place. Holding OK on an app gives **Move** (to rearrange tiles interactively with arrow keys and confirm with OK), **Add to dock** or **Remove from dock**, **Change icon** and **Reset icon** (see [Your own icon](#your-own-icon)), **Hide app** and **Uninstall** (with a confirmation prompt, for user-installed LG Store and Homebrew apps);
-- the **top buttons**: move one left or right, remove it, or add Inputs, Settings, Live TV, TV, **Power off** or any app. **TV** opens LG's own Live TV (the
+- the **top buttons**: move one left or right, remove it, or add Inputs, Bluetooth, Settings, Live TV, TV, **Power off** or any app. **TV** opens LG's own Live TV (the
 tuner) and is offered only when the TV has that app and **Show LG's own Live TV** is on in the manager;
   **Power off** asks first and then switches the TV off completely, unlike the remote's power key, which only suspends it (Quick Start+).
   The next start is a cold boot, so it takes longer, and Wake-on-LAN no longer wakes the TV;
@@ -154,6 +154,28 @@ Suggested and first built by [ibexes](https://github.com/lasharor/cleanyourtv-We
 
 ![Inputs menu](screenshots/inputs.jpg)
 
+## Bluetooth
+
+The **Bluetooth** button (add it in **Customise** > the top buttons) lists the paired Bluetooth devices, with whether each is connected.
+OK on a game controller, a keyboard or a mouse disconnects it, or connects it again, without going through LG's settings; holding OK
+removes its pairing (asked first). LG's own remote is paired too but is never listed, so it cannot be disconnected or removed by mistake.
+Other devices, such as headphones, are shown dimmed: LG's settings connect and pair them.
+
+A controller that is switched off cannot be connected from the TV: press its own button (on a DualSense the PS button) and it
+connects by itself. **Refresh** reads the list again.
+
+**Pair a controller...** looks for devices for about 20 seconds and lists the controllers, keyboards and mice it finds that have a
+name. Put the controller in pairing mode first (on a DualSense hold **Create** and **PS** until the light blinks fast) and choose it;
+**Search again** looks once more. A DualSense keeps one console or TV only: after it was used with a PS5, the TV still lists it as
+paired but it no longer connects. It is then listed as **Pair again**, and pairing removes the old pairing first. After pairing, press
+the controller's PS button to connect it. A device that asks for a code to be typed in is paired in LG's settings.
+
+!!! note "Tested with a PS5 DualSense"
+    The Bluetooth button was tested with a **PS5 DualSense** controller on an LG OLED65C47LA (webOS 25, SDK 10.3.1, firmware
+    33.31.68). Other controllers (Xbox, 8BitDo, Switch Pro, a PS4 DualShock), keyboards and mice were not tried and may behave
+    differently: one may ask for a confirmation while pairing, or may connect from the TV where the DualSense only connects itself.
+    Please report how yours behaves in an [issue](https://github.com/lasharor/cleanyourtv-WebOS/issues).
+
 ## Icons
 
 Each tile uses the app's own icon. The tile colour is taken from the icon's edge colour, so an icon that reaches its edges blends
@@ -193,7 +215,7 @@ manager opens the same page.
 ## Language
 
 Menus follow the TV's language, or the one chosen in the manager app: English, Dutch, German, French, Spanish, Catalan, Russian,
-Turkish, Arabic, Polish, Italian, Brazilian Portuguese, Vietnamese, Hungarian and Swedish. See [Languages](languages.md), also for adding one.
+Turkish, Arabic, Polish, Italian, Brazilian Portuguese, Vietnamese, Hungarian, Swedish and Danish. See [Languages](languages.md), also for adding one.
 
 ## Themes
 

@@ -1,6 +1,6 @@
 var API = 'http://127.0.0.1:8765',
   CACHE_KEY = 'cytv.cache.v7',
-  VERSION = '1.5.18';
+  VERSION = '1.5.20';
 var DEFAULTS = {
   dock: ['netflix', 'youtube.leanback.v4', 'amazon', 'com.disney.disneyplus-prod'],
   topbar: [
@@ -11,6 +11,7 @@ var DEFAULTS = {
 };
 var PRESETS = [
   { label: 'Inputs', icon: 'inputs', action: 'inputs' },
+  { label: 'Bluetooth', icon: 'bluetooth', action: 'bluetooth' },
   { label: 'Settings', icon: 'settings', app: 'com.palm.app.settings' },
   { label: 'Live TV', icon: 'tv', action: 'live' },
   { label: 'TV', icon: 'tv', app: 'com.webos.app.livetv' },
@@ -26,6 +27,10 @@ var ICONS = {
   edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   tv: '<rect x="2" y="7" width="20" height="15" rx="2"/><path d="M17 2l-5 5-5-5"/>',
   power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/>',
+  bluetooth: '<path d="M7 7l10 10-5 5V2l5 5L7 17"/>',
+  gamepad:
+    '<path d="M6 8h12a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6l-1-1.1h-4l-1 1.1A4 4 0 0 1 2 13v-1a4 4 0 0 1 4-4z"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r=".5"/><circle cx="18" cy="13.5" r=".5"/>',
+  keyboard: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
   addon: '<path d="M10 3h4v4a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a2 2 0 1 0-4 0v3H3v-7h4a2 2 0 1 0 0-4H3V3z"/>',
   home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',

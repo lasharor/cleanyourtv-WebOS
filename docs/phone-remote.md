@@ -126,6 +126,12 @@ guess, best source first:
 A name that another paired phone already has gets ` 2`, ` 3` after it. A browser cannot tell a page the name of a computer or the model of a
 phone, so there is nothing more to read there.
 
+## Light and dark
+
+The page follows the phone's own setting: dark when the phone is set to dark, light when it is set to light (and when it changes, at once).
+On a phone without that setting the page stays dark, as before. A page that is shown inside an app with a theme of its own can choose:
+`html.light` or `html.dark` on the page wins over the phone's setting.
+
 ## Staying connected
 
 While the page is open and the phone is awake, it keeps a live connection (a WebSocket) to the TV. It pings the TV every five seconds and
