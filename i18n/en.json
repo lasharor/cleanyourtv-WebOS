@@ -1725,5 +1725,9 @@
  "Looking for devices…": "Looking for devices…",
  "Nothing found.": "Nothing found.",
  "Search again": "Search again",
- "Pair a controller": "Pair a controller"
+ "Pair a controller": "Pair a controller",
+ "Restart the service": "Restart the service",
+ "an add-on was updated, switched on or off": "an add-on was updated, switched on or off",
+ "its new version runs after this": "its new version runs after this",
+ "restart the service to apply it": "restart the service to apply it"
 }
