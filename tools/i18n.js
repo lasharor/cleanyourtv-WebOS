@@ -44,6 +44,8 @@ function pageText() {
               .map(d => fs.readFileSync(path.join(root, 'addons', 'catalog', d, 'service.js'), 'utf8'))
               .filter(s => s.indexOf('i18n.tr(') >= 0)
           )
+          // and what the add-ons' manifests say: the manager and the launcher show those words (tools/build-pages.js, addonText)
+          .concat(B.addonText())
       )
       .join('\n')
   );
@@ -162,6 +164,7 @@ if (require.main === module) {
     let m;
     while ((m = re.exec(src))) found[m[1]] = 1;
     while ((m = reI18n.exec(src))) found[m[1]] = 1;
+    for (const k of B.addonText()) found[k] = 1;
     for (const k of rowTexts(
       B.plain(
         fs
