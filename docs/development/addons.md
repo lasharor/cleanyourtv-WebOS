@@ -43,6 +43,8 @@ What is done, and what is not:
   tab. A bundled add-on ships it in its folder. A catalog add-on keeps it in `addons/catalog/<id>/`: `node tools/addon-index.js` lists it in the
   index (it is not part of `files`, so it is never installed) and the manager reads it from GitHub and keeps it for a day
   (`GET /api/addons/preview/<id>`).
+- `tile.label` (at most 40 characters; `name` when it is left out) is the page's name in the page strip and on its top bar button. Write it
+  in English: the launcher shows it in the TV's language when `i18n/` has that text, as it has for `Clock`, and as it is when not.
 - `tile.icon` is the icon of the page in the page strip and on its button: `home`, `tv`, `clock`, `chart`, `globe`, `photo`, `music`, `play`, `star`, `heart`, `cards`,
   `grid`, `hdmi`, `settings` or `addon` (the default).
 - `kind` is `page` (a web page, no code in the service) or `service` (Node code that runs as root in the service; also needs
