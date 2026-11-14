@@ -843,5 +843,6 @@
  "Logged out. This phone was removed from the TV’s list.": "Çıkış yapıldı. Bu telefon televizyonun listesinden çıkarıldı.",
  "The TV cannot be reached right now, so it cannot be told. This phone stops controlling the TV and everything it stored about the TV is deleted, but the TV keeps listing it until you remove it in the manager app. To use it again you pair with a new code.": "Televizyona şu an ulaşılamıyor, bu yüzden haberdar edilemez. Bu telefon artık televizyonu denetlemez ve televizyon hakkında sakladığı her şey silinir, ancak yönetici uygulamasında kaldırana kadar televizyon onu listesinde tutar. Yeniden kullanmak için yeni bir kodla eşleştirilmesi gerekir.",
  "The TV could not be reached: its list is left as it is": "Televizyona ulaşılamadı: listesi olduğu gibi kalır",
- "Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.": "Bu telefonda çıkış yapıldı. Televizyona ulaşılamadı ve bu telefonu hâlâ listesinde tutuyor: yönetici uygulamasında, Telefon kumandası, Eşleştirilmiş telefonlar bölümünden kaldırın."
+ "Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.": "Bu telefonda çıkış yapıldı. Televizyona ulaşılamadı ve bu telefonu hâlâ listesinde tutuyor: yönetici uygulamasında, Telefon kumandası, Eşleştirilmiş telefonlar bölümünden kaldırın.",
+ "Clear sky": "Açık"
 }

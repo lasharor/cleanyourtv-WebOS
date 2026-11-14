@@ -891,5 +891,6 @@
  "The TV could not be reached: its list is left as it is": "تعذّر الوصول إلى التلفاز: تبقى قائمته كما هي",
  "Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.": "تم تسجيل الخروج على هذا الهاتف. تعذّر الوصول إلى التلفاز وما زال يُبقي هذا الهاتف في قائمته: أزِله من تطبيق الإدارة، جهاز التحكم من الهاتف، الهواتف المقترنة.",
  "The TV is not waiting for a phone. On the TV, open Features > Phone remote > Pair a phone.": "التلفزيون لا ينتظر هاتفًا. على التلفزيون، افتح Features > جهاز التحكم من الهاتف > إقران هاتف.",
- "That code is not right. Check the 6 digits on the TV screen.": "الرمز غير صحيح. تحقق من الأرقام الستة على شاشة التلفزيون."
+ "That code is not right. Check the 6 digits on the TV screen.": "الرمز غير صحيح. تحقق من الأرقام الستة على شاشة التلفزيون.",
+ "Clear sky": "صافٍ"
 }

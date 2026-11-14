@@ -36,7 +36,7 @@ var WX_ICON = {
 };
 /* WMO weather codes as Open-Meteo gives them: an icon and a word */
 function wthKind(code, day) {
-  if (code === 0) return [day === false ? 'moon' : 'sun', t('Clear')];
+  if (code === 0) return [day === false ? 'moon' : 'sun', t('Clear sky')];
   if (code <= 2) return ['part', t('Partly cloudy')];
   if (code === 3) return ['cloud', t('Cloudy')];
   if (code === 45 || code === 48) return ['fog', t('Fog')];
@@ -179,7 +179,7 @@ var HAW = {};
    greeting's second line, which read the last weather drawn) */
 var HAW_COND = {
   sunny: ['sun', 'Sunny', 0],
-  'clear-night': ['moon', 'Clear', 0],
+  'clear-night': ['moon', 'Clear sky', 0],
   partlycloudy: ['part', 'Partly cloudy', 2],
   cloudy: ['cloud', 'Cloudy', 3],
   fog: ['fog', 'Fog', 45],

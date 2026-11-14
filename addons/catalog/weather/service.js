@@ -15,7 +15,7 @@ function create(ctx) {
 
   // WMO weather codes as Open-Meteo gives them: an icon (the page draws it) and a word
   function kind(code, day) {
-    if (code === 0) return [day === false ? 'moon' : 'sun', 'Clear'];
+    if (code === 0) return [day === false ? 'moon' : 'sun', 'Clear sky'];
     if (code <= 2) return ['part', 'Partly cloudy'];
     if (code === 3) return ['cloud', 'Cloudy'];
     if (code === 45 || code === 48) return ['fog', 'Fog'];
@@ -75,7 +75,7 @@ function create(ctx) {
     'Weather data by Open-Meteo.com',
     'Offline, data from %s',
     'Feels like %s',
-    'Clear',
+    'Clear sky',
     'Partly cloudy',
     'Cloudy',
     'Fog',
