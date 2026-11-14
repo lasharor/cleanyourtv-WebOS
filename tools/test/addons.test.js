@@ -86,6 +86,7 @@ run(async () => {
   a.start();
   const by = id => a.list().filter(x => x.id === id)[0];
   ok(by('demo').status === 'running' && by('demo').enabled, 'a good add-on runs');
+  ok(((await call(a, '/api/addons')).j || {}).restartPending === false, 'nothing asks for a restart of the service at the start');
   ok(
     by('broken').status === 'failed' && /boom/.test(by('broken').error),
     'an add-on that throws is failed, the others still load: ' + by('broken').error
@@ -110,6 +111,11 @@ run(async () => {
   ok(r.j.restartNeeded === true && cfg.get().addons.later.enabled === true, 'switching on is stored and asks for a restart of the service');
   r = await call(a, '/api/addons/later/enable', 'POST', { enabled: 'yes' });
   ok(r.code === 400, 'enabled must be a boolean');
+  // the manager offers the restart until it has happened: an action that needs one is remembered (restartPending)
+  ok(
+    ((await call(a, '/api/addons')).j || {}).restartPending === true,
+    'a switch that needs a restart is remembered, so the manager can offer it'
+  );
 
   fs.writeFileSync(path.join(path.dirname(dir), 'DISABLE-ADDONS'), '');
   a.load();

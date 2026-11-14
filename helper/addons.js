@@ -8,6 +8,7 @@
 //   GET  /api/addons/catalog               what the project's catalog offers: {addons: [...], error}
 //   POST /api/addons/install {id}          download from the catalog, check every file against its hash, install
 //   POST /api/addons/remove {id}           delete an installed add-on (its data stays)
+//   POST /api/addons/restart               start the service again, so an add-on that was updated or switched runs its new code
 //   GET  /api/addons/<id>                  one add-on
 //   POST /api/addons/<id>/enable {enabled} stored in config.json; takes effect at the next start (a page add-on at once)
 //   ANY  /api/addons/<id>/<path>           answered by the add-on's own service.js (path = what follows the id)
@@ -19,6 +20,7 @@
 const fs = require('fs'),
   path = require('path'),
   crypto = require('crypto');
+let restartPending = false;
 const P = require('./paths'),
   nc = require('./netcompat'),
   web = require('./web'),
@@ -751,6 +753,10 @@ function create(ctx) {
   const legacy = u => list.filter(a => a.bundled && a.status === 'running' && a.mod && a.manifest.routes.some(r => under(r, u)))[0];
   // may the page of add-on `id` call this path? Its bundled add-on's old API paths (Live TV's page calls /api/live/)
   const pageMay = (id, u) => list.some(a => a.id === id && a.bundled && a.status === 'running' && a.manifest.routes.some(r => under(r, u)));
+  // An add-on of kind "service" is loaded once: its new code runs when the service starts again. The actions that need that say so
+  // (restartNeeded), and this remembers it, so the manager can offer the restart until it has happened.
+  const needRestart = r => ((restartPending = restartPending || !!(r && r.restartNeeded)), r);
+
   const match = u => u.indexOf('/api/addons') === 0 || u.indexOf('/addon/') === 0 || !!legacy(u);
 
   async function viaAddon(a, req, res, sub, body) {
@@ -801,7 +807,15 @@ function create(ctx) {
       }
       return sendFile(res, a, rel || a.manifest.entry.page);
     }
-    if (u === '/api/addons' && req.method === 'GET') return web.json(res, { addons: list.map(info), paused: paused(), book: bookOf() });
+    if (u === '/api/addons' && req.method === 'GET')
+      return web.json(res, { addons: list.map(info), paused: paused(), book: bookOf(), restartPending });
+    // start the service again (the watchdog does it within ten seconds): the only way to run a service add-on's new code without
+    // turning the TV off and on. Home stays where it is and reconnects; what the add-ons kept is written to disk before this.
+    if (u === '/api/addons/restart' && req.method === 'POST') {
+      web.json(res, { ok: true });
+      require('./exec').detached('sleep 1; pkill -f "[c]leanyourtv/helper.js"');
+      return;
+    }
     if (u === '/api/addons/book' && req.method === 'POST') {
       const b = await body(req),
         known = list.filter(bookable).map(a => a.id),
@@ -837,7 +851,7 @@ function create(ctx) {
     if (u === '/api/addons/update' && req.method === 'POST') {
       const b = await body(req);
       if (b.id !== undefined && !ID.test(b.id || '')) return web.json(res, { error: 'bad id' }, 400);
-      const r = await updateAll(b.id, b.confirm);
+      const r = needRestart(await updateAll(b.id, b.confirm));
       return web.json(res, r, r.error ? 400 : 200);
     }
     const pm = /^\/api\/addons\/preview\/([a-z][a-z0-9-]*)$/.exec(u);
@@ -850,7 +864,9 @@ function create(ctx) {
     if ((u === '/api/addons/install' || u === '/api/addons/remove') && req.method === 'POST') {
       const b = await body(req);
       if (!ID.test(b.id || '')) return web.json(res, { error: 'bad id' }, 400);
-      const r = u === '/api/addons/install' ? await install(b.id, typeof b.repo === 'string' ? b.repo : '', b.confirm) : remove(b.id);
+      const r = needRestart(
+        u === '/api/addons/install' ? await install(b.id, typeof b.repo === 'string' ? b.repo : '', b.confirm) : remove(b.id)
+      );
       return web.json(res, r, r.error ? 400 : 200);
     }
     const m = /^\/api\/addons\/([a-z][a-z0-9-]*)(\/.*)?$/.exec(u);
@@ -876,7 +892,7 @@ function create(ctx) {
         return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: false });
       }
       // an add-on switched by an option stays loaded and the launcher reads the option: no restart for it
-      return web.json(res, { id: a.id, enabled: b.enabled, restartNeeded: changed && !opt });
+      return web.json(res, needRestart({ id: a.id, enabled: b.enabled, restartNeeded: changed && !opt }));
     }
     // the add-on's phone page (settings in its service, like a photo source's): the manager shows "Set up from your phone" for it
     if (m[2] === '/settings' && req.method === 'POST' && a.status === 'running' && a.mod && typeof a.mod.settings === 'function') {
