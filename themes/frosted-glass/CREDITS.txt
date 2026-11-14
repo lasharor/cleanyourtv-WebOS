@@ -1,0 +1,4 @@
+Original theme styling and procedural aurora wallpaper: CYTV themes, 2026, MIT. Contributed by @warleysr (pull request 253).
+Design reference: frosted glass interfaces in general. Independent styling built only from Theme API gradients, borders and shadows. No third-party screenshots, wallpapers or UI image assets are included.
+The preview image shows placeholder tiles, not real app icons.
+Preview image: actual trusted Home browser renderer, captured with the Frosted Glass theme and downsampled to 960x540.

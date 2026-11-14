@@ -8,8 +8,13 @@
       "about": "One bridge between the TV and a language model, built on a scheme instead of a fixed list. Installed apps and add-ons sign the scheme with a small tools.json that names their abilities; this add-on turns each into an MCP tool, gives them to the voice assistant and answers list and call over JSON-RPC at /api/addons/agent/mcp. Nothing is used until you approve it: open Set up from your phone and switch on the apps and add-ons whose tools the assistant may use. Tools that turn something off or delete something ask you first, and you say yes on the TV.",
       "preview": "",
       "kind": "service",
-      "permissions": ["net.fetch", "luna"],
-      "luna": ["luna://com.webos.applicationManager/launch"],
+      "permissions": [
+        "net.fetch",
+        "luna"
+      ],
+      "luna": [
+        "luna://com.webos.applicationManager/launch"
+      ],
       "files": {
         "README.md": "cd1e822f2b4d5bb1718f39f1c64b0ca226f95a27ee64c51887ee60e9c58b32c5",
         "addon.json": "7b4fb93c3dcf4443fdee2957f7488da5e0b868edd741639be7e7b0f8954570c4",
@@ -57,7 +62,9 @@
       "about": "",
       "preview": "",
       "kind": "service",
-      "permissions": ["net.fetch"],
+      "permissions": [
+        "net.fetch"
+      ],
       "luna": [],
       "files": {
         "addon.json": "b16b363150bbe9dc1ba3b6fc7a98073f8ed11c11996507691d33ce75a67b00c9",
@@ -73,8 +80,14 @@
       "about": "A card for Home with the films and episodes you did not finish on your Jellyfin server, and if you like the next episode of a series you follow: the picture, the title and how far you got. Each one is a button: OK opens your Jellyfin app, the official one, Litefin or Moonfin. Litefin opens the title itself (after its version 2.0.20); the others open on their own Home. The card talks only to your own server. Set up: Add-ons > Jellyfin continue watching > Set up from your phone. The TV keeps only the access token, never your password.",
       "preview": "preview.jpg",
       "kind": "service",
-      "permissions": ["net.fetch", "luna"],
-      "luna": ["luna://com.webos.applicationManager/getAppInfo", "luna://com.webos.applicationManager/launch"],
+      "permissions": [
+        "net.fetch",
+        "luna"
+      ],
+      "luna": [
+        "luna://com.webos.applicationManager/getAppInfo",
+        "luna://com.webos.applicationManager/launch"
+      ],
       "files": {
         "addon.json": "46c4c4f785042586eab9bf04b46c9588a243008eb9a7f9c474af364c88b2f176",
         "cards/continue/card.css": "4fa91cf45225cb62e120295378dc72bcd6f4ee9442ee7f2059fb17ccdb636841",
@@ -94,7 +107,9 @@
       "about": "Stocks: US shares and ETFs (AAPL, SPY) from Twelve Data, an official API that needs your own free key (twelvedata.com): set it in Add-ons > Stocks and crypto > Set up from your phone. The free plan has 8 credits a minute and 800 a day, one per symbol: prices every 5 minutes for 5 symbols, every 20 for 20, while the US market is open. Crypto: coins (BTC, ETH) from CoinGecko's free public API, no key, every 2 minutes; it has its own terms: the data is credited to CoinGecko (the drawer says so), and its limits are lower than CoinGecko's keyed plans and can change. Pick a list in Customise or type your own on the phone page; OK on a card opens the list, a chart and the details. Only your symbols (and the key, to Twelve Data) leave the TV.",
       "preview": "preview.jpg",
       "kind": "service",
-      "permissions": ["net.fetch"],
+      "permissions": [
+        "net.fetch"
+      ],
       "luna": [],
       "files": {
         "addon.json": "b7a6701cff16271878ce3c1111ab4305b0e2891d30aa01a29192d00df8cf49fb",
@@ -125,7 +140,9 @@
       "about": "A phone on the same Wi-Fi becomes the TV's remote control. It pairs once with a 6-digit code the TV shows, then its browser page reconnects by itself: the remote's buttons, a touchpad that moves the TV's pointer, a keyboard that types into the field open on the TV, a mic button that asks the TV's voice assistant and shows the conversation (speak or type on the phone, or let the TV listen on its remote), the TV's apps and the channels of your Live TV playlist, and a power button. Each phone can be blocked or removed, and a phone that is not used for a while is removed by itself. The phone remote is off until you switch it on in Add-ons; its page (Add-ons > Phone remote, and a page of the book on Home) pairs a phone and lists the paired ones.",
       "preview": "preview.jpg",
       "kind": "service",
-      "permissions": ["luna"],
+      "permissions": [
+        "luna"
+      ],
       "luna": [
         "luna://com.webos.service.networkinput/",
         "luna://com.webos.service.ime/",
@@ -159,7 +176,9 @@
       "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. South of the equator the seasons turn around; the tulip fields of spring show in the Netherlands and Belgium. The photos are from Unsplash (free to use), the photographer shows in the corner. About 8 MB is kept on the TV, so every set shows at least two photos without network.",
       "preview": "preview.jpg",
       "kind": "service",
-      "permissions": ["net.fetch"],
+      "permissions": [
+        "net.fetch"
+      ],
       "luna": [],
       "files": {
         "addon.json": "d50da41d5dbc0548a22338ff21e1e7d22791173a86b146682308dc97ff568b63",
@@ -175,8 +194,13 @@
       "about": "A card for Home that shows what plays, or is paused, on any device of your Spotify account: the cover, the title, the artist and a thin progress bar, with previous, play or pause, next and the output (where it plays) as buttons for the remote, and the cover opens the Spotify app of the TV on the song (the controls need Spotify Premium). It asks Spotify's Web API with your own Spotify developer app (only its Client ID: the sign-in uses PKCE, so the project holds no credential and no client secret is needed); the tokens stay on the TV, in this add-on's settings. Set it up from your phone: Add-ons > Spotify now playing > Set up from your phone. It also gives the voice assistant and AI agents one tool, spotify (what plays, play, pause, next, previous, the devices, open on the TV). The idea and the first version are from @Edenik (pull request 127).",
       "preview": "preview.jpg",
       "kind": "service",
-      "permissions": ["net.fetch", "luna"],
-      "luna": ["luna://com.webos.applicationManager/launch"],
+      "permissions": [
+        "net.fetch",
+        "luna"
+      ],
+      "luna": [
+        "luna://com.webos.applicationManager/launch"
+      ],
       "files": {
         "addon.json": "287085747e3654b2d2ec535a55c95c74aaf7b4112c860a0a4878c16e171e0691",
         "cards/nowplaying/card.css": "13ecfa7ba271f3186860529edeb9ec04c4120165a52c2957eee8d51011d9c514",
@@ -213,8 +237,15 @@
       "about": "A guide for the channels of the TV's own tuner (antenna, cable), in the look of the Live TV guide: the channels, what is on now and next, and the schedule of the channel you select, read from the same data LG's own guide uses. OK on a channel opens LG's Live TV on it. It is a page next to Home, on its own colour button, and it works on its own: it needs neither Live TV (IPTV) nor a playlist. Nothing is read until you open it. The guide itself is the code of the Live TV guide, built again, so both stay alike. The idea and the first version are from @Tech-Dex (pull request 144, issue 126).",
       "preview": "preview.jpg",
       "kind": "service",
-      "permissions": ["luna", "key.guide"],
-      "luna": ["luna://com.webos.service.iepg/getChannelList", "luna://com.webos.epgdb/find", "luna://com.webos.applicationManager/launch"],
+      "permissions": [
+        "luna",
+        "key.guide"
+      ],
+      "luna": [
+        "luna://com.webos.service.iepg/getChannelList",
+        "luna://com.webos.epgdb/find",
+        "luna://com.webos.applicationManager/launch"
+      ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
         "page/index.html": "1a95cf0b41f159c86d94e90dc804c74c1662ac982b2caa34c651b45fb4da2ecc",
@@ -231,7 +262,9 @@
       "about": "",
       "preview": "",
       "kind": "service",
-      "permissions": ["net.fetch"],
+      "permissions": [
+        "net.fetch"
+      ],
       "luna": [],
       "files": {
         "addon.json": "c3ed3ea1704744779e998a06998a61f749f25290f646128962622e870c82c93e",
@@ -247,7 +280,9 @@
       "about": "A card for Home that shows the weather at a city you choose on the TV (Customise > Weather) or on the phone page (Cards > Set up from your phone): now, with the temperature, feels like, humidity, wind, rain chance, UV, air pressure, air quality and sunrise and sunset; the next hours; and the next days. The card is one button for the remote: OK opens a drawer of the add-on with Now, Hours and Days. The weather comes from Open-Meteo (free, no key, no account): only the coordinates of the city you chose leave the TV, at most every 30 minutes. It also gives the voice assistant and AI agents one tool, weather (a detailed forecast for a place, and finding a place). The idea and the first version are from @Edenik (pull request 129).",
       "preview": "preview.jpg",
       "kind": "service",
-      "permissions": ["net.fetch"],
+      "permissions": [
+        "net.fetch"
+      ],
       "luna": [],
       "files": {
         "addon.json": "20b4cbc3fa80fe476c81055b75b632e3e3dd257a0a6e2ffd81c69f245896c60d",

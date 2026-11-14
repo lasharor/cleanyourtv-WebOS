@@ -374,7 +374,7 @@ function fit(d, dock) {
     bw = bx[2] - bx[0],
     bh = bx[3] - bx[1],
     s = i.style,
-    fullGlass = typeof document !== 'undefined' && document.body && document.body.getAttribute('data-theme') === 'liquid-glass';
+    fullGlass = typeof document !== 'undefined' && document.body && document.body.getAttribute('data-theme') === 'frosted-glass';
   if (dock && !fullGlass) {
     s.height = 'calc(' + 56 / bh + '% * var(--icon-s, 1) * var(--icon-s-dock, 1))';
     s.maxWidth = 'none';

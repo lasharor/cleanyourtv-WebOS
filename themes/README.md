@@ -79,15 +79,15 @@ A moonlit autumn landscape with a four-app glass dock, warm focus, app-colour ra
 
 Folder: [`moon/`](moon/)
 
-### Liquid Glass
+### Frosted Glass
 
 Translucent frosted glass surfaces with luminous edges over a deep dark aurora, a stacked greeting with inline time and date, and a sliding glass focus frame.
 
 The typeface is Outfit (weight 400), in the folder as `outfit.ttf` under the SIL Open Font License 1.1 (`OFL.txt`); the wallpaper (`aurora.jpg`) and styling come from CYTV themes under the MIT License (`LICENSE.txt`, see `CREDITS.txt`).
 
-[![Liquid Glass](liquid-glass/preview.jpg)](liquid-glass/preview.jpg)
+[![Frosted Glass](frosted-glass/preview.jpg)](frosted-glass/preview.jpg)
 
-Folder: [`liquid-glass/`](liquid-glass/)
+Folder: [`frosted-glass/`](frosted-glass/)
 
 ### Horizon
 

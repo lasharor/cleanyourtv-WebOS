@@ -1,4 +1,0 @@
-Original theme styling and procedural aurora wallpaper: CYTV themes, 2026, MIT.
-Design reference: frosted "liquid glass" interfaces. Independent styling built only from Theme API gradients, borders and shadows; not affiliated with Apple. No Apple screenshots, wallpapers or UI image assets are included.
-Browser preview captures depict reference application icons belonging to their respective owners and supplied by the project reference fixture. Original icon files are not distributed separately as replacement theme assets.
-Preview image: actual trusted Home browser renderer, No-root edition, captured with the Liquid Glass source theme and downsampled to 960x540.

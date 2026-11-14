@@ -198,7 +198,7 @@ function setFocus(nr, nc, first) {
   $('scroll').style.transform = sh ? 'translateY(' + sh + 'px)' : '';
 }
 
-/* Moon and Liquid Glass use one glass frame that travels between the dock and app rows. A single element makes the movement continuous instead of
+/* Moon and Frosted Glass use one glass frame that travels between the dock and app rows. A single element makes the movement continuous instead of
    fading one tile's ring out and another tile's ring in. It is visual only and never joins the remote's focus rows. */
 function moonTileFocus(e) {
   var sc = $('scroll'),
@@ -207,14 +207,14 @@ function moonTileFocus(e) {
     frame = $('tile-focus'),
     parent = e && e.parentNode,
     themeId = document.body.getAttribute('data-theme'),
-    isLiquidGlass = themeId === 'liquid-glass';
+    isFrosted = themeId === 'frosted-glass';
   if (!frame) {
     frame = document.createElement('div');
     frame.id = 'tile-focus';
     sc.appendChild(frame);
   }
   if (
-    (themeId !== 'moon' && !isLiquidGlass) ||
+    (themeId !== 'moon' && !isFrosted) ||
     !e ||
     (parent !== dock && parent !== grid) ||
     (e.classList && e.classList.contains('moving'))
@@ -237,7 +237,7 @@ function moonTileFocus(e) {
     x = er.left - sr.left - (ew - currentW) / 2,
     y = er.top - sr.top - (eh - currentH) / 2 + lift,
     radius = parseFloat(cs.borderRadius) || 0,
-    pad = isLiquidGlass ? 10 : 4;
+    pad = isFrosted ? 10 : 4;
   frame.style.width = Math.round(ew + pad * 2) + 'px';
   frame.style.height = Math.round(eh + pad * 2) + 'px';
   frame.style.borderRadius = Math.round(radius * scale + pad) + 'px';

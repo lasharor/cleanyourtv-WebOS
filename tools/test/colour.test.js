@@ -196,8 +196,8 @@ run(async () => {
   t = tileOf({ k: 'logo' });
   sandbox.fit(t, true);
   ok(t.cls.logo && !t.cls.fill, 'a transparent glyph icon is marked as logo so glass themes keep it translucent');
-  sandbox.document.body = { getAttribute: a => (a === 'data-theme' ? 'liquid-glass' : '') };
+  sandbox.document.body = { getAttribute: a => (a === 'data-theme' ? 'frosted-glass' : '') };
   t = tileOf({ k: 'pad', box: [0.0625, 0.0625, 0.9375, 0.9375] });
   sandbox.fit(t, true);
-  ok(t.cls.fill && /^114\.28/.test(t.st.height), 'a padded icon in the liquid-glass dock fills top to bottom like the grid');
+  ok(t.cls.fill && /^114\.28/.test(t.st.height), 'a padded icon in the frosted-glass dock fills top to bottom like the grid');
 });
