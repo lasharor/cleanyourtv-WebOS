@@ -213,12 +213,7 @@ function moonTileFocus(e) {
     frame.id = 'tile-focus';
     sc.appendChild(frame);
   }
-  if (
-    (themeId !== 'moon' && !isFrosted) ||
-    !e ||
-    (parent !== dock && parent !== grid) ||
-    (e.classList && e.classList.contains('moving'))
-  ) {
+  if ((themeId !== 'moon' && !isFrosted) || !e || (parent !== dock && parent !== grid) || (e.classList && e.classList.contains('moving'))) {
     frame.style.opacity = '0';
     return;
   }
