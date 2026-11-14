@@ -877,5 +877,6 @@
  "Logged out. This phone was removed from the TV’s list.": "Вы вышли. Этот телефон удалён из списка телевизора.",
  "The TV cannot be reached right now, so it cannot be told. This phone stops controlling the TV and everything it stored about the TV is deleted, but the TV keeps listing it until you remove it in the manager app. To use it again you pair with a new code.": "Телевизор сейчас недоступен, поэтому сообщить ему нельзя. Этот телефон перестанет управлять телевизором, а всё, что он сохранил о телевизоре, будет стёрто, но телевизор продолжит показывать его в списке, пока вы не удалите его в приложении управления. Чтобы снова им пользоваться, его нужно связать с телевизором по новому коду.",
  "The TV could not be reached: its list is left as it is": "Телевизор был недоступен: его список остаётся как есть",
- "Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.": "Вы вышли на этом телефоне. Телевизор был недоступен и всё ещё показывает этот телефон в списке: удалите его в приложении управления, Пульт на телефоне, Связанные телефоны."
+ "Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.": "Вы вышли на этом телефоне. Телевизор был недоступен и всё ещё показывает этот телефон в списке: удалите его в приложении управления, Пульт на телефоне, Связанные телефоны.",
+ "Clear sky": "Ясно"
 }

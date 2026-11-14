@@ -179,7 +179,7 @@ var HAW = {};
    greeting's second line, which read the last weather drawn) */
 var HAW_COND = {
   sunny: ['sun', 'Sunny', 0],
-  'clear-night': ['moon', 'Clear', 0],
+  'clear-night': ['moon', 'Clear sky', 0],
   partlycloudy: ['part', 'Partly cloudy', 2],
   cloudy: ['cloud', 'Cloudy', 3],
   fog: ['fog', 'Fog', 45],
