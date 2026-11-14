@@ -25,7 +25,7 @@ var M = null,
   MAX_TARGETS = 24;
 /* the WMO code as Open-Meteo gives it: the icon and the word (the words come in the labels) */
 function kind(code, day) {
-  if (code === 0) return [day === false ? 'moon' : 'sun', 'Clear'];
+  if (code === 0) return [day === false ? 'moon' : 'sun', 'Clear sky'];
   if (code <= 2) return ['part', 'Partly cloudy'];
   if (code === 3) return ['cloud', 'Cloudy'];
   if (code === 45 || code === 48) return ['fog', 'Fog'];

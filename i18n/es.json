@@ -916,5 +916,6 @@
  "Logged out. This phone was removed from the TV’s list.": "Sesión cerrada. Este móvil se quitó de la lista del televisor.",
  "The TV cannot be reached right now, so it cannot be told. This phone stops controlling the TV and everything it stored about the TV is deleted, but the TV keeps listing it until you remove it in the manager app. To use it again you pair with a new code.": "No se puede contactar con el televisor ahora, así que no se le puede avisar. Este móvil deja de controlar el televisor y se borra todo lo que guardó sobre él, pero el televisor lo sigue mostrando en su lista hasta que lo quites en la app de gestión. Para volver a usarlo, hay que vincularlo con un código nuevo.",
  "The TV could not be reached: its list is left as it is": "No se pudo contactar con el televisor: su lista se queda como está",
- "Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.": "Sesión cerrada en este móvil. No se pudo contactar con el televisor y aún lo muestra en su lista: quítalo en la app de gestión, Mando en el móvil, Móviles vinculados."
+ "Logged out on this phone. The TV could not be reached, so it still lists this phone: remove it in the manager app, Phone remote, Paired phones.": "Sesión cerrada en este móvil. No se pudo contactar con el televisor y aún lo muestra en su lista: quítalo en la app de gestión, Mando en el móvil, Móviles vinculados.",
+ "Clear sky": "Despejado"
 }

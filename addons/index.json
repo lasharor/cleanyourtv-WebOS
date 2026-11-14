@@ -154,7 +154,7 @@
       "files": {
         "addon.json": "31320aa0f93fdaf8b4991166e780e5f31e2160b547d2260ba9682a435b5bdae1",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "04ba0d7e5acdeee079ec04c960b0b96d8e4a03300e8256c670ed0094738a9794",
+        "page/index.html": "f894d0cf9d68e63a04a2ac7536b2b9f2af132e699cddad5d52665ac501136622",
         "page.js": "1bd6c98af5a81be3833d7cb14390a01ba336fdffa84025c3b65d133fb6cc88fa",
         "pwa/icon-180.png": "57040c5ec7e1dfc01918b2295df594dbc034b85df865140e27829873f02c4aff",
         "pwa/icon-512.png": "08849f214ae06fda96123a5e13ec69f9f30a6b7d13e776e20f21c669af3581e4",
@@ -248,7 +248,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "fd386986d0f276f598c7e45c0ce70a4e4b92aa8fc11d23f6f973c80572d59785",
+        "page/index.html": "4ac61e75e6725618389a626516aff2f7df710194b5f8d1ec3a64d5cb596a7c9a",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"
@@ -275,7 +275,7 @@
     {
       "id": "weather",
       "name": "Weather forecast",
-      "version": "1.5.0",
+      "version": "1.5.1",
       "description": "A weather card with the next hours and days, for any place on Home.",
       "about": "A card for Home that shows the weather at a city you choose on the TV (Customise > Weather) or on the phone page (Cards > Set up from your phone): now, with the temperature, feels like, humidity, wind, rain chance, UV, air pressure, air quality and sunrise and sunset; the next hours; and the next days. The card is one button for the remote: OK opens a drawer of the add-on with Now, Hours and Days. The weather comes from Open-Meteo (free, no key, no account): only the coordinates of the city you chose leave the TV, at most every 30 minutes. It also gives the voice assistant and AI agents one tool, weather (a detailed forecast for a place, and finding a place). The idea and the first version are from @Edenik (pull request 129).",
       "preview": "preview.jpg",
@@ -285,15 +285,15 @@
       ],
       "luna": [],
       "files": {
-        "addon.json": "20b4cbc3fa80fe476c81055b75b632e3e3dd257a0a6e2ffd81c69f245896c60d",
+        "addon.json": "caa13935f32aea5a53a645946082f40f2524fe5a4fb1017b501eb0dc90b20a36",
         "cards/forecast/card.css": "d10d6c560e1c7232c283dfe361e4e18699b38008394c2e29ed8ab0f57d474845",
         "cards/forecast/card.html": "e0f098d5a1290e48548e0b4d167f68ce2c8d62528a662512e21c1fa5196cca4a",
         "cards/forecast/card.js": "92322445f11e4945e1921a447116c4b7644d2f5d593d4863ec6ca42dc738a043",
         "cards/forecast/drawer.css": "6b8e5b6acbc5ef825dcb0ea3ec113c43449189701ffb5595c9d3254f29816ebd",
         "cards/forecast/drawer.html": "23d4a3120edfe92312fc55c95e1c5ec661f4eac1f3004026b4d532a5a3ea3eae",
-        "cards/forecast/drawer.js": "e81e72db80ffdada6d98a414eb735268a37c86d4afb1c3ef93fcc5c388030a11",
+        "cards/forecast/drawer.js": "addb8eb05d4b6716582c791f96be2dde60e884dce00597a5f8fd930b968787e6",
         "cards/forecast/preview.jpg": "8f718df9627e1a18ed7754cef71ad4cf5b81c101693dda6e39dcf461c415cbd1",
-        "service.js": "bf72c5ff25048bca78f958595a743cc3412c2d798b2772f4d5cd55f4cab9d2ee",
+        "service.js": "a4586ae4707b4ab2c472df4230af47b7a4a10ad373ddeebd214b5a0fda2697f3",
         "weather.js": "a0f80532ff74f5b272414c966297456b78bacb2a219639d31c11191d750c5821"
       }
     }
