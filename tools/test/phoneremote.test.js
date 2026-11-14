@@ -208,6 +208,12 @@ run(async () => {
             channels: [[7, 'bbc1', 'BBC One', 'News', launcher.logo, 'https://example/stream?key=secret', 'k7']],
           })
         );
+      if (req.url.indexOf('/api/live/epg?') === 0) {
+        const now = Math.floor(Date.now() / 1000);
+        return res
+          .writeHead(200, { 'content-type': 'application/json' })
+          .end(JSON.stringify({ bbc1: { now: [now - 600, now + 600, 'The Repair Shop', 'a workshop'] } }));
+      }
       if (req.url.indexOf('/api/logo/') === 0)
         return res.writeHead(200, { 'content-type': 'image/png' }).end(Buffer.from([137, 80, 78, 71]));
       if (req.url === '/api/launch' && req.method === 'POST') {
@@ -469,6 +475,11 @@ run(async () => {
   ok(
     lv.code === 200 && lv.text.indexOf('BBC One') > 0 && lv.text.indexOf('secret') < 0,
     'and the channels of the playlist, without the stream addresses that hold the provider key'
+  );
+  const lvNow = JSON.parse(lv.text).channels[0].now;
+  ok(
+    lvNow && lvNow.title === 'The Repair Shop' && lvNow.end > lvNow.start,
+    'with the programme on now from the guide, so the phone can show what is on and how far it is'
   );
   p.c.send(JSON.stringify({ t: 'liveSetup', n: 44 }));
   await sleep(250);

@@ -97,6 +97,8 @@ const request = (lib, u, opts, cb) => lib.request(Object.assign(withUrl(u), opts
 const PORT = 8799, // after the Jellyfin page (8798)
   IDLE_MS = 3 * 60 * 1000, // the pairing window closes this long after the manager last asked for it ...
   MAX_PAIR_MS = 30 * 60 * 1000, // ... and at the latest this long after it opened
+  GUIDE_MS = 60000, // the guide's answer is kept this long; the Live tab is opened again and again
+  GUIDE_MAX = 600, // channels asked about at most
   MAX_PHONES = 10,
   MAX_SOCKETS = 24,
   HELLO_MS = 5000, // a connection must say who it is within this time
@@ -625,17 +627,51 @@ function create(ctx, opts) {
       }));
   }
 
-  // the channels of the user's own playlist (Live TV), without the stream addresses: those hold the provider's key
+  // the channels of the user's own playlist (Live TV), without the stream addresses: those hold the provider's key, with the
+  // programme on now from the TV's own guide, so the page can show what is on under each channel's name
   async function liveList() {
     const r = await apiRequest('GET', '/api/live/channels');
-    return (Array.isArray(r.channels) ? r.channels : [])
-      .map(c => ({
+    const rows = (Array.isArray(r.channels) ? r.channels : []).filter(c => (parseInt(c[0], 10) || 0) > 0 && String(c[2] || ''));
+    const g = await guide(rows);
+    return rows.map(c => {
+      const out = {
         num: parseInt(c[0], 10) || 0,
         name: String(c[2] || ''),
         group: String(c[3] || ''),
         logo: /^https?:\/\//i.test(String(c[4] || '')), // the playlist's own logo address, fetched by the TV when the phone asks
-      }))
-      .filter(c => c.num > 0 && c.name);
+      };
+      const e = g[String(c[1] || '')];
+      if (e) out.now = { start: e[0], end: e[1], title: String(e[2] || '') };
+      return out;
+    });
+  }
+
+  // the guide's programme on now for those channels (Live TV answers 60 ids a request, and its answer is kept for a minute: the
+  // list is read again every time the phone opens the Live tab)
+  let guideAt = 0,
+    guideOut = {};
+  async function guide(rows) {
+    if (Date.now() - guideAt < GUIDE_MS) return guideOut;
+    const ids = rows
+      .map(c => String(c[1] || ''))
+      .filter(Boolean)
+      .slice(0, GUIDE_MAX);
+    const out = {};
+    for (let i = 0; i < ids.length; i += 60) {
+      let r = null;
+      try {
+        r = await apiRequest('GET', '/api/live/epg?ids=' + ids.slice(i, i + 60).map(encodeURIComponent).join(','));
+      } catch (_) {
+        return guideOut; // no guide (or Live TV is busy): the channels are shown without it
+      }
+      Object.keys(r || {}).forEach(k => {
+        const n = r[k] && r[k].now;
+        if (Array.isArray(n)) out[k] = n;
+      });
+    }
+    guideAt = Date.now();
+    guideOut = out;
+    return out;
   }
 
   // the logos already fetched (number -> {at, type, buf}, kept for an hour), so the page does not ask the provider again and again

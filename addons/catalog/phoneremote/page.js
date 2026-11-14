@@ -337,6 +337,8 @@ $('xins').onclick=function(){inputsOpen(false)};
 $('ins').onclick=function(e){if(e.target===$('ins'))inputsOpen(false)};
 /* placeholder tiles while a list comes in: the same boxes as a tile, with only their opacity moving */
 function skeleton(n){var out='',i;for(i=0;i<n;i++)out+='<div class=skel><i></i></div>';return out}
+/* how far the programme on now is, as a percentage of its length (the guide gives the times in seconds) */
+function pct(n){var a=+n.start||0,b=+n.end||0;if(!(b>a))return 0;return Math.max(0,Math.min(100,Math.round((Date.now()/1000-a)*100/(b-a))))}
 /* Live TV: the channels of the user's own playlist, as the TV has them; the tab is not there when there is no playlist */
 function loadLive(){
   var g=$('lvgrid');
@@ -360,7 +362,10 @@ function loadLive(){
       var icon = c.logo
         ? '<img class=lvi alt="" data-n="'+c.num+'" loading=lazy src="/api/logo/'+c.num+'?t='+encodeURIComponent(tok)+'">'
         : '<span class=lvn>'+c.num+'</span>';
-      return '<button data-ch="'+c.num+'">'+icon+'<span class=lvt>'+esc(c.name)+'</span></button>';
+      var now = c.now && c.now.title
+        ? '<span class=lvp>'+esc(c.now.title)+'</span><i class=lvb><b style="width:'+pct(c.now)+'%"></b></i>'
+        : '';
+      return '<button data-ch="'+c.num+'">'+icon+'<span class=lvw><span class=lvt>'+esc(c.name)+'</span>'+now+'</span></button>';
     }).join('');
     Array.prototype.forEach.call(g.querySelectorAll('.lvi'),function(im){
       /* a logo that cannot be fetched is replaced by the number, so the slot is never empty */
@@ -722,7 +727,7 @@ button{display:flex;align-items:center;justify-content:center;font-weight:700;fo
 /* a row of the screen's column, the same height as the 64px the script takes off: no fixed positioning to be swallowed by a phone's
    address bar, nothing can end up outside the visible area */
 .tabbar{flex:none;display:flex;border-top:1px solid #2e3140;background:#13141a;padding:0 12px 4px}.tabbar{padding-bottom:max(4px,env(safe-area-inset-bottom,0px))}
-.tab{flex:1;height:60px;border:0;border-radius:0;background:transparent;flex-direction:column;font-size:12px;font-weight:600;color:#a3a8b8}.tab .ic{margin:0 0 4px}.tab.on{background:transparent;color:#ff8a5b}
+.tab{flex:1;height:60px;min-width:0;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:0;border-radius:0;background:transparent;flex-direction:column;font-size:12px;font-weight:600;color:#a3a8b8}.tab .ic{margin:0 0 4px}.tab.on{background:transparent;color:#ff8a5b}
 .pad{position:relative;margin:18px auto 0;width:calc(100% - 40px);max-width:390px;height:calc(100vh - 380px);min-height:300px;max-height:432px;border-radius:28px;border:1px solid #2e3140;background:radial-gradient(circle at 50% 38%,#1c1f2a 0%,#14161d 62%,#111319 100%);overflow:hidden;touch-action:none;transition:border-color .12s,box-shadow .12s}
 .pad:before{content:'';position:absolute;left:0;right:0;top:0;bottom:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1.5px);background-size:22px 22px;background-position:11px 11px;pointer-events:none}
 .pad.on{border-color:rgba(255,138,91,.5);box-shadow:0 0 0 4px rgba(255,138,91,.08)}
@@ -750,6 +755,11 @@ button{display:flex;align-items:center;justify-content:center;font-weight:700;fo
 .lvgrid button{justify-content:flex-start;height:72px;border-radius:16px;background:#1a1c23;padding:0 12px;overflow:hidden}
 .lvgrid .lvi{flex:none;width:42px;height:42px;border-radius:10px;object-fit:contain;background:#232631;margin-right:10px}
 .lvgrid .lvt{flex:1;font:600 13px/1.3 ui-sans-serif,system-ui;color:#dde0ea;text-align:left;overflow:hidden;max-height:2.6em}
+.lvgrid .lvw{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.lvgrid .lvw .lvt{flex:none;max-height:1.3em;white-space:nowrap;text-overflow:ellipsis;max-width:100%}
+.lvgrid .lvp{font:500 11.5px/1.3 ui-sans-serif,system-ui;color:#9aa0b4;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:2px}
+.lvgrid .lvb{display:block;width:100%;height:3px;border-radius:2px;background:#2a2d38;margin-top:5px;overflow:hidden}
+.lvgrid .lvb b{display:block;height:100%;background:#ff8a5b}
 .lvgrid .lvn{flex:none;width:42px;height:42px;border-radius:10px;background:#232631;display:flex;align-items:center;justify-content:center;margin-right:10px;font:800 19px ui-monospace,monospace;color:#ff8a5b}
 .lvgrid p{grid-column:1/-1}
 .pstate{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:26px 12px 8px}
