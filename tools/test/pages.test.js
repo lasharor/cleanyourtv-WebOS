@@ -263,6 +263,50 @@ run(async () => {
       'the voice-acts switch needs any usable AI provider (a server of yours too), not only OpenRouter'
     );
   }
+  // the name of an add-on's page comes in English from its addon.json, like every text of the service: the page strip on Home and the
+  // add-on's top bar button show it in the TV's language (in Swedish the strip read Hem, Live TV, Phone remote)
+  {
+    const addonsSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'addons.js'), 'utf8'),
+      clockSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'clock.js'), 'utf8');
+    const pagerSrc = addonsSrc.slice(addonsSrc.indexOf('var addonBar'), addonsSrc.indexOf("window.addEventListener('message'"));
+    const barSrc = clockSrc.slice(clockSrc.indexOf('function barLabel'), clockSrc.indexOf('function clockOpts'));
+    const node = () => ({
+      style: { setProperty() {} },
+      kids: [],
+      setAttribute() {},
+      addEventListener() {},
+      appendChild(k) {
+        this.kids.push(k);
+      },
+    });
+    const strip = node();
+    const SV = { Home: 'Hem', 'Live TV': 'Live-TV', 'Phone remote': 'Telefonfjärrkontroll' };
+    const sb = {
+      $: id => (id === 'pagestrip' ? strip : null),
+      document: { createElement: node },
+      t: s => (Object.prototype.hasOwnProperty.call(SV, s) ? SV[s] : s),
+      svg: () => '',
+      themeStrip: null,
+      JSON,
+    };
+    vm.runInNewContext(pagerSrc + barSrc + ';this.P = PAGER;this.bar = barLabel;', sb);
+    sb.PAGES = [
+      { id: 'iptv', label: 'Live TV', icon: 'tv' },
+      { id: 'phoneremote', label: 'Phone remote', icon: 'devphone' },
+      { id: 'dnscheck', label: 'DNS', icon: 'globe' },
+    ];
+    sb.P.draw();
+    const names = strip.kids.map(e => e.kids[1].textContent).join(', ');
+    ok(
+      names === 'Hem, Live-TV, Telefonfjärrkontroll, DNS',
+      'the page strip shows the pages in the TV language, a name with no translation as it is: ' + names
+    );
+    ok(
+      sb.bar({ action: 'addon', addon: 'phoneremote', label: 'Phone remote' }) === 'Telefonfjärrkontroll',
+      "and so does an add-on's top bar button"
+    );
+    ok(sb.bar({ app: 'com.example.app', label: 'Phone remote' }) === 'Phone remote', 'a button you added keeps the name it has');
+  }
   const pages = [
     'app',
     'manager/app',

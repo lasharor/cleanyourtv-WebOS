@@ -9,7 +9,8 @@ function useLang(code) {
   LOC = loc;
   if (window.tick) tick(); /* the date in the new language at once, not at the next quarter minute */
 }
-/* a button's label: built-in buttons are translated, buttons you added keep the app's own name */
+/* a button's label: built-in buttons and the add-ons' buttons are translated (an add-on's name comes in English from its addon.json),
+   buttons you added keep the app's own name */
 function barLabel(o) {
   return o.action === 'inputs'
     ? t('Inputs')
@@ -25,7 +26,9 @@ function barLabel(o) {
               ? t('Customise')
               : o.action === 'live'
                 ? t('Live TV')
-                : o.label || '';
+                : o.action === 'addon'
+                  ? t(o.label || '')
+                  : o.label || '';
 }
 function clockOpts() {
   var c = cfg.clock,

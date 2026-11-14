@@ -103,7 +103,8 @@ var PAGER = {
         } else d.className = 'c' + i;
       } else d.textContent = String(i + 1);
       var l = document.createElement('span');
-      l.textContent = p.label;
+      /* an add-on's page name comes in English from its addon.json, like every text of the service; Home's is translated above */
+      l.textContent = p.id ? t(p.label) : p.label;
       e.appendChild(d);
       e.appendChild(l);
       /* the pointer of the Magic Remote (or a mouse) turns to the page it clicks, as its number or colour button does */
