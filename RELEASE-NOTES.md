@@ -1,8 +1,8 @@
 ## New
 
-- **The Frosted Glass theme** (Theme > Frosted Glass): translucent frosted-glass panels, pills and tiles with luminous edges over a deep dark aurora, in the Outfit typeface, with a stacked greeting, clock and date, and one glass focus frame that slides between the dock and the app rows. There are two places for cards, under the clock and at the side. An app icon that fills its tile fills it from top to bottom, while a transparent logo keeps the glass look. Cards of the Weather add-on that are shown in a frame no longer sit too high over the clock and date. See [Themes](themes.md). By @warleysr (#253).
+- **The Frosted Glass theme** (Theme > Frosted Glass): translucent frosted-glass panels, pills and tiles with luminous edges over a deep dark aurora, in the Outfit typeface, with a stacked greeting, clock and date, and one glass focus frame that slides between the dock and the app rows. There are two places for cards, under the clock and at the side. An app icon that fills its tile fills it from top to bottom, while a transparent logo keeps the glass look. In this theme, a card shown in a frame (the weather forecast, for example) sits where it should under the clock, not over it. See [Themes](themes.md). By @warleysr (#253).
 - **Brazilian Portuguese is complete.** The texts of everything added since the last update are translated (Bluetooth controllers, the phone remote's light mode, AI agents, Stocks and crypto, the screen saver, remapping a button for one app), so Portuguese is at 100 %. By @warleysr (#253).
-- **Catalan is up to date**, with the AI providers, voice and the newer screens translated. By @jmtalarn (#254).
+- **Catalan is up to date**, with the newer texts translated. By @jmtalarn (#254).
 
 ## Fixes
 
