@@ -591,6 +591,165 @@ body {
     transform calc(0.3s * var(--spd)) cubic-bezier(0.2, 0.85, 0.3, 1),
     opacity calc(0.15s * var(--spd)) linear;
 }
+/* Frosted Glass: specular translucent panels, frosted edges and a cool travelling glass focus frame. */
+[data-theme="frosted-glass"] #dock .tile.f:not(.moving)::before,
+[data-theme="frosted-glass"] #grid .tile.f:not(.moving)::before {
+  display: none;
+}
+[data-theme="frosted-glass"] #tile-focus {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 8;
+  display: block;
+  box-sizing: border-box;
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.34),
+    rgba(255, 255, 255, 0.04) 24%,
+    rgba(255, 255, 255, 0) 70%,
+    rgba(255, 255, 255, 0.14)
+  );
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.3),
+    0 0 24px 4px rgba(170, 200, 255, 0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform calc(0.28s * var(--spd)) cubic-bezier(0.22, 1, 0.36, 1),
+    opacity calc(0.15s * var(--spd)) linear;
+}
+[data-theme="frosted-glass"][data-clock="stack"] #clock {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: var(--clock-ai);
+  max-width: 1120px;
+}
+[data-theme="frosted-glass"][data-clock="stack"] #greet:empty,
+[data-theme="frosted-glass"][data-clock="stack"] #date:empty {
+  display: none;
+}
+[data-theme="frosted-glass"][data-clock="stack"] #greet {
+  flex: 0 0 100%;
+  display: flex;
+  justify-content: var(--clock-ai);
+  font-size: calc(22px * var(--fs) * var(--date-s));
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0 0 8px 2px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+[data-theme="frosted-glass"][data-clock="stack"] #time {
+  font-weight: 400;
+  line-height: 0.96;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+[data-theme="frosted-glass"][data-clock="stack"] #date {
+  display: flex;
+  align-items: center;
+  margin-top: 0;
+  margin-left: 18px;
+  padding-left: 18px;
+  border-left: 2px solid rgba(255, 255, 255, 0.25);
+  min-height: calc(34px * var(--date-s));
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+[data-theme="frosted-glass"] #name {
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+[data-theme="frosted-glass"]:not([data-bar="flat"]) .pill {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 45%, rgba(255, 255, 255, 0.05)), var(--pill-bg);
+  box-shadow:
+    inset 0 0 0 1px var(--pill-ring),
+    0 8px 24px rgba(0, 0, 0, 0.28);
+}
+[data-theme="frosted-glass"] .pill.f {
+  background: var(--acc);
+  color: var(--acc-ink);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.88),
+    0 8px 24px rgba(0, 0, 0, 0.28);
+}
+[data-theme="frosted-glass"] #dock {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.1));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+[data-theme="frosted-glass"] #dock .tile:not(.logo):not(.inp):not(.sys),
+[data-theme="frosted-glass"] #grid .tile:not(.logo):not(.inp):not(.sys) {
+  overflow: hidden;
+  background: rgb(var(--b));
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+[data-theme="frosted-glass"] #dock .tile:not(.logo):not(.inp):not(.sys) img,
+[data-theme="frosted-glass"] #grid .tile:not(.logo):not(.inp):not(.sys) img {
+  width: auto;
+  height: calc(100% * var(--icon-s, 1));
+  max-width: none;
+  max-height: none;
+}
+[data-theme="frosted-glass"] #dock .tile.logo,
+[data-theme="frosted-glass"] #grid .tile.logo {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 45%, rgba(255, 255, 255, 0.06)),
+    rgba(var(--b), 0.36);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34),
+    0 8px 20px rgba(0, 0, 0, 0.3);
+}
+[data-theme="frosted-glass"] .tile::after {
+  z-index: 2;
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 44%, rgba(255, 255, 255, 0.04));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+[data-theme="frosted-glass"] .tile.logo::after,
+[data-theme="frosted-glass"] .tile.inp::after,
+[data-theme="frosted-glass"] .tile.sys::after {
+  display: none;
+}
+[data-theme="frosted-glass"][data-cards="glass"] .card-weather,
+[data-theme="frosted-glass"][data-cards="glass"] .card-ha-weather,
+[data-theme="frosted-glass"][data-cards="glass"] .card-ha-entity,
+[data-theme="frosted-glass"][data-cards="glass"] .card-ha-entities,
+[data-theme="frosted-glass"][data-cards="glass"] .card-ha-camera {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.03) 48%, rgba(255, 255, 255, 0.08)),
+    rgba(18, 22, 42, 0.56);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.28),
+    0 10px 28px rgba(0, 0, 0, 0.35);
+}
+[data-theme="frosted-glass"][data-cards="glass"] .card-frame {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+[data-theme="frosted-glass"][data-cards="glass"] .card-frame > iframe,
+[data-theme="frosted-glass"][data-cards="glass"] .card-frame > .card-bw {
+  left: 0 !important;
+  top: 50% !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: translateY(-50%) !important;
+}
+[data-theme="frosted-glass"] #toast {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04) 48%, rgba(255, 255, 255, 0.08)),
+    rgba(22, 24, 40, 0.88);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.32),
+    0 14px 36px rgba(0, 0, 0, 0.45);
+}
 #grid .tile.sys {
   flex-direction: column;
 }
@@ -1351,6 +1510,7 @@ body.scenes-on {
   top: 16px !important;
   width: calc(100% - 36px) !important;
   height: calc(100% - 32px) !important;
+  transform: none !important;
 }
 [data-cards="glass"] .card-ha-entity.f {
   background-image: none !important;

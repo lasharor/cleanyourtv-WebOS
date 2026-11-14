@@ -51,6 +51,13 @@
    "preview": "couchtv/preview.jpg"
   },
   {
+   "id": "frosted-glass",
+   "name": "Frosted Glass",
+   "author": "CYTV themes",
+   "description": "Translucent frosted glass surfaces with luminous edges over a deep dark aurora.",
+   "preview": "frosted-glass/preview.jpg"
+  },
+  {
    "id": "horizon",
    "name": "Horizon",
    "author": "CleanYourTV",

@@ -1,0 +1,122 @@
+{
+  "name": "Frosted Glass",
+  "author": "CYTV themes",
+  "description": "Translucent frosted glass surfaces with luminous edges over a deep dark aurora.",
+  "extends": "classic",
+  "colors": {
+    "night": "#070a1a",
+    "panel": "#161828",
+    "ink": "#ffffff",
+    "accent": "#eef3ff",
+    "focus": "",
+    "pill": "#ffffff"
+  },
+  "surface": {
+    "pillAlpha": 0.14,
+    "pillRing": 0.45,
+    "pillRadius": 32,
+    "menuAlpha": 0.84,
+    "rowRadius": 24
+  },
+  "type": {
+    "font": "default",
+    "fontFile": "outfit.ttf",
+    "scale": 1
+  },
+  "clock": {
+    "show": true,
+    "date": true,
+    "greeting": true,
+    "layout": "stack",
+    "anchor": "top",
+    "align": "left",
+    "x": 96,
+    "y": 54,
+    "scale": 1.65,
+    "dateScale": 0.78,
+    "style": "text"
+  },
+  "bar": {
+    "show": true,
+    "style": "pill",
+    "labels": "auto",
+    "anchor": "top",
+    "align": "right",
+    "x": 96,
+    "y": 54,
+    "size": 60,
+    "gap": 12
+  },
+  "strip": {
+    "show": true,
+    "style": "pills",
+    "labels": "current",
+    "colors": "colour",
+    "anchor": "bottom",
+    "align": "center",
+    "y": 22,
+    "size": 0.9
+  },
+  "shelf": {
+    "show": true,
+    "align": "left",
+    "x": 128,
+    "y": 395,
+    "scale": 1.2,
+    "dockAlign": true
+  },
+  "dock": {
+    "anchor": "top",
+    "align": "center",
+    "y": 540,
+    "count": 4,
+    "w": 392,
+    "h": 210,
+    "gap": 32,
+    "radius": 28,
+    "panel": 0.16,
+    "panelPad": 32,
+    "tileAlpha": 1,
+    "tileFrost": 0,
+    "lift": 0,
+    "focusScale": 1.06,
+    "iconScale": 1
+  },
+  "grid": {
+    "mode": "below",
+    "align": "center",
+    "cols": 4,
+    "tileH": 210,
+    "gapX": 32,
+    "gapY": 36,
+    "radius": 28,
+    "x": 128,
+    "width": 1664,
+    "clipTop": 495,
+    "focusScale": 1.06,
+    "iconScale": 1
+  },
+  "tile": {
+    "gloss": 0.35,
+    "border": 0.42,
+    "ringWidth": 0,
+    "ringOffset": 10,
+    "iconScale": 1
+  },
+  "effects": {
+    "glow": 0.35,
+    "focusIcon": false,
+    "glowColor": "accent",
+    "speed": 1,
+    "wallpaper": "aurora.jpg",
+    "wallpaperDim": 0.05,
+    "scenes": "off"
+  },
+  "cards": {
+    "style": "glass"
+  },
+  "slots": [
+    { "id": "under-clock", "anchor": "top", "align": "left", "x": 96, "y": 205, "w": 680, "h": 175 },
+    { "id": "side", "anchor": "top", "align": "right", "x": 96, "y": 155, "w": 520, "h": 225 }
+  ]
+}
