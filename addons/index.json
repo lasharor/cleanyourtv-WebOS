@@ -171,9 +171,9 @@
     {
       "id": "seasons",
       "name": "Seasons",
-      "version": "1.0.0",
-      "description": "Photos for the Couch scenes that follow the calendar: Christmas, New Year and the four seasons.",
-      "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. South of the equator the seasons turn around; the tulip fields of spring show in the Netherlands and Belgium. The photos are from Unsplash (free to use), the photographer shows in the corner. About 8 MB is kept on the TV, so every set shows at least two photos without network.",
+      "version": "1.1.0",
+      "description": "Photos for the Couch scenes that follow the calendar and the hour: Christmas, New Year, the four seasons, and the evening.",
+      "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. While the sun is down, a time of year that has photos of the evening shows those, so the photo is of the hour it is: winter has them, the other seasons keep their photos of the day for now. South of the equator the seasons turn around. The photos are from Unsplash (free to use), the photographer shows in the corner.",
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
@@ -181,9 +181,9 @@
       ],
       "luna": [],
       "files": {
-        "addon.json": "d50da41d5dbc0548a22338ff21e1e7d22791173a86b146682308dc97ff568b63",
-        "photos.js": "81051e7844fc059e22cb12b4e9c1df339fff4ade4640ffcff46e3987a11ad91b",
-        "service.js": "c9fd51d3f3d398cce347d729e22b801bb8401886082215ca7f76b18069b90d50"
+        "addon.json": "471ca960cdb69bf6e0789cf703ef7d08172b57f1075c0f542b25edb0de3e223a",
+        "photos.js": "a50ba247acc0bdf865e7d1eb2e8209c6864292f48f187c56fb4d0b7837a3e56f",
+        "service.js": "71a28eb04e57b280309b03a3ba49a76ffb514e4007d07d7bd4d9ea71bb4702db"
       }
     },
     {

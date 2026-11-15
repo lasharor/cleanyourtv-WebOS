@@ -60,6 +60,13 @@ function wthSvg(k) {
 function wthText(w) {
   return w && w.now ? w.now.temp + '° · ' + wthKind(w.now.code, w.now.day)[1] : '';
 }
+/* the place of a weather card (the first one that was asked for), for the sun's hours in daynight.js: {lat, lon} or null */
+function wxPlace() {
+  var k = Object.keys(WX)[0];
+  if (!k) return null;
+  var p = k.split(',');
+  return isFinite(+p[0]) && isFinite(+p[1]) ? { lat: +p[0], lon: +p[1] } : null;
+}
 /* the weather of a card's place: what is known now (or null), asking the service when it is older than ten minutes */
 function wthFor(o) {
   var lat = +o.lat,

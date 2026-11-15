@@ -2,11 +2,13 @@
 // add-on that provides "scenes" (docs/development/addons.md) can bring other photos for them, chosen by the add-on (the Seasons add-on:
 // by the date and the TV's country). Nothing happens without such an add-on: the launcher asks, gets an empty list, and keeps the
 // five landscapes. The photos are files the add-on keeps on the TV; the launcher loads them from here, so it needs no network for them.
-//   POST /api/scenes {cc}                      the scenes of the first add-on that has some: {addon, scenes: [{id, credit, darkSky}]}
-//                                              (cc: the TV's country, two or three letters, as the launcher reads it)
+//   POST /api/scenes {cc, day}                 the scenes of the first add-on that has some: {addon, scenes: [{id, credit, darkSky}]}
+//                                              (cc: the TV's country, two or three letters, as the launcher reads it; day: false while
+//                                              the sun is down, so an add-on can answer with photos of the evening)
 //   GET  /api/scenes/photo/<add-on>/<id>/<image|glass>   a photo, or its blurred copy for the glass clock and the glass cards
 // The object `scenes` on the module an add-on returns from create():
-//   list({cc})        -> [{id, credit, darkSky}] (or a promise of it): the scenes to show now, at most 20; id: letters, digits, - _ .
+//   list({cc, day})   -> [{id, credit, darkSky}] (or a promise of it): the scenes to show now, at most 20; id: letters, digits, - _ .
+//                     day is false while the sun is down where the TV is; an add-on that does not care simply ignores it
 //   file(id, kind)    -> the absolute path of the photo (kind "image") or of its blurred copy ("glass"): a JPEG, PNG or WebP, or ''
 const fs = require('fs'),
   path = require('path');
@@ -38,8 +40,8 @@ function create(ctx) {
       : [];
   };
 
-  async function list(cc) {
-    const opts = { cc: /^[A-Z]{2,3}$/.test(cc || '') ? cc : '' };
+  async function list(cc, day) {
+    const opts = { cc: /^[A-Z]{2,3}$/.test(cc || '') ? cc : '', day: day !== false };
     for (const s of sources()) {
       let l = [];
       try {
@@ -87,7 +89,7 @@ function create(ctx) {
     }
     if (u === '/api/scenes' && req.method === 'POST') {
       const b = await body(req);
-      return web.json(res, await list(String((b && b.cc) || '').toUpperCase()));
+      return web.json(res, await list(String((b && b.cc) || '').toUpperCase(), !(b && b.day === false)));
     }
     return web.notFound(res);
   }

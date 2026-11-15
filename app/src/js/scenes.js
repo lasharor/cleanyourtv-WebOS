@@ -7,19 +7,28 @@
    Without scenes the glass clock stands alone with a white frosted fill.
    Custom scenes (effects.scenes "custom"): a theme brings its own images; they are served by the helper at /api/theme/scene/<id>/<file>.
    Per-scene clock and date position are set as CSS variables on each scene element; .s-custom in home.css reads them.
+   Day and evening: the launcher works out whether the sun is down (daynight.js) and says so in the request, so an add-on can answer
+   with photos of the evening instead of photos of the day. It asks again as soon as the sun goes down or comes up. The photos of such
+   an add-on are not dimmed after 10 pm (body.nightpix), because an evening photo is already an evening photo.
+   Following the sun (effects.sceneSun): the five landscapes are not shown in turn but by the part of the day they belong to, Dawn in
+   the morning twilight, Waterline and Fog through the day, Golden hour in the evening and Night after dark; the ones of the part it is
+   now still take turns among themselves. After couch-tv's "Follow the sun" (MIT).
    Scenes of an add-on (with the couch scenes): an add-on that provides "scenes" (the Seasons add-on, helper/scenes.js) can bring other
    photos for the couch scenes. The launcher asks POST /api/scenes {cc} (the TV's country) when the theme starts the couch scenes and
    every 30 minutes; a list comes back only when such an add-on runs, and then its photos take the place of the five landscapes, drawn
    as custom scenes (no cut-out, a darker shade at the top) with the photographer in the bottom corner. Without one nothing changes. */
 var SCENES = (function () {
+  /* part: which part of the day each landscape belongs to, for a theme that follows the sun (effects.sceneSun) */
   var COUCH = [
-    { id: 'night', fg: true },
-    { id: 'golden', fg: true },
-    { id: 'water', fg: false, water: 0.55 } /* the clock sits on the water: under the line a blurred reflection */,
-    { id: 'fog', fg: true },
-    { id: 'dawn', fg: true },
+    { id: 'night', fg: true, part: 'dark' },
+    { id: 'golden', fg: true, part: 'evening' },
+    { id: 'water', fg: false, water: 0.55, part: 'day' } /* the clock sits on the water: under the line a blurred reflection */,
+    { id: 'fog', fg: true, part: 'day' },
+    { id: 'dawn', fg: true, part: 'dawn' },
   ];
-  var addonLib = null /* the scenes of an add-on, as custom scenes, or null */,
+  var sunScenes = false /* the theme's effects.sceneSun: the landscape follows the sun */,
+    wasDark = null /* whether the sun was down when the add-on was last asked */,
+    addonLib = null /* the scenes of an add-on, as custom scenes, or null */,
     addonKey = '',
     addonAt = 0,
     lastTh = null;
@@ -37,11 +46,26 @@ var SCENES = (function () {
     }
     return String(c).toUpperCase();
   }
-  /* the scenes of an add-on: asked when the couch scenes start and every 30 minutes (sooner while an add-on has none ready yet) */
+  /* the place of the weather card, for the sun's own hours; {lat: NaN, lon: NaN} without one */
+  function place() {
+    var p = typeof wxPlace === 'function' ? wxPlace() : null;
+    return p || { lat: NaN, lon: NaN };
+  }
+  /* is the sun down? (daynight.js: the weather of the place of a weather card, else the sun from its coordinates, else the clock) */
+  function night() {
+    return nightNow({
+      date: new Date(),
+      weatherDay: WX_LAST && WX_LAST.now && typeof WX_LAST.now.day === 'boolean' ? WX_LAST.now.day : null,
+      lat: place().lat,
+      lon: place().lon,
+    });
+  }
+  /* the scenes of an add-on: asked when the couch scenes start and every 30 minutes (sooner while an add-on has none ready yet), and
+     again as soon as the sun goes down or comes up, so photos of the evening take the place of the photos of the day */
   function askAddon(force) {
     if (!force && Date.now() - addonAt < (addonKey === 'none' ? 60000 : 1800000)) return;
     addonAt = Date.now();
-    api('/api/scenes', { cc: country() }).then(
+    api('/api/scenes', { cc: country(), day: !night() }).then(
       function (r) {
         var l =
           r && r.addon && r.scenes && r.scenes.length
@@ -56,6 +80,8 @@ var SCENES = (function () {
                 };
               })
             : null;
+        /* an add-on's photos of the evening carry the hour themselves, so the scene is not dimmed on top of them */
+        document.body.classList.toggle('nightpix', !!l && night());
         var k = l ? JSON.stringify(l) : 'none';
         if (k === addonKey) return;
         addonKey = k;
@@ -213,18 +239,38 @@ var SCENES = (function () {
     }, 700);
     /* after the fade: the old scene is no longer drawn, the next one gets ready */
     setTimeout(function () {
-      var next = (cur + 1) % lib.length;
+      var next = nextFrom(cur);
       els.forEach(function (el, k) {
         if (k !== cur && k !== next) el.classList.remove('ready', 'on');
       });
       ready(next);
     }, 2000);
   }
+  /* the scene after this one. With a theme that follows the sun, the landscapes of another part of the day are passed over, and the
+     ones of this part take turns among themselves as they always did; nothing matches (a theme's own scenes, an add-on's photos,
+     which follow the sun themselves) and they all take turns */
+  function nextFrom(i) {
+    if (sunScenes && lib === COUCH) {
+      var want = dayPart({
+        date: new Date(),
+        weatherDay: WX_LAST && WX_LAST.now && typeof WX_LAST.now.day === 'boolean' ? WX_LAST.now.day : null,
+        lat: place().lat,
+        lon: place().lon,
+      });
+      var pool = [];
+      for (var k = 0; k < lib.length; k++) if (lib[k].part === want) pool.push(k);
+      if (pool.length) {
+        for (var j = 0; j < pool.length; j++) if (pool[j] > i) return pool[j];
+        return pool[0];
+      }
+    }
+    return (i + 1) % lib.length;
+  }
   function arm() {
     clearInterval(timer);
     if (on)
       timer = setInterval(function () {
-        show((cur + 1) % lib.length);
+        show(nextFrom(cur));
       }, secs * 1000);
   }
   /* the theme decides: scenes on or off, how long each stays, the glass clock with or without them */
@@ -234,6 +280,7 @@ var SCENES = (function () {
     var wantCustom = !!(th && th.scenes && th.scenes.set === 'custom' && th.scenes.lib && th.scenes.lib.length);
     var want = wantCouch || wantCustom;
     secs = (th && th.scenes && th.scenes.secs) || 20;
+    sunScenes = !!(th && th.scenes && th.scenes.sun);
 
     if (wantCouch) askAddon(false);
     var wantAddon = wantCouch && !!addonLib;
@@ -288,6 +335,15 @@ var SCENES = (function () {
   function tick() {
     var h = new Date().getHours();
     document.body.classList.toggle('late', h >= 22 || h < 6);
+    var dark = night();
+    if (dark !== wasDark) {
+      wasDark = dark;
+      if (on && lastTh && lastTh.scenes && lastTh.scenes.set === 'couch') askAddon(true); /* other photos for the other half of the day */
+    }
+    if (on && sunScenes && lib === COUCH) {
+      var want = nextFrom(cur);
+      if (lib[cur].part !== lib[want].part) show(want); /* the sun moved on to another part of the day */
+    }
     if (on && lastTh && lastTh.scenes && lastTh.scenes.set === 'couch') askAddon(false);
     if (!glassOn()) return;
     var x = hm();

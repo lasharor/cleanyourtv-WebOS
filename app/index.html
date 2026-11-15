@@ -1298,6 +1298,10 @@ body.scenes-on {
 .late .scene .late {
   opacity: 0.28;
 }
+/* an add-on's own photos of the evening (scenes.js): they are of the evening already, so they are not dimmed on top */
+.late.nightpix .scene .late {
+  opacity: 0;
+}
 .gclock {
   position: absolute;
   left: 0;
@@ -2982,6 +2986,90 @@ function paint(d, col) {
   d.style.setProperty('--c', col.c.join(','));
   d.style.setProperty('--b', col.b.join(','));
 }
+/* ---------- Day or night, for the scenes behind Home (scenes.js) ----------
+   The scenes dimmed from 10 pm by the clock alone, so in December the sun was long down while the photo still stood in full daylight,
+   and in June the dimming came on while it was still light outside. The same photo should simply look like the hour it is.
+   What is asked, in this order, and why: the weather of the place the user picked for a weather card already says whether the sun is up
+   there (Open-Meteo's is_day); it costs nothing and is already on the TV. Without it, the sun is worked out from that place's
+   coordinates, which needs no network. Without a place, the clock decides, as it did before. A TV that knows nothing new therefore keeps
+   exactly its old behaviour.
+   Only function declarations here, so the file can be read in a test without a browser (as colour.js is). */
+
+/* The hours the sun rises and sets, in hours of local time on that date, for a place; null above the polar circles on a day without a
+   sunrise or a sunset, and for coordinates that are not a place. The hours are of that date and can fall outside 0 to 24 when the place
+   is far from the TV's own time zone (a weather card for another part of the world), so read them around the clock. The usual
+   astronomy: the day of the year gives the sun's declination
+   and the equation of time, the latitude gives the hour angle of the horizon. It is a few minutes out at most, which is enough to dim a
+   photograph by. */
+function sunHours(date, lat, lon) {
+  if (!isFinite(lat) || !isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  var rad = Math.PI / 180;
+  var start = Date.UTC(date.getFullYear(), 0, 0);
+  var day = Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - start) / 86400000);
+  var g = (357.5291 + 0.98560028 * (day - 1)) * rad; /* the sun's mean anomaly */
+  var l = 280.459 * rad + g + 1.915 * rad * Math.sin(g) + 0.02 * rad * Math.sin(2 * g); /* its place along the ecliptic */
+  var dec = Math.asin(Math.sin(23.44 * rad) * Math.sin(l)); /* declination */
+  /* the equation of time, in hours: the difference between the clock's sun and the real one */
+  var eot = (-7.655 * Math.sin(g) + 9.873 * Math.sin(2 * l + 3.588 * rad)) / 60;
+  var cos = (Math.sin(-0.833 * rad) - Math.sin(lat * rad) * Math.sin(dec)) / (Math.cos(lat * rad) * Math.cos(dec));
+  if (cos > 1 || cos < -1) return null; /* the sun does not cross the horizon on this date */
+  var half = Math.acos(cos) / rad / 15; /* half the day, in hours */
+  var noon = 12 - lon / 15 - eot + -date.getTimezoneOffset() / 60; /* the sun at its highest, in the TV's own time */
+  return { rise: noon - half, set: noon + half };
+}
+
+/* Where the sun stands now: {alt: how high it is in degrees, below zero when it is down; morning: true before its highest point}, or
+   null for coordinates that are not a place. The scenes use it to pick the one that belongs to the hour. */
+function sunPos(date, lat, lon) {
+  if (!isFinite(lat) || !isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  var rad = Math.PI / 180;
+  var start = Date.UTC(date.getFullYear(), 0, 0);
+  var day = Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - start) / 86400000);
+  var g = (357.5291 + 0.98560028 * (day - 1)) * rad;
+  var l = 280.459 * rad + g + 1.915 * rad * Math.sin(g) + 0.02 * rad * Math.sin(2 * g);
+  var dec = Math.asin(Math.sin(23.44 * rad) * Math.sin(l));
+  var eot = (-7.655 * Math.sin(g) + 9.873 * Math.sin(2 * l + 3.588 * rad)) / 60;
+  var utc = (date.getHours() + date.getMinutes() / 60 + date.getTimezoneOffset() / 60 + 24) % 24;
+  var solar = (utc + lon / 15 + eot + 24) % 24; /* the sun's own time at that place */
+  var hourAngle = (solar - 12) * 15 * rad;
+  var alt = Math.asin(Math.sin(lat * rad) * Math.sin(dec) + Math.cos(lat * rad) * Math.cos(dec) * Math.cos(hourAngle)) / rad;
+  return { alt: alt, morning: hourAngle < 0 };
+}
+
+/* Which part of the day it is, for the scene that belongs to it: 'day' while the sun is well up, 'dawn' and 'evening' around sunrise
+   and sunset, 'dark' once it is down. o is as nightNow's. Without a place the clock gives the four parts, with the same hours the
+   launcher has always used for its dark hours. */
+function dayPart(o) {
+  var date = (o && o.date) || new Date();
+  var pos = o && sunPos(date, +o.lat, +o.lon);
+  if (pos) {
+    if (pos.alt >= 8) return 'day';
+    if (pos.alt >= -10) return pos.morning ? 'dawn' : 'evening'; /* from the blue hour on: the twilight scenes belong here */
+    return 'dark';
+  }
+  var h = date.getHours() + date.getMinutes() / 60;
+  if (o && o.weatherDay === false) return 'dark';
+  if (h >= 22 || h < 6) return 'dark';
+  if (h < 8) return 'dawn';
+  if (h < 19) return 'day';
+  return 'evening';
+}
+
+/* Is it night now? o: {date, weatherDay (true, false or null: what the weather says), lat, lon (the place of the weather card, or
+   nothing)}. The clock's own rule (dark from 10 pm to 6 am) is the last word, so this never answers nothing. */
+function nightNow(o) {
+  var date = (o && o.date) || new Date();
+  if (o && (o.weatherDay === true || o.weatherDay === false)) return !o.weatherDay;
+  var sun = o && sunHours(date, +o.lat, +o.lon);
+  if (sun) {
+    var hour = date.getHours() + date.getMinutes() / 60;
+    var rise = ((sun.rise % 24) + 24) % 24,
+      set = ((sun.set % 24) + 24) % 24; /* read around the clock: a place far from this time zone can rise or set past midnight */
+    return rise <= set ? hour < rise || hour >= set : hour >= set && hour < rise;
+  }
+  var h = date.getHours();
+  return h >= 22 || h < 6;
+}
 /* ---------- tiles (built once per app, reused across rebuilds) ---------- */
 function tile(a) {
   /* a new custom icon (iv, the App icons add-on) or a new way to show it (it: Full tile): build the tile again, with the colour of the new picture */
@@ -3445,6 +3533,13 @@ function wthSvg(k) {
 }
 function wthText(w) {
   return w && w.now ? w.now.temp + '° · ' + wthKind(w.now.code, w.now.day)[1] : '';
+}
+/* the place of a weather card (the first one that was asked for), for the sun's hours in daynight.js: {lat, lon} or null */
+function wxPlace() {
+  var k = Object.keys(WX)[0];
+  if (!k) return null;
+  var p = k.split(',');
+  return isFinite(+p[0]) && isFinite(+p[1]) ? { lat: +p[0], lon: +p[1] } : null;
 }
 /* the weather of a card's place: what is known now (or null), asking the service when it is older than ten minutes */
 function wthFor(o) {
@@ -4896,19 +4991,28 @@ function csFind(type, q) {
    Without scenes the glass clock stands alone with a white frosted fill.
    Custom scenes (effects.scenes "custom"): a theme brings its own images; they are served by the helper at /api/theme/scene/<id>/<file>.
    Per-scene clock and date position are set as CSS variables on each scene element; .s-custom in home.css reads them.
+   Day and evening: the launcher works out whether the sun is down (daynight.js) and says so in the request, so an add-on can answer
+   with photos of the evening instead of photos of the day. It asks again as soon as the sun goes down or comes up. The photos of such
+   an add-on are not dimmed after 10 pm (body.nightpix), because an evening photo is already an evening photo.
+   Following the sun (effects.sceneSun): the five landscapes are not shown in turn but by the part of the day they belong to, Dawn in
+   the morning twilight, Waterline and Fog through the day, Golden hour in the evening and Night after dark; the ones of the part it is
+   now still take turns among themselves. After couch-tv's "Follow the sun" (MIT).
    Scenes of an add-on (with the couch scenes): an add-on that provides "scenes" (the Seasons add-on, helper/scenes.js) can bring other
    photos for the couch scenes. The launcher asks POST /api/scenes {cc} (the TV's country) when the theme starts the couch scenes and
    every 30 minutes; a list comes back only when such an add-on runs, and then its photos take the place of the five landscapes, drawn
    as custom scenes (no cut-out, a darker shade at the top) with the photographer in the bottom corner. Without one nothing changes. */
 var SCENES = (function () {
+  /* part: which part of the day each landscape belongs to, for a theme that follows the sun (effects.sceneSun) */
   var COUCH = [
-    { id: 'night', fg: true },
-    { id: 'golden', fg: true },
-    { id: 'water', fg: false, water: 0.55 } /* the clock sits on the water: under the line a blurred reflection */,
-    { id: 'fog', fg: true },
-    { id: 'dawn', fg: true },
+    { id: 'night', fg: true, part: 'dark' },
+    { id: 'golden', fg: true, part: 'evening' },
+    { id: 'water', fg: false, water: 0.55, part: 'day' } /* the clock sits on the water: under the line a blurred reflection */,
+    { id: 'fog', fg: true, part: 'day' },
+    { id: 'dawn', fg: true, part: 'dawn' },
   ];
-  var addonLib = null /* the scenes of an add-on, as custom scenes, or null */,
+  var sunScenes = false /* the theme's effects.sceneSun: the landscape follows the sun */,
+    wasDark = null /* whether the sun was down when the add-on was last asked */,
+    addonLib = null /* the scenes of an add-on, as custom scenes, or null */,
     addonKey = '',
     addonAt = 0,
     lastTh = null;
@@ -4926,11 +5030,26 @@ var SCENES = (function () {
     }
     return String(c).toUpperCase();
   }
-  /* the scenes of an add-on: asked when the couch scenes start and every 30 minutes (sooner while an add-on has none ready yet) */
+  /* the place of the weather card, for the sun's own hours; {lat: NaN, lon: NaN} without one */
+  function place() {
+    var p = typeof wxPlace === 'function' ? wxPlace() : null;
+    return p || { lat: NaN, lon: NaN };
+  }
+  /* is the sun down? (daynight.js: the weather of the place of a weather card, else the sun from its coordinates, else the clock) */
+  function night() {
+    return nightNow({
+      date: new Date(),
+      weatherDay: WX_LAST && WX_LAST.now && typeof WX_LAST.now.day === 'boolean' ? WX_LAST.now.day : null,
+      lat: place().lat,
+      lon: place().lon,
+    });
+  }
+  /* the scenes of an add-on: asked when the couch scenes start and every 30 minutes (sooner while an add-on has none ready yet), and
+     again as soon as the sun goes down or comes up, so photos of the evening take the place of the photos of the day */
   function askAddon(force) {
     if (!force && Date.now() - addonAt < (addonKey === 'none' ? 60000 : 1800000)) return;
     addonAt = Date.now();
-    api('/api/scenes', { cc: country() }).then(
+    api('/api/scenes', { cc: country(), day: !night() }).then(
       function (r) {
         var l =
           r && r.addon && r.scenes && r.scenes.length
@@ -4945,6 +5064,8 @@ var SCENES = (function () {
                 };
               })
             : null;
+        /* an add-on's photos of the evening carry the hour themselves, so the scene is not dimmed on top of them */
+        document.body.classList.toggle('nightpix', !!l && night());
         var k = l ? JSON.stringify(l) : 'none';
         if (k === addonKey) return;
         addonKey = k;
@@ -5102,18 +5223,38 @@ var SCENES = (function () {
     }, 700);
     /* after the fade: the old scene is no longer drawn, the next one gets ready */
     setTimeout(function () {
-      var next = (cur + 1) % lib.length;
+      var next = nextFrom(cur);
       els.forEach(function (el, k) {
         if (k !== cur && k !== next) el.classList.remove('ready', 'on');
       });
       ready(next);
     }, 2000);
   }
+  /* the scene after this one. With a theme that follows the sun, the landscapes of another part of the day are passed over, and the
+     ones of this part take turns among themselves as they always did; nothing matches (a theme's own scenes, an add-on's photos,
+     which follow the sun themselves) and they all take turns */
+  function nextFrom(i) {
+    if (sunScenes && lib === COUCH) {
+      var want = dayPart({
+        date: new Date(),
+        weatherDay: WX_LAST && WX_LAST.now && typeof WX_LAST.now.day === 'boolean' ? WX_LAST.now.day : null,
+        lat: place().lat,
+        lon: place().lon,
+      });
+      var pool = [];
+      for (var k = 0; k < lib.length; k++) if (lib[k].part === want) pool.push(k);
+      if (pool.length) {
+        for (var j = 0; j < pool.length; j++) if (pool[j] > i) return pool[j];
+        return pool[0];
+      }
+    }
+    return (i + 1) % lib.length;
+  }
   function arm() {
     clearInterval(timer);
     if (on)
       timer = setInterval(function () {
-        show((cur + 1) % lib.length);
+        show(nextFrom(cur));
       }, secs * 1000);
   }
   /* the theme decides: scenes on or off, how long each stays, the glass clock with or without them */
@@ -5123,6 +5264,7 @@ var SCENES = (function () {
     var wantCustom = !!(th && th.scenes && th.scenes.set === 'custom' && th.scenes.lib && th.scenes.lib.length);
     var want = wantCouch || wantCustom;
     secs = (th && th.scenes && th.scenes.secs) || 20;
+    sunScenes = !!(th && th.scenes && th.scenes.sun);
 
     if (wantCouch) askAddon(false);
     var wantAddon = wantCouch && !!addonLib;
@@ -5177,6 +5319,15 @@ var SCENES = (function () {
   function tick() {
     var h = new Date().getHours();
     document.body.classList.toggle('late', h >= 22 || h < 6);
+    var dark = night();
+    if (dark !== wasDark) {
+      wasDark = dark;
+      if (on && lastTh && lastTh.scenes && lastTh.scenes.set === 'couch') askAddon(true); /* other photos for the other half of the day */
+    }
+    if (on && sunScenes && lib === COUCH) {
+      var want = nextFrom(cur);
+      if (lib[cur].part !== lib[want].part) show(want); /* the sun moved on to another part of the day */
+    }
     if (on && lastTh && lastTh.scenes && lastTh.scenes.set === 'couch') askAddon(false);
     if (!glassOn()) return;
     var x = hm();

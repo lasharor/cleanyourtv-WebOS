@@ -83,9 +83,9 @@ run(async () => {
     l.length === 5 && l[0].id === 'autumn-1' && l[0].credit === 'Federica Galli / Unsplash' && l.every(x => typeof x.darkSky === 'boolean'),
     'the five photos of autumn with their photographer: ' + l.map(x => x.id).join(' ')
   );
-  // autumn's five, and two of each of the other five sets (spring: the first two, never the tulips)
+  // autumn's five, and two of each of the other six sets (spring: the first two, never the tulips)
   ok(
-    files().length === (5 + 5 * 2) * 2,
+    files().length === (5 + 6 * 2) * 2,
     'the set in use and the first two of every set are kept, each with its blurred copy: ' + files().length
   );
   ok(
@@ -113,6 +113,31 @@ run(async () => {
     S.scenes.list({ cc: 'NLD' }).length === 5 && files().indexOf('autumn-3.jpg') < 0 && files().indexOf('autumn-1.jpg') >= 0,
     'then all five, and only the first two of autumn stay'
   );
+
+  // the evening of a time of year that has its own photos: the launcher says the sun is down, and those take the place of the day's
+  today = new Date(2026, 1, 20); // winter
+  await S.sync();
+  const byDay = S.scenes.list({ cc: 'NLD', day: true }),
+    byNight = S.scenes.list({ cc: 'NLD', day: false });
+  ok(
+    byDay.length === 5 && byDay.every(x => /^winter-\d$/.test(x.id)),
+    'in February the photos of winter show while the sun is up: ' + byDay.map(x => x.id).join(' ')
+  );
+  ok(
+    byNight.length === 5 && byNight.every(x => /^winternight-\d$/.test(x.id)) && byNight[0].credit === 'Martin Woortman / Unsplash',
+    'and the photos of the evening once it is down: ' + byNight.map(x => x.id).join(' ')
+  );
+  ok(
+    S.scenes.list({ cc: 'NLD' }).length === 5 && S.scenes.list({ cc: 'NLD' })[0].id === 'winter-1',
+    'a launcher that says nothing about the hour keeps the photos of the day, as before'
+  );
+  today = new Date(2026, 6, 10); // summer: no photos of the evening yet
+  await S.sync();
+  ok(
+    S.scenes.list({ cc: 'NLD', day: false }).every(x => /^summer-\d$/.test(x.id)),
+    'a time of year without photos of the evening keeps its own, whatever the hour'
+  );
+  today = new Date(2026, 3, 10); // back to spring for what follows
 
   // no network: what is kept still shows, and the error is reported
   today = new Date(2026, 3, 10); // spring
