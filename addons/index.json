@@ -173,7 +173,7 @@
       "name": "Seasons",
       "version": "1.1.0",
       "description": "Photos for the Couch scenes that follow the calendar and the hour: Christmas, New Year, the four seasons, and the evening.",
-      "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. While the sun is down, a time of year that has photos of the evening shows those, so the photo is of the hour it is: winter and autumn have them, spring and summer keep their photos of the day for now. South of the equator the seasons turn around. The photos are from Unsplash (free to use), the photographer shows in the corner.",
+      "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. While the sun is down, a time of year that has photos of the evening shows those, so the photo is of the hour it is: every season has them. South of the equator the seasons turn around. The photos are from Unsplash (free to use), the photographer shows in the corner.",
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
@@ -181,8 +181,8 @@
       ],
       "luna": [],
       "files": {
-        "addon.json": "13b2a2fcbabf76e7ea1e2c978c432bccbf9b04414f5ed7a3c047b932f60693f5",
-        "photos.js": "b3332ee0cef7ee90bc9836e7433777c418ecebdc0ed407029b5deeda35472b2e",
+        "addon.json": "b03279963e51a20d272f9df9b9d7609095dc6f9df616b93468f9eeefbfccbe6b",
+        "photos.js": "e1449592aa27bf531fe8dff798d2a4826ebd13012b2847068bb20915a540a11a",
         "service.js": "71a28eb04e57b280309b03a3ba49a76ffb514e4007d07d7bd4d9ea71bb4702db"
       }
     },

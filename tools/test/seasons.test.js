@@ -83,9 +83,9 @@ run(async () => {
     l.length === 5 && l[0].id === 'autumn-1' && l[0].credit === 'Federica Galli / Unsplash' && l.every(x => typeof x.darkSky === 'boolean'),
     'the five photos of autumn with their photographer: ' + l.map(x => x.id).join(' ')
   );
-  // autumn's five and the five of the autumn evening, and two of each of the other six sets (spring: the first two, never the tulips)
+  // autumn's five and the five of the autumn evening, and two of each of the other eight sets (spring: the first two, never the tulips)
   ok(
-    files().length === (5 + 5 + 6 * 2) * 2,
+    files().length === (5 + 5 + 8 * 2) * 2,
     'the set in use, the evening of that set and the first two of every set are kept, each with its blurred copy: ' + files().length
   );
   ok(
@@ -138,10 +138,10 @@ run(async () => {
       S.scenes.list({ cc: 'NLD', day: true }).every(x => /^autumn-\d$/.test(x.id)),
     'in October the same, with the photos of the autumn evening'
   );
-  today = new Date(2026, 6, 10); // summer: no photos of the evening yet
+  today = new Date(2026, 11, 10); // Christmas, which is an evening already and has no second set
   await S.sync();
   ok(
-    S.scenes.list({ cc: 'NLD', day: false }).every(x => /^summer-\d$/.test(x.id)),
+    S.scenes.list({ cc: 'NLD', day: false }).every(x => /^christmas-\d$/.test(x.id)),
     'a time of year without photos of the evening keeps its own, whatever the hour'
   );
   today = new Date(2026, 3, 10); // back to spring for what follows

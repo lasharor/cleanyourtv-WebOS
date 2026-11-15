@@ -78,6 +78,20 @@ const SETS = {
     { p: '1571680719972-f18bb57077cf', by: 'Max Andrey' },
   ],
   // the evening of the same time of year: a dark sky, so the buttons at the top stay light
+  springnight: [
+    { p: '1783443351885-ea630e304703', by: 'Wojciech Wyszkowski' },
+    { p: '1765692120897-6d032b0a21e4', by: 'MacroLingo LLC' },
+    { p: '1767967904433-f373a77d0b2e', by: 'Tempest Spiral' },
+    { p: '1741744951022-5b1f79ed343e', by: 'Dima Zimakov' },
+    { p: '1782811559593-99dcd0f00c50', by: 'Hanna Lazar' },
+  ],
+  summernight: [
+    { p: '1685387843155-38cf47c27b61', by: 'Nicolas Houdayer' },
+    { p: '1673694549411-6fdf2dce4008', by: 'Péter Kövesi' },
+    { p: '1730136803450-b87ebaa6e0be', by: 'Igor Sporynin' },
+    { p: '1723842976568-8dd66ec30c07', by: 'Stefan Åhman' },
+    { p: '1550573932-49f7df2a2a05', by: 'Danijel Durkovic' },
+  ],
   autumnnight: [
     { p: '1635805099221-cf512d8a196a', by: 'Igor Solkin' },
     { p: '1509001333319-944a48ef262b', by: 'John Jennings' },
