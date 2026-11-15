@@ -3,7 +3,7 @@
   "name": "Seasons",
   "version": "1.1.0",
   "description": "Photos for the Couch scenes that follow the calendar and the hour: Christmas, New Year, the four seasons, and the evening.",
-  "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. While the sun is down, a time of year that has photos of the evening shows those, so the photo is of the hour it is: winter has them, the other seasons keep their photos of the day for now. South of the equator the seasons turn around. The photos are from Unsplash (free to use), the photographer shows in the corner.",
+  "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. While the sun is down, a time of year that has photos of the evening shows those, so the photo is of the hour it is: winter and autumn have them, spring and summer keep their photos of the day for now. South of the equator the seasons turn around. The photos are from Unsplash (free to use), the photographer shows in the corner.",
   "kind": "service",
   "entry": {
     "service": "service.js"

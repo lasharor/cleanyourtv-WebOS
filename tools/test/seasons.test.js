@@ -83,10 +83,10 @@ run(async () => {
     l.length === 5 && l[0].id === 'autumn-1' && l[0].credit === 'Federica Galli / Unsplash' && l.every(x => typeof x.darkSky === 'boolean'),
     'the five photos of autumn with their photographer: ' + l.map(x => x.id).join(' ')
   );
-  // autumn's five, and two of each of the other six sets (spring: the first two, never the tulips)
+  // autumn's five and the five of the autumn evening, and two of each of the other six sets (spring: the first two, never the tulips)
   ok(
-    files().length === (5 + 6 * 2) * 2,
-    'the set in use and the first two of every set are kept, each with its blurred copy: ' + files().length
+    files().length === (5 + 5 + 6 * 2) * 2,
+    'the set in use, the evening of that set and the first two of every set are kept, each with its blurred copy: ' + files().length
   );
   ok(
     asked.some(u => /^\/photo-1508255139162-e1f7b7288ab7\?w=1920&h=1080/.test(u)) &&
@@ -130,6 +130,13 @@ run(async () => {
   ok(
     S.scenes.list({ cc: 'NLD' }).length === 5 && S.scenes.list({ cc: 'NLD' })[0].id === 'winter-1',
     'a launcher that says nothing about the hour keeps the photos of the day, as before'
+  );
+  today = new Date(2026, 9, 20); // autumn, which has its own evening too
+  await S.sync();
+  ok(
+    S.scenes.list({ cc: 'NLD', day: false }).every(x => /^autumnnight-\d$/.test(x.id)) &&
+      S.scenes.list({ cc: 'NLD', day: true }).every(x => /^autumn-\d$/.test(x.id)),
+    'in October the same, with the photos of the autumn evening'
   );
   today = new Date(2026, 6, 10); // summer: no photos of the evening yet
   await S.sync();
