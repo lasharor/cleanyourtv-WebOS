@@ -657,19 +657,21 @@ function create(ctx, opts) {
       .filter(Boolean)
       .slice(0, GUIDE_MAX);
     const out = {};
+    let whole = true;
     for (let i = 0; i < ids.length; i += 60) {
       let r = null;
       try {
         r = await apiRequest('GET', '/api/live/epg?ids=' + ids.slice(i, i + 60).map(encodeURIComponent).join(','));
       } catch (_) {
-        return guideOut; // no guide (or Live TV is busy): the channels are shown without it
+        whole = false; // no guide, or Live TV busy: what came back before this is used, the rest is shown without it
+        break;
       }
       Object.keys(r || {}).forEach(k => {
         const n = r[k] && r[k].now;
         if (Array.isArray(n)) out[k] = n;
       });
     }
-    guideAt = Date.now();
+    if (whole) guideAt = Date.now(); // a part of the answer is used now but asked for again, instead of kept for the minute
     guideOut = out;
     return out;
   }
