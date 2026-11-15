@@ -7,11 +7,11 @@ const fs = require('fs'),
 const { root, ok, run } = require('./lib');
 
 run(async () => {
-  const sandbox = {};
+  const sandbox = { Intl: Intl };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'app', 'src', 'js', 'daynight.js'), 'utf8'), sandbox, {
     filename: 'daynight.js',
   });
-  const { sunHours, sunPos, dayPart, nightNow, weatherDay } = sandbox;
+  const { sunHours, sunPos, dayPart, nightNow, weatherDay, zoneCity } = sandbox;
 
   // the dates are in the TV's own time zone, and so are the hours sunHours gives back, so every hour here is compared in that zone:
   // off() is how far it is from UTC on that date, which keeps these checks true wherever the tests are run
@@ -129,5 +129,25 @@ run(async () => {
   ok(
     weatherDay(null) === null && weatherDay({ now: {} }) === null && weatherDay({ now: { day: 'yes' } }) === null,
     'no weather, or something that is not yes or no, is not known'
+  );
+
+  // the city the TV's own time zone names, for a TV with no weather card
+  const zone = process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  ok(
+    zone.indexOf('/') < 0 ? zoneCity() === '' : zoneCity() === zone.split('/').pop().replace(/_/g, ' '),
+    'the zone of this machine gives its city: ' + JSON.stringify([zone, zoneCity()])
+  );
+  const city = z => {
+    const keep = sandbox.Intl;
+    sandbox.Intl = { DateTimeFormat: () => ({ resolvedOptions: () => ({ timeZone: z }) }) };
+    const out = zoneCity();
+    sandbox.Intl = keep;
+    return out;
+  };
+  ok(city('Europe/Amsterdam') === 'Amsterdam' && city('America/New_York') === 'New York', 'a zone names its city');
+  ok(city('America/Argentina/Buenos_Aires') === 'Buenos Aires', 'and the last part of a longer one');
+  ok(
+    city('UTC') === '' && city('Etc/GMT+1') === '' && city('') === '' && city('Europe/') === '',
+    'a zone that names no place gives nothing, so the clock decides'
   );
 });

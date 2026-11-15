@@ -10,6 +10,8 @@
    Day and evening: the launcher works out whether the sun is down (daynight.js) and says so in the request, so an add-on can answer
    with photos of the evening instead of photos of the day. It asks again as soon as the sun goes down or comes up. The photos of such
    an add-on are not dimmed after 10 pm (body.nightpix), because an evening photo is already an evening photo.
+   Where the TV is comes from a weather card, or from the city this TV's time zone names, which the service looks up with the same
+   search the weather card uses. Nothing of this needs Home Assistant.
    Following the sun (effects.sceneSun): the five landscapes are not shown in turn but by the part of the day they belong to, Dawn in
    the morning twilight, Waterline and Fog through the day, Golden hour in the evening and Night after dark; the ones of the part it is
    now still take turns among themselves. After couch-tv's "Follow the sun" (MIT).
@@ -46,10 +48,29 @@ var SCENES = (function () {
     }
     return String(c).toUpperCase();
   }
-  /* the place of the weather card, for the sun's own hours; {lat: NaN, lon: NaN} without one */
+  /* where the TV is, for the sun's own hours: the place of a weather card, else the city this TV's time zone names, asked of the
+     service once (it has the same search the weather card uses). {lat: NaN, lon: NaN} while neither is known: the clock decides. */
+  var zonePlace = null,
+    zoneAsked = false;
   function place() {
     var p = typeof wxPlace === 'function' ? wxPlace() : null;
-    return p || { lat: NaN, lon: NaN };
+    if (p) return p;
+    if (!zonePlace) askZone();
+    return zonePlace || { lat: NaN, lon: NaN };
+  }
+  function askZone() {
+    if (zoneAsked) return;
+    var c = zoneCity();
+    if (!c) return;
+    zoneAsked = true;
+    api('/api/scenes/place', { q: c }).then(
+      function (r) {
+        if (r && r.place && isFinite(r.place.lat) && isFinite(r.place.lon)) zonePlace = { lat: r.place.lat, lon: r.place.lon };
+      },
+      function () {
+        zoneAsked = false; /* no network yet: asked again at the next tick */
+      }
+    );
   }
   /* is the sun down? (daynight.js: the weather of the place of a weather card, else the sun from its coordinates, else the clock) */
   function night() {

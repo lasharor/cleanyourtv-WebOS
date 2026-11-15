@@ -197,6 +197,37 @@ run(async () => {
   ok(g.code === 404 && g2.code === 404, 'an odd id or an add-on that does not provide scenes gets nothing');
   web.server.close();
 
+  // the place of the TV by name (the launcher asks with the city its time zone names), from the same search the weather card uses
+  const geoAsked = [];
+  const geo = await serve((q, s2) => {
+    geoAsked.push(q.url);
+    s2.writeHead(200, { 'content-type': 'application/json' });
+    s2.end(
+      /Amsterdam/i.test(q.url)
+        ? JSON.stringify({ results: [{ name: 'Amsterdam', country: 'Netherlands', latitude: 52.37, longitude: 4.89 }] })
+        : JSON.stringify({ results: [] })
+    );
+  });
+  process.env.CYTV_GEO_URL = geo.url + '/v1/search';
+  // the address of the search is read when weather.js is first loaded, so both are loaded again for this part
+  for (const n of ['weather', 'scenes']) delete require.cache[require.resolve(path.join(root, 'helper', n + '.js'))];
+  const sc2 = require(path.join(root, 'helper', 'scenes.js')).create({ feature: () => null });
+  const post = q => call(sc2, '/api/scenes/place', 'POST', { q: q });
+  let pl = await post('Amsterdam');
+  ok(
+    pl.code === 200 && pl.j.place && pl.j.place.lat === 52.37 && pl.j.place.lon === 4.89 && pl.j.place.name === 'Amsterdam',
+    'a place by name gives its coordinates: ' + JSON.stringify(pl.j)
+  );
+  const once = geoAsked.length;
+  await post('amsterdam');
+  ok(geoAsked.length === once, 'and is not asked twice: the answer is kept while the service runs');
+  pl = await post('Nowhereville');
+  ok(pl.j.place === null, 'a name the search does not know gives nothing, so the clock decides');
+  pl = await post('A');
+  ok(pl.j.place === null && geoAsked.length === once + 1, 'and a name of one letter is not searched at all');
+  geo.server.close();
+  delete process.env.CYTV_GEO_URL;
+
   // the manifest is accepted by the loader, with "scenes" among what it provides
   const man = JSON.parse(fs.readFileSync(path.join(dir, 'addon.json'), 'utf8'));
   ok(man.provides.indexOf('scenes') >= 0 && man.about.length <= 600 && man.permissions.join() === 'net.fetch', 'the manifest');

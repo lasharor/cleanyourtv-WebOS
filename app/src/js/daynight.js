@@ -31,6 +31,20 @@ function sunHours(date, lat, lon) {
   return { rise: noon - half, set: noon + half };
 }
 
+/* The city the TV's own time zone names (Europe/Amsterdam -> Amsterdam, America/Argentina/Buenos_Aires -> Buenos Aires). A TV with
+   no weather card has no coordinates, and this is close enough for the hours of the sun: a time zone is at most a few hundred
+   kilometres wide where people live, which moves sunset by minutes. '' when the zone says nothing of a place (UTC, Etc/GMT+1). */
+function zoneCity() {
+  var z = '';
+  try {
+    z = (Intl && Intl.DateTimeFormat && Intl.DateTimeFormat().resolvedOptions().timeZone) || '';
+  } catch (e) {}
+  var p = String(z).split('/');
+  if (p.length < 2) return '';
+  var c = p[p.length - 1].replace(/_/g, ' ').trim();
+  return /^[A-Za-z][A-Za-z' -]{1,39}$/.test(c) ? c : '';
+}
+
 /* Is the weather on screen proof that the sun is up? wx is the weather last drawn (cards.js, WX_LAST). Open-Meteo says is_day
    outright, so both its yes and its no can be taken (sure). Home Assistant names only one condition of the night (clear-night), so
    there a cloudy night looks like a cloudy day: only its no means anything, and its yes is answered as not known (null). */

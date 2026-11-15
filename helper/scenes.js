@@ -6,6 +6,10 @@
 //                                              (cc: the TV's country, two or three letters, as the launcher reads it; day: false while
 //                                              the sun is down, so an add-on can answer with photos of the evening)
 //   GET  /api/scenes/photo/<add-on>/<id>/<image|glass>   a photo, or its blurred copy for the glass clock and the glass cards
+//   POST /api/scenes/place {q}                 the coordinates of a place by name: {place: {name, lat, lon}} or {place: null}. The
+//                                              launcher asks once, with the city its own time zone names, so the scenes can follow
+//                                              the sun on a TV without a weather card. Open-Meteo's geocoding, the same the weather
+//                                              card uses; only the name leaves the TV and the answer is kept until the service stops
 // The object `scenes` on the module an add-on returns from create():
 //   list({cc, day})   -> [{id, credit, darkSky}] (or a promise of it): the scenes to show now, at most 20; id: letters, digits, - _ .
 //                     day is false while the sun is down where the TV is; an add-on that does not care simply ignores it
@@ -25,6 +29,8 @@ const line = (v, n) =>
     .slice(0, n);
 
 function create(ctx) {
+  const weather = require('./weather').create({ path: require('./paths').WEATHER });
+  const places = {}; // the places looked up since the service started
   const warned = {};
   const warn = (id, e) => {
     if (warned[id]) return;
@@ -81,11 +87,34 @@ function create(ctx) {
     fs.createReadStream(f).pipe(res);
   }
 
+  // a place by name: the first match, or null when the search says nothing (no network, an unknown name)
+  async function placeOf(q) {
+    const key = q.toLowerCase();
+    if (places[key] !== undefined) return places[key];
+    let p = null;
+    try {
+      const found = await weather.search(q, '');
+      const f = Array.isArray(found) ? found[0] : null;
+      if (f && isFinite(f.lat) && isFinite(f.lon)) p = { name: line(f.name, 60), lat: f.lat, lon: f.lon };
+    } catch (e) {
+      return null; // not kept: asked again next time
+    }
+    places[key] = p;
+    return p;
+  }
+
   async function handle(req, res, u, body) {
     const m = /^\/api\/scenes\/photo\/([^/]+)\/([^/]+)\/(image|glass)$/.exec(u);
     if (m) {
       if (req.method !== 'GET' || !ADDON.test(m[1]) || !ID.test(m[2])) return web.notFound(res);
       return photo(res, m[1], m[2], m[3]);
+    }
+    if (u === '/api/scenes/place' && req.method === 'POST') {
+      const b = await body(req);
+      const q = String((b && b.q) || '')
+        .trim()
+        .slice(0, 60);
+      return web.json(res, { place: q.length < 2 ? null : await placeOf(q) });
     }
     if (u === '/api/scenes' && req.method === 'POST') {
       const b = await body(req);
