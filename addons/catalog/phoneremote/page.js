@@ -727,7 +727,8 @@ button{display:flex;align-items:center;justify-content:center;font-weight:700;fo
 /* a row of the screen's column, the same height as the 64px the script takes off: no fixed positioning to be swallowed by a phone's
    address bar, nothing can end up outside the visible area */
 .tabbar{flex:none;display:flex;border-top:1px solid #2e3140;background:#13141a;padding:0 12px 4px}.tabbar{padding-bottom:max(4px,env(safe-area-inset-bottom,0px))}
-.tab{flex:1;height:60px;min-width:0;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:0;border-radius:0;background:transparent;flex-direction:column;font-size:12px;font-weight:600;color:#a3a8b8}.tab .ic{margin:0 0 4px}.tab.on{background:transparent;color:#ff8a5b}
+.tab{flex:1;height:60px;min-width:0;padding:0 2px;overflow:hidden;border:0;border-radius:0;background:transparent;flex-direction:column;font-size:12px;font-weight:600;color:#a3a8b8}.tab .ic{margin:0 0 4px}.tab.on{background:transparent;color:#ff8a5b}
+.tabl{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pad{position:relative;margin:18px auto 0;width:calc(100% - 40px);max-width:390px;height:calc(100vh - 380px);min-height:300px;max-height:432px;border-radius:28px;border:1px solid #2e3140;background:radial-gradient(circle at 50% 38%,#1c1f2a 0%,#14161d 62%,#111319 100%);overflow:hidden;touch-action:none;transition:border-color .12s,box-shadow .12s}
 .pad:before{content:'';position:absolute;left:0;right:0;top:0;bottom:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1.5px);background-size:22px 22px;background-position:11px 11px;pointer-events:none}
 .pad.on{border-color:rgba(255,138,91,.5);box-shadow:0 0 0 4px rgba(255,138,91,.08)}
@@ -1040,7 +1041,7 @@ ${qr}</div></div>
 ${qr}</div></div>
 <div id=ap class=hide><div class=apgrid id=apgrid></div></div>
 <div id=lv class=hide><div class=lvgrid id=lvgrid></div></div>
-<div id=tabbar class=hide><div class=tabbar><button class=tab id=bkb>${ic('remote')}${T('Remote')}</button><button class=tab id=btp>${ic('pad')}${T('Touchpad')}</button><button class=tab id=bap>${ic('apps')}${T('Apps')}</button><button class=tab id=blv>${ic('live')}${T('Live')}</button></div></div>
+<div id=tabbar class=hide><div class=tabbar><button class=tab id=bkb>${ic('remote')}<span class=tabl>${T('Remote')}</span></button><button class=tab id=btp>${ic('pad')}<span class=tabl>${T('Touchpad')}</span></button><button class=tab id=bap>${ic('apps')}<span class=tabl>${T('Apps')}</span></button><button class=tab id=blv>${ic('live')}<span class=tabl>${T('Live')}</span></button></div></div>
 </div>
 <div id=ins class=hide><div id=insheet class=drawer role=dialog aria-label="${T('Inputs')}"><div class=grab></div><div class=top><b>${T('Inputs')}</b><button id=xins aria-label="${T('Close')}">${ic('close')}</button></div><div id=inslist class=inslist></div></div></div>
 <div id=kbs class=hide><div id=kbsheet class=drawer role=dialog aria-label="${T('Keyboard')}"><div class=grab></div><div class=top><b>${T('Keyboard')}</b><button id=xkb aria-label="${T('Close')}">${ic('close')}</button></div>
