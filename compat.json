@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-02",
+  "updated": "2026-11-14",
   "comment": "Firmware versions (Settings > About: software version, or the webOS SDK version) the setup is known to work on. A firmware listed here is set up without --force. A trailing * matches a prefix. Add an entry through an issue or pull request, with the output of 'Share log'.",
   "entries": [
     { "firmware": "43.04.24", "sdk": "11.0.1", "homeType": "flutter", "status": "reported", "note": "50NU850BPSA, SDK 11.0.1 (pull request 73)" },
@@ -13,6 +13,7 @@
     { "firmware": "03.53.45", "sdk": "6.5.3", "homeType": "native", "status": "reported", "note": "OLED55G19LA, 65NANO753PR, OLED65B16LA, 55UP7550PVG and OLED48C16LA, webOS 6.5.3 (issues 5, 8, 12, 18 and 26)" },
     { "firmware": "04.41.35", "sdk": "5.4.3", "homeType": "native", "status": "reported", "note": "OLED55CX3LA, webOS 5.4.3 (issue 13)" },
     { "firmware": "23.23.30", "sdk": "9.2.4", "homeType": "", "status": "reported", "note": "OLED55G4, webOS 24 (pull request 25)" },
+    { "firmware": "23.20.59", "sdk": "9.2.1", "homeType": "native", "status": "reported", "note": "OLED77C39LC, webOS 24, the mount way because of CRIU (issue 261)" },
     { "firmware": "04.60.91", "homeType": "", "status": "reported", "note": "43NANO786QA, webOS 22 (7.6) (issue 31)" }
   ]
 }
