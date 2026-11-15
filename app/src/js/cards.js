@@ -91,7 +91,10 @@ function wthFor(o) {
         e.at = Date.now() - 480000; /* try again in two minutes */
       });
   }
-  if (e.w) WX_LAST = e.w;
+  if (e.w) {
+    WX_LAST = e.w;
+    WX_LAST.sure = true; /* Open-Meteo's is_day */
+  }
   return e.w;
 }
 /* ---- Home Assistant (through the service, with the address and token set for Voice); one request for every card, every 30 s ---- */
@@ -231,7 +234,7 @@ function hawFor(o) {
   var w = e.w;
   if (w && w.now && w.now.temp !== null) {
     var hk = hawKind(w.now.cond);
-    WX_LAST = { now: { temp: Math.round(w.now.temp), code: hk[2], day: w.now.cond !== 'clear-night' } };
+    WX_LAST = { sure: false, now: { temp: Math.round(w.now.temp), code: hk[2], day: w.now.cond !== 'clear-night' } };
   }
   return w;
 }

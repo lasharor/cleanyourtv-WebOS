@@ -11,7 +11,7 @@ run(async () => {
   vm.runInNewContext(fs.readFileSync(path.join(root, 'app', 'src', 'js', 'daynight.js'), 'utf8'), sandbox, {
     filename: 'daynight.js',
   });
-  const { sunHours, sunPos, dayPart, nightNow } = sandbox;
+  const { sunHours, sunPos, dayPart, nightNow, weatherDay } = sandbox;
 
   // the dates are in the TV's own time zone, and so are the hours sunHours gives back, so every hour here is compared in that zone:
   // off() is how far it is from UTC on that date, which keeps these checks true wherever the tests are run
@@ -116,4 +116,18 @@ run(async () => {
     'without a place the clock gives the four parts: ' + [byClock(23), byClock(7), byClock(12), byClock(20)].join(' ')
   );
   ok(dayPart({ date: at(2026, 6, 21, 13), weatherDay: false, lat: NaN, lon: NaN }) === 'dark', 'and the weather still wins over it');
+
+  // what the weather on screen is proof of: the card that reads is_day proves both, the one that reads Home Assistant only the night
+  ok(
+    weatherDay({ sure: true, now: { day: true } }) === true && weatherDay({ sure: true, now: { day: false } }) === false,
+    'the weather card of the launcher proves day and night, because Open-Meteo says is_day'
+  );
+  ok(
+    weatherDay({ sure: false, now: { day: false } }) === false && weatherDay({ sure: false, now: { day: true } }) === null,
+    'a Home Assistant card proves the night (clear-night), but its day is not proof: a cloudy night looks the same there'
+  );
+  ok(
+    weatherDay(null) === null && weatherDay({ now: {} }) === null && weatherDay({ now: { day: 'yes' } }) === null,
+    'no weather, or something that is not yes or no, is not known'
+  );
 });

@@ -2,7 +2,8 @@
    The scenes dimmed from 10 pm by the clock alone, so in December the sun was long down while the photo still stood in full daylight,
    and in June the dimming came on while it was still light outside. The same photo should simply look like the hour it is.
    What is asked, in this order, and why: the weather of the place the user picked for a weather card already says whether the sun is up
-   there (Open-Meteo's is_day); it costs nothing and is already on the TV. Without it, the sun is worked out from that place's
+   there (Open-Meteo's is_day); it costs nothing and is already on the TV. A weather card that reads Home Assistant knows only one
+   condition of the night, so cards.js passes its "day" as unknown (weatherDay()). Without it, the sun is worked out from that place's
    coordinates, which needs no network. Without a place, the clock decides, as it did before. A TV that knows nothing new therefore keeps
    exactly its old behaviour.
    Only function declarations here, so the file can be read in a test without a browser (as colour.js is). */
@@ -28,6 +29,15 @@ function sunHours(date, lat, lon) {
   var half = Math.acos(cos) / rad / 15; /* half the day, in hours */
   var noon = 12 - lon / 15 - eot + -date.getTimezoneOffset() / 60; /* the sun at its highest, in the TV's own time */
   return { rise: noon - half, set: noon + half };
+}
+
+/* Is the weather on screen proof that the sun is up? wx is the weather last drawn (cards.js, WX_LAST). Open-Meteo says is_day
+   outright, so both its yes and its no can be taken (sure). Home Assistant names only one condition of the night (clear-night), so
+   there a cloudy night looks like a cloudy day: only its no means anything, and its yes is answered as not known (null). */
+function weatherDay(wx) {
+  var w = wx && wx.now;
+  if (!w || typeof w.day !== 'boolean') return null;
+  return w.day === false ? false : wx.sure === true ? true : null;
 }
 
 /* Where the sun stands now: {alt: how high it is in degrees, below zero when it is down; morning: true before its highest point}, or

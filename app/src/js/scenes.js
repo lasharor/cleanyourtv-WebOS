@@ -53,12 +53,7 @@ var SCENES = (function () {
   }
   /* is the sun down? (daynight.js: the weather of the place of a weather card, else the sun from its coordinates, else the clock) */
   function night() {
-    return nightNow({
-      date: new Date(),
-      weatherDay: WX_LAST && WX_LAST.now && typeof WX_LAST.now.day === 'boolean' ? WX_LAST.now.day : null,
-      lat: place().lat,
-      lon: place().lon,
-    });
+    return nightNow({ date: new Date(), weatherDay: weatherDay(WX_LAST), lat: place().lat, lon: place().lon });
   }
   /* the scenes of an add-on: asked when the couch scenes start and every 30 minutes (sooner while an add-on has none ready yet), and
      again as soon as the sun goes down or comes up, so photos of the evening take the place of the photos of the day */
@@ -251,12 +246,7 @@ var SCENES = (function () {
      which follow the sun themselves) and they all take turns */
   function nextFrom(i) {
     if (sunScenes && lib === COUCH) {
-      var want = dayPart({
-        date: new Date(),
-        weatherDay: WX_LAST && WX_LAST.now && typeof WX_LAST.now.day === 'boolean' ? WX_LAST.now.day : null,
-        lat: place().lat,
-        lon: place().lon,
-      });
+      var want = dayPart({ date: new Date(), weatherDay: weatherDay(WX_LAST), lat: place().lat, lon: place().lon });
       var pool = [];
       for (var k = 0; k < lib.length; k++) if (lib[k].part === want) pool.push(k);
       if (pool.length) {
