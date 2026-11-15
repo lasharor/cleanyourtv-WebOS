@@ -316,7 +316,8 @@ var SCENES = (function () {
         continue;
       }
       var r = el.getBoundingClientRect();
-      el.style.backgroundImage = 'linear-gradient(rgba(16,14,26,0.40),rgba(16,14,26,0.30)),' + g;
+      /* dark enough for white text on a light scene too (a hazy sky, snow) */
+      el.style.backgroundImage = 'linear-gradient(rgba(16,14,26,0.50),rgba(16,14,26,0.42)),' + g;
       el.style.backgroundSize = '100% 100%,1920px 1080px';
       el.style.backgroundPosition = '0 0,' + -Math.round(r.left) + 'px ' + -Math.round(r.top) + 'px';
     }
