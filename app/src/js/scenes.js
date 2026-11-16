@@ -29,6 +29,7 @@ var SCENES = (function () {
     { id: 'dawn', fg: true, part: 'dawn' },
   ];
   var sunScenes = false /* the theme's effects.sceneSun: the landscape follows the sun */,
+    wxScenes = false /* the theme's effects.sceneWeather: the weather falls over the scene */,
     wasDark = null /* whether the sun was down when the add-on was last asked */,
     addonLib = null /* the scenes of an add-on, as custom scenes, or null */,
     addonKey = '',
@@ -48,7 +49,10 @@ var SCENES = (function () {
     }
     return String(c).toUpperCase();
   }
-  /* where the TV is, for the sun's own hours: the place of a weather card, else the city this TV's time zone names, asked of the
+  /* The weather over the scene (effects.sceneWeather): rain, drizzle, snow, fog or a thunderstorm falls over the photo while the
+     weather says so (weatherfx.js). The weather is the one a weather card already shows; with no card the launcher asks the service
+     for the weather of the place the TV stands, when it knows one.
+     where the TV is, for the sun's own hours: the place of a weather card, else the city this TV's time zone names, asked of the
      service once (it has the same search the weather card uses). {lat: NaN, lon: NaN} while neither is known: the clock decides. */
   var zonePlace = null,
     zoneAsked = false;
@@ -71,6 +75,7 @@ var SCENES = (function () {
            the hour is asked again. Before sunrise in winter that is the difference between a sunlit photo and one of the evening. */
         if (on) {
           askAddon(true);
+          weatherFx();
           if (lastTh && lastTh.scenes && lastTh.scenes.sun) show(nextFrom(cur));
         }
       },
@@ -82,6 +87,23 @@ var SCENES = (function () {
   /* is the sun down? (daynight.js: the weather of the place of a weather card, else the sun from its coordinates, else the clock) */
   function night() {
     return nightNow({ date: new Date(), weatherDay: weatherDay(WX_LAST), lat: place().lat, lon: place().lon });
+  }
+  /* the weather to draw over the scene, '' for none. The weather card's own weather is used when there is one; with no card the
+     service is asked for the weather of the place the TV stands (wthFor keeps it for ten minutes), the same place the sun is worked
+     out from. Nothing of this needs Home Assistant. */
+  function fxNow() {
+    if (!on || !wxScenes) return '';
+    if (!WX_LAST || !WX_LAST.now) {
+      var p = place();
+      if (typeof wthFor === 'function' && isFinite(p.lat) && isFinite(p.lon)) wthFor({ lat: p.lat, lon: p.lon });
+      return '';
+    }
+    return WEATHERFX.fxFor(WX_LAST.now.code);
+  }
+  function weatherFx() {
+    try {
+      WEATHERFX.set(fxNow());
+    } catch (e) {}
   }
   /* the scenes of an add-on: asked when the couch scenes start and every 30 minutes (sooner while an add-on has none ready yet), and
      again as soon as the sun goes down or comes up, so photos of the evening take the place of the photos of the day */
@@ -299,6 +321,7 @@ var SCENES = (function () {
     var want = wantCouch || wantCustom;
     secs = (th && th.scenes && th.scenes.secs) || 20;
     sunScenes = !!(th && th.scenes && th.scenes.sun);
+    wxScenes = !!(th && th.scenes && th.scenes.weather);
 
     if (wantCouch) askAddon(false);
     var wantAddon = wantCouch && !!addonLib;
@@ -334,6 +357,7 @@ var SCENES = (function () {
     soloClock();
     arm();
     glassCards();
+    weatherFx();
   }
   /* the glass clock without scenes: one clock with a white frosted fill */
   function soloClock() {
@@ -363,6 +387,7 @@ var SCENES = (function () {
       if (lib[cur].part !== lib[want].part) show(want); /* the sun moved on to another part of the day */
     }
     if (on && lastTh && lastTh.scenes && lastTh.scenes.set === 'couch') askAddon(false);
+    weatherFx();
     if (!glassOn()) return;
     var x = hm();
     if (x === shownHm && fontIn) return;
@@ -416,9 +441,12 @@ var SCENES = (function () {
     shown: function () {
       arm();
       glassCards();
+      weatherFx();
+      WEATHERFX.shown();
     },
     hidden: function () {
       clearInterval(timer);
+      WEATHERFX.hidden();
     },
   };
 })();

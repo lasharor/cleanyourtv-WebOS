@@ -1589,3 +1589,87 @@ body.scenes-on {
   box-shadow: none;
   transform: scale(1.1);
 }
+/* ---- the weather over the scene (weatherfx.js, theme effects.sceneWeather) ---- */
+#wfx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  pointer-events: none;
+  display: none;
+}
+#wfx.on {
+  display: block;
+}
+/* the canvas holds 960 x 540 pixels and is stretched over the screen: a quarter of the pixels to draw */
+#wfx .wfxc {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  display: none;
+}
+#wfx.fx-drizzle .wfxc,
+#wfx.fx-rain .wfxc,
+#wfx.fx-storm .wfxc,
+#wfx.fx-snow .wfxc {
+  display: block;
+}
+/* fog is not drawn: two wide bands that only move, so the TV has nothing to redraw */
+#wfx .wfxfog {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  display: none;
+}
+#wfx.fx-fog .wfxfog {
+  display: block;
+}
+#wfx .wfxfog i {
+  position: absolute;
+  left: -960px;
+  width: 3840px;
+  height: 460px;
+  background: linear-gradient(
+    to right,
+    rgba(226, 232, 240, 0),
+    rgba(226, 232, 240, 0.3) 35%,
+    rgba(226, 232, 240, 0.12) 65%,
+    rgba(226, 232, 240, 0)
+  );
+  will-change: transform;
+}
+#wfx .wfxfog i:first-child {
+  top: 420px;
+  animation: wfxdrift 96s linear infinite;
+}
+#wfx .wfxfog i:last-child {
+  top: 680px;
+  height: 400px;
+  opacity: 0.7;
+  animation: wfxdrift 148s linear infinite reverse;
+}
+@keyframes wfxdrift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(960px, 0, 0);
+  }
+}
+/* the lightning of a thunderstorm: one layer that only changes its opacity */
+#wfx .wfxbolt {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: #e8f0ff;
+  opacity: 0;
+  transition: opacity 0.12s linear;
+}
