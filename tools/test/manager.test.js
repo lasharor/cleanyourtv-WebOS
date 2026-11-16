@@ -65,7 +65,10 @@ run(async () => {
     c.scenesPlace = { name: 'Amsterdam', lat: 52.37, lon: 4.89 };
   });
   r = await ask('options', 'POST', { sunPlace: true });
-  ok(r.j.options.sunPlace === true && r.j.sunPlace && r.j.sunPlace.name === 'Amsterdam', 'switched on, the manager shows the place that is kept');
+  ok(
+    r.j.options.sunPlace === true && r.j.sunPlace && r.j.sunPlace.name === 'Amsterdam',
+    'switched on, the manager shows the place that is kept'
+  );
   r = await ask('options', 'POST', { sunPlace: 'yes' });
   ok(r.j.options.sunPlace === true, 'only a boolean changes it');
   r = await ask('options', 'POST', { sunPlace: false });

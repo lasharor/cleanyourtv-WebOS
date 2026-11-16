@@ -2243,7 +2243,12 @@ function build() {
     if (sunOn)
       rows.push({
         label: 'Place kept on the TV',
-        sub: sunP && sunP.name ? sunP.name + ' \u00B7 ' + sunP.lat + ', ' + sunP.lon : sunP ? 'no city found: the clock decides' : 'not looked up yet',
+        sub:
+          sunP && sunP.name
+            ? sunP.name + ' \u00B7 ' + sunP.lat + ', ' + sunP.lon
+            : sunP
+              ? 'no city found: the clock decides'
+              : 'not looked up yet',
         fn: function () {},
       });
     rows.push({ sep: true });

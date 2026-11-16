@@ -255,7 +255,10 @@ run(async () => {
   });
   pl = await post('Nowhereville');
   const afterNone = geoAsked.length;
-  ok(pl.j.place === null && cfg2.get().scenesPlace && cfg2.get().scenesPlace.none, 'a name the search does not know gives nothing, so the clock decides');
+  ok(
+    pl.j.place === null && cfg2.get().scenesPlace && cfg2.get().scenesPlace.none,
+    'a name the search does not know gives nothing, so the clock decides'
+  );
   await post('Nowhereville');
   ok(geoAsked.length === afterNone, 'and it is not searched again');
   pl = await post('A');
