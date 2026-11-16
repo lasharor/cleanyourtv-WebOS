@@ -103,6 +103,14 @@ run(async () => {
       JSON.stringify([sunny.scenes, plainScenes.scenes])
   );
 
+  // the weather over the scene: off unless the theme asks for it, and it travels with the other scene settings
+  const wet = themeMod.resolve(themeMod.normalize({ effects: { scenes: 'couch', sceneWeather: true } }, 'wet'));
+  ok(
+    wet.scenes.weather === true && plainScenes.scenes.weather === false,
+    'a theme can let the weather fall over the scene, and nothing falls when it does not: ' +
+      JSON.stringify([wet.scenes, plainScenes.scenes])
+  );
+
   ok(themeMod.normalize({}, '../x') === null, 'a bad theme id is refused');
   // clock.greeting and dock.tileAlpha: a stacked greeting over the clock and a see-through dock
   const glass = themeMod.resolve(themeMod.normalize({ clock: { layout: 'stack', greeting: true }, dock: { tileAlpha: 0.3 } }, 'glass'));

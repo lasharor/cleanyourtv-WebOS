@@ -247,6 +247,13 @@ const SCHEMA = [
     'Follow the sun (`effects.scenes` `couch`): the five landscapes are shown by the part of the day they belong to \u2014 Dawn in the morning twilight, Waterline and Fog through the day, Golden hour in the evening and Night after dark \u2014 instead of all five taking turns. The ones of the part it is now still take turns among themselves every `effects.sceneSecs`. Where the sun stands is worked out from the place of a weather card; without one, from the city of the TV\u2019s time zone if **Features > Sun-aware scenes** is on in the manager (off by default), else from the clock. An add-on\u2019s photos follow the sun by themselves, so this does nothing to them.',
   ],
   [
+    'effects.sceneWeather',
+    'bool',
+    null,
+    false,
+    'The weather over the scene (`effects.scenes`): while the weather says rain, drizzle, snow, fog or a thunderstorm, that falls over the photo behind Home. The weather is the one the weather card already shows; with no card at all the launcher asks for the weather of the place the TV stands, when it knows one (see `effects.sceneSun`). Nothing is drawn in dry weather.',
+  ],
+  [
     'cards.style',
     'enum',
     ['flat', 'glass'],
@@ -608,7 +615,7 @@ function resolve(t, accent) {
     };
   if (dockBottom) out.dockBottom = true;
   if (v['effects.scenes'] !== 'off') {
-    out.scenes = { set: v['effects.scenes'], secs: v['effects.sceneSecs'], sun: v['effects.sceneSun'] };
+    out.scenes = { set: v['effects.scenes'], secs: v['effects.sceneSecs'], sun: v['effects.sceneSun'], weather: v['effects.sceneWeather'] };
     if (v['effects.scenes'] === 'custom' && v.customScenes) {
       out.scenes.lib = v.customScenes;
       out.scenes.id = t.id;
