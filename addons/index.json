@@ -154,7 +154,7 @@
       "files": {
         "addon.json": "31320aa0f93fdaf8b4991166e780e5f31e2160b547d2260ba9682a435b5bdae1",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "2b45899474c208cf48d217b1965a5b97543f8f1c77f80a4777e081c44ab5fa8d",
+        "page/index.html": "58259e2acc6a58a817aef7d85b4b4ce2931805f4a271cc02b1fdbebdf1e2ae7c",
         "page.js": "fde899bbe67cbf25b20062bb0f060bb051e1f7b4cc1d324de55857e614a3d5a7",
         "pwa/icon-180.png": "57040c5ec7e1dfc01918b2295df594dbc034b85df865140e27829873f02c4aff",
         "pwa/icon-512.png": "08849f214ae06fda96123a5e13ec69f9f30a6b7d13e776e20f21c669af3581e4",
@@ -171,9 +171,9 @@
     {
       "id": "seasons",
       "name": "Seasons",
-      "version": "1.0.0",
-      "description": "Photos for the Couch scenes that follow the calendar: Christmas, New Year and the four seasons.",
-      "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. South of the equator the seasons turn around; the tulip fields of spring show in the Netherlands and Belgium. The photos are from Unsplash (free to use), the photographer shows in the corner. About 8 MB is kept on the TV, so every set shows at least two photos without network.",
+      "version": "1.1.0",
+      "description": "Photos for the Couch scenes that follow the calendar and the hour: Christmas, New Year, the four seasons, and the evening.",
+      "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. While the sun is down, a time of year that has photos of the evening shows those, so the photo is of the hour it is. South of the equator the seasons turn around. The photos are from Unsplash (free to use), the photographer shows in the corner. About 12 MB is kept on the TV, so every set shows at least two photos without network.",
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
@@ -181,9 +181,9 @@
       ],
       "luna": [],
       "files": {
-        "addon.json": "d50da41d5dbc0548a22338ff21e1e7d22791173a86b146682308dc97ff568b63",
-        "photos.js": "81051e7844fc059e22cb12b4e9c1df339fff4ade4640ffcff46e3987a11ad91b",
-        "service.js": "c9fd51d3f3d398cce347d729e22b801bb8401886082215ca7f76b18069b90d50"
+        "addon.json": "7236db6d4b7ab590098f704546b49a3c77b0b84b7cc2886fbf347f03f3d1e56d",
+        "photos.js": "e1449592aa27bf531fe8dff798d2a4826ebd13012b2847068bb20915a540a11a",
+        "service.js": "71a28eb04e57b280309b03a3ba49a76ffb514e4007d07d7bd4d9ea71bb4702db"
       }
     },
     {
@@ -248,7 +248,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "17786a7b4b4f810deb901f770cda97da571334c5d3eb43d52e6065e1dc009f16",
+        "page/index.html": "01fbf6ac86094179ba87a362a50b99d6ed3e86497a054d4aeb623dbd1ee361ba",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"

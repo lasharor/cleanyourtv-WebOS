@@ -2,6 +2,9 @@
 // on images.unsplash.com, by: the photographer (shown in the corner of Home), dark: a bright sky (the top buttons turn dark), cc: only
 // in these countries (the tulip fields: the Netherlands and Belgium). The first two of each set show everywhere and are kept on the TV
 // all year, so every set shows at least two photos without network.
+// A set whose name ends in -night holds photos of the evening for that time of year; the launcher says whether the sun is down where
+// the TV is, and setOf() then picks that set. A time of year without such a set keeps its photos of the day, which is what the add-on
+// did before. Christmas and New Year are evenings already, so they have no second set.
 const TULIPS = ['NL', 'NLD', 'BE', 'BEL'];
 // the countries south of the equator: the seasons there are the other way round
 const SOUTH = [
@@ -74,15 +77,50 @@ const SETS = {
     { p: '1731617662729-cdde91663de9', by: 'iuliu illes' },
     { p: '1571680719972-f18bb57077cf', by: 'Max Andrey' },
   ],
+  // the evening of the same time of year: a dark sky, so the buttons at the top stay light
+  springnight: [
+    { p: '1783443351885-ea630e304703', by: 'Wojciech Wyszkowski' },
+    { p: '1765692120897-6d032b0a21e4', by: 'MacroLingo LLC' },
+    { p: '1767967904433-f373a77d0b2e', by: 'Tempest Spiral' },
+    { p: '1741744951022-5b1f79ed343e', by: 'Dima Zimakov' },
+    { p: '1782811559593-99dcd0f00c50', by: 'Hanna Lazar' },
+  ],
+  summernight: [
+    { p: '1685387843155-38cf47c27b61', by: 'Nicolas Houdayer' },
+    { p: '1673694549411-6fdf2dce4008', by: 'Péter Kövesi' },
+    { p: '1730136803450-b87ebaa6e0be', by: 'Igor Sporynin' },
+    { p: '1723842976568-8dd66ec30c07', by: 'Stefan Åhman' },
+    { p: '1550573932-49f7df2a2a05', by: 'Danijel Durkovic' },
+  ],
+  autumnnight: [
+    { p: '1635805099221-cf512d8a196a', by: 'Igor Solkin' },
+    { p: '1509001333319-944a48ef262b', by: 'John Jennings' },
+    { p: '1794140238930-e96f3a64cd9c', by: 'Hanna Lazar' },
+    { p: '1774444487684-a796af0c2841', by: 'Evgeni Tcherkasski' },
+    { p: '1755805874025-97650aed59b5', by: 'Dmitry Grachyov' },
+  ],
+  winternight: [
+    { p: '1767644851779-d5c329bb4542', by: 'Martin Woortman' },
+    { p: '1698378566210-34b31db66413', by: 'Anton Kotlovskii' },
+    { p: '1768231868716-1f0657c7c1d8', by: 'Jorgen Hendriksen' },
+    { p: '1768551635098-be585c452c61', by: 'Ivan Stepanov' },
+    { p: '1767553304839-eb95cb114673', by: 'Zuoranyi' },
+  ],
 };
 // which set a day gets: Christmas from 6 to 27 December, New Year from 28 December to 2 January, then the season (winter from 21
-// December, spring from 20 March, summer from 21 June, autumn from 23 September); south of the equator the seasons turn around
-function setOf(d, cc) {
+// December, spring from 20 March, summer from 21 June, autumn from 23 September); south of the equator the seasons turn around.
+// While the sun is down (day false) the set of the evening is taken, when there is one for that time of year
+function setOf(d, cc, day) {
   const md = (d.getMonth() + 1) * 100 + d.getDate();
   if (md >= 1206 && md <= 1227) return 'christmas';
   if (md >= 1228 || md <= 102) return 'newyear';
   const k = md >= 1221 || md <= 319 ? 0 : md <= 620 ? 1 : md <= 922 ? 2 : 3;
-  return ['winter', 'spring', 'summer', 'autumn'][SOUTH.indexOf(cc) >= 0 ? (k + 2) % 4 : k];
+  const set = ['winter', 'spring', 'summer', 'autumn'][SOUTH.indexOf(cc) >= 0 ? (k + 2) % 4 : k];
+  return day === false && SETS[set + 'night'] ? set + 'night' : set;
+}
+// the sets of photos of the evening, by the set of the day they belong to
+function nightOf(set) {
+  return SETS[set + 'night'] ? set + 'night' : '';
 }
 // the photos of a set for a country: [{id, p, by, dark}]; id is <set>-<n>, n counting from 1 in the list above
 function photosOf(set, cc) {
@@ -90,4 +128,4 @@ function photosOf(set, cc) {
     .map((x, i) => Object.assign({ id: set + '-' + (i + 1), n: i + 1 }, x))
     .filter(x => !x.cc || x.cc.indexOf(cc) >= 0);
 }
-module.exports = { SETS, TULIPS, SOUTH, setOf, photosOf };
+module.exports = { SETS, TULIPS, SOUTH, setOf, nightOf, photosOf };

@@ -245,6 +245,10 @@ function draw() {
     $('sub').textContent = tr('Input key');
     return;
   }
+  if (view === 'sunplace') {
+    $('sub').textContent = tr('Sun-aware scenes');
+    return;
+  }
   if (view === 'cardsidledim') {
     $('sub').textContent = tr('Dim inactive cards');
     return;

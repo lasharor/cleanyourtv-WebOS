@@ -1325,6 +1325,42 @@ function build() {
     rows.push({ label: 'Back', fn: pop });
     return;
   }
+  if (view === 'sunplace') {
+    /* the one lookup of the scenes that leaves the TV: off by default, said plainly, done once, forgotten when switched off */
+    var sunOn = !!st.options.sunPlace,
+      sunP = st.sunPlace;
+    rows.push({
+      label: 'What this does',
+      sub: 'Couch scenes and the Seasons photos follow the sun: the evening photos show when it is dark where you live. Without this the clock decides.',
+      fn: function () {},
+    });
+    rows.push({
+      label: 'What leaves the TV',
+      sub: 'Once, the name of the city your TV\u2019s time zone names (for example Amsterdam), sent to Open-Meteo, the weather service of the weather card. Nothing else. Not needed when a weather card is set up.',
+      fn: function () {},
+    });
+    rows.push({
+      label: 'Look up my city',
+      sub: onoff(sunOn),
+      fn: function () {
+        opt({ sunPlace: !sunOn });
+      },
+    });
+    if (sunOn)
+      rows.push({
+        label: 'Place kept on the TV',
+        sub:
+          sunP && sunP.name
+            ? sunP.name + ' \u00B7 ' + sunP.lat + ', ' + sunP.lon
+            : sunP
+              ? 'no city found: the clock decides'
+              : 'not looked up yet',
+        fn: function () {},
+      });
+    rows.push({ sep: true });
+    rows.push({ label: 'Back', fn: pop });
+    return;
+  }
   if (view === 'cardsidledim') {
     var dimEnabled = st.options.cardsIdleDim !== false;
     var dimMinutes = st.options.cardsIdleMinutes || 3;
@@ -1991,6 +2027,13 @@ function build() {
         },
       });
     rows.push({ label: 'Cards', sub: 'small widgets on Home', fn: openCards });
+    rows.push({
+      label: 'Sun-aware scenes',
+      sub: onoff(!!st.options.sunPlace) + ' \u00B7 looks up your city once, for the sun\u2019s hours',
+      fn: function () {
+        push('sunplace');
+      },
+    });
     rows.push({
       label: 'Dim inactive cards',
       sub: onoff(st.options.cardsIdleDim !== false),

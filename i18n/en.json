@@ -1851,5 +1851,17 @@
  "Restart the service": "Restart the service",
  "an add-on was updated, switched on or off": "an add-on was updated, switched on or off",
  "its new version runs after this": "its new version runs after this",
- "restart the service to apply it": "restart the service to apply it"
+ "restart the service to apply it": "restart the service to apply it",
+ "Sun-aware scenes": "Sun-aware scenes",
+ "What this does": "What this does",
+ "Couch scenes and the Seasons photos follow the sun: the evening photos show when it is dark where you live. Without this the clock decides.": "Couch scenes and the Seasons photos follow the sun: the evening photos show when it is dark where you live. Without this the clock decides.",
+ "What leaves the TV": "What leaves the TV",
+ "Once, the name of the city your TV’s time zone names (for example Amsterdam), sent to Open-Meteo, the weather service of the weather card. Nothing else. Not needed when a weather card is set up.": "Once, the name of the city your TV’s time zone names (for example Amsterdam), sent to Open-Meteo, the weather service of the weather card. Nothing else. Not needed when a weather card is set up.",
+ "Look up my city": "Look up my city",
+ "Place kept on the TV": "Place kept on the TV",
+ "no city found: the clock decides": "no city found: the clock decides",
+ "not looked up yet": "not looked up yet",
+ "looks up your city once, for the sun’s hours": "looks up your city once, for the sun’s hours",
+ "Photos for the Couch scenes that follow the calendar and the hour: Christmas, New Year, the four seasons, and the evening.": "Photos for the Couch scenes that follow the calendar and the hour: Christmas, New Year, the four seasons, and the evening.",
+ "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. While the sun is down, a time of year that has photos of the evening shows those, so the photo is of the hour it is. South of the equator the seasons turn around. The photos are from Unsplash (free to use), the photographer shows in the corner. About 12 MB is kept on the TV, so every set shows at least two photos without network.": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. While the sun is down, a time of year that has photos of the evening shows those, so the photo is of the hour it is. South of the equator the seasons turn around. The photos are from Unsplash (free to use), the photographer shows in the corner. About 12 MB is kept on the TV, so every set shows at least two photos without network."
 }

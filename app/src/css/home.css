@@ -1293,6 +1293,10 @@ body.scenes-on {
 .late .scene .late {
   opacity: 0.28;
 }
+/* an add-on's own photos of the evening (scenes.js): they are of the evening already, so they are not dimmed on top */
+.late.nightpix .scene .late {
+  opacity: 0;
+}
 .gclock {
   position: absolute;
   left: 0;

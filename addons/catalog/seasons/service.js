@@ -1,4 +1,6 @@
-// The Seasons add-on: photos for the couch scenes that follow the calendar (it provides "scenes", see helper/scenes.js). With a theme
+// The Seasons add-on: photos for the couch scenes that follow the calendar and the hour (it provides "scenes", see helper/scenes.js).
+// The launcher says whether the sun is down where the TV is, and a time of year that has photos of the evening then shows those, so
+// the photo on screen is of the hour it is instead of standing in daylight all evening. With a theme
 // that shows the couch scenes (Couch), Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five
 // photos of the season take the place of the five landscapes; south of the equator the seasons turn around, and the tulip fields of
 // spring show in the Netherlands and Belgium only (photos.js). The launcher tells the TV's country with each request.
@@ -26,10 +28,12 @@ function create(ctx) {
   const has = id => fs.existsSync(fileOf(id, 'image')) && fs.existsSync(fileOf(id, 'glass'));
   const state = { at: 0, ok: 0, error: '', busy: false, got: 0 };
 
-  // what the TV keeps for a country: the set in use, and the first two of every set
+  // what the TV keeps for a country: the set in use with the set of its evening, and the first two of every set
   function wanted(cc) {
-    const out = photos.photosOf(photos.setOf(now(), cc), cc);
-    for (const set of Object.keys(photos.SETS)) for (const x of photos.photosOf(set, cc).slice(0, KEEP)) out.push(x);
+    const set = photos.setOf(now(), cc, true),
+      night = photos.nightOf(set);
+    const out = photos.photosOf(set, cc).concat(night ? photos.photosOf(night, cc) : []);
+    for (const s2 of Object.keys(photos.SETS)) for (const x of photos.photosOf(s2, cc).slice(0, KEEP)) out.push(x);
     const seen = {};
     return out.filter(x => !seen[x.id] && (seen[x.id] = 1));
   }
@@ -103,7 +107,7 @@ function create(ctx) {
   let lastSet = '';
   function list(o) {
     const cc = (o && o.cc) || '';
-    const set = photos.setOf(now(), cc);
+    const set = photos.setOf(now(), cc, !(o && o.day === false));
     // a new country or a new set: the photos to keep change
     if (cc !== cfg().cc) ctx.settings.set({ cc });
     if (cc !== cfg().cc || set !== lastSet || photos.photosOf(set, cc).some(x => !has(x.id))) {

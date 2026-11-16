@@ -5,7 +5,7 @@ another tab, Up and Down move through its rows, and the left side of the screen 
 (Live TV, Voice, Language, ...) shows the tabs dimmed, and Back returns to the same tab and row. The tabs hold:
 
 - **Updates & Home**: Launcher, Service, Check for updates, Update channel, Go back to launcher, CleanYourTV as Home, Input key, Share log.
-- **Features**: Live TV, Wallpapers, App icons, Cards, Android box, Home Assistant, Voice, Network notifications, AI agents (MCP).
+- **Features**: Live TV, Wallpapers, App icons, Cards, Sun-aware scenes (off by default: looks up the city of the TV's time zone once at Open-Meteo, so the scenes follow the sun; the place is shown and forgotten when switched off), Android box, Home Assistant, Voice, Network notifications, AI agents (MCP).
 - **Add-ons**: the installed and available add-ons, **Repositories** (where add-ons come from: the project's own and any you add from your phone, see [Add-on repositories](development/addon-repos.md)), **Update all add-ons**, **Restart the service** (only while an add-on is waiting for it: one that was installed, removed, updated or
   switched on or off runs its service part after that restart) and the page strip. The picture and text of the add-on in focus show on the left; a text longer than its six lines drifts up by itself, rests at its end and starts over.
 - **Debloat**: the four groups.

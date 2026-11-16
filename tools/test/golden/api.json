@@ -447,6 +447,7 @@
     "debloat": false,
     "inputKey": false,
     "liveTv": true,
+    "sunPlace": false,
     "tuner": true,
     "volumeTheme": "system"
    },
@@ -473,6 +474,7 @@
     "updateTo": "99.1.0",
     "version": "<version>"
    },
+   "sunPlace": null,
    "voice": {
     "enabled": false,
     "ha": false,
@@ -541,6 +543,7 @@
     "debloat": false,
     "inputKey": false,
     "liveTv": true,
+    "sunPlace": false,
     "tuner": true,
     "volumeTheme": "system"
    },
@@ -567,6 +570,7 @@
     "updateTo": "99.1.0",
     "version": "<version>"
    },
+   "sunPlace": null,
    "voice": {
     "enabled": false,
     "ha": false,
@@ -653,6 +657,7 @@
     "debloat": false,
     "inputKey": false,
     "liveTv": false,
+    "sunPlace": false,
     "tuner": true,
     "volumeTheme": "system"
    },
@@ -679,6 +684,7 @@
     "updateTo": "99.1.0",
     "version": "<version>"
    },
+   "sunPlace": null,
    "voice": {
     "enabled": false,
     "ha": false,
@@ -962,6 +968,7 @@
    "debloat": false,
    "inputKey": false,
    "liveTv": false,
+   "sunPlace": false,
    "tuner": true,
    "volumeTheme": "system"
   },

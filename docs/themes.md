@@ -250,6 +250,7 @@ when the focus moves down into it (Back or Up closes it); a dock at the top leav
 | `effects.wallpaperDim` | 0 to 0.9 | `0.4` | How far the wallpaper is darkened with the background colour. |
 | `effects.scenes` | `off`, `couch`, `custom` | `off` | `couch`: five landscapes shipped with the launcher take turns behind Home (Night, Golden hour, Waterline, Fog, Dawn); with `clock.style` glass the scenery stands in front of the clock. Takes the place of the wallpaper and of Wallpapers. `custom`: the theme brings its own scenes as a `"scenes"` array in `theme.json`. |
 | `effects.sceneSecs` | 10 to 600 | `20` | Seconds each scene stays (`effects.scenes`). |
+| `effects.sceneSun` | `true` or `false` | `false` | Follow the sun (`effects.scenes` `couch`): the five landscapes are shown by the part of the day they belong to — Dawn in the morning twilight, Waterline and Fog through the day, Golden hour in the evening and Night after dark — instead of all five taking turns. The ones of the part it is now still take turns among themselves every `effects.sceneSecs`. Where the sun stands is worked out from the place of a weather card; without one, from the city of the TV’s time zone if **Features > Sun-aware scenes** is on in the manager (off by default), else from the clock. An add-on’s photos follow the sun by themselves, so this does nothing to them. |
 | **cards** | | | |
 | `cards.style` | `flat`, `glass` | `flat` | `glass`: the weather and Home Assistant cards sit on frosted glass (a blurred copy of the scene behind them, no live blur). |
 <!-- schema:end -->
@@ -262,7 +263,11 @@ when the focus moves down into it (Back or Up closes it); a dock at the top leav
 rim and a sheen. In four scenes the scenery is cut out of the photo and drawn over the clock, so the peaks stand in front of the digits;
 in Waterline the clock sits on the water with a reflection under it. Each scene places the clock and the date above it, so the other
 `clock.*` settings then only set the date's size and whether it shows. Without scenes the glass clock has a white frosted fill. After
-10 pm the scenes dim a little. Everything is drawn once a minute; only opacity animates. The scenes and the clock come from
+10 pm the scenes dim a little, unless an add-on's own photos of the evening are showing, which are of the evening already. With
+`effects.sceneSun` the five landscapes are not shown in turn but by the part of the day they belong to — Dawn in the morning
+twilight, Waterline and Fog through the day, Golden hour in the evening, Night after dark — and the ones of the part it is now
+still take turns among themselves. An add-on that brings photos is told whether the sun is down and answers with photos of that part
+of the day itself (the Seasons add-on: photos of the evening for the time of year). Everything is drawn once a minute; only opacity animates. The scenes and the clock come from
 [couch-tv](https://github.com/Seagey/couch-tv) (MIT; the scenes were generated for that project and are free to use, the typeface is
 Antonio under the SIL Open Font License, see `THIRD-PARTY.md`).
 

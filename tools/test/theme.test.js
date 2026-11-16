@@ -94,6 +94,15 @@ run(async () => {
       !('css' in bad.v),
     'effects are clamped, a wallpaper path is refused and unknown keys are dropped'
   );
+  // following the sun: off unless the theme asks for it, and it reaches the page with the other scene settings
+  const sunny = themeMod.resolve(themeMod.normalize({ effects: { scenes: 'couch', sceneSun: true } }, 'sunny'));
+  const plainScenes = themeMod.resolve(themeMod.normalize({ effects: { scenes: 'couch' } }, 'turns'));
+  ok(
+    sunny.scenes.sun === true && plainScenes.scenes.sun === false,
+    'a theme can make the landscapes follow the sun, and they take turns when it does not: ' +
+      JSON.stringify([sunny.scenes, plainScenes.scenes])
+  );
+
   ok(themeMod.normalize({}, '../x') === null, 'a bad theme id is refused');
   // clock.greeting and dock.tileAlpha: a stacked greeting over the clock and a see-through dock
   const glass = themeMod.resolve(themeMod.normalize({ clock: { layout: 'stack', greeting: true }, dock: { tileAlpha: 0.3 } }, 'glass'));

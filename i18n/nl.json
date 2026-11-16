@@ -1471,5 +1471,17 @@
  "Restart the service": "Service herstarten",
  "an add-on was updated, switched on or off": "een add-on is bijgewerkt, aan- of uitgezet",
  "its new version runs after this": "daarna draait zijn nieuwe versie",
- "restart the service to apply it": "herstart de service om het toe te passen"
+ "restart the service to apply it": "herstart de service om het toe te passen",
+ "Sun-aware scenes": "Zonbewuste scènes",
+ "What this does": "Wat dit doet",
+ "Couch scenes and the Seasons photos follow the sun: the evening photos show when it is dark where you live. Without this the clock decides.": "De bank-scènes en de Seasons-foto’s volgen de zon: de avondfoto’s verschijnen als het donker is waar je woont. Zonder dit beslist de klok.",
+ "What leaves the TV": "Wat de tv verlaat",
+ "Once, the name of the city your TV’s time zone names (for example Amsterdam), sent to Open-Meteo, the weather service of the weather card. Nothing else. Not needed when a weather card is set up.": "Eén keer de naam van de stad die de tijdzone van je tv noemt (bijvoorbeeld Amsterdam), naar Open-Meteo, de weerdienst van de weerkaart. Niets anders. Niet nodig als er een weerkaart is ingesteld.",
+ "Look up my city": "Zoek mijn stad op",
+ "Place kept on the TV": "Plaats die op de tv bewaard wordt",
+ "no city found: the clock decides": "geen stad gevonden: de klok beslist",
+ "not looked up yet": "nog niet opgezocht",
+ "looks up your city once, for the sun’s hours": "zoekt je stad één keer op, voor de uren van de zon",
+ "Photos for the Couch scenes that follow the calendar and the hour: Christmas, New Year, the four seasons, and the evening.": "Foto’s voor de bank-scènes die de kalender en het uur volgen: Kerst, Nieuwjaar, de vier seizoenen en de avond.",
+ "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. While the sun is down, a time of year that has photos of the evening shows those, so the photo is of the hour it is. South of the equator the seasons turn around. The photos are from Unsplash (free to use), the photographer shows in the corner. About 12 MB is kept on the TV, so every set shows at least two photos without network.": "Met een thema dat de bank-scènes toont (Couch) komen foto’s van het jaargetijde in plaats van de vijf landschappen: kerstverlichting en besneeuwde dorpen van 6 tot 27 december, vuurwerk tot 2 januari, daarna vijf foto’s van winter, lente, zomer of herfst. Als de zon onder is, toont een jaargetijde met avondfoto’s die, zodat de foto bij het uur past. Op het zuidelijk halfrond draaien de seizoenen om. De foto’s komen van Unsplash (gratis te gebruiken), de fotograaf staat in de hoek. Ongeveer 12 MB blijft op de tv bewaard, zodat elke set minstens twee foto’s zonder netwerk toont."
 }

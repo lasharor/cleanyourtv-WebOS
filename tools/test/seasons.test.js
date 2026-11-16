@@ -83,10 +83,10 @@ run(async () => {
     l.length === 5 && l[0].id === 'autumn-1' && l[0].credit === 'Federica Galli / Unsplash' && l.every(x => typeof x.darkSky === 'boolean'),
     'the five photos of autumn with their photographer: ' + l.map(x => x.id).join(' ')
   );
-  // autumn's five, and two of each of the other five sets (spring: the first two, never the tulips)
+  // autumn's five and the five of the autumn evening, and two of each of the other eight sets (spring: the first two, never the tulips)
   ok(
-    files().length === (5 + 5 * 2) * 2,
-    'the set in use and the first two of every set are kept, each with its blurred copy: ' + files().length
+    files().length === (5 + 5 + 8 * 2) * 2,
+    'the set in use, the evening of that set and the first two of every set are kept, each with its blurred copy: ' + files().length
   );
   ok(
     asked.some(u => /^\/photo-1508255139162-e1f7b7288ab7\?w=1920&h=1080/.test(u)) &&
@@ -113,6 +113,38 @@ run(async () => {
     S.scenes.list({ cc: 'NLD' }).length === 5 && files().indexOf('autumn-3.jpg') < 0 && files().indexOf('autumn-1.jpg') >= 0,
     'then all five, and only the first two of autumn stay'
   );
+
+  // the evening of a time of year that has its own photos: the launcher says the sun is down, and those take the place of the day's
+  today = new Date(2026, 1, 20); // winter
+  await S.sync();
+  const byDay = S.scenes.list({ cc: 'NLD', day: true }),
+    byNight = S.scenes.list({ cc: 'NLD', day: false });
+  ok(
+    byDay.length === 5 && byDay.every(x => /^winter-\d$/.test(x.id)),
+    'in February the photos of winter show while the sun is up: ' + byDay.map(x => x.id).join(' ')
+  );
+  ok(
+    byNight.length === 5 && byNight.every(x => /^winternight-\d$/.test(x.id)) && byNight[0].credit === 'Martin Woortman / Unsplash',
+    'and the photos of the evening once it is down: ' + byNight.map(x => x.id).join(' ')
+  );
+  ok(
+    S.scenes.list({ cc: 'NLD' }).length === 5 && S.scenes.list({ cc: 'NLD' })[0].id === 'winter-1',
+    'a launcher that says nothing about the hour keeps the photos of the day, as before'
+  );
+  today = new Date(2026, 9, 20); // autumn, which has its own evening too
+  await S.sync();
+  ok(
+    S.scenes.list({ cc: 'NLD', day: false }).every(x => /^autumnnight-\d$/.test(x.id)) &&
+      S.scenes.list({ cc: 'NLD', day: true }).every(x => /^autumn-\d$/.test(x.id)),
+    'in October the same, with the photos of the autumn evening'
+  );
+  today = new Date(2026, 11, 10); // Christmas, which is an evening already and has no second set
+  await S.sync();
+  ok(
+    S.scenes.list({ cc: 'NLD', day: false }).every(x => /^christmas-\d$/.test(x.id)),
+    'a time of year without photos of the evening keeps its own, whatever the hour'
+  );
+  today = new Date(2026, 3, 10); // back to spring for what follows
 
   // no network: what is kept still shows, and the error is reported
   today = new Date(2026, 3, 10); // spring
@@ -171,6 +203,68 @@ run(async () => {
   const g2 = await get('/api/scenes/photo/other/spring-1/image');
   ok(g.code === 404 && g2.code === 404, 'an odd id or an add-on that does not provide scenes gets nothing');
   web.server.close();
+
+  // the place of the TV by name (the launcher asks with the city its time zone names), from the same search the weather card uses
+  const geoAsked = [];
+  const geo = await serve((q, s2) => {
+    geoAsked.push(q.url);
+    s2.writeHead(200, { 'content-type': 'application/json' });
+    s2.end(
+      /Amsterdam/i.test(q.url)
+        ? JSON.stringify({ results: [{ name: 'Amsterdam', country: 'Netherlands', latitude: 52.37, longitude: 4.89 }] })
+        : JSON.stringify({ results: [] })
+    );
+  });
+  process.env.CYTV_GEO_URL = geo.url + '/v1/search';
+  // the address of the search is read when weather.js is first loaded, so both are loaded again for this part
+  for (const n of ['weather', 'scenes']) delete require.cache[require.resolve(path.join(root, 'helper', n + '.js'))];
+  // the lookup leaves the TV, so it is off until the switch in the manager (options.sunPlace) is on, and it is done once
+  const cfg2 = require(path.join(root, 'helper', 'config.js')).create('unused', { memory: {}, log() {} });
+  const sc2 = require(path.join(root, 'helper', 'scenes.js')).create({ feature: () => null, config: cfg2 });
+  const post = q => call(sc2, '/api/scenes/place', 'POST', { q: q });
+  let pl = await post('Amsterdam');
+  ok(
+    pl.code === 200 && pl.j.enabled === false && pl.j.place === null && geoAsked.length === 0,
+    'with the switch off nothing is asked and nothing leaves the TV: ' + JSON.stringify(pl.j)
+  );
+  cfg2.update('test', c => {
+    c.options = Object.assign({}, c.options, { sunPlace: true });
+  });
+  pl = await post('Amsterdam');
+  ok(
+    pl.code === 200 && pl.j.place && pl.j.place.lat === 52.37 && pl.j.place.lon === 4.89 && pl.j.place.name === 'Amsterdam',
+    'switched on, a place by name gives its coordinates: ' + JSON.stringify(pl.j)
+  );
+  const once = geoAsked.length;
+  ok(cfg2.get().scenesPlace && cfg2.get().scenesPlace.lat === 52.37, 'the answer is kept in config.json');
+  await post('Rotterdam');
+  ok(geoAsked.length === once, 'and it is asked once only: another name, a restart of the service or a reload asks nothing more');
+  const sc3 = require(path.join(root, 'helper', 'scenes.js')).create({ feature: () => null, config: cfg2 });
+  pl = await call(sc3, '/api/scenes/place', 'POST', { q: 'Amsterdam' });
+  ok(pl.j.place && pl.j.place.name === 'Amsterdam' && geoAsked.length === once, 'also after the service started again');
+  // the switch goes off: the place is forgotten
+  cfg2.update('test', c => {
+    c.options.sunPlace = false;
+    delete c.scenesPlace;
+  });
+  pl = await post('Amsterdam');
+  ok(pl.j.enabled === false && geoAsked.length === once, 'switched off again, nothing is asked');
+  // a name the search does not know is kept too, so it is not searched again and again
+  cfg2.update('test', c => {
+    c.options.sunPlace = true;
+  });
+  pl = await post('Nowhereville');
+  const afterNone = geoAsked.length;
+  ok(
+    pl.j.place === null && cfg2.get().scenesPlace && cfg2.get().scenesPlace.none,
+    'a name the search does not know gives nothing, so the clock decides'
+  );
+  await post('Nowhereville');
+  ok(geoAsked.length === afterNone, 'and it is not searched again');
+  pl = await post('A');
+  ok(pl.j.place === null && geoAsked.length === afterNone, 'a name of one letter is not searched at all');
+  geo.server.close();
+  delete process.env.CYTV_GEO_URL;
 
   // the manifest is accepted by the loader, with "scenes" among what it provides
   const man = JSON.parse(fs.readFileSync(path.join(dir, 'addon.json'), 'utf8'));

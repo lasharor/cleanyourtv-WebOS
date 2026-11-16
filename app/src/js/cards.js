@@ -60,6 +60,13 @@ function wthSvg(k) {
 function wthText(w) {
   return w && w.now ? w.now.temp + '° · ' + wthKind(w.now.code, w.now.day)[1] : '';
 }
+/* the place of a weather card (the first one that was asked for), for the sun's hours in daynight.js: {lat, lon} or null */
+function wxPlace() {
+  var k = Object.keys(WX)[0];
+  if (!k) return null;
+  var p = k.split(',');
+  return isFinite(+p[0]) && isFinite(+p[1]) ? { lat: +p[0], lon: +p[1] } : null;
+}
 /* the weather of a card's place: what is known now (or null), asking the service when it is older than ten minutes */
 function wthFor(o) {
   var lat = +o.lat,
@@ -84,7 +91,10 @@ function wthFor(o) {
         e.at = Date.now() - 480000; /* try again in two minutes */
       });
   }
-  if (e.w) WX_LAST = e.w;
+  if (e.w) {
+    WX_LAST = e.w;
+    WX_LAST.sure = true; /* Open-Meteo's is_day */
+  }
   return e.w;
 }
 /* ---- Home Assistant (through the service, with the address and token set for Voice); one request for every card, every 30 s ---- */
@@ -224,7 +234,7 @@ function hawFor(o) {
   var w = e.w;
   if (w && w.now && w.now.temp !== null) {
     var hk = hawKind(w.now.cond);
-    WX_LAST = { now: { temp: Math.round(w.now.temp), code: hk[2], day: w.now.cond !== 'clear-night' } };
+    WX_LAST = { sure: false, now: { temp: Math.round(w.now.temp), code: hk[2], day: w.now.cond !== 'clear-night' } };
   }
   return w;
 }
