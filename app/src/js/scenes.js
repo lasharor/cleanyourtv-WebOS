@@ -65,7 +65,14 @@ var SCENES = (function () {
     zoneAsked = true;
     api('/api/scenes/place', { q: c }).then(
       function (r) {
-        if (r && r.place && isFinite(r.place.lat) && isFinite(r.place.lon)) zonePlace = { lat: r.place.lat, lon: r.place.lon };
+        if (!r || !r.place || !isFinite(r.place.lat) || !isFinite(r.place.lon)) return;
+        zonePlace = { lat: r.place.lat, lon: r.place.lon };
+        /* the first scene was chosen while only the clock was known, which has the sun up from 6 am: now that the place is here,
+           the hour is asked again. Before sunrise in winter that is the difference between a sunlit photo and one of the evening. */
+        if (on) {
+          askAddon(true);
+          if (lastTh && lastTh.scenes && lastTh.scenes.sun) show(nextFrom(cur));
+        }
       },
       function () {
         zoneAsked = false; /* no network yet: asked again at the next tick */
