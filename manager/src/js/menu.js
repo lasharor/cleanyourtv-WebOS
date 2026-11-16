@@ -2181,6 +2181,14 @@ function addonRows() {
         push('confirm-addon');
       },
     });
+  if (ad.restartPending) {
+    rows.push({ sep: true });
+    rows.push({
+      label: 'Restart the service',
+      sub: 'an add-on was updated, switched on or off \u00B7 its new version runs after this',
+      fn: restartService,
+    });
+  }
   if (ad.reposOk) {
     rows.push({ sep: true });
     rows.push({
@@ -2337,6 +2345,39 @@ function zramLoad(stay) {
   );
 }
 /* "last 2 Nov, 470 MB" or "not run yet" */
+/* an add-on of kind "service" keeps its old code until the service starts again: this does that, without turning the TV off and on.
+   The service answers first and stops a second later; its watchdog starts it again within ten seconds. Home stays where it is. */
+function restartService() {
+  banner('Restarting the service\u2026', 'work');
+  api('/api/addons/restart', {}).then(
+    function (r) {
+      if (r.error) return banner(r.error, 'err');
+      var until = Date.now() + 60000;
+      (function wait() {
+        setTimeout(function () {
+          api('/api/addons').then(
+            function (a) {
+              if (a && !a.restartPending) {
+                banner('The service is running again', 'ok');
+                loadAddons();
+                return;
+              }
+              if (Date.now() < until) return wait();
+              banner('The service did not come back; turn the TV off and on', 'err');
+            },
+            function () {
+              if (Date.now() < until) return wait();
+              banner('The service did not come back; turn the TV off and on', 'err');
+            }
+          );
+        }, 3000);
+      })();
+    },
+    function () {
+      banner('The service did not answer', 'err');
+    }
+  );
+}
 function trimLast(t) {
   var l = t && t.last;
   if (!l) return 'not run yet';

@@ -339,7 +339,7 @@ you left it. Any app can open a page with `luna://com.webos.applicationManager/l
 
 | Request | Reply |
 |---|---|
-| `GET /api/addons` | `{addons: [{id, name, version, kind, description, about, preview, permissions, enabled, status, error, bundled, repo, tile, page}], paused}`; `status` is `running`, `off`, `paused` or `failed`; `repo` (not for bundled ones) is the repository it was installed from |
+| `GET /api/addons` | `{addons: [{id, name, version, kind, description, about, preview, permissions, enabled, status, error, bundled, repo, tile, page}], paused}`; `status` is `running`, `off`, `paused` or `failed`; `repo` (not for bundled ones) is the repository it was installed from. `restartPending` is true when an add-on was installed, removed, updated or switched since the service started, so its service part is not running yet; the service remembers it until it restarts |
 | `GET /api/addons/preview/<id>[?repo=<name>]` | The add-on's picture (`image/jpeg`, `png` or `webp`): from its folder when it is on the TV, else from its repository; 404 without one |
 | `GET /api/addons/catalog` | `{addons: [{id, name, version, description, about, preview, kind, permissions, repo, official, installed, bundled, update}], error, errors: [{repo, error}]}`: what every repository offers; `installed` and `update` only on the row of the repository the add-on was installed from |
 | `GET /api/addons/repos` | `{repos: [{name, url, official}]}` |
@@ -350,6 +350,7 @@ you left it. Any app can open a page with `luna://com.webos.applicationManager/l
 | `POST /api/addons/install {id, repo?, confirm?}` | Downloads each file named in the repository's index, refuses the whole install if one does not match its hash, then moves the folder in. Without `repo`: the repository it was installed from, else the official one, else the only one that has it. A repository other than `official` needs `confirm: true`, else `400 {error, confirm: true, addons: [{repo, id, name, version, kind, can}]}`; an id of the official repository cannot come from another one, and an id that several other repositories have needs `repo`. `{id, version, repo, restartNeeded}` |
 | `POST /api/addons/remove {id}` | Deletes an installed add-on. `restartNeeded` when its service part was loaded. |
 | `POST /api/addons/<id>/enable {enabled}` | Stored in `config.json` (or, for an add-on with `enabledOption`, in that option). A page add-on follows at once, a service add-on at the next start. |
+| `POST /api/addons/restart {}` | Restarts the service, so the add-ons that were installed, removed, updated or switched since it started begin to run. Answers `{ok: true}` first and then ends the service; the watchdog starts it again within ten seconds. Home comes back by itself; nothing else is lost, because the add-ons' settings are in `config.json`. |
 | `/api/addons/<id>/...` | Answered by the add-on's `service.js`. |
 | `GET /addon/<id>/<file>`, `GET /addon/sdk.js`, `GET /addon/qrcode.js` | The page, the helper script, and the QR code generator a page may draw with (one copy in the repository, `third-party/qrcode-generator`). |
 

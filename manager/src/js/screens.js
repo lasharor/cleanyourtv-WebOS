@@ -122,6 +122,7 @@ function loadAddons() {
       ad.reposOk = !!(r[2] && Array.isArray(r[2].repos));
       ad.repos = ad.reposOk ? r[2].repos : [];
       ad.paused = !!(r[0] && r[0].paused);
+      ad.restartPending = !!(r[0] && r[0].restartPending);
       ad.book = (r[0] && r[0].book) || ad.book;
       if (view === 'addon' && !addonSel()) pop();
       if (view === 'addonrepo' && !repoSel()) pop();
@@ -161,7 +162,7 @@ function addonDo(path, body, done, after) {
         loadAddons();
         return;
       }
-      banner(r.restartNeeded ? done + ' \u00B7 restart the TV to apply it' : done, 'ok');
+      banner(r.restartNeeded ? done + ' \u00B7 restart the service to apply it' : done, 'ok');
       loadAddons();
       if (after && !r.restartNeeded) after();
     },
