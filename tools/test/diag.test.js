@@ -85,8 +85,9 @@ run(async () => {
       ab.out === 'ran 3\n' &&
       fs.readFileSync(tries, 'utf8').trim() === '3' &&
       /started again \(2 of 3\)/.test(saidLines.join(' ')) &&
+      saidLines.some(l => l.indexOf('exec: /bin/sh (ulimit -c 0 2>/dev/null; n=$(cat "$1" 2>/dev/null || echo 0)...) ended') === 0) &&
       !('abortedAtStart' in ab),
-    'a child that Node aborted before it ran is started again (twice here), and the log says so'
+    'a child that Node aborted before it ran is started again (twice here), and the log says so, with the start of the script that was run'
   );
   // one that keeps aborting is given up after three more starts
   fs.writeFileSync(tries, '0');

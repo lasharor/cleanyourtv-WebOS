@@ -11,7 +11,9 @@ const diag = require('./diag'),
 // happened to the first program started while the service was starting, at every start (issue 125: there it was mkswap, so zram did
 // not come on). Such a child is started again, up to three times, half a second apart: it ended within 2 seconds, by SIGABRT, without
 // a byte of output, so the program never ran. Once was not always enough: on that TV the second start aborted as well after a power
-// on from standby.
+// on from standby. It is not only a start-up and standby thing: on the same TV it happened five times in one session, long after the
+// service was up, while the TV was loaded (load average 35, 400 MB of swap in use), so a fork that fails under memory pressure looks
+// likelier than a start-up race (issue 272). Every case so far was recovered by the first start again.
 function run(cmd, args, opts) {
   const o = Object.assign({ env: P.ENV, timeout: 60000, maxBuffer: 8 << 20 }, opts || {});
   const once = () =>
@@ -31,14 +33,24 @@ function run(cmd, args, opts) {
   const attempt = n =>
     once().then(r => {
       if (!r.abortedAtStart || n >= RETRIES) return clean(r);
-      diag.note('exec', 'aborted at start (Node 8), again: ' + cmd);
-      console.log('exec: ' + cmd + ' ended by SIGABRT before it ran (Node 8); started again (' + (n + 1) + ' of ' + RETRIES + ')');
+      diag.note('exec', 'aborted at start (Node 8), again: ' + label(cmd, args));
+      console.log(
+        'exec: ' + label(cmd, args) + ' ended by SIGABRT before it ran (Node 8); started again (' + (n + 1) + ' of ' + RETRIES + ')'
+      );
       return new Promise(res => setTimeout(res, RETRY_MS)).then(() => attempt(n + 1));
     });
   return attempt(0);
 }
 const RETRIES = 3,
   RETRY_MS = 500;
+// what the log says about the program that aborted. For /bin/sh that is the start of its script, which is what tells the caller: the
+// log used to say only "/bin/sh". Blanks are squeezed and the text is cut, so one line stays one line.
+const label = (cmd, args) => {
+  const a = Array.isArray(args) ? args : [];
+  const text = (cmd === '/bin/sh' && a[0] === '-c' ? a[1] : a.join(' ')) || '';
+  const short = String(text).replace(/\s+/g, ' ').trim();
+  return short ? cmd + ' (' + (short.length > 60 ? short.slice(0, 60) + '...' : short) + ')' : cmd;
+};
 const clean = r => {
   delete r.abortedAtStart;
   return r;
