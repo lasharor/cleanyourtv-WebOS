@@ -132,7 +132,24 @@ if (cmd === 'kind') {
     });
     fs.writeFileSync(p, JSON.stringify(b));
   }
+} else if (cmd === 'localeui') {
+  // localeui <settingsservice getSystemSettings reply with localeInfo>  ->  the UI language (it-IT)
+  var lr = rj(a[1], {}),
+    li = (lr.settings && lr.settings.localeInfo) || {};
+  console.log((li.locales && li.locales.UI) || '');
+} else if (cmd === 'localetemp') {
+  // localetemp <UI language>  ->  a nearby one for the moment rescan-home.sh needs: the bare language (it-IT -> it), so the screen
+  // keeps its words; a language without a region gets one (it -> it-IT)
+  var lu = String(a[1] || '');
+  console.log(lu.indexOf('-') > 0 ? lu.split('-')[0] : lu ? lu + '-' + lu.toUpperCase() : '');
+} else if (cmd === 'localeset') {
+  // localeset <getSystemSettings reply with localeInfo> <UI language>  ->  the setSystemSettings request that changes only locales.UI
+  var sr = rj(a[1], {}),
+    si = sr.settings && sr.settings.localeInfo;
+  if (!si || !si.locales || !si.locales.UI || !a[2]) process.exit(1);
+  si.locales.UI = a[2];
+  console.log(JSON.stringify({ settings: { localeInfo: si } }));
 } else {
-  console.error('usage: jtool.js kind|newer|options|opt|stage|saver|exe|wamlaunch|wintype|rmbind');
+  console.error('usage: jtool.js kind|newer|options|opt|stage|saver|exe|wamlaunch|wintype|rmbind|localeui|localetemp|localeset');
   process.exit(2);
 }

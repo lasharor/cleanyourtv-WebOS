@@ -28,7 +28,11 @@ uninstall. Optional features contact other services only when you switch them on
 
     - **LG's Home is a flutter or web app** (webOS 24 and newer): a directory holding the launcher is **bind-mounted** over LG's Home
       app (`/usr/palm/applications/com.webos.app.home`). Its `appinfo.json` is derived from this TV's own stock Home, so nothing of
-      LG's is shipped. The system app manager (`sam`) is restarted so that it reads the new Home.
+      LG's is shipped. The system app manager (`sam`) then reads the new Home: first without a restart (`rescan-home.sh`: the UI
+      language is set to the bare language, `it-IT` to `it`, for a moment and back, and `sam` scans every app folder again when it changes;
+      the picture of an HDMI input stays), and only where `sam` still reports LG's Home after that, by restarting it. A file
+      `home-rescan-off` in the service folder skips the first step. If the TV loses power during that moment, the next boot puts the
+      language back (`locale-ui.restore`).
     - **LG's Home is a native program** (webOS 5 to 23): `home-standin.sh` is **bind-mounted** over that program (its path comes from
       the stock Home's `appinfo.json`, usually `/usr/bin/com.webos.app.home`) and LG's running Home is stopped once. LG's Home
       manifest stays in place and the app manager is not restarted: it starts the stand-in whenever Home is launched. The stand-in

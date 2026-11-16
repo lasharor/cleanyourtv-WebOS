@@ -73,7 +73,7 @@ from the SDK version and the kind of LG's Home app as it came with the TV. **Sha
 | | webOS 5 and 6 (SDK 5, 6) | webOS 22 and 23 (SDK 7, 8) | webOS 24 to 26 (SDK 9 to 11) |
 |---|---|---|---|
 | LG's Home app (reports) | native program | native program | flutter or web app; native on a 43UR75006LK (SDK 9.2.2) |
-| How the launcher becomes Home | stand-in over LG's Home program; the app manager is not restarted | stand-in, as on webOS 5 and 6 | launcher folder mounted over LG's Home app and the app manager restarted; the stand-in where LG's Home is native |
+| How the launcher becomes Home | stand-in over LG's Home program; the app manager is not restarted | stand-in, as on webOS 5 and 6 | launcher folder mounted over LG's Home app and read by the app manager again (a rescan; a restart where that does not work); the stand-in where LG's Home is native |
 | Setup on unlisted firmware | **Set up anyway** needed | **Set up anyway** needed | continues by itself |
 | Input key | Inputs list started on each press | started on each press | kept ready over the running app on webOS 25 (SDK 10); started on each press on SDK 9 and 11 |
 | Picture notifications window | `overlay` | `overlay` | `topui` from SDK 10, `overlay` on SDK 9 |

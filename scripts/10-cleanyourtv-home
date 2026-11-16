@@ -2,7 +2,8 @@
 # Replace LG's Home with the CleanYourTV launcher (RAM-only; reboot without this script restores stock).
 # Use LG's Home instead: the switch in the manager app (creates /media/developer/cleanyourtv/DISABLE and restarts the TV).
 # Two ways, chosen by helper/tvprofile.js (homeTakeover) from LG's Home as it came with the TV:
-#   mount    (flutter and web Home) the launcher's folder is mounted over LG's Home app and the app manager (sam) is restarted
+#   mount    (flutter and web Home) the launcher's folder is mounted over LG's Home app and the app manager (sam) reads it again:
+#            rescan-home.sh (no restart, a moment of another UI language) and, where that does not work, a restart of sam
 #   standin  (native Home, webOS 5 to 23) home-standin.sh is mounted over LG's Home program; sam is not restarted.
 #            A file home-method holding "mount" in the service folder chooses the first way on such a TV too.
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin:$PATH
@@ -42,6 +43,8 @@ pgrep -f cleanyourtv/helper.js >/dev/null || (nohup node $L/helper.js >/tmp/clea
 # after an update (the replaced-Home case below leaves this script early), and if our Home stays unreachable for 60 s it falls back to
 # stock Home until the next reboot.
 pgrep -f "[c]leanyourtv/watchdog.sh" >/dev/null || (sh $L/watchdog.sh </dev/null >/dev/null 2>&1 &)
+# a UI language that rescan-home.sh changed for a moment and could not put back (the TV lost power in between)
+[ -s $L/locale-ui.restore ] && sh $L/rescan-home.sh restore </dev/null
 [ -e $L/DISABLE ] && exit 0   # LG's Home is selected: only the service runs (manager, Input key picker)
 sh $L/stage-home.sh
 if [ -z "$FAST" ] && replaced; then
@@ -104,10 +107,31 @@ if [ "$method" = standin ]; then
     fi
   ) </dev/null >/dev/null 2>&1 &
 else
-  echo "$(up) home: mounting the launcher over LG's Home, restarting sam" >> $LOG
-  # the screen saver, when switched on in the manager (off by default): its folder too, so this one restart reads both
+  # the screen saver, when switched on in the manager (off by default): its folder too, so the one rescan or restart reads both
   [ -e $L/SCREENSAVER-ON ] && sh $L/20-cleanyourtv-screensaver prepare </dev/null
-  mount --bind $L/home-overlay $H && { (sleep 3; pkill -9 -f /usr/palm/applications/airplay/LunaExecutable) </dev/null >/dev/null 2>&1 & systemctl restart sam; }
+  mount --bind $L/home-overlay $H || { echo "$(up) home: the mount over $H failed" >> $LOG; exit 1; }
+  # First without a restart: rescan-home.sh has sam read the app folders again (a moment of another UI language). The picture of an
+  # HDMI input stays, so this also runs when the TV started on an input. A file home-rescan-off in the service folder skips it.
+  if [ ! -e $L/home-rescan-off ] && sh $L/rescan-home.sh; then
+    echo "$(up) home: the launcher is mounted over LG's Home and the app manager read it without a restart" >> $LOG
+    (
+      # LG's Home that runs now (or that sam preloads again around the rescan) is its own program or page: stop it, so the next
+      # launch of Home opens the launcher; open it now if Home or nothing is in front
+      pkill -f "[-]i com\.webos\.app\.home( |$)"
+      pkill -f "[a]pp-id=com\.webos\.app\.home( |$)"
+      sleep 1
+      fg=$(luna_send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' | grep '"appId"')
+      case "$fg" in
+        *'"appId": ""'*|*com.webos.app.home*|"") luna_send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' ;;
+      esac
+      # from here on only LG's own Home program: the launcher runs in webapp-mgr now
+      for i in 1 2 3; do sleep 5; pkill -f "[-]i com\.webos\.app\.home( |$)"; done
+    ) </dev/null >/dev/null 2>&1 &
+    exit 0
+  fi
+  echo "$(up) home: restarting sam so it reads the launcher mounted over LG's Home" >> $LOG
+  (sleep 3; pkill -9 -f /usr/palm/applications/airplay/LunaExecutable) </dev/null >/dev/null 2>&1 &
+  systemctl restart sam
   echo "$(up) home: sam restarted" >> $LOG
   # After the sam restart nothing is in the foreground (black screen). Once sam is back, start Home again
   # unless the user already went somewhere else (e.g. an HDMI input).

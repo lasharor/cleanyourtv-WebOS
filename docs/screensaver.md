@@ -46,7 +46,7 @@ happens while the switch is off (no `SCREENSAVER-ON`).
 ### Which TVs
 
 This version replaces the screen saver only in the way that was tried on a TV (an LG 65UR91006LB, webOS 25, whose Home and screen
-saver are Flutter apps): where the Home takeover is the folder mount, with its app manager restart. In the manager, **Screen saver**
+saver are Flutter apps): where the Home takeover is the folder mount, with its app manager rescan or restart. In the manager, **Screen saver**
 reads "not available on this TV yet" elsewhere, and those TVs keep LG's screen saver:
 
 - **LG's Home is a native program** (webOS 5 to 23, Home taken over by the stand-in): there is no app manager restart at boot to read
@@ -118,7 +118,8 @@ The setting is the file `SCREENSAVER-ON` in `/media/developer/cleanyourtv`: pres
     LG's screen saver is a **Flutter** app started by `tvpowerd`: after the mount and one app manager restart, sam reports `type: web`,
     `main: index.html`; `tvpowerd` starts the page after the idle timeout (`caller_id: com.webos.service.tvpower`), with the window type
     of the manifest, and the first key closes it and gives the launcher back. Without the app manager restart the registry keeps
-    `type: flutter` and nothing appears — the restart is what makes the mount take effect.
+    `type: flutter` and nothing appears — the restart is what makes the mount take effect. The rescan of `rescan-home.sh` (a
+    moment of another UI language) reads every app folder the same way; with the screen saver it is not yet verified on a TV.
 
 The launch showed a grey "loading" screen with a spinner for a second, like any web app: the derived manifest now sets
 `noSplashOnLaunch: true` and `spinnerOnLaunch: false`, so the page's own black background is what appears. (Not yet seen on the TV.)
