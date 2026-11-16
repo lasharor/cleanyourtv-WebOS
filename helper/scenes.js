@@ -6,10 +6,12 @@
 //                                              (cc: the TV's country, two or three letters, as the launcher reads it; day: false while
 //                                              the sun is down, so an add-on can answer with photos of the evening)
 //   GET  /api/scenes/photo/<add-on>/<id>/<image|glass>   a photo, or its blurred copy for the glass clock and the glass cards
-//   POST /api/scenes/place {q}                 the coordinates of a place by name: {place: {name, lat, lon}} or {place: null}. The
-//                                              launcher asks once, with the city its own time zone names, so the scenes can follow
-//                                              the sun on a TV without a weather card. Open-Meteo's geocoding, the same the weather
-//                                              card uses; only the name leaves the TV and the answer is kept until the service stops
+//   POST /api/scenes/place {q}                 the coordinates of a place by name: {enabled, place: {name, lat, lon}} or {enabled, place: null}. The
+//                                              launcher asks with the city its own time zone names, so the scenes can follow the sun
+//                                              on a TV without a weather card. Only when options.sunPlace is on (manager > Features >
+//                                              Sun-aware scenes, off by default): else {enabled: false, place: null} and nothing leaves
+//                                              the TV. Open-Meteo's geocoding, the same the weather card uses; only the name leaves the
+//                                              TV, once: the answer is kept in config.json (scenesPlace) until the switch goes off
 // The object `scenes` on the module an add-on returns from create():
 //   list({cc, day})   -> [{id, credit, darkSky}] (or a promise of it): the scenes to show now, at most 20; id: letters, digits, - _ .
 //                     day is false while the sun is down where the TV is; an add-on that does not care simply ignores it
@@ -30,7 +32,6 @@ const line = (v, n) =>
 
 function create(ctx) {
   const weather = require('./weather').create({ path: require('./paths').WEATHER });
-  const places = {}; // the places looked up since the service started
   const warned = {};
   const warn = (id, e) => {
     if (warned[id]) return;
@@ -87,20 +88,30 @@ function create(ctx) {
     fs.createReadStream(f).pipe(res);
   }
 
-  // a place by name: the first match, or null when the search says nothing (no network, an unknown name)
+  // The place the sun's hours are worked out for, from the name of the city the TV's time zone names. This is the only call of the
+  // scenes that leaves the TV, so: only with the switch in the manager (options.sunPlace, off by default), and only once. The answer
+  // (or "not found") is kept in config.json until the switch goes off, which forgets it. A network failure is tried again at most
+  // once per start of the service, so a TV that is offline is not asking all day.
+  let failedThisRun = false;
   async function placeOf(q) {
-    const key = q.toLowerCase();
-    if (places[key] !== undefined) return places[key];
+    if (!ctx.config.options().sunPlace) return { enabled: false, place: null };
+    const kept = ctx.config.get().scenesPlace;
+    if (kept) return { enabled: true, place: kept.lat !== undefined ? kept : null };
+    if (failedThisRun) return { enabled: true, place: null };
     let p = null;
     try {
       const found = await weather.search(q, '');
       const f = Array.isArray(found) ? found[0] : null;
       if (f && isFinite(f.lat) && isFinite(f.lon)) p = { name: line(f.name, 60), lat: f.lat, lon: f.lon };
     } catch (e) {
-      return null; // not kept: asked again next time
+      failedThisRun = true;
+      return { enabled: true, place: null };
     }
-    places[key] = p;
-    return p;
+    // the switch may have gone off while the search was out: then nothing is kept
+    ctx.config.update('scenes', c => {
+      if (c.options && c.options.sunPlace) c.scenesPlace = p || { none: true, at: Date.now() };
+    });
+    return { enabled: true, place: p };
   }
 
   async function handle(req, res, u, body) {
@@ -114,7 +125,7 @@ function create(ctx) {
       const q = String((b && b.q) || '')
         .trim()
         .slice(0, 60);
-      return web.json(res, { place: q.length < 2 ? null : await placeOf(q) });
+      return web.json(res, q.length < 2 ? { enabled: !!ctx.config.options().sunPlace, place: null } : await placeOf(q));
     }
     if (u === '/api/scenes' && req.method === 'POST') {
       const b = await body(req);

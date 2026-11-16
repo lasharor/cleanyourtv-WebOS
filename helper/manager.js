@@ -84,6 +84,7 @@ function create(ctx) {
     } catch (_) {}
     return Object.assign(updates.status(), {
       options: opts,
+      sunPlace: opts.sunPlace && config.get().scenesPlace ? config.get().scenesPlace : null,
       picker: Object.assign({}, config.get().picker || {}, { mode: inputkey().mode(), released: !!opts.inputKey && !inputkey().on() }),
       voice: voice ? (v => ({ installed: v.installed, enabled: v.enabled, ha: v.ha.configured }))(voice.status()) : null,
       notifyApi: napi ? { enabled: napi.info().enabled, port: napi.info().port } : { enabled: false },
@@ -113,6 +114,7 @@ function create(ctx) {
     const next = Object.assign({}, cur);
     for (const k of ['debloat', 'inputKey', 'liveTv', 'tuner']) if (typeof o[k] === 'boolean') next[k] = o[k];
     if (require('./audio').THEMES.indexOf(o.volumeTheme) >= 0) next.volumeTheme = o.volumeTheme;
+    if (typeof o.sunPlace === 'boolean') next.sunPlace = o.sunPlace;
     if (typeof o.cardsIdleDim === 'boolean') next.cardsIdleDim = o.cardsIdleDim;
     if ([3, 5, 10].indexOf(o.cardsIdleMinutes) >= 0) next.cardsIdleMinutes = o.cardsIdleMinutes;
     if (Array.isArray(o.debloatOff)) next.debloatOff = debloat.cleanOff(o.debloatOff);
@@ -137,6 +139,8 @@ function create(ctx) {
           at: Date.now(),
         });
       c.options = next;
+      // the city looked up for the sun's hours is forgotten with the switch: nothing of it stays when the user says no
+      if (!next.sunPlace) delete c.scenesPlace;
     });
     inputkey().syncMode();
     if (next.debloat !== cur.debloat) await debloat.apply(next.debloat);

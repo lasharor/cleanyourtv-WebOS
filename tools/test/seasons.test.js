@@ -218,20 +218,48 @@ run(async () => {
   process.env.CYTV_GEO_URL = geo.url + '/v1/search';
   // the address of the search is read when weather.js is first loaded, so both are loaded again for this part
   for (const n of ['weather', 'scenes']) delete require.cache[require.resolve(path.join(root, 'helper', n + '.js'))];
-  const sc2 = require(path.join(root, 'helper', 'scenes.js')).create({ feature: () => null });
+  // the lookup leaves the TV, so it is off until the switch in the manager (options.sunPlace) is on, and it is done once
+  const cfg2 = require(path.join(root, 'helper', 'config.js')).create('unused', { memory: {}, log() {} });
+  const sc2 = require(path.join(root, 'helper', 'scenes.js')).create({ feature: () => null, config: cfg2 });
   const post = q => call(sc2, '/api/scenes/place', 'POST', { q: q });
   let pl = await post('Amsterdam');
   ok(
+    pl.code === 200 && pl.j.enabled === false && pl.j.place === null && geoAsked.length === 0,
+    'with the switch off nothing is asked and nothing leaves the TV: ' + JSON.stringify(pl.j)
+  );
+  cfg2.update('test', c => {
+    c.options = Object.assign({}, c.options, { sunPlace: true });
+  });
+  pl = await post('Amsterdam');
+  ok(
     pl.code === 200 && pl.j.place && pl.j.place.lat === 52.37 && pl.j.place.lon === 4.89 && pl.j.place.name === 'Amsterdam',
-    'a place by name gives its coordinates: ' + JSON.stringify(pl.j)
+    'switched on, a place by name gives its coordinates: ' + JSON.stringify(pl.j)
   );
   const once = geoAsked.length;
-  await post('amsterdam');
-  ok(geoAsked.length === once, 'and is not asked twice: the answer is kept while the service runs');
+  ok(cfg2.get().scenesPlace && cfg2.get().scenesPlace.lat === 52.37, 'the answer is kept in config.json');
+  await post('Rotterdam');
+  ok(geoAsked.length === once, 'and it is asked once only: another name, a restart of the service or a reload asks nothing more');
+  const sc3 = require(path.join(root, 'helper', 'scenes.js')).create({ feature: () => null, config: cfg2 });
+  pl = await call(sc3, '/api/scenes/place', 'POST', { q: 'Amsterdam' });
+  ok(pl.j.place && pl.j.place.name === 'Amsterdam' && geoAsked.length === once, 'also after the service started again');
+  // the switch goes off: the place is forgotten
+  cfg2.update('test', c => {
+    c.options.sunPlace = false;
+    delete c.scenesPlace;
+  });
+  pl = await post('Amsterdam');
+  ok(pl.j.enabled === false && geoAsked.length === once, 'switched off again, nothing is asked');
+  // a name the search does not know is kept too, so it is not searched again and again
+  cfg2.update('test', c => {
+    c.options.sunPlace = true;
+  });
   pl = await post('Nowhereville');
-  ok(pl.j.place === null, 'a name the search does not know gives nothing, so the clock decides');
+  const afterNone = geoAsked.length;
+  ok(pl.j.place === null && cfg2.get().scenesPlace && cfg2.get().scenesPlace.none, 'a name the search does not know gives nothing, so the clock decides');
+  await post('Nowhereville');
+  ok(geoAsked.length === afterNone, 'and it is not searched again');
   pl = await post('A');
-  ok(pl.j.place === null && geoAsked.length === once + 1, 'and a name of one letter is not searched at all');
+  ok(pl.j.place === null && geoAsked.length === afterNone, 'a name of one letter is not searched at all');
   geo.server.close();
   delete process.env.CYTV_GEO_URL;
 

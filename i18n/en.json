@@ -1806,5 +1806,15 @@
  "Restart the service": "Restart the service",
  "an add-on was updated, switched on or off": "an add-on was updated, switched on or off",
  "its new version runs after this": "its new version runs after this",
- "restart the service to apply it": "restart the service to apply it"
+ "restart the service to apply it": "restart the service to apply it",
+ "Sun-aware scenes": "Sun-aware scenes",
+ "What this does": "What this does",
+ "Couch scenes and the Seasons photos follow the sun: the evening photos show when it is dark where you live. Without this the clock decides.": "Couch scenes and the Seasons photos follow the sun: the evening photos show when it is dark where you live. Without this the clock decides.",
+ "What leaves the TV": "What leaves the TV",
+ "Once, the name of the city your TV’s time zone names (for example Amsterdam), sent to Open-Meteo, the weather service of the weather card. Nothing else. Not needed when a weather card is set up.": "Once, the name of the city your TV’s time zone names (for example Amsterdam), sent to Open-Meteo, the weather service of the weather card. Nothing else. Not needed when a weather card is set up.",
+ "Look up my city": "Look up my city",
+ "Place kept on the TV": "Place kept on the TV",
+ "no city found: the clock decides": "no city found: the clock decides",
+ "not looked up yet": "not looked up yet",
+ "looks up your city once, for the sun’s hours": "looks up your city once, for the sun’s hours"
 }

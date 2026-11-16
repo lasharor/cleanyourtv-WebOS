@@ -59,6 +59,17 @@ run(async () => {
   ok(r.j.options.tuner === false, 'only a boolean changes the tuner option');
   r = await ask('options', 'POST', { tuner: true });
   ok(r.j.options.tuner === true, "Show LG's own Live TV can be switched on again");
+  // the place lookup for the sun's hours is off by default, and switching it off forgets the place that was kept
+  ok(r.j.options.sunPlace === false && r.j.sunPlace === null, 'the city lookup for the scenes is off by default');
+  conf.update('test', c => {
+    c.scenesPlace = { name: 'Amsterdam', lat: 52.37, lon: 4.89 };
+  });
+  r = await ask('options', 'POST', { sunPlace: true });
+  ok(r.j.options.sunPlace === true && r.j.sunPlace && r.j.sunPlace.name === 'Amsterdam', 'switched on, the manager shows the place that is kept');
+  r = await ask('options', 'POST', { sunPlace: 'yes' });
+  ok(r.j.options.sunPlace === true, 'only a boolean changes it');
+  r = await ask('options', 'POST', { sunPlace: false });
+  ok(r.j.options.sunPlace === false && !conf.get().scenesPlace && r.j.sunPlace === null, 'switched off, the place is forgotten');
   r = await ask('options', 'POST', { liveTv: 'no' });
   ok(r.j.options.liveTv === false, 'only a boolean changes an option');
   r = await ask('options', 'POST', { inputKey: false });

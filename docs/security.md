@@ -68,6 +68,14 @@ Only with a weather card on Home. The service asks `api.open-meteo.com` over HTT
 30 minutes, and keeps the last answer in `weather.json`; the request carries the place's coordinates (rounded to about a kilometre) and
 nothing else. Searching a place on the phone page sends the name you type to `geocoding-api.open-meteo.com`. No account or key.
 
+## Sun-aware scenes
+
+Off by default. With **Features > Sun-aware scenes** on in the manager and no weather card, the service sends one request to
+`geocoding-api.open-meteo.com`: the name of the city the TV's time zone names (for example `Amsterdam`), nothing else. The answer, or the
+fact that none was found, is kept in `config.json` (`scenesPlace`) and never asked again; switching the option off deletes it. With the
+option off the route `POST /api/scenes/place` answers without a request. A failed request (no network) is tried again once per start of
+the service. The manager screen says the same and shows the place that is kept.
+
 ## Home Assistant cards
 
 They use the Home Assistant address and token set under **More** > **Home Assistant**, the same ones Voice uses; nothing else is stored. The service reads the states with one

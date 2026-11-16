@@ -154,7 +154,7 @@
       "files": {
         "addon.json": "31320aa0f93fdaf8b4991166e780e5f31e2160b547d2260ba9682a435b5bdae1",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
-        "page/index.html": "03280c5289f180b4e72b01eec73cba33a5700eec3a29706ce179e33fe0be55e4",
+        "page/index.html": "15344c7a1a798781f17fe5a3d04ee5a429cf49c7b50d843954966e1cd21544df",
         "page.js": "fde899bbe67cbf25b20062bb0f060bb051e1f7b4cc1d324de55857e614a3d5a7",
         "pwa/icon-180.png": "57040c5ec7e1dfc01918b2295df594dbc034b85df865140e27829873f02c4aff",
         "pwa/icon-512.png": "08849f214ae06fda96123a5e13ec69f9f30a6b7d13e776e20f21c669af3581e4",
@@ -173,7 +173,7 @@
       "name": "Seasons",
       "version": "1.1.0",
       "description": "Photos for the Couch scenes that follow the calendar and the hour: Christmas, New Year, the four seasons, and the evening.",
-      "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. While the sun is down, a time of year that has photos of the evening shows those, so the photo is of the hour it is: every season has them. South of the equator the seasons turn around. The photos are from Unsplash (free to use), the photographer shows in the corner.",
+      "about": "With a theme that shows the couch scenes (Couch), photos for the time of year take the place of the five landscapes: Christmas lights and snowy villages from 6 to 27 December, fireworks until 2 January, then five photos of winter, spring, summer or autumn. While the sun is down, a time of year that has photos of the evening shows those, so the photo is of the hour it is. South of the equator the seasons turn around. The photos are from Unsplash (free to use), the photographer shows in the corner. About 12 MB is kept on the TV, so every set shows at least two photos without network.",
       "preview": "preview.jpg",
       "kind": "service",
       "permissions": [
@@ -181,7 +181,7 @@
       ],
       "luna": [],
       "files": {
-        "addon.json": "b03279963e51a20d272f9df9b9d7609095dc6f9df616b93468f9eeefbfccbe6b",
+        "addon.json": "7236db6d4b7ab590098f704546b49a3c77b0b84b7cc2886fbf347f03f3d1e56d",
         "photos.js": "e1449592aa27bf531fe8dff798d2a4826ebd13012b2847068bb20915a540a11a",
         "service.js": "71a28eb04e57b280309b03a3ba49a76ffb514e4007d07d7bd4d9ea71bb4702db"
       }
@@ -248,7 +248,7 @@
       ],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
-        "page/index.html": "75e84f1365da100c6cfaa68d524033d855ae75e7a4073f832a07d612e26816d5",
+        "page/index.html": "470c20dc9d48da6888ca7f33947421b01b039a1590a410b7b3610addfd5358aa",
         "service.js": "9ec8b88db4b510e9de7181f0a8b88e3aca73889e9d2c92bd94c6812753becf5a",
         "src/index.html": "a97da7e3f223e4830404f92b5184cc647777cf4934acd13a960cecddd980e560",
         "tuner.js": "8c22501e09f98da5269c2fd0451f5d769931282d058094324dd8e5e340dfbd40"

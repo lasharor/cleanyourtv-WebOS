@@ -244,7 +244,7 @@ const SCHEMA = [
     'bool',
     null,
     false,
-    'Follow the sun (`effects.scenes` `couch`): the five landscapes are shown by the part of the day they belong to \u2014 Dawn in the morning twilight, Waterline and Fog through the day, Golden hour in the evening and Night after dark \u2014 instead of all five taking turns. The ones of the part it is now still take turns among themselves every `effects.sceneSecs`. Where the sun stands is worked out from the place of a weather card, and without one from the clock. An add-on\u2019s photos follow the sun by themselves, so this does nothing to them.',
+    'Follow the sun (`effects.scenes` `couch`): the five landscapes are shown by the part of the day they belong to \u2014 Dawn in the morning twilight, Waterline and Fog through the day, Golden hour in the evening and Night after dark \u2014 instead of all five taking turns. The ones of the part it is now still take turns among themselves every `effects.sceneSecs`. Where the sun stands is worked out from the place of a weather card; without one, from the city of the TV\u2019s time zone if **Features > Sun-aware scenes** is on in the manager (off by default), else from the clock. An add-on\u2019s photos follow the sun by themselves, so this does nothing to them.',
   ],
   [
     'cards.style',

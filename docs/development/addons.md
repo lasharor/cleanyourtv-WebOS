@@ -194,10 +194,13 @@ from `GET /api/scenes/photo/<add-on>/<id>/<image|glass>`, so the launcher needs 
 them on the TV. Without such an add-on the list is empty and nothing changes.
 
 Whether it is day the launcher works out itself, from the sun over the place the TV stands: it takes the place from the weather card
-when one is set up, and otherwise from the time zone of the TV, whose last part is usually a city (`Europe/Amsterdam`). It asks
-`POST /api/scenes/place {q}` for the coordinates of that name, which the service looks up with the same free weather service as the
-weather card (`{place: {name, lat, lon}}`, or `{place: null}` for a name it does not know). Nothing of this needs Home Assistant, and
-without any place at all the clock decides (day until 19:00, evening until 22:00, then night).
+when one is set up, and otherwise, only if the user switched on **Features > Sun-aware scenes** (off by default), from the time zone of the TV,
+whose last part is usually a city (`Europe/Amsterdam`). It asks `POST /api/scenes/place {q}` for the coordinates of that name, which the
+service looks up with the same free weather service as the weather card (`{enabled, place: {name, lat, lon}}`, or `{enabled, place: null}`
+for a name it does not know). That is the one thing of the scenes that leaves the TV: the name of the city, once. The answer, or the fact
+that none was found, is kept in `config.json` (`scenesPlace`) and the service never asks again; switching the option off deletes it, and with
+the option off the route answers `{enabled: false}` without a request. A failed request (no network) is tried again once per start of the
+service. Nothing of this needs Home Assistant, and without any place at all the clock decides (day until 19:00, evening until 22:00, then night).
 
 ### Tools for the assistant
 

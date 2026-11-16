@@ -1425,5 +1425,15 @@
  "Restart the service": "Service herstarten",
  "an add-on was updated, switched on or off": "een add-on is bijgewerkt, aan- of uitgezet",
  "its new version runs after this": "daarna draait zijn nieuwe versie",
- "restart the service to apply it": "herstart de service om het toe te passen"
+ "restart the service to apply it": "herstart de service om het toe te passen",
+ "Sun-aware scenes": "Zonbewuste scènes",
+ "What this does": "Wat dit doet",
+ "Couch scenes and the Seasons photos follow the sun: the evening photos show when it is dark where you live. Without this the clock decides.": "De bank-scènes en de Seasons-foto’s volgen de zon: de avondfoto’s verschijnen als het donker is waar je woont. Zonder dit beslist de klok.",
+ "What leaves the TV": "Wat de tv verlaat",
+ "Once, the name of the city your TV’s time zone names (for example Amsterdam), sent to Open-Meteo, the weather service of the weather card. Nothing else. Not needed when a weather card is set up.": "Eén keer de naam van de stad die de tijdzone van je tv noemt (bijvoorbeeld Amsterdam), naar Open-Meteo, de weerdienst van de weerkaart. Niets anders. Niet nodig als er een weerkaart is ingesteld.",
+ "Look up my city": "Zoek mijn stad op",
+ "Place kept on the TV": "Plaats die op de tv bewaard wordt",
+ "no city found: the clock decides": "geen stad gevonden: de klok beslist",
+ "not looked up yet": "nog niet opgezocht",
+ "looks up your city once, for the sun’s hours": "zoekt je stad één keer op, voor de uren van de zon"
 }
