@@ -86,6 +86,7 @@ run(async () => {
   a.start();
   const by = id => a.list().filter(x => x.id === id)[0];
   ok(by('demo').status === 'running' && by('demo').enabled, 'a good add-on runs');
+  ok(((await call(a, '/api/addons')).j || {}).restartPending === false, 'nothing asks for a restart of the service at the start');
   ok(
     by('broken').status === 'failed' && /boom/.test(by('broken').error),
     'an add-on that throws is failed, the others still load: ' + by('broken').error
@@ -110,6 +111,11 @@ run(async () => {
   ok(r.j.restartNeeded === true && cfg.get().addons.later.enabled === true, 'switching on is stored and asks for a restart of the service');
   r = await call(a, '/api/addons/later/enable', 'POST', { enabled: 'yes' });
   ok(r.code === 400, 'enabled must be a boolean');
+  // the manager offers the restart until it has happened: an action that needs one is remembered (restartPending)
+  ok(
+    ((await call(a, '/api/addons')).j || {}).restartPending === true,
+    'a switch that needs a restart is remembered, so the manager can offer it'
+  );
 
   fs.writeFileSync(path.join(path.dirname(dir), 'DISABLE-ADDONS'), '');
   a.load();
@@ -825,6 +831,87 @@ run(async () => {
   );
   r = await call(a, '/api/addons/install', 'POST', { id: 'twin', repo: 'second', confirm: true });
   ok(r.code === 200 && r.j.repo === 'second', 'with the repository named it installs');
+  // install, update and remove remember the restart the same way a switch does. The flag lives in the module, so each step gets a
+  // service that has just started (a fresh module over the same folders and settings) and then asks GET /api/addons for it.
+  const addonsFile = path.join(__dirname, '..', '..', 'helper', 'addons.js');
+  const freshAddons = () => {
+    delete require.cache[require.resolve(addonsFile)];
+    const m = require(addonsFile).create({ config: cfg, version: SVC, feature: () => null, luna: fakeLuna });
+    m.start();
+    return m;
+  };
+  const pendingOf = async x => ((await call(x, '/api/addons')).j || {}).restartPending;
+  // a stand-in repository with a service add-on whose version can be raised, so an update really is one
+  const svcVer = { v: '1.0.0' };
+  const svcFiles = () => ({
+    'addon.json': JSON.stringify({
+      id: 'svc',
+      name: 'svc',
+      version: svcVer.v,
+      kind: 'service',
+      entry: { service: 'service.js' },
+      permissions: [],
+    }),
+    'service.js': 'exports.create = () => ({});',
+  });
+  const gu = await serve((q, s2) => {
+    const f = svcFiles();
+    if (q.url === '/index.json')
+      return s2.end(
+        JSON.stringify({
+          addons: [
+            {
+              id: 'svc',
+              name: 'svc',
+              version: svcVer.v,
+              kind: 'service',
+              permissions: [],
+              files: { 'addon.json': sha(f['addon.json']), 'service.js': sha(f['service.js']) },
+            },
+          ],
+        })
+      );
+    const m2 = /^\/catalog\/svc\/(.+)$/.exec(q.url);
+    if (m2 && f[m2[1]] !== undefined) return s2.end(f[m2[1]]);
+    s2.writeHead(404);
+    s2.end();
+  });
+  await call(a, '/api/addons/repos', 'POST', { add: gu.url, name: 'svcrepo', confirm: true });
+  let b = freshAddons();
+  ok((await pendingOf(b)) === false, 'a service that has just started has nothing waiting for a restart');
+  r = await call(b, '/api/addons/install', 'POST', { id: 'svc', repo: 'svcrepo', confirm: true });
+  ok(
+    r.code === 200 && r.j.restartNeeded === false && (await pendingOf(b)) === false,
+    'an add-on that was not there starts at once, so nothing has to be restarted: ' + r.out
+  );
+  r = await call(b, '/api/addons/install', 'POST', { id: 'svc', repo: 'svcrepo', confirm: true });
+  ok(
+    r.code === 200 && r.j.restartNeeded === true && (await pendingOf(b)) === true,
+    'installing over one whose code is loaded remembers the restart: ' + r.out
+  );
+  b = freshAddons();
+  svcVer.v = '1.1.0';
+  r = await call(b, '/api/addons/update', 'POST', { confirm: true });
+  ok(r.code === 200 && r.j.restartNeeded === true && (await pendingOf(b)) === true, 'and so does an update: ' + r.out);
+  b = freshAddons();
+  r = await call(b, '/api/addons/remove', 'POST', { id: 'svc' });
+  ok(r.code === 200 && r.j.restartNeeded === true && (await pendingOf(b)) === true, 'and removing one whose code is loaded: ' + r.out);
+  // the restart itself: the answer goes out first, then the service is ended and the watchdog starts it again
+  const exec = req('exec');
+  const realDetached = exec.detached;
+  const detached = [];
+  exec.detached = cmd => detached.push(cmd);
+  r = await call(b, '/api/addons/restart', 'POST', {});
+  exec.detached = realDetached;
+  ok(
+    r.code === 200 && r.j.ok === true && detached.length === 1 && /pkill -f "\[c\]leanyourtv\/helper\.js"/.test(detached[0]),
+    'POST /api/addons/restart answers {ok:true} and ends the service: ' + JSON.stringify(detached)
+  );
+  r = await call(b, '/api/addons/restart');
+  ok(r.code === 404, 'and only on POST');
+  await call(a, '/api/addons/repos', 'POST', { remove: 'svcrepo' });
+  gu.server.close();
+
   r = await call(a, '/api/addons/install', 'POST', { id: 'liar', repo: 'shadow', confirm: true });
   ok(
     r.code === 400 && /other permissions/.test(r.j.error) && !fs.existsSync(path.join(dir, 'liar')),

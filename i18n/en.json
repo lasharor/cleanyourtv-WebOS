@@ -1802,5 +1802,9 @@
  "Prime Video": "Prime Video",
  "Google Assistant": "Google Assistant",
  "no answer from the Homebrew Channel service (is it installed and up to date?)": "no answer from the Homebrew Channel service (is it installed and up to date?)",
- "Searching...": "Searching..."
+ "Searching...": "Searching...",
+ "Restart the service": "Restart the service",
+ "an add-on was updated, switched on or off": "an add-on was updated, switched on or off",
+ "its new version runs after this": "its new version runs after this",
+ "restart the service to apply it": "restart the service to apply it"
 }

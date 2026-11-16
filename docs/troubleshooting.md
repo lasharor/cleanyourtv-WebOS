@@ -1,5 +1,8 @@
 # Troubleshooting
 
+- **An add-on does nothing after installing, updating or switching it on.** Its service part only runs once the service restarts.
+  Use **Add-ons** > **Restart the service** in the CleanYourTV app (the row is there while something is waiting); Home comes back by
+  itself within about ten seconds. Turning the TV off and on is not enough with Quick Start+, which suspends instead of booting.
 - **Black screen after switching or rebooting.** Wait a minute; if it stays black, restart the TV. If the new Home does not come
   up, the setup removes the boot scripts and restarts the TV with LG's Home by itself.
 - **The Home button opens LG's full-screen Home, not CleanYourTV.** Some TVs have a Home Style setting. Set TV Settings > General >
