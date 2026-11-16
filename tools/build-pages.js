@@ -31,6 +31,28 @@ const COPIES = [
 ];
 // the manager shows the service's own messages (update steps, sync errors): it carries the translations of texts in helper/ too
 const EXTRA = { 'manager/src': ['helper'] };
+// An add-on's own words live in its manifest, not in a t('...') call: its name, what it does in one line, its longer text and the label
+// of its page. The manager shows them on the Add-ons tab and an add-on's screen, the launcher the label on the page strip, each through
+// t()/tr(), so both pages carry their translations.
+const ADDON_DIRS = ['addons/catalog', 'helper/addons-bundled'],
+  ADDON_TEXT_IN = ['manager/src', 'app/src'];
+function addonText() {
+  const out = [];
+  for (const d of ADDON_DIRS) {
+    const base = path.join(root, d);
+    if (!fs.existsSync(base)) continue;
+    for (const id of fs.readdirSync(base).sort()) {
+      let m;
+      try {
+        m = JSON.parse(fs.readFileSync(path.join(base, id, 'addon.json'), 'utf8'));
+      } catch (e) {
+        continue; // a folder without a manifest, or one being written
+      }
+      for (const t of [m.name, m.description, m.about, m.tile && m.tile.label]) if (t && out.indexOf(String(t)) < 0) out.push(String(t));
+    }
+  }
+  return out;
+}
 const extraText = src =>
   (EXTRA[src] || [])
     .map(d =>
@@ -41,7 +63,8 @@ const extraText = src =>
         .map(f => fs.readFileSync(path.join(root, d, f), 'utf8'))
         .join('\n')
     )
-    .join('\n');
+    .join('\n')
+    .concat(ADDON_TEXT_IN.indexOf(src) >= 0 ? '\n' + addonText().join('\n') : '');
 const I18N = path.join(root, 'i18n');
 // A checkout on Windows may have CRLF: the @include lines would not match and the page would be built without its CSS and script. Every
 // file the build reads is normalised, so the pages are written with LF and a check on Windows compares the same text as on Linux.
@@ -171,4 +194,4 @@ if (require.main === module) {
     }
   process.exit(stale ? 1 : 0);
 }
-module.exports = { build, fresh, PAGES, COPIES, langs, english, usedIn, plain, filled };
+module.exports = { build, fresh, PAGES, COPIES, langs, english, usedIn, plain, filled, addonText };

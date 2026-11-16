@@ -30,3 +30,9 @@ TV's menu language, or the one chosen in the manager app under **More** > **Lang
 
 Write it in English and pass it through `t('...')` (`tr()` in the manager). Then run `node tools/i18n.js --sync` to add it to
 `en.json`, add the translations you know to the language files and run `node tools/build-pages.js`.
+
+## Adding an add-on
+
+The `name`, `description`, `about` and tile label in an add-on's `addon.json` are written in English and collected from the
+manifest by `node tools/i18n.js --sync`, so they need no `t('...')`: translate them in the language files like any other text.
+`tools/test/i18n.test.js` fails when one of them is missing from `en.json` or `nl.json`.
