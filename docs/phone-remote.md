@@ -162,6 +162,11 @@ only), passed on by the phone remote's own server and only with the paired phone
 like a key press. A channel chosen on the **Live** tab opens Live TV, as a card does, and then presses the channel's number on the TV's digits, which is
 how Live TV takes a number (the launcher is not asked for anything the phone remote needs: it is an [add-on](development/addons.md#the-phone-remote-the-phoneremote-add-on)).
 
+Under each channel's name the **Live** tab shows the programme on now, with a bar for how far it is, the way Home's Live card does. It
+comes from the TV's own guide and is asked for while the list is read (60 channels a request, kept for a minute, at most 600 channels).
+A channel the guide says nothing about, a playlist without a guide, or Live TV busy with something else: the channel is shown with its
+name alone, as before.
+
 ## Control who has access
 
 The page's top bar shows the TV's own name. On webOS 10 the name the user sets (Settings > General > Devices > TV Name) is not in the

@@ -1848,5 +1848,8 @@
  "%s on": "%s on",
  "%s off": "%s off",
  "Add-ons updated": "Add-ons updated",
- "restart the TV to apply it": "restart the TV to apply it"
+ "Restart the service": "Restart the service",
+ "an add-on was updated, switched on or off": "an add-on was updated, switched on or off",
+ "its new version runs after this": "its new version runs after this",
+ "restart the service to apply it": "restart the service to apply it"
 }

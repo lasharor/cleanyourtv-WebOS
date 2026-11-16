@@ -213,7 +213,7 @@ run(async () => {
       JSON.stringify(noNl.slice(0, 3).map(t => t.slice(0, 40)))
   );
   // the words the Add-ons screen puts around them
-  const banner = ['%s installed', '%s on', '%s off', 'Add-ons updated', 'restart the TV to apply it'];
+  const banner = ['%s installed', '%s on', '%s off', 'Add-ons updated', 'restart the service to apply it'];
   ok(
     banner.every(k => Object.prototype.hasOwnProperty.call(enKeys, k)),
     'en.json lists what the Add-ons screen says around them: ' + JSON.stringify(banner.filter(k => !enKeys[k]))
