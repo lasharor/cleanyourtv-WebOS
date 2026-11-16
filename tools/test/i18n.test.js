@@ -175,4 +175,47 @@ run(async () => {
   const phoneTexts = (phonePage.match(/\bT\('((?:[^'\\]|\\.)+)'\)/g) || []).map(x => x.slice(3, -2).replace(/\\'/g, "'"));
   const phoneAbsent = phoneTexts.filter(k => !Object.prototype.hasOwnProperty.call(enKeys, k));
   ok(phoneTexts.length > 20 && phoneAbsent.length === 0, "en.json lists the phone remote page's texts: " + JSON.stringify(phoneAbsent));
+
+  // an add-on's own words (name, description, about, tile label) are in the tables too, or the Add-ons screen and the tile stay
+  // English in every other language
+  const manifests = [];
+  for (const d of ['addons/catalog', 'helper/addons-bundled']) {
+    const base = path.join(root, d);
+    if (!fs.existsSync(base)) continue;
+    for (const id of fs.readdirSync(base).sort()) {
+      const file = path.join(base, id, 'addon.json');
+      if (fs.existsSync(file)) manifests.push([d + '/' + id, JSON.parse(fs.readFileSync(file, 'utf8'))]);
+    }
+  }
+  const addonTexts = B.addonText();
+  const missed = [];
+  for (const [where, m] of manifests) {
+    for (const t of [m.name, m.description, m.about, m.tile && m.tile.label]) {
+      if (t && addonTexts.indexOf(String(t)) < 0) missed.push(where + ': ' + String(t).slice(0, 40));
+    }
+  }
+  ok(
+    manifests.length > 5 && missed.length === 0,
+    'the words of every add-on manifest are collected (node tools/i18n.js --sync): ' + JSON.stringify(missed.slice(0, 5))
+  );
+  ok(
+    addonTexts.every(t => t && typeof t === 'string' && t.trim()) &&
+      addonTexts.length === addonTexts.filter((t, i) => addonTexts.indexOf(t) === i).length,
+    'and each of them once, never empty: ' + addonTexts.length + ' texts'
+  );
+  const nlKeys = JSON.parse(fs.readFileSync(path.join(root, 'i18n', 'nl.json'), 'utf8'));
+  const noEn = addonTexts.filter(t => !Object.prototype.hasOwnProperty.call(enKeys, t));
+  const noNl = addonTexts.filter(t => !Object.prototype.hasOwnProperty.call(nlKeys, t));
+  ok(noEn.length === 0, 'en.json lists them: ' + JSON.stringify(noEn.slice(0, 3).map(t => t.slice(0, 40))));
+  ok(
+    noNl.length === 0,
+    'and nl.json translates them, so a new add-on without a translation is caught here: ' +
+      JSON.stringify(noNl.slice(0, 3).map(t => t.slice(0, 40)))
+  );
+  // the words the Add-ons screen puts around them
+  const banner = ['%s installed', '%s on', '%s off', 'Add-ons updated', 'restart the service to apply it'];
+  ok(
+    banner.every(k => Object.prototype.hasOwnProperty.call(enKeys, k)),
+    'en.json lists what the Add-ons screen says around them: ' + JSON.stringify(banner.filter(k => !enKeys[k]))
+  );
 });

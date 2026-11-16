@@ -283,7 +283,9 @@ function drawAbout(r, ie) {
     ie.appendChild(im);
   }
   var b = document.createElement('b');
-  b.textContent = r.ablabel ? tr(r.ablabel) : r.label;
+  /* the name above the text, translated as the row's own name is (drawRows, above) */
+  var nm = r.ablabel || r.label;
+  b.textContent = r.raw && !r.ablabel ? nm : tr(nm);
   ie.appendChild(b);
   var box = document.createElement('div'),
     txt = document.createElement('div');

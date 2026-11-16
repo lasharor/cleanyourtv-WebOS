@@ -47,5 +47,7 @@ Right on the remote follow the mirrored layout. Live TV keeps its left-to-right 
 
 New texts are written in English and passed through `t('...')` in the launcher and the picker, `tr()` in the manager, and
 `i18n.tr()` in the service's phone pages. `node tools/i18n.js --sync` adds texts from `t('...')` calls to `en.json`, and
-`node tools/build-pages.js` puts each page's translations into it. [`i18n/README.md`](https://github.com/lasharor/cleanyourtv-WebOS/blob/dev/i18n/README.md)
+`node tools/build-pages.js` puts each page's translations into it. An add-on's own words — the `name`, `description`, `about` and
+tile label in its `addon.json` — are collected from the manifests too, so the Add-ons screen and the tile show them in the TV's
+language; there is nothing to call in the add-on itself. [`i18n/README.md`](https://github.com/lasharor/cleanyourtv-WebOS/blob/dev/i18n/README.md)
 has the details.
