@@ -99,4 +99,16 @@ run(async () => {
   });
   ok(r.status === 0 && r.ui === 'it-IT' && !fs.existsSync(restoreFile), 'rescan-home restore: a language left changed comes back at boot');
   ok(r.changes.length === 1, 'rescan-home restore: no rescan of its own');
+  // the restore cannot happen yet (settings service not ready): the main run must not take the changed language for the user's own
+  r = sh([], () => {
+    fs.writeFileSync(path.join(state, 'ui'), 'it\n');
+    fs.writeFileSync(path.join(state, 'setfails'), '');
+    fs.writeFileSync(restoreFile, 'it-IT\n');
+  });
+  ok(
+    r.status === 1 && r.ui === 'it' && r.changes.length === 0 && fs.readFileSync(restoreFile, 'utf8').trim() === 'it-IT',
+    'rescan-home: a language still waiting to be restored is not overwritten, and there is no rescan (sam is restarted instead)'
+  );
+  ok(/not back yet/.test(r.log), 'rescan-home: the boot log says why there was no rescan');
+  fs.unlinkSync(restoreFile);
 });

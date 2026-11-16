@@ -32,7 +32,7 @@ uninstall. Optional features contact other services only when you switch them on
       language is set to the bare language, `it-IT` to `it`, for a moment and back, and `sam` scans every app folder again when it changes;
       the picture of an HDMI input stays), and only where `sam` still reports LG's Home after that, by restarting it. A file
       `home-rescan-off` in the service folder skips the first step. If the TV loses power during that moment, the next boot puts the
-      language back (`locale-ui.restore`).
+      language back (`locale-ui.restore`); while that file is still there (the settings service was not ready), the boot restarts `sam` instead of rescanning.
     - **LG's Home is a native program** (webOS 5 to 23): `home-standin.sh` is **bind-mounted** over that program (its path comes from
       the stock Home's `appinfo.json`, usually `/usr/bin/com.webos.app.home`) and LG's running Home is stopped once. LG's Home
       manifest stays in place and the app manager is not restarted: it starts the stand-in whenever Home is launched. The stand-in

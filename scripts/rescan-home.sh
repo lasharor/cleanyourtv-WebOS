@@ -37,6 +37,12 @@ if [ -s $R ]; then
   fi
 fi
 [ "$1" = restore ] && exit 0
+# the language is still the changed one (settingsservice was not ready for the restore above): the file holds the language to put
+# back, and a rescan now would read the changed one as the user's and overwrite it. Leave both alone; the caller restarts sam.
+if [ -s $R ]; then
+  echo "$(up) rescan-home: the UI language of an earlier run is not back yet, no rescan this time" >> $LOG
+  exit 1
+fi
 
 want=$(node $L/jtool.js kind $H/appinfo.json 2>/dev/null | cut -d' ' -f2)
 [ -n "$want" ] || { echo "$(up) rescan-home: no appinfo.json in $H" >> $LOG; exit 1; }
