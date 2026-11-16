@@ -58,9 +58,15 @@ card are small and stay single files.
    `backup/home-appinfo.orig.json` the first time), switched to the web type.
 3. `tvprofile.js` decides the way from the stock Home's kind (`homeTakeover`):
     - `mount` (flutter or web Home, webOS 24 and newer): the script **bind-mounts** that directory over
-      `/usr/palm/applications/com.webos.app.home`, restarts the system app manager (`sam`) so it reads the new Home, and launches
-      Home again. On webOS before 7 and with a native Home, `after-sam.sh` then restarts the services that keep talking to the old
-      app manager (`afterSam`).
+      `/usr/palm/applications/com.webos.app.home` and has the system app manager (`sam`) read the new Home. `rescan-home.sh` does that
+      without a restart: `sam` scans every app folder again when `locales.UI` of `localeInfo` changes (`SettingsSubscriber` compares
+      only that key), so the script sets it to the bare language (`jtool.js localetemp`, `it-IT` to `it`) for a moment and back, and
+      waits until `getAppInfo` reports Home with the type of the mounted `appinfo.json`. The language to put back is written to
+      `locale-ui.restore` first; each boot runs `rescan-home.sh restore`. The boot script then stops LG's Home that still runs (its
+      own program, or one `sam` preloads around the rescan) and launches Home if Home or nothing is in front; an HDMI input stays
+      on screen. Where the rescan does not change what `sam` reports (or `home-rescan-off` exists), it restarts `sam` as before and
+      launches Home again; on webOS before 7 and with a native Home, `after-sam.sh` then restarts the services that keep talking to
+      the old app manager (`afterSam`).
     - `standin` (native Home, webOS 5 to 23): `jtool.js exe` finds LG's Home program in the stock `appinfo.json` and the script
       bind-mounts `home-standin.sh` over it, then stops LG's running Home once. `sam` is not restarted and keeps LG's Home manifest,
       so it starts the stand-in for Home. The stand-in sends `wam-launch.json` (written by `stage-home.sh` with `jtool.js wamlaunch`) to
@@ -121,7 +127,7 @@ only while the manager's switch has written `SCREENSAVER-ON` (off by default):
   one `tvpowerd` counts; `jtool.js saver`). It compares the page *and* the generated manifest before it copies anything, so an update
   that changes the derived manifest is staged as well.
 - `10-cleanyourtv-home` calls it, with `prepare`, only in its folder-mount way and only while `SCREENSAVER-ON` is there, right before
-  its own `systemctl restart sam`: one restart reads both folders. `20-` never restarts the app manager itself and is not a boot script
+  the app manager reads the folders again (`rescan-home.sh`, or `systemctl restart sam`): one rescan or restart reads both folders. `20-` never restarts the app manager itself and is not a boot script
   of its own (no link in `init.d`); run any other way it does nothing.
 - `tvprofile.js` `saverTakeover`: `mount` where LG's screen saver is a Flutter, QML or web app; `none` where it is a native program,
   which this version does not replace. `screensaver.js` `supported()` adds the Home side: the Home takeover has to be the folder mount
