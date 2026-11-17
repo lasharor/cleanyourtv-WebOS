@@ -640,7 +640,7 @@ body {
   font-weight: 400;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.88);
   margin: 0 0 8px 2px;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
@@ -1188,7 +1188,7 @@ body.wpon {
   justify-content: flex-end;
   margin-left: 28px;
   padding-left: 24px;
-  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  border-left: 1px solid rgba(255, 255, 255, 0.26);
 }
 .hw-fc > div {
   display: flex;
@@ -1487,9 +1487,14 @@ body.scenes-on {
   padding: 22px 28px;
   border-radius: 30px;
   background-color: rgba(30, 20, 28, 0.34);
+  /* the second line of a card (the days of the forecast, the episode) is dimmed by --ink2, which is thin over a photo; on glass it
+     is nearly as bright as the first line. The edge is drawn a little stronger as well, so the card is still a card on a dark
+     scene (a night sky), where the panel and the photo are both dark. */
+  --ink2: rgba(255, 255, 255, 0.88);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 220, 230, 0.2),
-    inset 0 1px 0 rgba(255, 230, 238, 0.22),
+    inset 0 0 0 1px rgba(255, 230, 238, 0.32),
+    inset 0 1px 0 rgba(255, 235, 242, 0.3),
+    0 10px 34px rgba(0, 0, 0, 0.5),
     0 24px 60px rgba(0, 0, 0, 0.28);
   text-shadow:
     0 1px 3px rgba(0, 0, 0, 0.35),
