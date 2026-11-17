@@ -5,6 +5,7 @@
 
 ## Fixes
 
+- **Swedish is complete and corrected.** 66 missing texts are translated, including the long add-on descriptions, so Swedish is at 1,821 of 1,821. All the existing texts were reviewed and 62 were corrected: **Clear** now says "Rensa", **Running apps** says "Öppna appar", development builds are named the same way everywhere, and the help texts use the names of the buttons as they are on screen. Technical names and placeholders are untouched. The translation was made and checked with OpenAI Codex against the English texts and where the launcher uses them; it has not been looked at on a TV, so the fit of longer words in the layout is not seen. By @NickWick13 (#279).
 - **Glass cards are readable on a dark scene.** The evening photos of the couch scenes brought scenes that are dark from edge to edge, and on them the weather card and the "last watched" card were hard to make out. On a glass card the second line (the days of the forecast, `78% · 19 km/h`, the episode under a title) is now 88 % white instead of 62 %, as is the column of a Home Assistant weather card. The edge is a hairline of 32 % white instead of 20 %, with a shorter, darker shadow, so a card keeps its shape on a dark photo. Light scenes look as before. By @larsoss (#278).
 - **The UI language can no longer be left changed by the rescan.** If the TV lost power in the moment the language was changed, the next boot puts it back. When that restore cannot run yet (the settings service is not ready), the boot now keeps the saved language, skips the rescan and restarts `sam` instead; before, it could take the changed language for yours and keep it (`it-IT` became `it`). Found in the review of #274 (#276).
 
@@ -20,4 +21,4 @@ These changes are checked by the tests and by CI.
 
 ## Thanks
 
-@larsoss for the weather over the scenes and the readable glass cards; @privatepenguinzero for the Home rescan that keeps an HDMI input on screen; and everyone who reports what a dev build does on their TV.
+@larsoss for the weather over the scenes and the readable glass cards; @privatepenguinzero for the Home rescan that keeps an HDMI input on screen; @NickWick13 for the Swedish texts; and everyone who reports what a dev build does on their TV.
