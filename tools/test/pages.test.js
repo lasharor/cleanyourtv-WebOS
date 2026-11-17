@@ -403,6 +403,20 @@ run(async () => {
   );
   const built = require(path.join(root, 'tools', 'build-pages.js'));
   for (const p of built.PAGES) ok(built.fresh(p), p[1] + ' is built from ' + p[0] + ' (run: node tools/build-pages.js)');
+
+  // A glass card stands on the blurred scene, so its second line (the days of the forecast, the episode under a title) was the first
+  // thing to go: --ink2 dims it to 62% of the ink, which is thin over a photo. On glass it is nearly as bright as the first line, and
+  // the edge of the card is drawn stronger, so the card is still a card on a scene that is dark everywhere (a night sky).
+  const homeCss = fs.readFileSync(path.join(root, 'app', 'src', 'css', 'home.css'), 'utf8'),
+    glassCard = (homeCss.match(/^\[data-cards="glass"\] \.card-frame \{([^}]*)\}/m) || [])[1] || '';
+  ok(
+    /--ink2:\s*rgba\(255,\s*255,\s*255,\s*0\.8[0-9]?\)/.test(glassCard),
+    'the second line of a glass card is bright enough to read over a photo: ' + (glassCard.match(/--ink2:[^;]*/) || ['(not set)'])[0]
+  );
+  ok(
+    /inset 0 0 0 1px rgba\(255, 230, 238, 0\.3[0-9]?\)/.test(glassCard) && /0 10px 34px rgba\(0, 0, 0, 0\.[45][0-9]?\)/.test(glassCard),
+    'and its edge and shadow keep the card a shape on a dark scene'
+  );
   // a long device name (HDMI-CEC) is the second line of a chip in the Inputs picker: the line could not shrink, so it was painted outside the
   // card, over the next ones (issue 19). It wraps onto a second line now, ends in an ellipsis there when that is not enough, and the card
   // reserves the two lines so every card's icon and port sit at the same height.
