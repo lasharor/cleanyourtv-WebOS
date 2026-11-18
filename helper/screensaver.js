@@ -1,7 +1,7 @@
 // The screen saver: our page in place of LG's screen saver app (scripts/20-cleanyourtv-screensaver, docs/screensaver.md). This module
 // serves that page, closes it again, and opens it over an idle launcher when tvpowerd did not:
 //   GET  /api/screensaver          {replaced, running, photos, every}
-//   GET  /api/screensaver/photos?cc=<country>   {photos, credits, from, every}   what Home has behind it (background() below):
+//   GET  /api/screensaver/photos?cc=<country>   {photos, credits, from, every, lang}   what Home has behind it (background() below):
 //        photos are library ids ('u/<id>', 's/<add-on>/<id>', 'l/<add-on>') or paths on this service; from: scenes, wallpapers, theme
 //   GET  /api/screensaver/scene/<night|golden|water|fog|dawn>   a couch scene of the launcher (app/scene-<id>.jpg)
 //   GET  /api/screensaver/live/<add-on>   {url, credit}: the photo a live source (Unsplash) gave Home last, so the saver shows the same
@@ -232,7 +232,8 @@ function create(ctx) {
       // ?cc=<country>: the page passes the TV's country, as the launcher does for the scenes of an add-on (Seasons picks by it)
       const m = /[?&]cc=([A-Za-z]{2,3})(?:&|$)/.exec(req.url || '');
       const b = await background(m ? m[1].toUpperCase() : '');
-      return json({ photos: b.photos, credits: b.credits, from: b.from, every: EVERY_S });
+      const lang = (config.get() || {}).lang || '';
+      return json({ photos: b.photos, credits: b.credits, from: b.from, every: EVERY_S, lang });
     }
     // a live source's photo: the one Home has now (wallpapers.js liveCurrent), not the next one the source would hand out
     const lm = /^\/api\/screensaver\/live\/([a-z][a-z0-9-]{1,31})$/.exec(u);
