@@ -150,6 +150,12 @@ run(async () => {
   themeNow = { id: 'plain' };
   x = await call(f, '/api/screensaver/photos');
   ok(x.j.photos.length === 0 && x.j.from === '', 'no wallpaper on Home: nothing, so the page shows the clock on black');
+  cfgNow = { wall: { on: true }, lang: 'de' };
+  x = await call(f, '/api/screensaver/photos');
+  ok(x.j.lang === 'de', 'GET /api/screensaver/photos: lang from config is returned so the page can localise the date');
+  cfgNow = { wall: { on: true } };
+  x = await call(f, '/api/screensaver/photos');
+  ok(x.j.lang === '', "GET /api/screensaver/photos: lang is '' when the Language setting follows the TV");
   themeNow = { id: 'couchtv', scenes: { set: 'couch', secs: 20 }, wallpaper: { id: 'couchtv', file: 'x.jpg', dim: 0.4 } };
   cfgNow = { wall: { on: true } };
   x = await call(f, '/api/screensaver/photos?cc=nl');
