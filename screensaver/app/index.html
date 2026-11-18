@@ -224,7 +224,7 @@
           m = d.getMinutes();
         el('time').textContent = pad(h) + ':' + pad(m);
         try {
-          el('date').textContent = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+          el('date').textContent = d.toLocaleDateString(clockLang || undefined, { weekday: 'long', day: 'numeric', month: 'long' });
         } catch (e) {
           el('date').textContent = pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
         }
@@ -246,11 +246,13 @@
       }
 
       var credits = {};
+      var clockLang = '';
       function load() {
         return get(API + '/api/screensaver/photos?cc=' + encodeURIComponent(country())).then(function (r) {
           credits = r.credits || {};
           list = (r.photos || []).slice();
           if (typeof r.every === 'number') every = r.every;
+          if (typeof r.lang === 'string' && r.lang) clockLang = r.lang;
           order = shuffle(list.slice());
           pos = 0;
           if (order.length) {
