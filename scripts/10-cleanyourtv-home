@@ -116,8 +116,15 @@ else
     echo "$(up) home: the launcher is mounted over LG's Home and the app manager read it without a restart" >> $LOG
     (
       # LG's Home that runs now (or that sam preloads again around the rescan) is its own program or page: stop it, so the next
-      # launch of Home opens the launcher; open it now if Home or nothing is in front
-      pkill -f "[-]i com\.webos\.app\.home( |$)"
+      # launch of Home opens the launcher; open it now if Home or nothing is in front. A native Home (home-method mount on webOS 5
+      # to 23) is the program /usr/bin/com.webos.app.home {...}, which the "-i" pattern misses: left running, it stays registered
+      # with sam and takes some Home launches, so the Home window shows and hides at once and the launcher never opens.
+      NATIVE=$(node $L/jtool.js exe $L/backup/home-appinfo.orig.json 2>/dev/null)
+      stop_lg_home() {
+        pkill -f "[-]i com\.webos\.app\.home( |$)"
+        [ -z "$NATIVE" ] || pkill -f "^$NATIVE( |$)"
+      }
+      stop_lg_home
       pkill -f "[a]pp-id=com\.webos\.app\.home( |$)"
       sleep 1
       fg=$(luna_send -n 1 -w 5000 -f luna://com.webos.applicationManager/getForegroundAppInfo '{}' | grep '"appId"')
@@ -125,7 +132,7 @@ else
         *'"appId": ""'*|*com.webos.app.home*|"") luna_send -n 1 -w 10000 -f luna://com.webos.applicationManager/launch '{"id":"com.webos.app.home"}' ;;
       esac
       # from here on only LG's own Home program: the launcher runs in webapp-mgr now
-      for i in 1 2 3; do sleep 5; pkill -f "[-]i com\.webos\.app\.home( |$)"; done
+      for i in 1 2 3; do sleep 5; stop_lg_home; done
     ) </dev/null >/dev/null 2>&1 &
     exit 0
   fi
