@@ -77,7 +77,7 @@ right after opening.
 
 ## While it runs
 
-- The page asks the service for the photos and closes itself through it (`POST /api/screensaver/dismiss`). The service closes the
+- The page asks the service for the photos (`GET /api/screensaver/photos`, which also returns `lang`, the CleanYourTV language setting: the date on the clock follows it, and with **Language follows the TV** it is empty and the TV's own language is used) and closes itself through the service (`POST /api/screensaver/dismiss`). The service closes the
   page with `com.palm.webappmanager/killApp` and the app manager's `closeByAppId`, each tried on its own, which is what works where
   `window.close()` does nothing.
 - If the system ends the screen saver by itself (the TV is back on an app) and the page is still listed, the service closes it within

@@ -224,7 +224,12 @@
           m = d.getMinutes();
         el('time').textContent = pad(h) + ':' + pad(m);
         try {
-          el('date').textContent = d.toLocaleDateString(clockLang || undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+          var dopt = { weekday: 'long', day: 'numeric', month: 'long' };
+          try {
+            el('date').textContent = d.toLocaleDateString(clockLang || undefined, dopt);
+          } catch (e) {
+            el('date').textContent = d.toLocaleDateString(undefined, dopt);
+          }
         } catch (e) {
           el('date').textContent = pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
         }
