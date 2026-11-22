@@ -250,6 +250,19 @@ run(async () => {
     'the boot script mounts the stand-in first when an earlier boot found the way, before the service and any Node.js step, ' +
       'and not after an update of the launcher (then the slow way stages it first)'
   );
+  // the mount way without a sam restart also stops a native Home's own program (/usr/bin/com.webos.app.home {...} on webOS 5),
+  // which the "-i" pattern misses: left running it takes Home launches and the launcher does not open
+  const rescanPart = bootSh.slice(bootSh.indexOf('sh $L/rescan-home.sh; then'), bootSh.indexOf('restarting sam so it reads'));
+  const nativeRe = new RegExp('^/usr/bin/com\\.webos\\.app\\.home( |$)');
+  ok(
+    /NATIVE=\$\(node \$L\/jtool\.js exe \$L\/backup\/home-appinfo\.orig\.json/.test(rescanPart) &&
+      /pkill -f "\^\$NATIVE\( \|\$\)"/.test(rescanPart) &&
+      (rescanPart.match(/stop_lg_home/g) || []).length >= 3 &&
+      nativeRe.test('/usr/bin/com.webos.app.home {"parameters":{"snapshot":true}}') &&
+      !nativeRe.test('/usr/bin/WebAppMgr --app-id=com.webos.app.home') &&
+      !/^.*-i com\.webos\.app\.home( |$)/.test('/usr/bin/com.webos.app.home {"parameters":{"snapshot":true}}'),
+    "after the rescan the boot script also stops LG's native Home program, which the -i pattern does not match"
+  );
 
   // the watchdog (watchdog.sh): starts a service that has stopped again, keeps the logs of the runs that ended, starts less often a
   // service that stops at once, survives its own file being replaced by an update, and ends when CleanYourTV is gone.
