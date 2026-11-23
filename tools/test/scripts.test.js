@@ -159,6 +159,36 @@ run(async () => {
     /mount --bind \/tmp\/cleanyourtv-hosts \/etc\/hosts/.test(stop) && /umount \/etc\/hosts/.test(undo),
     'where /etc/hosts is read-only (issue 11) the ad servers go into a copy in RAM, and the undo removes it'
   );
+  // the ad servers include the ones of the TV's LG services country (gb.ad.lgsmartad.com on a UK TV): a network that drops them
+  // otherwise held admanager, and HBO Max and Disney+ behind it, for a 10 s connect timeout at every start
+  const hostsBlock = stop.slice(stop.indexOf('cc=$('), stop.indexOf('\n}\n', stop.indexOf('add_hosts() {')) + 3);
+  // a stand-in luna-send on PATH (dash does not take a function named luna-send)
+  const fakeBin = path.join(tmp, 'fake-luna');
+  fs.mkdirSync(fakeBin);
+  fs.writeFileSync(path.join(fakeBin, 'luna-send'), '#!/bin/sh\ncat >/dev/null\nprintf "%s" "$REPLY"\n', { mode: 0o755 });
+  const adHosts = reply => {
+    const r = cp.spawnSync('/bin/sh', ['-c', hostsBlock + 'add_hosts'], {
+      env: Object.assign({}, process.env, { REPLY: reply, PATH: fakeBin + path.delimiter + process.env.PATH }),
+    });
+    return String(r.stdout).trim().split('\n');
+  };
+  const base = 'eic.ads.lgtvcommon.com nl.ad.lgsmartad.com nl.info.lgsmartad.com';
+  const gb = adHosts('{"settings":{"smartServiceCountryCode2": "GB"},"returnValue":true}');
+  ok(
+    gb.length === 2 &&
+      gb[0] === '127.0.0.1 ' + base + ' gb.ad.lgsmartad.com gb.info.lgsmartad.com # cleanyourtv-debloat' &&
+      gb[1] === '::1 ' + base + ' gb.ad.lgsmartad.com gb.info.lgsmartad.com # cleanyourtv-debloat',
+    "the ad servers of the TV's country are blocked too"
+  );
+  ok(
+    adHosts('{"settings":{"smartServiceCountryCode2":"NL"}}')[0] === '127.0.0.1 ' + base + ' # cleanyourtv-debloat',
+    'nl is not added twice'
+  );
+  ok(adHosts('')[0] === '127.0.0.1 ' + base + ' # cleanyourtv-debloat', 'without an answer from the TV the fixed list stays');
+  ok(
+    adHosts('{"settings":{"smartServiceCountryCode2":"x; rm"}}')[0] === '127.0.0.1 ' + base + ' # cleanyourtv-debloat',
+    'only a two-letter code is used'
+  );
   // the installer waits until the TV says "installed" before it removes the package: on an update the files are there already, and an early
   // yes deleted the package while the TV was still unpacking it, so the old version stayed in place
   const installSh = fs.readFileSync(path.join(root, 'install.sh'), 'utf8');

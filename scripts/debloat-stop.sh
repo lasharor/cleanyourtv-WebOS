@@ -33,12 +33,17 @@ for b in $bins; do
   pkill -9 -f "^/usr/sbin/$b"
 done
 on ads || exit 0
-# ad servers (resolved + verified as LG ad endpoints); the marker lets debloat-undo.sh remove them
+# ad servers (resolved + verified as LG ad endpoints); the marker lets debloat-undo.sh remove them.
+# lgsmartad.com has a server per country (nl.ad..., gb.ad...) and admanager asks the one of the TV's LG services country: block that one
+# too, so it is refused at once instead of reaching the server (or, where the network drops it, waiting out a 10 s connect timeout
+# that HBO Max and Disney+ wait for at start, issue 47)
+cc=$(luna-send -n 1 -w 5000 luna://com.webos.settingsservice/getSystemSettings '{"category":"option","keys":["smartServiceCountryCode2"]}' </dev/null 2>/dev/null |
+  sed -n 's/.*"smartServiceCountryCode2": *"\([A-Za-z][A-Za-z]\)".*/\1/p' | tr 'A-Z' 'a-z')
+ad_hosts="eic.ads.lgtvcommon.com nl.ad.lgsmartad.com nl.info.lgsmartad.com"
+[ -n "$cc" ] && [ "$cc" != nl ] && ad_hosts="$ad_hosts $cc.ad.lgsmartad.com $cc.info.lgsmartad.com"
 add_hosts() {
-  cat <<'H'
-127.0.0.1 eic.ads.lgtvcommon.com nl.ad.lgsmartad.com nl.info.lgsmartad.com # cleanyourtv-debloat
-::1 eic.ads.lgtvcommon.com nl.ad.lgsmartad.com nl.info.lgsmartad.com # cleanyourtv-debloat
-H
+  echo "127.0.0.1 $ad_hosts # cleanyourtv-debloat"
+  echo "::1 $ad_hosts # cleanyourtv-debloat"
 }
 if ! grep -q "# cleanyourtv-debloat" /etc/hosts; then
   if [ -w /etc/hosts ] && add_hosts >> /etc/hosts 2>/dev/null; then
