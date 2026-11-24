@@ -84,6 +84,8 @@ if [ "$method" = standin ]; then
         # /tmp/cleanyourtv-home-asked then; the stand-in also starts when the app manager preloads Home, which does not count.
         echo "$(up) home: the TV started on $(echo "$fg" | sed 's/.*"appId": *"\([^"]*\)".*/\1/'); the launcher is checked when Home first opens" >> $LOG
         rm -f /tmp/cleanyourtv-home-asked
+        # an HDMI input without a picture after the takeover (issue 255): hdmi-plane.sh does something only on a TV that needs it
+        sh $L/hdmi-plane.sh "$(echo "$fg" | sed 's/.*"appId": *"\([^"]*\)".*/\1/')" </dev/null >/dev/null 2>&1 &
         # Home in the foreground without that file means the stand-in did not run (Home key pressed, nothing opened): check then too,
         # so a broken stand-in still brings LG's Home back. Not an empty foreground: that is also what standby looks like.
         until [ -f /tmp/cleanyourtv-home-asked ]; do
