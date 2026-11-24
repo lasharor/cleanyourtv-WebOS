@@ -26,6 +26,10 @@
 //                  to read it (flutter and web Home). 'standin' where LG's Home is the native program: a small script is mounted over
 //                  that program and asks webapp-mgr to open the launcher as com.webos.app.home, so LG's Home manifest stays and the
 //                  app manager is not restarted (issues 14, 23 and 24). scripts/home-standin.sh is the script.
+//   hdmiPlane      an HDMI input stays black after the stand-in takeover until webapp-mgr is restarted early in the boot (issue 255,
+//                  50UP75003LF, webOS 6.5.3, MStar): scripts/hdmi-plane.sh does that once when the TV came up on a live input. Only
+//                  webOS 6 with the native Home (the stand-in way); no other TV was seen with it, so webOS 5 and the rest stay off
+//                  unless the file hdmi-plane-on is in the service folder (hdmi-plane-off switches it off).
 //   saverTakeover  the same for LG's screen saver (scripts/20-cleanyourtv-screensaver): 'mount' (the page's folder over the app, read
 //                  by the app manager restart of the Home takeover) where LG's screen saver is a Flutter, QML or web app; 'none'
 //                  where it is a native program, which this version does not replace (no way for that was tried on a TV yet).
@@ -91,6 +95,7 @@ function decide(facts, compat) {
             : '',
     criu: /(^|\s)criu_enabled(\s|=|$)/.test(String(f.cmdline || '')),
     homeTakeover: /^com\.webos\.app\.home native$/.test(homeKind) ? 'standin' : 'mount',
+    hdmiPlane: major === 6 && /^com\.webos\.app\.home native$/.test(homeKind),
     wakeRefocus: major >= 11,
     saverTakeover: /^com\.webos\.app\.screensaver native$/.test(String(f.saver || '')) ? 'none' : 'mount',
   };

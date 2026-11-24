@@ -70,6 +70,14 @@ uninstall. Optional features contact other services only when you switch them on
    played with a black picture after the takeover, because the media services had no foreground app; restarting those two brought picture
    and sound back). The ARC controller is left alone there; eARC keeps working. Other webOS 25 TVs were fine without it, so a file
    `after-sam-services` in `/media/developer/cleanyourtv/` replaces the list on one TV (an empty file switches it off; updates leave it).
+   On webOS 6 with LG's native Home (the stand-in way), HDMI inputs can stay black after the takeover: the input app runs and the
+   signal is live, but the video plane is not attached (issue 255, a 50UP75003LF on webOS 6.5.3). One restart of `webapp-mgr` early in
+   the boot attaches it; five minutes in it no longer does. So when the TV comes up on an HDMI input, `hdmi-plane.sh` restarts
+   `webapp-mgr` once, and only while the uptime is under 120 s, the input is in front, its port reports a live signal and the launcher
+   is not open (it runs inside `webapp-mgr`; closing it blanks the TV). A boot with no signal on the input, for example the box still off,
+   cannot be repaired this way: turn the box on and restart the TV. The files `hdmi-plane-on` and `hdmi-plane-off` in
+   `/media/developer/cleanyourtv/` switch it on for another TV or off on this one (updates leave them). Each step is in
+   `/tmp/cleanyourtv-boot.log`. A TV that boots to the launcher with a live input is not covered yet.
 3. About a minute later the debloat runs, if it is on.
 
 Either bind mount lives in RAM. A reboot without the boot scripts, or the Homebrew Channel's failsafe mode, leaves LG's Home as it was.

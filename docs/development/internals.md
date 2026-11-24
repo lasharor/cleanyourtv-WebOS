@@ -66,7 +66,7 @@ card are small and stay single files.
       own program, or one `sam` preloads around the rescan) and launches Home if Home or nothing is in front; an HDMI input stays
       on screen. Where the rescan does not change what `sam` reports (or `home-rescan-off` exists), it restarts `sam` as before and
       launches Home again; on webOS before 7 and with a native Home, `after-sam.sh` then restarts the services that keep talking to
-      the old app manager (`afterSam`).
+      the old app manager (`afterSam`). On the stand-in way sam is not restarted, so `after-sam.sh` does not run; `hdmi-plane.sh` (`hdmiPlane`, webOS 6) restarts `webapp-mgr` once early in the boot when the TV came up on a live HDMI input (issue 255).
     - `standin` (native Home, webOS 5 to 23): `jtool.js exe` finds LG's Home program in the stock `appinfo.json` and the script
       bind-mounts `home-standin.sh` over it, then stops LG's running Home once. `sam` is not restarted and keeps LG's Home manifest,
       so it starts the stand-in for Home. The stand-in sends `wam-launch.json` (written by `stage-home.sh` with `jtool.js wamlaunch`) to
