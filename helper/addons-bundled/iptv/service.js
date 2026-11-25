@@ -698,9 +698,29 @@ async function handle(req, res, u, body) {
 // the id the page asks the guide with: the playlist's own, or the guide channel found by name
 const guideId = c => (epg && epg.byId && epg.byId[c.id] ? c.id : (epg && epg.map && epg.map[c.key]) || c.id);
 
+// Is the cached guide still useful right now? It must contain at least one programme
+// that covers the current time for a channel in the playlist.
+function epgCoversNow() {
+  if (!epg || !epg.byId || !playlist || !playlist.channels) return false;
+  const now = Math.floor(Date.now() / 1000);
+  for (const c of playlist.channels) {
+    const id = guideId(c);
+    const list = epg.byId[id];
+    if (!list) continue;
+    const i = list.findIndex(p => p[1] > now);
+    if (i >= 0 && list[i][0] <= now) return true;
+  }
+  return false;
+}
+
 // refresh once shortly after start (low priority), then twice a day
 function start() {
-  if (settings.playlistUrl) setTimeout(() => refresh(false), 20000);
+  if (settings.playlistUrl) {
+    setTimeout(() => {
+      const force = !epgCoversNow() || (epg && Date.now() - epg.fetchedAt > 12 * 3600 * 1000);
+      refresh(force);
+    }, 20000);
+  }
   setInterval(() => refresh(false), 6 * 3600 * 1000).unref();
 }
 
