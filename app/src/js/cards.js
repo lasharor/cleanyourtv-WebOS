@@ -851,8 +851,10 @@ function cardFrame(id, pk) {
   return {
     draw: function (el, o) {
       el._pk = pk;
-      /* a card with its own page: the glass style (cards.style) gives it the frosted panel too, its page inside the margins */
+      /* a card with its own page: the glass style (cards.style) gives it the frosted panel too, its page inside the margins; a page
+         that draws its own panel (surface "own") gets none, so it is not a panel in a panel */
       if (!/\bcard-frame\b/.test(el.className)) el.className += ' card-frame';
+      el.classList.toggle('card-own', pk.surface === 'own');
       if (!el._f) {
         el.style.overflow = 'visible';
         var f = document.createElement('iframe');

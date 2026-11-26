@@ -1509,6 +1509,22 @@ body.scenes-on {
 [data-cards="glass"] .card-ha-camera {
   padding: 0;
 }
+/* a card page that draws its own panel (surface "own" in its declaration, like the weather forecast): no panel of the launcher around it,
+   and the page fills the place (the same as the frosted-glass theme does for every card page) */
+[data-cards="glass"] .card-frame.card-own {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+[data-cards="glass"] .card-frame.card-own > iframe,
+[data-cards="glass"] .card-frame.card-own > .card-bw {
+  left: 0 !important;
+  top: 50% !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: translateY(-50%) !important;
+}
 .card-ha-entities.ha-dark,
 [data-cards="glass"] .card-ha-entities.ha-dark {
   background-color: rgba(12, 18, 28, 0.6);
@@ -4438,8 +4454,10 @@ function cardFrame(id, pk) {
   return {
     draw: function (el, o) {
       el._pk = pk;
-      /* a card with its own page: the glass style (cards.style) gives it the frosted panel too, its page inside the margins */
+      /* a card with its own page: the glass style (cards.style) gives it the frosted panel too, its page inside the margins; a page
+         that draws its own panel (surface "own") gets none, so it is not a panel in a panel */
       if (!/\bcard-frame\b/.test(el.className)) el.className += ' card-frame';
+      el.classList.toggle('card-own', pk.surface === 'own');
       if (!el._f) {
         el.style.overflow = 'visible';
         var f = document.createElement('iframe');
@@ -5757,7 +5775,8 @@ var SCENES = (function () {
     for (var i = 0; i < els2.length; i++) {
       var el = els2[i];
       if (!/\bcard-(weather|ha-|frame\b)/.test(el.className)) continue;
-      if (!g) {
+      /* a card page that draws its own panel (card-own) gets no blurred scene behind it */
+      if (!g || /\bcard-own\b/.test(el.className)) {
         el.style.backgroundImage = '';
         el.style.backgroundSize = '';
         el.style.backgroundPosition = '';

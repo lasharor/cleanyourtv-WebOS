@@ -150,6 +150,9 @@ and its **buttons** send the add-on **actions**. The frame is a sandboxed iframe
   request at a time, and only for a card that is set for a place.
 - `actions`: what the card's buttons can do (at most 8): a `name` and a `label`, which is what the remote's focus shows and is in the language of
   the add-on (translate it with the add-on's own words).
+- `surface` (optional): `own` when the page draws its own panel (as the cards of the weather, stocks and crypto, and Spotify add-ons do). A theme
+  with glass cards (`cards.style` `glass`) then puts no panel of its own around the card and no blurred scene behind it, and the page fills its
+  place; otherwise the card would show as a panel in a panel. Left out, the launcher draws the glass panel and the page sits inside its margins.
 
 The add-on's service answers with `cards` on the object `create()` returns:
 

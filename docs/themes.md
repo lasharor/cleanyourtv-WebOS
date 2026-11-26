@@ -321,7 +321,8 @@ shows photos for the time of year in place of the five landscapes. See [Add-ons]
 Up to 10 scenes are accepted; extras are ignored. A scene whose files are missing or whose filenames contain path characters is skipped silently. One scene means no cycling. The TV downloads the image files from the theme's GitHub folder together with `theme.json` when the theme is installed.
 
 `cards.style` `glass` puts the weather and Home Assistant cards on frosted glass: the same blurred copy of the current scene, placed
-where the card is, under a dark tint. Without scenes it is a plain translucent panel.
+where the card is, under a dark tint. Without scenes it is a plain translucent panel. A card of an add-on whose page draws its own panel
+(`surface` `own`, such as the weather forecast) gets no glass of the launcher around it, so it is not a panel in a panel.
 
 ### Slots for cards
 

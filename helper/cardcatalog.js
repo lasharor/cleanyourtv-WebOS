@@ -119,6 +119,8 @@ function clean(m, folder, opts) {
       options,
       template: hasPage ? '' : m.template,
       page: hasPage ? m.page : '',
+      // a page that draws its own panel (surface "own"): with glass cards the launcher then adds no panel of its own around it
+      surface: hasPage && m.surface === 'own' ? 'own' : '',
       poll,
       actions,
       drawer,
