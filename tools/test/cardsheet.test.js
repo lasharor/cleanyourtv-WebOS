@@ -189,6 +189,7 @@ run(async () => {
     cfg: { cards: { a: { type: 'x-demo', place: 'Paris', unit: 'c' } } },
     CARD_PACKS: {
       demo: {
+        name: 'Demo forecast card',
         settings: { action: 'settings', title: 'Demo' },
         options: [
           { key: 'place', kind: 'place', label: 'City', def: '', choices: [] },
@@ -247,6 +248,18 @@ run(async () => {
   env.csSettings('x-demo');
   rows = built.b();
   ok(rows[0].note === 'This card is not on Home yet. Choose it for a place in Cards.', 'no card on Home: a note first');
+  ok(rows[1].note === 'In Cards it is called Demo forecast card.', 'and the name to look for in Cards');
+  ok(!rows.some(r => /another card/.test(r.note || '')), 'with no other card with a city on Home nothing more is said');
+  // a card of another type with a city of its own stood on Home and was taken for this one: the panel says so
+  env.cfg.cards = { row: { type: 'other-card', place: 'Paris' }, side: { type: 'x-jelly' } };
+  env.csSettings('x-demo');
+  rows = built.b();
+  ok(
+    rows[0].note === 'This card is not on Home yet. Choose it for a place in Cards.' &&
+      rows[2].note === 'The card with a city on Home now is another card. Its city is set on the phone (Cards > Set up from your phone).',
+    'another card with a city on Home: the panel says it is another card, set on the phone'
+  );
+  env.cfg.cards = {};
   const cr = env.csRows();
   ok(cr.length === 1 && cr[0].label === 'Demo' && cr[0].sub === 'Not set', 'Customise gets a row per pack with settings');
 });
