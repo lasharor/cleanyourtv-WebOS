@@ -15,6 +15,7 @@ luna_send() { command luna-send "$@" </dev/null; }
 LOG=${CYTV_BOOT_LOG:-/tmp/cleanyourtv-boot.log} # the tests point these elsewhere
 UPTIME=${CYTV_UPTIME:-/proc/uptime}
 MAXUP=${CYTV_BOOT_INPUT_MAXUP:-300}
+WAMWAIT=${CYTV_BOOT_INPUT_WAMWAIT:-20}
 up() { cut -d' ' -f1 $UPTIME; }
 upsec() { read -r n _ < $UPTIME; echo "${n%.*}"; }
 log() { echo "$(up) home-boot-input: $*" >> $LOG 2>/dev/null; }
@@ -25,6 +26,14 @@ if ! luna_send -n 1 -w 3000 luna://com.webos.settingsservice/getSystemSettings '
   log "the TV started on ${1:-an input}; Home Auto Launch is off in LG's settings, so it stays there"
   exit 0
 fi
+# hdmi-plane.sh may just have restarted webapp-mgr, which opens the launcher: systemd calls it active before it answers on the bus, and
+# a launch it refuses would leave the boot hook to think the launcher cannot open. So wait until it answers (at most 20 s).
+for i in $(seq 1 "$WAMWAIT"); do
+  luna_send -n 1 -w 2000 luna://com.palm.webappmanager/listRunningApps '{}' 2>/dev/null | grep -q '"returnValue": *true' && break
+  [ "$i" = "$WAMWAIT" ] && { log "webapp-mgr does not answer; Home is not opened (the Home key opens it)"; exit 0; }
+  sleep 1
+done
+# what is in front is read last, right before the launch
 fg=$(luna_send -n 1 -w 3000 luna://com.webos.applicationManager/getForegroundAppInfo '{}' 2>/dev/null | sed -n 's/.*"appId": *"\([^"]*\)".*/\1/p')
 case "$fg" in
   com.webos.app.home) log "Home is already in front"; exit 0 ;;

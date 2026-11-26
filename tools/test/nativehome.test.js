@@ -368,7 +368,7 @@ run(async () => {
   // Home after a cold boot on an input: a full restart brings the TV up on the last input, and the stand-in only preloads Home then
   // (seen on a 65UP77006LB, webOS 6.5.3: it stayed on HDMI 1 until Home was pressed). home-boot-input.sh opens Home by the same rule as
   // the power on from standby, and only early in a boot, so a setup or an update that runs the boot hook later never covers an input.
-  const bootInput = (name, setting, fg, uptime) => {
+  const bootInput = (name, setting, fg, uptime, wam) => {
     const D = path.join(tmp, name);
     fs.mkdirSync(D);
     fs.mkdirSync(path.join(D, 'bin'));
@@ -385,6 +385,9 @@ run(async () => {
         '*getForegroundAppInfo) echo \'{"appId":"' +
         fg +
         '","returnValue":true}\' ;;\n' +
+        "*listRunningApps) echo '" +
+        (wam === false ? '{"returnValue":false,"errorText":"not ready"}' : '{"returnValue":true,"running":[]}') +
+        "' ;;\n" +
         '*) echo \'{"returnValue":true}\' ;;\nesac\n'
     );
     fs.chmodSync(path.join(D, 'bin', 'luna-send'), 0o755);
@@ -393,6 +396,7 @@ run(async () => {
         PATH: path.join(D, 'bin') + ':' + process.env.PATH,
         CYTV_BOOT_LOG: path.join(D, 'boot.log'),
         CYTV_UPTIME: path.join(D, 'uptime'),
+        CYTV_BOOT_INPUT_WAMWAIT: '2',
       }),
       timeout: 10000,
     });
@@ -414,6 +418,11 @@ run(async () => {
   ok(
     bi.launches === 0 && /not a boot/.test(bi.log),
     'long after a boot (a setup or an update runs the hook) Home is not opened over the input'
+  );
+  bi = bootInput('boot-input-wam', 'on', 'com.webos.app.hdmi1', null, false);
+  ok(
+    bi.launches === 0 && /webapp-mgr does not answer; Home is not opened/.test(bi.log),
+    'webapp-mgr that does not answer (just restarted by hdmi-plane.sh) is waited for, and Home is not launched into it'
   );
   const hookNow = fs.readFileSync(path.join(root, 'scripts/10-cleanyourtv-home'), 'utf8');
   ok(
