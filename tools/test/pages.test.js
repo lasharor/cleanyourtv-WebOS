@@ -99,6 +99,36 @@ run(async () => {
     stackCards.map(card => card.style.top).join(',') === '150px,558px,688px' && stackCards.every(card => card.style.transform === ''),
     'a tall card above two short cards keeps its size when the whole stack fits'
   );
+  // Dim inactive cards: the timer ran on while Home was hidden (the TV in standby), so after switching the TV on the cards were dimmed until
+  // a key was pressed. Home shown again or relaunched starts them bright, and the minutes count from then.
+  {
+    const cardsSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'cards.js'), 'utf8');
+    const part = cardsSrc.slice(cardsSrc.indexOf('var cardsIdleMinutes'), cardsSrc.indexOf('/* OLED care'));
+    const on = {},
+      cls = {},
+      timers = [];
+    const sb = {
+      document: {
+        hidden: false,
+        addEventListener: (n, f) => (on[n] = on[n] || []).push(f),
+        body: { classList: { add: c => (cls[c] = true), remove: c => delete cls[c] } },
+      },
+      setTimeout: f => timers.push(f) && timers.length,
+      clearTimeout: () => timers.splice(0),
+    };
+    vm.runInNewContext(part + ';setCardsIdleMinutes(3);', sb);
+    timers.splice(0).forEach(f => f());
+    ok(cls['cards-idle'], 'the cards dim after their idle minutes');
+    sb.document.hidden = true;
+    (on.visibilitychange || []).forEach(f => f());
+    ok(cls['cards-idle'], 'Home hidden (standby) leaves them as they are');
+    sb.document.hidden = false;
+    (on.visibilitychange || []).forEach(f => f());
+    ok(!cls['cards-idle'] && timers.length === 1, 'Home shown again (the TV switched on) shows the cards bright and counts again');
+    timers.splice(0).forEach(f => f());
+    (on.webOSRelaunch || []).forEach(f => f());
+    ok(!cls['cards-idle'], 'a relaunch of Home (the Home key) does the same');
+  }
   // webOS 26: after a wake the launcher is shown without the focus and asks the service for the remote (POST /api/refocus), twice at most
   {
     const inputSrc = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'input.js'), 'utf8');
