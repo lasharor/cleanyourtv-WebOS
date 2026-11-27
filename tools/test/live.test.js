@@ -439,6 +439,30 @@ run(async () => {
     );
   }
 
+  // a guide that has run out while the TV was off is noticed at start (it is then loaded again)
+  {
+    const now = 1000000,
+      pl = {
+        channels: [
+          { id: 'a', key: 'ka' },
+          { id: 'b', key: 'kb' },
+        ],
+      },
+      g = byId => ({ v: 5, byId, map: { kb: 'guide-b' } });
+    ok(!live.epgCoversNow(null, pl, now) && !live.epgCoversNow(g({}), null, now), 'a missing guide or playlist covers nothing');
+    ok(!live.epgCoversNow(g({ a: [[now - 7200, now - 3600, 'Old']] }), pl, now), 'a guide that ended before now is stale');
+    ok(!live.epgCoversNow(g({ a: [[now + 60, now + 600, 'Later']] }), pl, now), 'a guide that starts after now is stale');
+    ok(live.epgCoversNow(g({ a: [[now - 60, now + 600, 'Now']] }), pl, now), 'a programme on now keeps the guide');
+    ok(
+      live.epgCoversNow(g({ a: [[now - 7200, now - 3600, 'Old']], 'guide-b': [[now - 5, now + 5, 'Now']] }), pl, now),
+      'a channel found by name counts'
+    );
+    ok(
+      !live.epgCoversNow(g({ other: [[now - 60, now + 600, 'Nobody']] }), pl, now),
+      'a programme of a channel nobody lists does not count'
+    );
+  }
+
   // a connection that drops after the headers ends the playlist read with an error, never a hang (issue 5)
   const drop = await serve((q, r) => {
     r.writeHead(200, { 'content-length': '100000' });

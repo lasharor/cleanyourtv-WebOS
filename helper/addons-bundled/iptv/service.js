@@ -698,14 +698,13 @@ async function handle(req, res, u, body) {
 // the id the page asks the guide with: the playlist's own, or the guide channel found by name
 const guideId = c => (epg && epg.byId && epg.byId[c.id] ? c.id : (epg && epg.map && epg.map[c.key]) || c.id);
 
-// Is the cached guide still useful right now? It must contain at least one programme
-// that covers the current time for a channel in the playlist.
-function epgCoversNow() {
-  if (!epg || !epg.byId || !playlist || !playlist.channels) return false;
-  const now = Math.floor(Date.now() / 1000);
-  for (const c of playlist.channels) {
-    const id = guideId(c);
-    const list = epg.byId[id];
+// Is a guide still useful at this moment (seconds since 1970)? It must hold a programme that covers
+// the time for at least one channel of the playlist (the id of the playlist, or the one found by name).
+function epgCoversNow(e, pl, now) {
+  if (!e || !e.byId || !pl || !pl.channels) return false;
+  for (const c of pl.channels) {
+    const id = e.byId[c.id] ? c.id : (e.map && e.map[c.key]) || c.id;
+    const list = e.byId[id];
     if (!list) continue;
     const i = list.findIndex(p => p[1] > now);
     if (i >= 0 && list[i][0] <= now) return true;
@@ -717,8 +716,7 @@ function epgCoversNow() {
 function start() {
   if (settings.playlistUrl) {
     setTimeout(() => {
-      const force = !epgCoversNow() || (epg && Date.now() - epg.fetchedAt > 12 * 3600 * 1000);
-      refresh(force);
+      refresh(!epgCoversNow(epg, playlist, Math.floor(Date.now() / 1000)));
     }, 20000);
   }
   setInterval(() => refresh(false), 6 * 3600 * 1000).unref();
@@ -846,4 +844,4 @@ async function callTool(name, args) {
 // the add-on's ctx is not needed: this part keeps its own state (it was a part of the service before add-ons, and still answers /api/live/)
 const create = (/** @type {any} */ _ctx) => ({ handle, start, tools: { list: () => [TOOL], call: callTool } });
 
-module.exports = { create, handle, parseM3U, parseEpg, probe, derivedEpgUrl, nameKey };
+module.exports = { create, handle, epgCoversNow, parseM3U, parseEpg, probe, derivedEpgUrl, nameKey };
