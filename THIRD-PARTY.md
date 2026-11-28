@@ -64,6 +64,13 @@ Kazuhiko Arase, unmodified (npm package `qrcode-generator@1.4.4`, SHA-256 of the
 `18ae399f81182bc9de916e9c77b195df20cc58d6f2d55a62b085a299f1bf1780`), licensed under the MIT license (the notice is in
 the file header). The manager app loads it to draw the QR code.
 
+## earc_route (DTS audio passthrough add-on, not shipped)
+
+The catalog add-on `dtspass` downloads, at the user's request, the release `earc-route-hbr-0.1.0.tar.gz` of
+[Mokto/earc_route](https://github.com/Mokto/earc_route) (GPL-2.0-only, a Linux kernel module with its loader scripts; SHA-256
+`1c32b01fb30a9d365b51ed0b540c83a6dae045ffae49642176391d9bd03559f5`). Nothing of it is in this repository or in the package: the add-on is MIT
+and only runs the release's own installer as a separate program. tvlauncher and Native Jelly (GPL-3.0) are not used; no code of them is copied.
+
 ## Design
 
 The home-screen design follows the Android TV project [CleanYourTV](https://github.com/Gathin23/cleanyourtv) (MIT).

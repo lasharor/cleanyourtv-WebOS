@@ -72,12 +72,13 @@ const WORDS = {
   notify: 'show notifications on the TV',
   'key.guide': 'use the Guide button',
 };
-function describe(kind, permissions, luna) {
+function describe(kind, permissions, luna, exec) {
   const out = [];
   if (kind === 'service') out.push('run its own code as root on the TV');
   else out.push('show its own web page');
   for (const p of permissions || []) if (WORDS[p]) out.push(WORDS[p]);
   if ((luna || []).length) out.push("call LG's services: " + luna.map(u => String(u).replace('luna://', '')).join(', '));
+  if ((exec || []).length) out.push('run these commands as root: ' + exec.join('; '));
   return out;
 }
 

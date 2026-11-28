@@ -1,0 +1,27 @@
+{
+  "id": "dtspass",
+  "name": "DTS audio passthrough",
+  "version": "1.0.0",
+  "minService": "1.6.32",
+  "kind": "service",
+  "description": "Switches the eARC output to full-rate (HBR) passthrough for apps that play DTS-HD, TrueHD and DTS:X themselves. webOS 6 only.",
+  "about": "Installs and manages the earc_route kernel module (a separate GPL-2.0 program, downloaded from its own release and checked against a fixed SHA-256) so that players such as tvlauncher or Native Jelly can send DTS-HD MA, DTS:X and TrueHD to a receiver over eARC. It does not play or decode anything itself. Only for LG TVs on webOS 6 (kernel 4.4.84), tested on an LG C1 only; other TVs are refused. Loading the module is undone by a reboot without the boot script.",
+  "entry": {
+    "service": "service.js",
+    "page": "index.html"
+  },
+  "permissions": ["net.fetch", "luna", "exec"],
+  "luna": [{ "uri": "luna://com.webos.service.audio/getSoundOutput" }],
+  "exec": [
+    ["tar", "-xzf", "{data}/hbr.tgz", "-C", "{data}/hbr"],
+    ["sh", "{data}/hbr/earc-route-hbr-0.1.0/earc-route-hbr.sh", "install"],
+    ["sh", "{data}/hbr/earc-route-hbr-0.1.0/earc-route-hbr.sh", "remove"],
+    ["sh", "{data}/hbr/earc-route-hbr-0.1.0/earc-route-hbr.sh", "refresh"],
+    ["sh", "{data}/hbr/earc-route-hbr-0.1.0/earc-route-hbr.sh", "status"]
+  ],
+  "tile": {
+    "label": "DTS",
+    "icon": "music",
+    "placement": "page"
+  }
+}

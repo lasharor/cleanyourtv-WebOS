@@ -27,7 +27,7 @@ run(async () => {
   bad({ kind: 'root' }, /kind/, 'an unknown kind is refused');
   bad({ entry: { service: '../x.js' } }, /entry\.service/, 'a service file outside the folder is refused');
   bad({ entry: { service: 'a.js', page: '/etc/passwd' } }, /entry\.page/, 'an absolute page path is refused');
-  bad({ permissions: ['exec'] }, /unknown permission/, 'a permission that does not exist is refused');
+  bad({ permissions: ['sudo'] }, /unknown permission/, 'a permission that does not exist is refused');
   bad({ minService: '9.0.0' }, /needs service 9\.0\.0/, 'a newer service is asked for');
   ok(addons.check(null).error && addons.check([]).error, 'a manifest that is not an object is refused');
   ok(

@@ -31,7 +31,10 @@ const repos = require('./addonrepos');
 
 const KINDS = ['page', 'service'];
 // luna: calls to LG's own services, only the ones the manifest lists ("luna": [{uri, as}]); see addonCtx
-const PERMISSIONS = ['net.fetch', 'config.own', 'notify', 'key.guide', 'luna'];
+// exec: fixed commands as root, only the ones the manifest lists ("exec": [["sh", "{data}/x.sh", "status"]]); see addonCtx
+const PERMISSIONS = ['net.fetch', 'config.own', 'notify', 'key.guide', 'luna', 'exec'];
+const EXEC_PROGRAMS = ['sh', 'tar'];
+const EXEC_ARG = /^[A-Za-z0-9._{}\/=:+-]{1,160}$/;
 // keys a page keeps for itself; every other key (the number and colour buttons, Back) switches pages or goes back to Home
 const CLAIMS = ['digits', 'colors', 'back'];
 // what an add-on can provide to a part of the service (wallpapers: photo sources, see helper/wallpapers.js; cards: cards for Home with
@@ -103,6 +106,24 @@ function check(m, serviceVersion) {
       luna.push({ uri: l.uri, as: l.as === undefined ? '' : String(l.as) });
     }
   }
+  // the commands this add-on may run as root (permission "exec"): a list of 1 to 6 argument lists, each exactly as it will be run. The program is
+  // sh or tar; "{data}" in an argument is the add-on's own data folder. No wildcards: the add-on cannot add an argument or change one.
+  const exec = [];
+  if (m.exec !== undefined || perms.indexOf('exec') >= 0) {
+    if (perms.indexOf('exec') < 0) return { error: 'exec needs the permission exec' };
+    if (!Array.isArray(m.exec) || !m.exec.length || m.exec.length > 6) return { error: 'exec is a list of 1 to 6 commands' };
+    for (const c of m.exec) {
+      if (
+        !Array.isArray(c) ||
+        c.length < 2 ||
+        c.length > 8 ||
+        EXEC_PROGRAMS.indexOf(c[0]) < 0 ||
+        !c.every(a => typeof a === 'string' && EXEC_ARG.test(a) && a.indexOf('..') < 0)
+      )
+        return { error: 'a command of exec is a list: sh or tar, then up to 7 plain arguments' };
+      exec.push(c.slice());
+    }
+  }
   // cards for Home (provides "cards"): each is checked as a card.json is, with a poll interval and the actions of its buttons
   const cards = [];
   if (m.cards !== undefined) {
@@ -125,6 +146,7 @@ function check(m, serviceVersion) {
       entry: { service: entry.service, page: entry.page },
       permissions: perms,
       luna,
+      exec,
       routes,
       provides: (Array.isArray(m.provides) ? m.provides : []).filter((c, i, a) => PROVIDES.indexOf(c) >= 0 && a.indexOf(c) === i),
       cards,
@@ -165,6 +187,8 @@ function cleanIndex(raw) {
       permissions: (Array.isArray(e.permissions) ? e.permissions : []).filter(p => PERMISSIONS.indexOf(p) >= 0),
       // the calls to LG's services it asks for (the uris of luna in its addon.json), so the person can be told before installing
       luna: (Array.isArray(e.luna) ? e.luna : []).filter(u => typeof u === 'string' && LUNA_URI.test(u)).slice(0, 8),
+      // the commands it may run as root (the lines of exec in its addon.json, each joined with spaces), shown before installing
+      exec: (Array.isArray(e.exec) ? e.exec : []).filter(u => typeof u === 'string' && u.length < 400).slice(0, 6),
       files,
     });
   }
@@ -235,7 +259,7 @@ function create(ctx) {
   const find = id => list.filter(x => x.id === id)[0];
   const paused = () => fs.existsSync(path.join(path.dirname(P.ADDONS), 'DISABLE-ADDONS')) || fs.existsSync(path.join(P.ADDONS, 'DISABLE'));
 
-  // the ctx an add-on gets: its folders, its settings, fetch and a log line; not exec, luna or the other parts of the service
+  // the ctx an add-on gets: its folders, its settings, fetch and a log line; not exec or luna (only as the manifest lists them) or the other parts of the service
   function addonCtx(a) {
     const dataDir = path.join(P.ADDON_DATA, a.id);
     nc.mkdirp(dataDir);
@@ -271,6 +295,15 @@ function create(ctx) {
         const e = allowed.filter(x => String(uri).indexOf(x.uri) === 0)[0];
         if (!e) return Promise.resolve({ returnValue: false, errorText: 'this add-on may not call ' + String(uri).slice(0, 80) });
         return ctx.luna(uri, payload, Object.assign({ wait: Math.min(+(o && o.wait) || 5000, 20000) }, e.as ? { appId: e.as } : {}));
+      };
+    }
+    // fixed commands as root, only the ones the manifest lists, word for word ({data} is this add-on's data folder); the add-on adds nothing
+    if (perms.indexOf('exec') >= 0) {
+      const lines = a.manifest.exec.map(argv => argv.map(w => w.split('{data}').join(dataDir)));
+      c.exec = (argv, o) => {
+        const hit = Array.isArray(argv) && lines.filter(l => l.length === argv.length && l.every((w, i) => w === argv[i]))[0];
+        if (!hit) return Promise.resolve({ ok: false, code: -1, out: '', err: '', error: 'this add-on may not run that command' });
+        return require('./exec').run(hit[0], hit.slice(1), { timeout: Math.min(+(o && o.timeout) || 30000, 120000) });
       };
     }
     if (perms.indexOf('notify') >= 0 && ctx.feature('notify')) c.notify = body => ctx.feature('notify').show(body);
@@ -466,7 +499,7 @@ function create(ctx) {
     name: e.name,
     version: e.version,
     kind: e.kind,
-    can: repos.describe(e.kind, e.permissions, e.luna),
+    can: repos.describe(e.kind, e.permissions, e.luna, e.exec),
   });
 
   // Every repository is read at the same time. The official one decides which ids are its own: another repository cannot offer the id
@@ -506,7 +539,8 @@ function create(ctx) {
         kind: e.kind,
         permissions: e.permissions,
         luna: e.luna,
-        can: repos.describe(e.kind, e.permissions, e.luna),
+        exec: e.exec,
+        can: repos.describe(e.kind, e.permissions, e.luna, e.exec),
         repo: repo.name,
         official: repo.name === repos.OFFICIAL,
         // installed from this repository (the same id from another one is a different add-on)
@@ -617,6 +651,10 @@ function create(ctx) {
         !same(
           r.manifest.luna.map(l => l.uri),
           e.luna
+        ) ||
+        !same(
+          r.manifest.exec.map(c => c.join(' ')),
+          e.exec
         )
       )
         throw new Error('addon.json asks for other permissions than the catalog entry lists (nothing was installed)');

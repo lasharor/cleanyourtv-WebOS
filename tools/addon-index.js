@@ -39,6 +39,7 @@ function build(dir) {
       kind: m.kind,
       permissions: m.permissions || [],
       luna: (m.luna || []).map(l => l.uri),
+      exec: (m.exec || []).map(c => c.join(' ')),
       files: walk(dir, '', {}),
     });
   }

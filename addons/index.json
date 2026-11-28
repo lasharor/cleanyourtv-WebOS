@@ -15,6 +15,7 @@
       "luna": [
         "luna://com.webos.applicationManager/launch"
       ],
+      "exec": [],
       "files": {
         "README.md": "cd1e822f2b4d5bb1718f39f1c64b0ca226f95a27ee64c51887ee60e9c58b32c5",
         "addon.json": "7b4fb93c3dcf4443fdee2957f7488da5e0b868edd741639be7e7b0f8954570c4",
@@ -33,6 +34,7 @@
       "kind": "page",
       "permissions": [],
       "luna": [],
+      "exec": [],
       "files": {
         "addon.json": "e82a2d9b9353500c67c87797538914299a6cc5b22029084714c5033a2206f205",
         "index.html": "ad47a31114832658c41cbbcb46ef2e4cdb9be8ab7cad4308cdea90a2d9da784f"
@@ -48,10 +50,40 @@
       "kind": "service",
       "permissions": [],
       "luna": [],
+      "exec": [],
       "files": {
         "addon.json": "5b8aecd48cb3813a404cb93391482d5f1be54e2504a0be77feb9696b3f82fde0",
         "index.html": "f844a216c574a7bf965ad85e3d13cadae06c9b5f18cd8f9d04d30577e41f25c8",
         "service.js": "1036e54bd3556779f2f2bafca460793852f98e49833569bb18862e150f641cbc"
+      }
+    },
+    {
+      "id": "dtspass",
+      "name": "DTS audio passthrough",
+      "version": "1.0.0",
+      "description": "Switches the eARC output to full-rate (HBR) passthrough for apps that play DTS-HD, TrueHD and DTS:X themselves. webOS 6 only.",
+      "about": "Installs and manages the earc_route kernel module (a separate GPL-2.0 program, downloaded from its own release and checked against a fixed SHA-256) so that players such as tvlauncher or Native Jelly can send DTS-HD MA, DTS:X and TrueHD to a receiver over eARC. It does not play or decode anything itself. Only for LG TVs on webOS 6 (kernel 4.4.84), tested on an LG C1 only; other TVs are refused. Loading the module is undone by a reboot without the boot script.",
+      "preview": "",
+      "kind": "service",
+      "permissions": [
+        "net.fetch",
+        "luna",
+        "exec"
+      ],
+      "luna": [
+        "luna://com.webos.service.audio/getSoundOutput"
+      ],
+      "exec": [
+        "tar -xzf {data}/hbr.tgz -C {data}/hbr",
+        "sh {data}/hbr/earc-route-hbr-0.1.0/earc-route-hbr.sh install",
+        "sh {data}/hbr/earc-route-hbr-0.1.0/earc-route-hbr.sh remove",
+        "sh {data}/hbr/earc-route-hbr-0.1.0/earc-route-hbr.sh refresh",
+        "sh {data}/hbr/earc-route-hbr-0.1.0/earc-route-hbr.sh status"
+      ],
+      "files": {
+        "addon.json": "19833825b3174768ca86968831d8f4115aeccbd1f1ea063b820cfaed34b612e9",
+        "index.html": "9e0e5d3b74189c42a636f4ef5043dcded7d17f43b739b6469b6525a8ac86ded2",
+        "service.js": "c972c2849f991b978597cce02e6be8688a0c703dcfd959b05a3f5ef8ef504799"
       }
     },
     {
@@ -66,6 +98,7 @@
         "net.fetch"
       ],
       "luna": [],
+      "exec": [],
       "files": {
         "addon.json": "b16b363150bbe9dc1ba3b6fc7a98073f8ed11c11996507691d33ce75a67b00c9",
         "phone.js": "7f64427c617e10baac60e6c711b7a86ad74929f39409f2b603f7526fb85f3a3d",
@@ -88,6 +121,7 @@
         "luna://com.webos.applicationManager/getAppInfo",
         "luna://com.webos.applicationManager/launch"
       ],
+      "exec": [],
       "files": {
         "addon.json": "46c4c4f785042586eab9bf04b46c9588a243008eb9a7f9c474af364c88b2f176",
         "cards/continue/card.css": "4fa91cf45225cb62e120295378dc72bcd6f4ee9442ee7f2059fb17ccdb636841",
@@ -111,6 +145,7 @@
         "net.fetch"
       ],
       "luna": [],
+      "exec": [],
       "files": {
         "addon.json": "221d69eff1d71c6fdf8e54402f8775e0c44451e292ff2de3334c6b2f9d18357e",
         "cards/crypto/card.css": "5dcdc4418017a72426e48451bdf16cf49909274d011071b18af3a7daf7f8a62c",
@@ -151,6 +186,7 @@
         "luna://com.webos.service.settings/getSystemSettings",
         "luna://com.webos.service.tv.systemproperty/getSystemInfo"
       ],
+      "exec": [],
       "files": {
         "addon.json": "31320aa0f93fdaf8b4991166e780e5f31e2160b547d2260ba9682a435b5bdae1",
         "devicename.js": "a0ef58074f9c4ef9fd66e7c7a51259b184167304f95e0d36d4bb544db6750d14",
@@ -180,6 +216,7 @@
         "net.fetch"
       ],
       "luna": [],
+      "exec": [],
       "files": {
         "addon.json": "7236db6d4b7ab590098f704546b49a3c77b0b84b7cc2886fbf347f03f3d1e56d",
         "photos.js": "e1449592aa27bf531fe8dff798d2a4826ebd13012b2847068bb20915a540a11a",
@@ -201,6 +238,7 @@
       "luna": [
         "luna://com.webos.applicationManager/launch"
       ],
+      "exec": [],
       "files": {
         "addon.json": "f41c0327d3491032a0424db69fd902507e6bacbedf6caf6d49bd6fe2c5359af9",
         "cards/nowplaying/card.css": "13ecfa7ba271f3186860529edeb9ec04c4120165a52c2957eee8d51011d9c514",
@@ -223,6 +261,7 @@
       "kind": "service",
       "permissions": [],
       "luna": [],
+      "exec": [],
       "files": {
         "addon.json": "02cb4add590dfa7ee9d950123d59752a44cf7e1c1613cf1b36e9f5c891a133b0",
         "index.html": "cbc683b2bf5aab30023e05284f12a1652a422b7c7dbec2efe4bbcb375756aca6",
@@ -246,6 +285,7 @@
         "luna://com.webos.epgdb/find",
         "luna://com.webos.applicationManager/launch"
       ],
+      "exec": [],
       "files": {
         "addon.json": "257bb5ee9be018484e8708dd0f69c7b6991ad3af4ec541c94925168b6defa4ee",
         "page/index.html": "e5ebeb34dc1968ebaefb1189e55f09d1fb1914064aaaf9bf8ddc357df273e0c8",
@@ -266,6 +306,7 @@
         "net.fetch"
       ],
       "luna": [],
+      "exec": [],
       "files": {
         "addon.json": "c3ed3ea1704744779e998a06998a61f749f25290f646128962622e870c82c93e",
         "phone.js": "d9f96764f349e821469a600bb1bf338057e4af1230f5367d939b05ede7d60a5e",
@@ -284,6 +325,7 @@
         "net.fetch"
       ],
       "luna": [],
+      "exec": [],
       "files": {
         "addon.json": "39f8c8c4463addade9b1914ac59132cb6ffa85bee15bfdcd722da5a864c3395a",
         "cards/forecast/card.css": "d10d6c560e1c7232c283dfe361e4e18699b38008394c2e29ed8ab0f57d474845",

@@ -178,3 +178,11 @@ pages, because the bridge is open to whatever the WebView loads.
 
 Open a private security advisory on the [GitHub repository](https://github.com/lasharor/cleanyourtv-WebOS/security/advisories),
 or an issue that does not include exploit details.
+
+## Add-ons that run commands (the permission `exec`)
+
+An add-on with the permission `exec` runs only the commands its `addon.json` lists, word for word (`sh` or `tar`, plain arguments, `{data}` for its own
+folder); the loader refuses anything else, and an install is refused when the commands differ from what the index showed you. The DTS audio passthrough add-on
+(`dtspass`) uses it to run the installer of the earc_route kernel module, which loads an unsigned module into the TV's kernel (a kernel that only loads
+signed modules refuses it). The download is pinned by SHA-256, the add-on does nothing without `confirm: true` in the request and OK twice on its page,
+and a restart of the TV without its boot script (`/var/lib/webosbrew/init.d/30-earc-route-hbr`, or the Homebrew Channel's failsafe mode) unloads it.

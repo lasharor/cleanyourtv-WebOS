@@ -280,6 +280,32 @@ one), with a wait of at most 20 seconds; any other call gets `{returnValue: fals
 by mistake, not what its code could do (it runs in the service): read the list of a catalog add-on before you install it. `applicationManager/launch`
 can start any app.
 
+## Fixed commands as root (the permission `exec`)
+
+A service add-on can run commands only when its manifest asks: `"permissions": ["exec"]` and `"exec"`, a list of 1 to 6 commands, each a list of the
+program (`sh` or `tar`) and up to 7 plain arguments (letters, digits and `. _ { } / = : + -`; no `..`). `{data}` in an argument is the add-on's own
+folder under `addon-data/`. `ctx.exec(argv, {timeout})` then runs a command only when it is one of the listed ones, word for word, and returns
+`{ok, code, out, err, error}`; anything else gets `{ok: false}`. The add-on cannot add an argument, run `sh -c` or choose a program. The manager and
+`cytv-addons` show the commands before installing (`exec` in the index; the install is refused when `addon.json` lists others). Like `luna`, this limits
+what a catalog add-on does by mistake, not what its code could do: read the commands of an add-on before you install it.
+
+## DTS audio passthrough (the dtspass add-on)
+
+`addons/catalog/dtspass/` manages the [earc_route](https://github.com/Mokto/earc_route) kernel module (GPL-2.0-only, a separate program: it is downloaded
+from its own release and never shipped here) that switches the TV's eARC output to full-rate (HBR) passthrough and makes `/dev/earc_route`, which
+players such as [tvlauncher](https://github.com/Mokto/tvlauncher) or Native Jelly open to send DTS-HD MA, DTS:X and TrueHD to a receiver. The add-on
+plays and decodes nothing itself. **webOS 6 only** (kernel 4.4.84); the module was tested on an LG C1 (firmware 03.53.45) and every other kernel is
+refused. Install downloads `earc-route-hbr-0.1.0.tar.gz` (pinned by address and SHA-256 in `service.js`), unpacks it into the add-on's data folder and
+runs the release's own installer, which loads the module at once and puts a boot script in `/var/lib/webosbrew/init.d/30-earc-route-hbr`. The page shows
+the kernel, whether the audio output is a receiver (`audio/getSoundOutput`: ARC or optical) and the state of the route, with **Install**, **Refresh**
+(makes the nodes again after an app was opened for the first time) and **Remove**; install and remove need OK twice and the API needs `confirm: true`.
+A kernel that only loads signed modules (`sig_enforce`) is refused by the loader with its reason. The module has no exit on this kernel: Remove
+switches it off and deletes the boot script and files, and it is unloaded at the next restart. Also set the TV's Digital Sound Output to Pass Through.
+API: `GET /api/addons/dtspass/status`, `POST .../install`, `.../refresh`, `.../remove` (each with `{"confirm": true}`).
+
+Not tried on a TV: the install, the module and the passthrough itself (the tests cover the manifest, the permission, the status and answer parsing,
+the checksum and kernel refusals and the confirm; nothing here loads a module).
+
 ## Pages: Home is page 1 of a book
 
 A page add-on is served at `http://127.0.0.1:8765/addon/<id>/...` while it runs, with a content security policy that lets it load
@@ -366,6 +392,7 @@ you left it. Any app can open a page with `luna://com.webos.applicationManager/l
 |---|---|
 | `agent` | **Agent tools (MCP)**: gives the voice assistant and `/api/mcp` the tools that installed apps and add-ons sign in a `tools.json` (an app to launch, an add-on's own endpoint, an address), once you approve each on its phone page (port 8799). It provides `tools`; nothing app-specific is in it. The permission `luna` is for `applicationManager/launch` only. See [Tools for the assistant](../agent.md). |
 | `bigclock` | A full-screen clock (a page add-on, the smallest example). |
+| `dtspass` | **DTS audio passthrough** (see above): installs and manages the earc_route module so that players that open `/dev/earc_route` can send DTS-HD, DTS:X and TrueHD to a receiver. Permissions `net.fetch`, `luna` (`audio/getSoundOutput`) and `exec` (five fixed commands). webOS 6 only; untested on a TV. |
 | `dnscheck` | Asks the TV's own resolver for the hosts the debloat blocks and shows each as Blocked or Reachable (issue 92). A host that does not exist, or resolves to 0.0.0.0, 127.x or ::, counts as blocked; a control host (example.com) tells whether DNS works at all, and when it does not, no host is called blocked. Add your own hosts with `curl -X POST localhost:8765/api/addons/dnscheck/hosts -d '{"hosts":["ads.example.net"]}'` on the TV. |
 | `sysinfo` | Memory, swap, load and uptime of the TV, live, from `/proc`. |
 | `immich` | Photos from your Immich albums as the Home wallpaper, a photo source (see above): the sync, the albums and the phone page (port 8795) moved here from Wallpapers. A TV that had Immich before hands its settings and photos to it once. |
