@@ -28,7 +28,9 @@ function parseStatus(text) {
 
 // the last "hbr: ..." line a script printed: {state: 'active'|'removed'|'refused'|'', why}
 function parseLine(text) {
-  const lines = String(text).split('\n').filter(l => /^hbr: /.test(l));
+  const lines = String(text)
+    .split('\n')
+    .filter(l => /^hbr: /.test(l));
   const l = lines.length ? lines[lines.length - 1] : '';
   if (/^hbr: active/.test(l)) return { state: 'active', why: '' };
   if (/^hbr: removed/.test(l)) return { state: 'removed', why: '' };
@@ -88,7 +90,8 @@ function create(ctx) {
   }
 
   async function install() {
-    if (!supported(kernel())) return { ok: false, error: 'this TV runs kernel ' + (kernel() || '?') + '; the module is built for 4.4.84 (webOS 6) only' };
+    if (!supported(kernel()))
+      return { ok: false, error: 'this TV runs kernel ' + (kernel() || '?') + '; the module is built for 4.4.84 (webOS 6) only' };
     ctx.util.mkdirp(hbr);
     await ctx.fetch.toFile(URL, tgz, { maxBytes: MAX_BYTES, totalMs: 60000 });
     const sum = crypto.createHash('sha256').update(fs.readFileSync(tgz)).digest('hex');

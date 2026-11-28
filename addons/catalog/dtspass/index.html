@@ -1,76 +1,205 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-<meta charset="utf-8">
-<title>DTS audio passthrough</title>
-<style>
-  html, body { margin: 0; height: 100%; background: #07080b; color: #f5f6f8; font-family: "LG Smart UI", Helvetica, Arial, sans-serif; overflow: hidden; }
-  #wrap { position: absolute; left: 96px; right: 96px; top: 60px; bottom: 80px; }
-  h1 { margin: 0 0 30px; font-size: 56px; font-weight: 600; }
-  .row { font-size: 30px; margin-bottom: 14px; }
-  .row b { display: inline-block; width: 420px; font-weight: 400; color: #aab; }
-  .ok { color: #5ac07f; } .no { color: #e0794f; }
-  #note { margin: 26px 0 30px; font-size: 26px; line-height: 1.4; color: #99a; max-width: 1500px; }
-  #btns { margin-top: 10px; }
-  button { font: inherit; font-size: 30px; color: #f5f6f8; background: #1a1c22; border: 3px solid transparent; border-radius: 14px; padding: 16px 34px; margin-right: 24px; }
-  button:focus { outline: none; border-color: #fff; background: #2a2d36; }
-  button[disabled] { opacity: 0.4; }
-  #msg { margin-top: 28px; font-size: 28px; min-height: 40px; }
-  #hint { position: absolute; left: 0; right: 0; bottom: 0; color: #667; font-size: 22px; }
-</style>
-</head>
-<body>
-<div id="wrap">
-  <h1>DTS audio passthrough</h1>
-  <div class="row"><b>TV software</b><span id="k"></span></div>
-  <div class="row"><b>Receiver on eARC / optical</b><span id="r"></span></div>
-  <div class="row"><b>Passthrough route</b><span id="m"></span></div>
-  <div id="note">This switches the TV's eARC link to full-rate passthrough for players that use it (tvlauncher, Native Jelly). It plays nothing itself. Also set the TV's Digital Sound Output to Pass Through. It loads a kernel module from github.com/Mokto/earc_route (GPL-2.0, tested on an LG C1 only). Remove it, then restart the TV, to undo it completely.</div>
-  <div id="btns"><button id="bi">Install</button><button id="bf">Refresh</button><button id="br">Remove</button></div>
-  <div id="msg"></div>
-  <div id="hint">OK twice to install or remove. Back goes to Home.</div>
-</div>
-<script src="/addon/sdk.js"></script>
-<script>
-  /* ES5 only: this page runs on Chromium 68 (webOS 5) too */
-  var $ = function (id) { return document.getElementById(id); };
-  var st = null, armed = '', busy = false;
-  function set(id, text, good) { var e = $(id); e.textContent = text; e.className = good === undefined ? '' : good ? 'ok' : 'no'; }
-  function render(s) {
-    st = s;
-    set('k', s.supported ? 'webOS 6 (kernel ' + s.kernel + ')' : 'not supported (kernel ' + (s.kernel || '?') + ')', s.supported);
-    set('r', s.receiver ? 'yes (' + s.output + ')' : s.output ? 'no (' + s.output + ')' : 'unknown', s.receiver);
-    set('m', s.active ? 'active' + (s.node ? '' : ', no /dev/earc_route') : s.loaded ? 'loaded, switched off' : s.installed ? 'installed, restart the TV' : 'not installed', s.active && s.node);
-    $('bi').disabled = busy || !s.supported || s.active;
-    $('bf').disabled = busy || !s.active;
-    $('br').disabled = busy || !(s.installed || s.loaded);
-    $('bi').textContent = armed === 'install' ? 'OK again to install' : 'Install';
-    $('br').textContent = armed === 'remove' ? 'OK again to remove' : 'Remove';
-  }
-  function load() { CYTV.api('/status').then(render, function () { $('msg').textContent = 'The service does not answer.'; }); }
-  function act(name) {
-    if ((name === 'install' || name === 'remove') && armed !== name) { armed = name; $('msg').textContent = ''; render(st); return; }
-    armed = ''; busy = true; $('msg').className = ''; $('msg').textContent = 'Working...'; render(st);
-    CYTV.api('/' + name, { confirm: true }).then(function (r) {
-      busy = false;
-      $('msg').className = r.ok ? 'ok' : 'no';
-      $('msg').textContent = r.ok ? (name === 'remove' ? 'Removed. Restart the TV to unload the module.' : 'Done.') : 'Refused: ' + (r.error || 'unknown');
-      render(r.status || st);
-    }, function () { busy = false; $('msg').className = 'no'; $('msg').textContent = 'The service does not answer.'; render(st); });
-  }
-  $('bi').onclick = function () { act('install'); };
-  $('bf').onclick = function () { act('refresh'); };
-  $('br').onclick = function () { act('remove'); };
-  var order = ['bi', 'bf', 'br'];
-  document.addEventListener('keydown', function (e) {
-    var i = order.indexOf(document.activeElement && document.activeElement.id);
-    if (e.keyCode === 37 || e.keyCode === 39) {
-      for (var n = 1; n <= 3; n++) { var b = $(order[(i + (e.keyCode === 39 ? n : -n) + 6) % 3]); if (!b.disabled) { b.focus(); break; } }
-    }
-  });
-  load();
-  setInterval(function () { if (!busy) load(); }, 5000);
-  setTimeout(function () { if (!$('bi').disabled) $('bi').focus(); else if (!$('br').disabled) $('br').focus(); }, 600);
-</script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>DTS audio passthrough</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #07080b;
+        color: #f5f6f8;
+        font-family: 'LG Smart UI', Helvetica, Arial, sans-serif;
+        overflow: hidden;
+      }
+      #wrap {
+        position: absolute;
+        left: 96px;
+        right: 96px;
+        top: 60px;
+        bottom: 80px;
+      }
+      h1 {
+        margin: 0 0 30px;
+        font-size: 56px;
+        font-weight: 600;
+      }
+      .row {
+        font-size: 30px;
+        margin-bottom: 14px;
+      }
+      .row b {
+        display: inline-block;
+        width: 420px;
+        font-weight: 400;
+        color: #aab;
+      }
+      .ok {
+        color: #5ac07f;
+      }
+      .no {
+        color: #e0794f;
+      }
+      #note {
+        margin: 26px 0 30px;
+        font-size: 26px;
+        line-height: 1.4;
+        color: #99a;
+        max-width: 1500px;
+      }
+      #btns {
+        margin-top: 10px;
+      }
+      button {
+        font: inherit;
+        font-size: 30px;
+        color: #f5f6f8;
+        background: #1a1c22;
+        border: 3px solid transparent;
+        border-radius: 14px;
+        padding: 16px 34px;
+        margin-right: 24px;
+      }
+      button:focus {
+        outline: none;
+        border-color: #fff;
+        background: #2a2d36;
+      }
+      button[disabled] {
+        opacity: 0.4;
+      }
+      #msg {
+        margin-top: 28px;
+        font-size: 28px;
+        min-height: 40px;
+      }
+      #hint {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        color: #667;
+        font-size: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="wrap">
+      <h1>DTS audio passthrough</h1>
+      <div class="row"><b>TV software</b><span id="k"></span></div>
+      <div class="row"><b>Receiver on eARC / optical</b><span id="r"></span></div>
+      <div class="row"><b>Passthrough route</b><span id="m"></span></div>
+      <div id="note">
+        This switches the TV's eARC link to full-rate passthrough for players that use it (tvlauncher, Native Jelly). It plays nothing
+        itself. Also set the TV's Digital Sound Output to Pass Through. It loads a kernel module from github.com/Mokto/earc_route (GPL-2.0,
+        tested on an LG C1 only). Remove it, then restart the TV, to undo it completely.
+      </div>
+      <div id="btns"><button id="bi">Install</button><button id="bf">Refresh</button><button id="br">Remove</button></div>
+      <div id="msg"></div>
+      <div id="hint">OK twice to install or remove. Back goes to Home.</div>
+    </div>
+    <script src="/addon/sdk.js"></script>
+    <script>
+      /* ES5 only: this page runs on Chromium 68 (webOS 5) too */
+      var $ = function (id) {
+        return document.getElementById(id);
+      };
+      var st = null,
+        armed = '',
+        busy = false;
+      function set(id, text, good) {
+        var e = $(id);
+        e.textContent = text;
+        e.className = good === undefined ? '' : good ? 'ok' : 'no';
+      }
+      function render(s) {
+        st = s;
+        set('k', s.supported ? 'webOS 6 (kernel ' + s.kernel + ')' : 'not supported (kernel ' + (s.kernel || '?') + ')', s.supported);
+        set('r', s.receiver ? 'yes (' + s.output + ')' : s.output ? 'no (' + s.output + ')' : 'unknown', s.receiver);
+        set(
+          'm',
+          s.active
+            ? 'active' + (s.node ? '' : ', no /dev/earc_route')
+            : s.loaded
+              ? 'loaded, switched off'
+              : s.installed
+                ? 'installed, restart the TV'
+                : 'not installed',
+          s.active && s.node
+        );
+        $('bi').disabled = busy || !s.supported || s.active;
+        $('bf').disabled = busy || !s.active;
+        $('br').disabled = busy || !(s.installed || s.loaded);
+        $('bi').textContent = armed === 'install' ? 'OK again to install' : 'Install';
+        $('br').textContent = armed === 'remove' ? 'OK again to remove' : 'Remove';
+      }
+      function load() {
+        CYTV.api('/status').then(render, function () {
+          $('msg').textContent = 'The service does not answer.';
+        });
+      }
+      function act(name) {
+        if ((name === 'install' || name === 'remove') && armed !== name) {
+          armed = name;
+          $('msg').textContent = '';
+          render(st);
+          return;
+        }
+        armed = '';
+        busy = true;
+        $('msg').className = '';
+        $('msg').textContent = 'Working...';
+        render(st);
+        CYTV.api('/' + name, { confirm: true }).then(
+          function (r) {
+            busy = false;
+            $('msg').className = r.ok ? 'ok' : 'no';
+            $('msg').textContent = r.ok
+              ? name === 'remove'
+                ? 'Removed. Restart the TV to unload the module.'
+                : 'Done.'
+              : 'Refused: ' + (r.error || 'unknown');
+            render(r.status || st);
+          },
+          function () {
+            busy = false;
+            $('msg').className = 'no';
+            $('msg').textContent = 'The service does not answer.';
+            render(st);
+          }
+        );
+      }
+      $('bi').onclick = function () {
+        act('install');
+      };
+      $('bf').onclick = function () {
+        act('refresh');
+      };
+      $('br').onclick = function () {
+        act('remove');
+      };
+      var order = ['bi', 'bf', 'br'];
+      document.addEventListener('keydown', function (e) {
+        var i = order.indexOf(document.activeElement && document.activeElement.id);
+        if (e.keyCode === 37 || e.keyCode === 39) {
+          for (var n = 1; n <= 3; n++) {
+            var b = $(order[(i + (e.keyCode === 39 ? n : -n) + 6) % 3]);
+            if (!b.disabled) {
+              b.focus();
+              break;
+            }
+          }
+        }
+      });
+      load();
+      setInterval(function () {
+        if (!busy) load();
+      }, 5000);
+      setTimeout(function () {
+        if (!$('bi').disabled) $('bi').focus();
+        else if (!$('br').disabled) $('br').focus();
+      }, 600);
+    </script>
+  </body>
 </html>
