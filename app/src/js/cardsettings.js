@@ -8,6 +8,13 @@ function csCards(type) {
   for (id in c) if (c[id] && c[id].type === type) out.push(c[id]);
   return out;
 }
+/* a card of another type on Home that has a city of its own */
+function csOtherPlace(type) {
+  var c = cfg.cards || {},
+    id;
+  for (id in c) if (c[id] && c[id].type !== type && c[id].place) return true;
+  return false;
+}
 /* the settings of a place with the card: the first one with a city (they share what this panel sets) */
 function csCard(type) {
   var l = csCards(type),
@@ -50,7 +57,16 @@ function csSettings(type) {
     var c = csCard(type),
       rows = [],
       skipped = false;
-    if (!csCards(type).length) rows.push({ note: t('This card is not on Home yet. Choose it for a place in Cards.') });
+    if (!csCards(type).length) {
+      rows.push({ note: t('This card is not on Home yet. Choose it for a place in Cards.') });
+      /* name it as Cards does, and say so when a card with a city of another type stands on Home: that one was taken for this card,
+         while this panel kept saying the card was not there and the city typed here was not kept */
+      rows.push({ note: t('In Cards it is called %s.').replace('%s', t(pack.name)) });
+      if (csOption(pack, 'place') && csOtherPlace(type))
+        rows.push({
+          note: t('The card with a city on Home now is another card. Its city is set on the phone (Cards > Set up from your phone).'),
+        });
+    }
     (pack.options || []).forEach(function (o) {
       var v = c[o.key] !== undefined && c[o.key] !== null ? c[o.key] : o.def;
       if (o.kind === 'place') {
