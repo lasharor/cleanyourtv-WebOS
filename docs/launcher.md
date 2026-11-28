@@ -131,7 +131,7 @@ A Home Assistant card stays hidden while Home Assistant is not set up or no enti
 either.
 
 Cards shift by a few pixels every few minutes, so they do not stay in one place on an OLED panel for hours.
-In the manager, Features → Dim inactive cards lowers card opacity after 3, 5 or 10 minutes without a key press.
+In the manager, Features → Dim inactive cards lowers card opacity after 3, 5 or 10 minutes without a key press. The minutes count from the last key press or from when Home was last shown: when the TV is switched on from standby, an app closes or the Home key is pressed, the cards come back bright.
 The default delay is three minutes. A key press restores full opacity.
 How a theme marks its places is in [Themes](themes.md#slots-for-cards).
 

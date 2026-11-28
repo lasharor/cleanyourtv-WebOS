@@ -1027,6 +1027,12 @@ function setCardsIdleMinutes(minutes) {
   wakeCards();
 }
 document.addEventListener('keydown', wakeCards, true);
+/* Home shown again (the TV switched on from standby, an app closed, the Home key): the timer kept running while Home was hidden, so the
+   cards came back dimmed until a key was pressed; they start bright now, and the minutes count from here */
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden) wakeCards();
+});
+document.addEventListener('webOSRelaunch', wakeCards);
 
 /* OLED care: shift the cards a few pixels periodically. */
 setInterval(function () {
