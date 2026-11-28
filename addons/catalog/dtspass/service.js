@@ -51,7 +51,7 @@ function create(ctx) {
   const sh = sub => ctx.exec(['sh', script, sub], { timeout: 60000 });
   const kernel = () => {
     try {
-      return fs.readFileSync(path.join(ctx.proc || '/proc', 'sys/kernel/osrelease'), 'utf8').trim();
+      return fs.readFileSync(path.join(ctx.proc, 'sys/kernel/osrelease'), 'utf8').trim();
     } catch (_) {
       return '';
     }

@@ -10,6 +10,7 @@
       "kind": "service",
       "permissions": [],
       "luna": [],
+      "exec": [],
       "files": {
         "addon.json": "fc5bdc9fcbcb3501716e7745fa07909fcdcd457ec6562297d85fbf9a1343163f",
         "index.html": "b3003514f3acc49ffafdce674ab4f3334e86e1c3645046678abed7cdb691c2cf",
