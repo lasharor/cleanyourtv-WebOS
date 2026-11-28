@@ -100,6 +100,26 @@ run(async () => {
     '1.6.15'
   );
   ok(plain.manifest.cards[0].drawer === null && plain.manifest.cards[0].settings === null, 'a card without them has null');
+  // surface "own": the page draws its own panel, so the launcher adds none around it on glass cards
+  const own = addons.check(Object.assign({}, man, { cards: [Object.assign({}, card, { surface: 'own' })] }), '1.6.15');
+  ok(own.manifest.cards[0].surface === 'own', 'a card page can say it draws its own panel');
+  ok(m0.manifest.cards[0].surface === '', 'a card page without surface gets the panel of the launcher');
+  ok(
+    addons.check(Object.assign({}, man, { cards: [Object.assign({}, card, { surface: 'glass' })] }), '1.6.15').manifest.cards[0].surface ===
+      '',
+    'an unknown surface is ignored'
+  );
+  ok(
+    cc.clean({ id: 'tpl-card', name: 'T', version: '1.0.0', template: '# x', surface: 'own' }).card.surface === '',
+    'a template card has no own surface'
+  );
+  for (const f of ['weather', 'markets', 'spotify'])
+    ok(
+      JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'addons', 'catalog', f, 'addon.json'), 'utf8')).cards.every(
+        c => c.surface === 'own'
+      ),
+      'the cards of the ' + f + ' add-on draw their own panel and say so'
+    );
   ok(
     cc.clean(Object.assign({}, card, { drawer: { page: 'd.html', action: 'prev' } })).card.drawer === null,
     'a downloaded card ignores a drawer'

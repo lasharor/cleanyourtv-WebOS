@@ -479,6 +479,7 @@ function create(ctx) {
             about: have[id].about || have[id].description,
             template: have[id].template,
             page: have[id].page,
+            surface: have[id].surface || '',
             size: have[id].size,
             poll: have[id].poll || 0,
             actions: have[id].addon ? have[id].actions : [],

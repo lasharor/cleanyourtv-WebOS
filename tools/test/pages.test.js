@@ -447,6 +447,20 @@ run(async () => {
     /inset 0 0 0 1px rgba\(255, 230, 238, 0\.3[0-9]?\)/.test(glassCard) && /0 10px 34px rgba\(0, 0, 0, 0\.[45][0-9]?\)/.test(glassCard),
     'and its edge and shadow keep the card a shape on a dark scene'
   );
+  // A card page that draws its own panel (the weather forecast, stocks, Spotify) stood as a panel in a panel on glass cards: the launcher's
+  // panel the size of the place, and the card's own the size of its content inside it. A page that says surface "own" gets no panel of
+  // the launcher and no blurred scene behind it, and fills its place.
+  const ownCard = (homeCss.match(/^\[data-cards="glass"\] \.card-frame\.card-own \{([^}]*)\}/m) || [])[1] || '',
+    ownFrame = (homeCss.match(/^\[data-cards="glass"\] \.card-frame\.card-own > iframe,[^{]*\{([^}]*)\}/m) || [])[1] || '';
+  ok(
+    /background:\s*none/.test(ownCard) && /box-shadow:\s*none/.test(ownCard) && /padding:\s*0/.test(ownCard),
+    'a card page with its own panel gets no glass panel of the launcher'
+  );
+  ok(/left:\s*0 !important/.test(ownFrame) && /width:\s*100% !important/.test(ownFrame), 'and its page fills the place');
+  const cardsJs = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'cards.js'), 'utf8'),
+    scenesJs = fs.readFileSync(path.join(root, 'app', 'src', 'js', 'scenes.js'), 'utf8');
+  ok(/classList\.toggle\('card-own', pk\.surface === 'own'\)/.test(cardsJs), 'the launcher marks such a card from its declaration');
+  ok(/if \(!g \|\| \/\\bcard-own\\b\/\.test\(el\.className\)\)/.test(scenesJs), 'and puts no blurred scene behind it');
   // a long device name (HDMI-CEC) is the second line of a chip in the Inputs picker: the line could not shrink, so it was painted outside the
   // card, over the next ones (issue 19). It wraps onto a second line now, ends in an ellipsis there when that is not enough, and the card
   // reserves the two lines so every card's icon and port sit at the same height.

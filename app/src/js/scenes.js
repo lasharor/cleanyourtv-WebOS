@@ -408,7 +408,8 @@ var SCENES = (function () {
     for (var i = 0; i < els2.length; i++) {
       var el = els2[i];
       if (!/\bcard-(weather|ha-|frame\b)/.test(el.className)) continue;
-      if (!g) {
+      /* a card page that draws its own panel (card-own) gets no blurred scene behind it */
+      if (!g || /\bcard-own\b/.test(el.className)) {
         el.style.backgroundImage = '';
         el.style.backgroundSize = '';
         el.style.backgroundPosition = '';
